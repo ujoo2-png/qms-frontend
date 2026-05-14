@@ -42,7 +42,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.13</title>
+<title>QMS - 품질경영시스템 v2.14</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -652,7 +652,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.13</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.14</div>
         </div>
       </div>
     </div>
@@ -749,7 +749,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.13 (2026-05-14) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.14 (2026-05-14) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -760,7 +760,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.13</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.14</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1025,6 +1025,160 @@ const SB={
     const {error}=await _sb.storage.from('qms-files').remove([path]);
     if(error) console.warn('[SB] 파일 삭제 실패',error.message);
   },
+
+  /* ── 사용자 ── */
+  async getUsers(){
+    if(!_sb) return DB.users;
+    const {data,error}=await _sb.from('users').select('*').order('id');
+    if(error){console.warn('[SB] users 실패→더미',error.message);return DB.users;}
+    return data.length>0?data:DB.users;
+  },
+  async addUser(row){
+    if(!_sb){const id=Math.max(0,...DB.users.map(u=>u.id))+1;DB.users.push({id,...row});return{ok:true,id};}
+    const {data,error}=await _sb.from('users').insert(row).select().single();
+    if(error){Toast.show('사용자 저장 실패: '+error.message,'err');return{ok:false};}
+    DB.users.push(data);return{ok:true,id:data.id};
+  },
+  async updateUser(id,patch){
+    if(!_sb){const u=DB.users.find(u=>u.id===id);if(u)Object.assign(u,patch);return{ok:true};}
+    const {error}=await _sb.from('users').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
+    const u=DB.users.find(u=>u.id===id);if(u)Object.assign(u,patch);return{ok:true};
+  },
+  async deleteUser(id){
+    if(!_sb){DB.users=DB.users.filter(u=>u.id!==id);return{ok:true};}
+    const {error}=await _sb.from('users').delete().eq('id',id);
+    if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
+    DB.users=DB.users.filter(u=>u.id!==id);return{ok:true};
+  },
+
+  /* ── 품목 ── */
+  async addItem(row){
+    if(!_sb){const id=Math.max(0,...DB.items.map(i=>i.id))+1;DB.items.push({id,...row});return{ok:true,id};}
+    const {data,error}=await _sb.from('items').insert(row).select().single();
+    if(error){Toast.show('품목 저장 실패: '+error.message,'err');return{ok:false};}
+    DB.items.push(data);return{ok:true,id:data.id};
+  },
+  async updateItem(id,patch){
+    if(!_sb){const i=DB.items.find(i=>i.id===id);if(i)Object.assign(i,patch);return{ok:true};}
+    const {error}=await _sb.from('items').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
+    const i=DB.items.find(i=>i.id===id);if(i)Object.assign(i,patch);return{ok:true};
+  },
+  async deleteItem(id){
+    if(!_sb){DB.items=DB.items.filter(i=>i.id!==id);return{ok:true};}
+    const {error}=await _sb.from('items').delete().eq('id',id);
+    if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
+    DB.items=DB.items.filter(i=>i.id!==id);return{ok:true};
+  },
+
+  /* ── 거래처 ── */
+  async addVendor(row){
+    if(!_sb){const id=Math.max(0,...DB.vendors.map(v=>v.id))+1;DB.vendors.push({id,...row});return{ok:true,id};}
+    const {data,error}=await _sb.from('vendors').insert(row).select().single();
+    if(error){Toast.show('거래처 저장 실패: '+error.message,'err');return{ok:false};}
+    DB.vendors.push(data);return{ok:true,id:data.id};
+  },
+  async updateVendor(id,patch){
+    if(!_sb){const v=DB.vendors.find(v=>v.id===id);if(v)Object.assign(v,patch);return{ok:true};}
+    const {error}=await _sb.from('vendors').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
+    const v=DB.vendors.find(v=>v.id===id);if(v)Object.assign(v,patch);return{ok:true};
+  },
+  async deleteVendor(id){
+    if(!_sb){DB.vendors=DB.vendors.filter(v=>v.id!==id);return{ok:true};}
+    const {error}=await _sb.from('vendors').delete().eq('id',id);
+    if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
+    DB.vendors=DB.vendors.filter(v=>v.id!==id);return{ok:true};
+  },
+
+  /* ── 부적합 ── */
+  async addNc(row){
+    if(!_sb){const id=Math.max(0,...DB.nc.map(n=>n.id))+1;DB.nc.push({id,...row});return{ok:true,id};}
+    const {data,error}=await _sb.from('nonconformances').insert(row).select().single();
+    if(error){Toast.show('부적합 저장 실패: '+error.message,'err');return{ok:false};}
+    DB.nc.push(data);return{ok:true,id:data.id};
+  },
+  async updateNc(id,patch){
+    if(!_sb){const n=DB.nc.find(n=>n.id===id);if(n)Object.assign(n,patch);return{ok:true};}
+    const {error}=await _sb.from('nonconformances').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
+    const n=DB.nc.find(n=>n.id===id);if(n)Object.assign(n,patch);return{ok:true};
+  },
+
+  /* ── 계측기 ── */
+  async getEquip(){
+    if(!_sb) return DB.equip;
+    const {data,error}=await _sb.from('equipment').select('*').order('id');
+    if(error){console.warn('[SB] equip 실패→더미',error.message);return DB.equip;}
+    return data.length>0?data:DB.equip;
+  },
+  async addEquip(row){
+    if(!_sb){const id=Math.max(0,...DB.equip.map(e=>e.id))+1;DB.equip.push({id,...row});return{ok:true,id};}
+    const {data,error}=await _sb.from('equipment').insert(row).select().single();
+    if(error){Toast.show('계측기 저장 실패: '+error.message,'err');return{ok:false};}
+    DB.equip.push(data);return{ok:true,id:data.id};
+  },
+  async updateEquip(id,patch){
+    if(!_sb){const e=DB.equip.find(e=>e.id===id);if(e)Object.assign(e,patch);return{ok:true};}
+    const {error}=await _sb.from('equipment').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
+    const e=DB.equip.find(e=>e.id===id);if(e)Object.assign(e,patch);return{ok:true};
+  },
+
+  /* ── 교정 ── */
+  async getCals(){
+    if(!_sb) return DB.cals;
+    const {data,error}=await _sb.from('calibrations').select('*').order('date',{ascending:false});
+    if(error){console.warn('[SB] cals 실패→더미',error.message);return DB.cals;}
+    return data.length>0?data:DB.cals;
+  },
+  async addCal(row){
+    if(!_sb){const id=Math.max(0,...DB.cals.map(c=>c.id))+1;DB.cals.push({id,...row});return{ok:true,id};}
+    const {data,error}=await _sb.from('calibrations').insert(row).select().single();
+    if(error){Toast.show('교정 저장 실패: '+error.message,'err');return{ok:false};}
+    DB.cals.push(data);return{ok:true,id:data.id};
+  },
+
+  /* ── 문서 ── */
+  async getDocs(){
+    if(!_sb) return DB.docs;
+    const {data,error}=await _sb.from('documents').select('*').order('id');
+    if(error){console.warn('[SB] docs 실패→더미',error.message);return DB.docs;}
+    return data.length>0?data:DB.docs;
+  },
+  async addDoc(row){
+    if(!_sb){const id=Math.max(0,...DB.docs.map(d=>d.id))+1;DB.docs.push({id,...row});return{ok:true,id};}
+    const {data,error}=await _sb.from('documents').insert(row).select().single();
+    if(error){Toast.show('문서 저장 실패: '+error.message,'err');return{ok:false};}
+    DB.docs.push(data);return{ok:true,id:data.id};
+  },
+  async updateDoc(id,patch){
+    if(!_sb){const d=DB.docs.find(d=>d.id===id);if(d)Object.assign(d,patch);return{ok:true};}
+    const {error}=await _sb.from('documents').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
+    const d=DB.docs.find(d=>d.id===id);if(d)Object.assign(d,patch);return{ok:true};
+  },
+
+  /* ── 시정조치(CAR) ── */
+  async getCars(){
+    if(!_sb) return DB.cars;
+    const {data,error}=await _sb.from('corrective_actions').select('*').order('date',{ascending:false});
+    if(error){console.warn('[SB] cars 실패→더미',error.message);return DB.cars;}
+    return data.length>0?data:DB.cars;
+  },
+  async addCar(row){
+    if(!_sb){const id=Math.max(0,...DB.cars.map(c=>c.id))+1;DB.cars.push({id,...row});return{ok:true,id};}
+    const {data,error}=await _sb.from('corrective_actions').insert(row).select().single();
+    if(error){Toast.show('CAR 저장 실패: '+error.message,'err');return{ok:false};}
+    DB.cars.push(data);return{ok:true,id:data.id};
+  },
+  async updateCar(id,patch){
+    if(!_sb){const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
+    const {error}=await _sb.from('corrective_actions').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
+    const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
+  },
 };
 
 /* ══ 전역 상태 ══ */
@@ -1258,8 +1412,13 @@ const Auth={
     else{if(ePw)ePw.style.display='none';if(iPw)iPw.classList.remove('err');}
     if(!ok)return;
     if(id==='admin'&&pw==='admin1234'){
-      this._cur='admin';  /* 현재 로그인 사용자 ID 저장 */
+      this._cur='admin';
       this._u={id:1,username:'admin',name:'시스템관리자',role:'admin',dept:'IT팀'};
+      /* C안: sessionStorage에 로그인 상태 저장 — F5 새로고침 후 복원 */
+      sessionStorage.setItem('qms_auth', JSON.stringify({
+        cur:'admin',
+        u:{id:1,username:'admin',name:'시스템관리자',role:'admin',dept:'IT팀'}
+      }));
       ['uav','uname','urole','tbuser'].forEach((el,i)=>{
         const e=document.getElementById(el);
         if(e)e.textContent=['관','시스템관리자','시스템관리자','시스템관리자'][i];
@@ -1289,7 +1448,10 @@ const Auth={
   },
 
   logout(){
-    this._u=null;this._pwV=false;
+    this._u=null;this._pwV=false;this._cur=null;
+    /* C안: 로그아웃 시 sessionStorage 완전 삭제 */
+    sessionStorage.removeItem('qms_auth');
+    sessionStorage.removeItem('qms_page');
     document.getElementById('app').classList.add('hidden');
     document.getElementById('loginOv').style.display='';
     document.getElementById('npOverlay').classList.add('hidden');
@@ -1664,6 +1826,9 @@ const TopNav={
 /* ══ 내비 ══ */
 const Nav={
   go(page){
+    /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
+    if(Auth._u) sessionStorage.setItem('qms_page', page);
+
     document.querySelectorAll('.ni').forEach(el=>el.classList.toggle('active',el.dataset.p===page));
 
     /* 홈: 사이드바 숨김 + 상단바 숨김, 전체 화면 */
@@ -1751,7 +1916,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.13</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.14</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -1897,14 +2062,16 @@ dash(){
 },
 
 /* ── 품목 등록 (컬럼 재설계) ── */
-items(){
+async items(){
   const w=document.getElementById('pw');
-  let data=[...DB.items],search='',cat='';
-  // 통계
-  const total=DB.items.length;
-  const active=DB.items.filter(i=>i.active).length;
-  const byType={};DB.items.forEach(i=>{byType[i.category]=(byType[i.category]||0)+1});
-  const withFile=DB.items.filter(i=>FM.has(`item-${i.id}`)).length;
+  w.innerHTML='<div class="spin"></div>';
+  const allItems=await SB.getItems();
+  DB.items=allItems; // 로컬 캐시 갱신
+  let data=[...allItems],search='',cat='';
+  const total=allItems.length;
+  const active=allItems.filter(i=>i.active).length;
+  const byType={};allItems.forEach(i=>{byType[i.category]=(byType[i.category]||0)+1});
+  const withFile=allItems.filter(i=>FM.has(`item-${i.id}`)).length;
   const COLS=[
     {key:'category',label:'분류',w:'72px',render:v=>`<span class="badge bblu">${H.e(v||'-')}</span>`},
     {key:'item_code',label:'품목코드',w:'100px'},
@@ -4564,6 +4731,40 @@ function setupHotkeys(){
   document.getElementById('lpw')?.addEventListener('keydown',e=>{if(e.key==='Enter')Auth.login()});
   const bdot=document.getElementById('bdot');if(bdot)bdot.style.display='block';
   setupHotkeys();
+
+  /* C안: F5 새로고침 후 로그인 상태 + 마지막 페이지 복원
+     1. sessionStorage에 저장된 로그인 정보 확인
+     2. 있으면 → 앱 진입 + 마지막 페이지로 이동
+     3. 없으면 → 로그인 화면 표시 */
+  const savedAuth = sessionStorage.getItem('qms_auth');
+  if(savedAuth){
+    try{
+      const {cur, u} = JSON.parse(savedAuth);
+      // 로그인 상태 복원
+      Auth._cur = cur;
+      Auth._u   = u;
+      // 사이드바 사용자 정보 업데이트
+      ['uav','uname','urole','tbuser'].forEach((id,i)=>{
+        const el=document.getElementById(id);
+        if(el)el.textContent=['관','시스템관리자','시스템관리자','시스템관리자'][i];
+      });
+      // 앱 화면 표시
+      document.getElementById('loginOv').style.display='none';
+      document.getElementById('app').classList.remove('hidden');
+      // 마지막 페이지 복원 (없으면 홈)
+      const savedPage = sessionStorage.getItem('qms_page') || 'home';
+      setTimeout(()=>{
+        Nav.go(savedPage);
+        if(savedPage !== 'home'){
+          Toast.show(`마지막 화면으로 돌아왔습니다.`,'info',2000);
+        }
+      }, 80);
+    } catch(e){
+      // 복원 실패 시 sessionStorage 삭제 후 로그인 화면
+      sessionStorage.removeItem('qms_auth');
+      sessionStorage.removeItem('qms_page');
+    }
+  }
 })();
 </script>
 </body>
