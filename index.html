@@ -915,8 +915,8 @@ textarea.fc{resize:vertical;min-height:68px}
 
    [Supabase 연동 준비]
    1. 환경변수 설정 (Vercel 대시보드 또는 .env):
-      NEXT_PUBLIC_SUPABASE_URL = https://xxxx.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJ...
+      NEXT_PUBLIC_SUPABASE_URL = https://phxlsnghgvowrxdlcsph.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJhbGci...
 
    2. CDN 추가 (</head> 앞):
       <script src="cdn.jsdelivr.net/npm/@supabase/supabase-js">
@@ -944,6 +944,15 @@ textarea.fc{resize:vertical;min-height:68px}
       Auth.login()  -> _sb.auth.signInWithPassword({email,password})
       Auth.logout() -> _sb.auth.signOut()
    ---------------------------------------------------------- */
+
+/* Supabase 클라이언트 초기화
+   프로젝트 URL 및 anon key가 설정되어 있습니다.
+   현재는 더미데이터 모드로 동작하며, 아래 _sb 객체를 통해
+   각 DB.* 호출을 supabase.from() 으로 교체하면 실제 DB 연동 됩니다. */
+const SUPABASE_URL  = 'https://phxlsnghgvowrxdlcsph.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoeGxzbmdoZ3Zvd3J4ZGxjc3BoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDUyNjAsImV4cCI6MjA5NDMyMTI2MH0.bddEx1cymfYIfKVWe01mb7qSZQMN3j-sNdFRyGzoGIA';
+/* Supabase SDK 사용 시 아래 주석 해제:
+   const _sb = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON); */
 
 /* ══ 전역 상태 ══ */
 const App={
