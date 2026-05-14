@@ -42,7 +42,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.12</title>
+<title>QMS - 품질경영시스템 v2.13</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -322,47 +322,14 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .sb-logo-img{height:22px;max-width:100px;object-fit:contain;filter:brightness(0) invert(1)}
 .sb-logo-def{font-size:13px;font-weight:800;color:#fff}
 
-/* ══ 홈 개인정보 수정 버튼 ══ */
+/* ══ 홈 프로필 버튼 + 로그아웃 버튼 (A안: 나란히) ══ */
 .hw-profile-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:20px;cursor:pointer;transition:.15s;flex-shrink:0}
 .hw-profile-btn:hover{background:rgba(59,130,246,.18)}
+.hw-logout-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:20px;cursor:pointer;transition:.15s;flex-shrink:0;font-size:12px;font-weight:600;color:#ef4444}
+.hw-logout-btn:hover{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4)}
 .hw-profile-avatar{width:26px;height:26px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 .hw-profile-name{font-size:12px;font-weight:600;color:#1e40af}
 
-
-/* ★ 우측 패널 내부 */
-.hw-panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;flex:1;min-height:0;box-shadow:0 1px 6px rgba(0,0,0,.05)}
-.hw-panel-head{padding:9px 13px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.hw-panel-title{font-size:12.5px;font-weight:700;color:#1e293b;display:flex;align-items:center;gap:6px}
-.hw-panel-more{font-size:11px;color:#3b82f6;cursor:pointer;font-weight:600}
-.hw-panel-more:hover{color:#1d4ed8}
-.hw-panel-body{padding:6px 10px;overflow-y:auto;flex:1}
-.hw-mention{padding:7px 5px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:.12s;border-radius:6px}
-.hw-mention:last-child{border-bottom:none}
-.hw-mention:hover{background:#eff6ff}
-.hw-mention-top{display:flex;align-items:center;gap:5px;margin-bottom:2px}
-.hw-mention-avatar{width:20px;height:20px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0}
-.hw-mention-from{font-size:11.5px;font-weight:700;color:#1e40af}
-.hw-mention-ref{font-size:10px;color:#64748b;background:#f1f5f9;padding:1px 5px;border-radius:3px}
-.hw-mention-unread{width:6px;height:6px;background:#3b82f6;border-radius:50%;flex-shrink:0;margin-left:auto}
-.hw-mention-text{font-size:11.5px;color:#374151;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:25px}
-.hw-mention-time{font-size:10px;color:#94a3b8;padding-left:25px}
-.hw-notice{padding:7px 5px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:.12s;border-radius:6px}
-.hw-notice:last-child{border-bottom:none}
-.hw-notice:hover{background:#fefce8}
-.hw-notice-row{display:flex;align-items:flex-start;gap:6px}
-.hw-notice-new{background:#f59e0b;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px;flex-shrink:0;margin-top:2px}
-.hw-notice-title{font-size:11.5px;font-weight:600;color:#1e293b;line-height:1.4}
-.hw-notice-meta{font-size:10px;color:#94a3b8;margin-top:3px;display:flex;gap:8px}
-
-/* 사이드바 로고 */
-.sb-logo-img{height:22px;max-width:100px;object-fit:contain;filter:brightness(0) invert(1)}
-.sb-logo-def{font-size:13px;font-weight:800;color:#fff}
-
-/* 개인정보 수정 버튼 */
-.hw-profile-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:20px;cursor:pointer;transition:.15s;flex-shrink:0}
-.hw-profile-btn:hover{background:rgba(59,130,246,.18)}
-.hw-profile-avatar{width:26px;height:26px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
-.hw-profile-name{font-size:12px;font-weight:600;color:#1e40af}
 
 /* ── 앱 ── */
 .app{display:flex;height:100vh;overflow:hidden}
@@ -481,7 +448,7 @@ textarea.fc{resize:vertical;min-height:68px}
 
 /* ── 모달 ── */
 .mo{position:fixed;inset:0;background:rgba(15,23,42,.52);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:200;pointer-events:auto}
-.mo.dragging{background:rgba(15,23,42,.3)}padding:14px}
+.mo.dragging{background:rgba(15,23,42,.3)}
 .mb{background:var(--sur);border-radius:var(--rx);width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:var(--shl);animation:mIn .2s ease}
 .mb.is-dragging{animation:none;transition:none}
 @keyframes mIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:none}}
@@ -631,6 +598,8 @@ textarea.fc{resize:vertical;min-height:68px}
 .sp-empty{padding:40px 20px;text-align:center;color:var(--tm)}
 .sp-empty-icon{font-size:36px;margin-bottom:9px}
 </style>
+<!-- Supabase JS SDK CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -683,7 +652,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.12</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.13</div>
         </div>
       </div>
     </div>
@@ -780,7 +749,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.12 (2026-05-14) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.13 (2026-05-14) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -791,7 +760,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.12</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.13</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -945,14 +914,118 @@ textarea.fc{resize:vertical;min-height:68px}
       Auth.logout() -> _sb.auth.signOut()
    ---------------------------------------------------------- */
 
-/* Supabase 클라이언트 초기화
-   프로젝트 URL 및 anon key가 설정되어 있습니다.
-   현재는 더미데이터 모드로 동작하며, 아래 _sb 객체를 통해
-   각 DB.* 호출을 supabase.from() 으로 교체하면 실제 DB 연동 됩니다. */
+/* Supabase 클라이언트 초기화 */
 const SUPABASE_URL  = 'https://phxlsnghgvowrxdlcsph.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoeGxzbmdoZ3Zvd3J4ZGxjc3BoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDUyNjAsImV4cCI6MjA5NDMyMTI2MH0.bddEx1cymfYIfKVWe01mb7qSZQMN3j-sNdFRyGzoGIA';
-/* Supabase SDK 사용 시 아래 주석 해제:
-   const _sb = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON); */
+
+/* _sb: Supabase 클라이언트 — SDK 로드 후 생성 */
+let _sb = null;
+if(window.supabase){
+  _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  console.log('[Supabase] 클라이언트 초기화 완료');
+} else {
+  console.warn('[Supabase] SDK 로드 실패 — 더미데이터 모드로 동작');
+}
+
+/* ── SB: Supabase DB 연동 헬퍼 ──
+   각 함수는 _sb 연결 시 Supabase 사용, 미연결 시 DB.* 더미데이터 사용
+   테이블 미생성 시 자동으로 더미데이터로 폴백 */
+const SB={
+  /* 연결 여부 확인 */
+  ok(){return !!_sb},
+
+  /* 품목 목록 조회 */
+  async getItems(){
+    if(!_sb) return DB.items;
+    const {data,error}=await _sb.from('items').select('*').order('id');
+    if(error){console.warn('[SB] items 조회 실패 → 더미데이터',error.message);return DB.items;}
+    return data.length>0?data:DB.items;
+  },
+
+  /* 거래처 목록 조회 */
+  async getVendors(){
+    if(!_sb) return DB.vendors;
+    const {data,error}=await _sb.from('vendors').select('*').order('id');
+    if(error){console.warn('[SB] vendors 조회 실패 → 더미데이터',error.message);return DB.vendors;}
+    return data.length>0?data:DB.vendors;
+  },
+
+  /* 검사 목록 조회 */
+  async getInspections(type=null){
+    if(!_sb) return type?DB.inspections.filter(i=>i.type===type):DB.inspections;
+    let q=_sb.from('inspections').select('*').order('insp_date',{ascending:false});
+    if(type) q=q.eq('type',type);
+    const {data,error}=await q;
+    if(error){console.warn('[SB] inspections 조회 실패 → 더미데이터',error.message);
+      return type?DB.inspections.filter(i=>i.type===type):DB.inspections;}
+    return data.length>0?data:(type?DB.inspections.filter(i=>i.type===type):DB.inspections);
+  },
+
+  /* 검사 등록 */
+  async addInspection(row){
+    if(!_sb){const id=Math.max(0,...DB.inspections.map(i=>i.id))+1;DB.inspections.push({id,...row});return {ok:true,id};}
+    const {data,error}=await _sb.from('inspections').insert(row).select().single();
+    if(error){Toast.show('DB 저장 실패: '+error.message,'err');return {ok:false};}
+    DB.inspections.unshift(data); return {ok:true,id:data.id};
+  },
+
+  /* 부적합 목록 조회 */
+  async getNc(){
+    if(!_sb) return DB.nc;
+    const {data,error}=await _sb.from('nonconformances').select('*').order('date',{ascending:false});
+    if(error){console.warn('[SB] nc 조회 실패 → 더미데이터',error.message);return DB.nc;}
+    return data.length>0?data:DB.nc;
+  },
+
+  /* 멘션 목록 조회 */
+  async getMentions(){
+    if(!_sb) return DB.mentions;
+    const {data,error}=await _sb.from('mentions').select('*').order('created_at',{ascending:false});
+    if(error){console.warn('[SB] mentions 조회 실패 → 더미데이터',error.message);return DB.mentions;}
+    return data.length>0?data:DB.mentions;
+  },
+
+  /* 멘션 등록 */
+  async addMention(row){
+    if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
+    const {error}=await _sb.from('mentions').insert(row);
+    if(error){Toast.show('멘션 저장 실패: '+error.message,'err');return {ok:false};}
+    return {ok:true};
+  },
+
+  /* 멘션 수정 */
+  async updateMention(id,patch){
+    if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
+    const {error}=await _sb.from('mentions').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return {ok:false};}
+    const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};
+  },
+
+  /* 멘션 삭제 (soft delete: deleted_at 기록) */
+  async deleteMention(id){
+    if(!_sb){DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};}
+    const {error}=await _sb.from('mentions').update({deleted_at:new Date().toISOString()}).eq('id',id);
+    if(error){Toast.show('삭제 실패: '+error.message,'err');return {ok:false};}
+    DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};
+  },
+
+  /* 파일 업로드 (Supabase Storage: qms-files 버킷) */
+  async uploadFile(key,file){
+    if(!_sb) return null;
+    const path=`${key}/${Date.now()}_${file.name}`;
+    const {data,error}=await _sb.storage.from('qms-files').upload(path,file,{upsert:true});
+    if(error){console.warn('[SB] 파일 업로드 실패',error.message);return null;}
+    const {data:urlData}=_sb.storage.from('qms-files').getPublicUrl(path);
+    return {path, url:urlData.publicUrl, name:file.name, size:H._fmtSize(file.size), date:H.today()};
+  },
+
+  /* 파일 삭제 */
+  async deleteFile(path){
+    if(!_sb) return;
+    const {error}=await _sb.storage.from('qms-files').remove([path]);
+    if(error) console.warn('[SB] 파일 삭제 실패',error.message);
+  },
+};
 
 /* ══ 전역 상태 ══ */
 const App={
@@ -1058,6 +1131,7 @@ const H={
   d(d){if(!d)return'-';const dt=new Date(d);return`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`},
   n(n){return Number(n||0).toLocaleString('ko-KR')},
   today(){return this.d(new Date())},
+  _fmtSize(b){if(!b)return'0B';const u=['B','KB','MB','GB'];let i=0;while(b>=1024&&i<3){b/=1024;i++;}return b.toFixed(i>0?1:0)+u[i]},
 };
 
 /* ══ 토스트 ══ */
@@ -1075,38 +1149,44 @@ const Toast={
 const Modal={
   open({title,body,foot='',size='mlg'}={}){
     const box=document.getElementById('gmoBox');
+    const mo=document.getElementById('gmo');
+    /* 버그수정: 드래그 후 남은 인라인 스타일 완전 초기화
+       position:fixed / alignItems 등이 남아 배경색 사라지는 원인 */
+    box.removeAttribute('style');
+    mo.removeAttribute('style');
     box.className=`mb ${size}`;
-    // 드래그 위치 초기화 (열 때마다 중앙으로)
-    box.style.transform='';
-    box.style.left=''; box.style.top='';
     document.getElementById('mTitle').innerHTML=title||'';
     document.getElementById('mBody').innerHTML=body||'';
     document.getElementById('mFoot').innerHTML=foot;
-    document.getElementById('gmo').classList.remove('hidden');
-    // 드래그 초기화
+    mo.classList.remove('hidden');
+    // 헤더 드래그 재바인딩 (매 open마다)
+    const hd=box.querySelector('.mhd');
+    if(hd) hd._dragBound=false;
     this._initDrag(box);
   },
   close(){
-    const el=document.getElementById('gmo');
-    el.classList.add('hidden');
+    const mo=document.getElementById('gmo');
+    const box=document.getElementById('gmoBox');
+    mo.classList.add('hidden');
+    // 인라인 스타일 초기화 → 다음 open시 중앙 배치 보장
+    box.removeAttribute('style');
+    mo.removeAttribute('style');
   },
   /* 모달 드래그 이동 — 헤더(.mhd) 잡고 이동, 화면 밖 이탈 방지 */
   _initDrag(box){
     const hd=box.querySelector('.mhd');
     if(!hd||hd._dragBound) return;
     hd._dragBound=true;
-    let ox=0,oy=0,bx=0,by=0;
+    let ox=0,oy=0;
     const onDown=e=>{
       if(e.target.closest('button,input,select,textarea')) return;
       const r=box.getBoundingClientRect();
       ox=e.clientX-r.left; oy=e.clientY-r.top;
-      bx=r.left; by=r.top;
       box.classList.add('is-dragging');
       box.style.position='fixed';
       box.style.margin='0';
       box.style.left=r.left+'px'; box.style.top=r.top+'px';
       box.style.transform='none';
-      // overlay를 flex 해제해 fixed 위치 유지
       const mo=document.getElementById('gmo');
       mo.style.alignItems='flex-start'; mo.style.justifyContent='flex-start';
       document.addEventListener('mousemove',onMove);
@@ -1403,12 +1483,43 @@ const FM={
       foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
     });
   },
-  add(k,inp){
+  /* 파일 추가 — Supabase Storage 연동 (미연결 시 로컬 더미) */
+  async add(k,inp){
     if(!App.files[k])App.files[k]=[];
-    Array.from(inp.files).forEach(f=>App.files[k].push({name:f.name,size:f.size>1048576?(f.size/1048576).toFixed(1)+'MB':(f.size/1024).toFixed(0)+'KB',date:H.today()}));
-    Toast.show(`${inp.files.length}개 등록되었습니다.`,'ok');Modal.close();
+    const files=Array.from(inp.files);
+    if(!files.length)return;
+    Toast.show('업로드 중...','info',60000);
+    for(const f of files){
+      /* Supabase Storage 연동 시도 */
+      const uploaded=await SB.uploadFile(k,f);
+      if(uploaded){
+        App.files[k].push(uploaded);
+      } else {
+        /* 폴백: 로컬 더미 (미리보기용) */
+        App.files[k].push({
+          name:f.name,
+          size:H._fmtSize(f.size),
+          date:H.today(),
+          path:null, url:null,
+        });
+      }
+    }
+    document.getElementById('tcont').querySelectorAll('.toast').forEach(e=>e.remove());
+    Toast.show(`${files.length}개 등록되었습니다.`,'ok');
+    Modal.close();
   },
-  del(k,i){Modal.confirm({title:'파일 삭제',msg:'이 파일을 삭제하시겠습니까?',danger:true,onOk:()=>{if(App.files[k])App.files[k].splice(i,1);Toast.show('삭제되었습니다.','ok');this.modal(k)}})}
+  /* 파일 삭제 — Supabase Storage 연동 */
+  async del(k,i){
+    Modal.confirm({title:'파일 삭제',msg:'이 파일을 삭제하시겠습니까?',danger:true,
+      onOk:async()=>{
+        const f=App.files[k]?.[i];
+        if(f?.path) await SB.deleteFile(f.path);
+        if(App.files[k])App.files[k].splice(i,1);
+        Toast.show('삭제되었습니다.','ok');
+        this.modal(k);
+      }
+    });
+  }
 };
 
 /* ══════════════════════════════════════════════════════
@@ -1640,16 +1751,19 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.12</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.13</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
           <div>미결 <strong style="color:#ef4444">${ncO}건</strong> &nbsp;·&nbsp; 교정만료 <strong style="color:#f59e0b">${eqE}건</strong> &nbsp;·&nbsp; CAR <strong style="color:#3b82f6">${carO}건</strong></div>
         </div>
-        <!-- 개인정보 수정 버튼 -->
+        <!-- A안: 👤 이름(개인정보수정) + 🚪 로그아웃 버튼 나란히 -->
         <div class="hw-profile-btn" onclick="Pages._profileEdit()" title="개인정보 수정">
           <div class="hw-profile-avatar">${H.e(loginUser.name.charAt(0))}</div>
           <span class="hw-profile-name">${H.e(loginUser.name)}</span>
+        </div>
+        <div class="hw-logout-btn" onclick="Auth.logout()" title="로그아웃">
+          🚪 로그아웃
         </div>
       </div>
 
@@ -2813,7 +2927,8 @@ _mentionWrite(editId=null){
 },
 
 /* 멘션 저장 (등록/수정) */
-_mentionSave(editId){
+/* 멘션 저장 (등록/수정) — SB 연동 */
+async _mentionSave(editId){
   const to=(document.getElementById('mto')?.value||'').trim();
   const ref=document.getElementById('mref')?.value||'기타';
   const text=(document.getElementById('mtext')?.value||'').trim();
@@ -2823,18 +2938,15 @@ _mentionSave(editId){
   const meUser=DB.users.find(u=>u.username===me)||{name:'관리자',dept:''};
 
   if(editId){
-    // 수정: 본인 글만 가능
-    const m=DB.mentions.find(m=>m.id===editId);
-    if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return}
-    m.text=text; m.to=to; m.ref=ref;
+    const res=await SB.updateMention(editId,{text,to,ref});
+    if(!res.ok)return;
     Toast.show('멘션이 수정되었습니다.','ok');
   } else {
-    // 신규 등록
-    const newId=Math.max(0,...DB.mentions.map(m=>m.id))+1;
-    DB.mentions.unshift({
-      id:newId, from:meUser.name, to, dept:meUser.dept||'',
-      text, ref, time:'방금 전', read:false, replies:[],
-    });
+    const row={from:meUser.name,to,dept:meUser.dept||'',text,ref,
+               time:'방금 전',read:false,replies:[],
+               created_at:new Date().toISOString()};
+    const res=await SB.addMention(row);
+    if(!res.ok)return;
     Toast.show('멘션이 등록되었습니다.','ok');
   }
   Modal.close();
@@ -2846,18 +2958,13 @@ _mentionEdit(id){
   this._mentionWrite(id);
 },
 
-/* 멘션 삭제
-   - 본인 글: 댓글 없을 때만 삭제 가능
-   - 관리자: 항상 삭제 가능 (히스토리는 Supabase deleted_at 필드로 관리)
-   Supabase 배포 시: .update({deleted_at:new Date()}).eq('id',id) — soft delete */
+/* 멘션 삭제 — SB 연동 (soft delete: deleted_at) */
 _mentionDel(id){
-  const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
   const m=DB.mentions.find(m=>m.id===id);
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return}
   const isMine=m.from===(Auth._u?.name||'관리자');
   const hasReply=(m.replies||[]).length>0;
-
   if(!isAdmin&&hasReply){Toast.show('댓글이 있는 멘션은 삭제할 수 없습니다.','warn');return}
   if(!isAdmin&&!isMine){Toast.show('본인이 작성한 멘션만 삭제할 수 있습니다.','warn');return}
 
@@ -2865,8 +2972,9 @@ _mentionDel(id){
     title:'멘션 삭제',
     msg:`${isAdmin&&!isMine?'<div style="margin-bottom:8px;padding:7px 12px;background:#fef3c7;border-radius:6px;font-size:12px;color:#92400e">⚠️ 관리자 권한으로 삭제합니다.</div>':''}<p>이 멘션을 삭제하시겠습니까?</p>`,
     danger:true,
-    onOk:()=>{
-      DB.mentions=DB.mentions.filter(m=>m.id!==id);
+    onOk:async()=>{
+      const res=await SB.deleteMention(id);
+      if(!res.ok)return;
       Toast.show('삭제되었습니다.','ok');
       Pages.mentions();
     }
