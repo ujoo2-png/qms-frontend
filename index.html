@@ -991,9 +991,9 @@ const SB={
   /* 검사 등록 */
   async addInspection(row){
     if(!_sb){const id=Math.max(0,...DB.inspections.map(i=>i.id))+1;DB.inspections.push({id,...row});return {ok:true,id};}
-    const {data,error}=await _sb.from('inspections').insert(row).select().single();
+    const {error}=await _sb.from('inspections').insert(row);
     if(error){Toast.show('DB 저장 실패: '+error.message,'err');return {ok:false};}
-    DB.inspections.unshift(data); return {ok:true,id:data.id};
+    DB.inspections.unshift({id:Date.now(),...row}); return {ok:true};
   },
 
   /* 부적합 목록 조회 */
@@ -1062,9 +1062,9 @@ const SB={
   },
   async addUser(row){
     if(!_sb){const id=Math.max(0,...DB.users.map(u=>u.id))+1;DB.users.push({id,...row});return{ok:true,id};}
-    const {data,error}=await _sb.from('users').insert(row).select().single();
+    const {error}=await _sb.from('users').insert(row);
     if(error){Toast.show('사용자 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.users.push(data);return{ok:true,id:data.id};
+    DB.users.push({id:Date.now(),...row});return{ok:true};
   },
   async updateUser(id,patch){
     if(!_sb){const u=DB.users.find(u=>u.id===id);if(u)Object.assign(u,patch);return{ok:true};}
@@ -1087,7 +1087,7 @@ const SB={
       return{ok:true,id};
     }
     /* Supabase items 테이블 허용 컬럼만 추출
-       테이블에 없는 필드 포함 시 "could not find column" 오류 발생 방지 */
+       .select() 제거: insert 후 SELECT 시도 시 RLS 오류 방지 */
     const allowed={
       major_category: row.major_category||'',
       category:       row.category||'',
@@ -1103,10 +1103,11 @@ const SB={
       created_at:     row.created_at||null,
       updated_at:     row.updated_at||null,
     };
-    const {data,error}=await _sb.from('items').insert(allowed).select().single();
+    const {error}=await _sb.from('items').insert(allowed);
     if(error){Toast.show('품목 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.items.push(data);
-    return{ok:true,id:data.id};
+    /* insert 성공 시 로컬 캐시에 추가 (id는 임시값) */
+    DB.items.push({id:Date.now(),...allowed});
+    return{ok:true};
   },
   async updateItem(id,patch){
     if(!_sb){const i=DB.items.find(i=>i.id===id);if(i)Object.assign(i,patch);return{ok:true};}
@@ -1129,9 +1130,9 @@ const SB={
   /* ── 거래처 ── */
   async addVendor(row){
     if(!_sb){const id=Math.max(0,...DB.vendors.map(v=>v.id))+1;DB.vendors.push({id,...row});return{ok:true,id};}
-    const {data,error}=await _sb.from('vendors').insert(row).select().single();
+    const {error}=await _sb.from('vendors').insert(row);
     if(error){Toast.show('거래처 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.vendors.push(data);return{ok:true,id:data.id};
+    DB.vendors.push({id:Date.now(),...row});return{ok:true};
   },
   async updateVendor(id,patch){
     if(!_sb){const v=DB.vendors.find(v=>v.id===id);if(v)Object.assign(v,patch);return{ok:true};}
@@ -1149,9 +1150,9 @@ const SB={
   /* ── 부적합 ── */
   async addNc(row){
     if(!_sb){const id=Math.max(0,...DB.nc.map(n=>n.id))+1;DB.nc.push({id,...row});return{ok:true,id};}
-    const {data,error}=await _sb.from('nonconformances').insert(row).select().single();
+    const {error}=await _sb.from('nonconformances').insert(row);
     if(error){Toast.show('부적합 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.nc.push(data);return{ok:true,id:data.id};
+    DB.nc.push({id:Date.now(),...row});return{ok:true};
   },
   async updateNc(id,patch){
     if(!_sb){const n=DB.nc.find(n=>n.id===id);if(n)Object.assign(n,patch);return{ok:true};}
@@ -1169,9 +1170,9 @@ const SB={
   },
   async addEquip(row){
     if(!_sb){const id=Math.max(0,...DB.equip.map(e=>e.id))+1;DB.equip.push({id,...row});return{ok:true,id};}
-    const {data,error}=await _sb.from('equipment').insert(row).select().single();
+    const {error}=await _sb.from('equipment').insert(row);
     if(error){Toast.show('계측기 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.equip.push(data);return{ok:true,id:data.id};
+    DB.equip.push({id:Date.now(),...row});return{ok:true};
   },
   async updateEquip(id,patch){
     if(!_sb){const e=DB.equip.find(e=>e.id===id);if(e)Object.assign(e,patch);return{ok:true};}
@@ -1189,9 +1190,9 @@ const SB={
   },
   async addCal(row){
     if(!_sb){const id=Math.max(0,...DB.cals.map(c=>c.id))+1;DB.cals.push({id,...row});return{ok:true,id};}
-    const {data,error}=await _sb.from('calibrations').insert(row).select().single();
+    const {error}=await _sb.from('calibrations').insert(row);
     if(error){Toast.show('교정 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.cals.push(data);return{ok:true,id:data.id};
+    DB.cals.push({id:Date.now(),...row});return{ok:true};
   },
 
   /* ── 문서 ── */
@@ -1203,9 +1204,9 @@ const SB={
   },
   async addDoc(row){
     if(!_sb){const id=Math.max(0,...DB.docs.map(d=>d.id))+1;DB.docs.push({id,...row});return{ok:true,id};}
-    const {data,error}=await _sb.from('documents').insert(row).select().single();
+    const {error}=await _sb.from('documents').insert(row);
     if(error){Toast.show('문서 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.docs.push(data);return{ok:true,id:data.id};
+    DB.docs.push({id:Date.now(),...row});return{ok:true};
   },
   async updateDoc(id,patch){
     if(!_sb){const d=DB.docs.find(d=>d.id===id);if(d)Object.assign(d,patch);return{ok:true};}
@@ -1223,9 +1224,9 @@ const SB={
   },
   async addCar(row){
     if(!_sb){const id=Math.max(0,...DB.cars.map(c=>c.id))+1;DB.cars.push({id,...row});return{ok:true,id};}
-    const {data,error}=await _sb.from('corrective_actions').insert(row).select().single();
+    const {error}=await _sb.from('corrective_actions').insert(row);
     if(error){Toast.show('CAR 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.cars.push(data);return{ok:true,id:data.id};
+    DB.cars.push({id:Date.now(),...row});return{ok:true};
   },
   async updateCar(id,patch){
     if(!_sb){const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
