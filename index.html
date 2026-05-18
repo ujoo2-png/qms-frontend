@@ -39,6 +39,13 @@
   ║        Supabase SDK 연결 + SB 헬퍼 전체 CRUD 완성              ║
   ║  v2.14 F5 새로고침 로그아웃 버그 수정 (2026-05-14)             ║
   ║        C안: sessionStorage 로그인 상태 + 마지막 페이지 복원      ║
+  ║  v2.17 품목등록 개선 + 페이지네이션 UX (2026-05-18)          ║
+  ║        [1] 사이드바/TopNav 품질현황 대시보드 추가              ║
+  ║        [2] 품목분류 레이블 변경(분류→품목분류), 대분류 추가     ║
+  ║        [3] _iSave SB 연동 + 등록일/수정일 자동생성            ║
+  ║        [4] onDel 실제 삭제 반영 (SB.deleteItem 연동)          ║
+  ║        [5] 일괄등록 등록일 자동생성 + SB 연동                  ║
+  ║        [6] Tbl 페이지네이션: 건수선택+위치표시+첫끝버튼        ║
   ║  v2.16 품질현황 대시보드 신규 (C안, 2026-05-15)              ║
   ║        검사5종 미니차트+토글+누적대형차트+KPI+상세테이블       ║
   ║        CSS버그(.sp-head중복) 수정, 검사 더미데이터 23건 보강   ║
@@ -57,7 +64,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.16</title>
+<title>QMS - 품질경영시스템 v2.17</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -671,7 +678,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.16</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.17</div>
         </div>
       </div>
     </div>
@@ -768,7 +775,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.16 (2026-05-15) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.17 (2026-05-18) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -779,7 +786,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.16</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.17</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -798,6 +805,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="ni" data-p="users" onclick="Nav.go('users')"><span class="nii">👥</span><span class="nt">사용자 등록</span></div>
       </div>
       <div class="ns"><div class="nst">품질관리</div>
+        <div class="ni" data-p="quality_dash" onclick="Nav.go('quality_dash')"><span class="nii">📊</span><span class="nt">품질현황 대시보드</span></div>
         <div class="ni" data-p="insp_in" onclick="Nav.go('insp_in')"><span class="nii">🔍</span><span class="nt">수입검사</span></div>
         <div class="ni" data-p="insp_pr" onclick="Nav.go('insp_pr')"><span class="nii">⚙️</span><span class="nt">공정검사</span></div>
         <div class="ni" data-p="insp_pu" onclick="Nav.go('insp_pu')"><span class="nii">🛒</span><span class="nt">구매검사</span></div>
@@ -1621,7 +1629,9 @@ const Tbl={
     const c=typeof el==='string'?document.querySelector(el):el;
     if(!c)return;
     const total=data.length,pages=Math.max(1,Math.ceil(total/ps));
+    page=Math.min(Math.max(1,page),pages);
     const slice=data.slice((page-1)*ps,page*ps);
+    const from=(page-1)*ps+1, to=Math.min(page*ps,total);
     const ths=`<th class="tc"><input type="checkbox" onchange="Tbl.chkAll(this)"></th><th class="tn">No</th>${cols.map(col=>`<th style="${col.w?`width:${col.w}`:''}${col.align?`;text-align:${col.align}`:''}">${col.label}</th>`).join('')}`;
     const trs=slice.length===0
       ?`<tr><td colspan="${cols.length+2}" style="text-align:center;padding:36px;color:var(--tm)">데이터가 없습니다.</td></tr>`
@@ -1630,13 +1640,40 @@ const Tbl={
           <td class="tn">${(page-1)*ps+i+1}</td>
           ${cols.map(col=>{const v=row[col.key];return`<td style="${col.align?`text-align:${col.align}`:''}">${col.render?col.render(v,row):H.e(v??'')}</td>`}).join('')}
         </tr>`).join('');
+
+    /* ── 페이지네이션 UX 개선 ──
+       건수선택 / 위치표시(N-M/전체K건) / «‹ 번호 ›» 버튼 */
     let pg='';
-    if(pages>1){const s=Math.max(1,page-2),e2=Math.min(pages,page+2);const bs=[];for(let p=s;p<=e2;p++)bs.push(`<button class="pb${p===page?' on':''}" onclick="Tbl._pg(${p})">${p}</button>`);pg=`<div class="pg"><button class="pb" ${page===1?'disabled':''} onclick="Tbl._pg(${page-1})">‹</button>${bs.join('')}<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${page+1})">›</button></div>`;}
+    if(pages>0){
+      const s=Math.max(1,page-2), e2=Math.min(pages,s+4);
+      const bs=[];
+      bs.push(`<button class="pb" ${page===1?'disabled':''} onclick="Tbl._pg(1)" title="첫 페이지">«</button>`);
+      bs.push(`<button class="pb" ${page===1?'disabled':''} onclick="Tbl._pg(${page-1})" title="이전">‹</button>`);
+      if(s>1) bs.push(`<button class="pb" style="pointer-events:none;opacity:.4">…</button>`);
+      for(let p=s;p<=e2;p++) bs.push(`<button class="pb${p===page?' on':''}" onclick="Tbl._pg(${p})">${p}</button>`);
+      if(e2<pages) bs.push(`<button class="pb" style="pointer-events:none;opacity:.4">…</button>`);
+      bs.push(`<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${page+1})" title="다음">›</button>`);
+      bs.push(`<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${pages})" title="마지막">»</button>`);
+      pg=`<div class="pg">
+        <select class="fsel" style="height:28px;font-size:12px;padding:0 4px;margin-right:6px;border-radius:6px"
+          onchange="Tbl._psChange(this.value)" title="페이지당 표시 건수">
+          ${[10,20,50,100].map(n=>`<option value="${n}"${ps===n?' selected':''}>${n}건</option>`).join('')}
+        </select>
+        ${bs.join('')}
+      </div>`;
+    }
+
     c.innerHTML=`<div class="tw"><div class="ts"><table class="dt"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>
-      <div class="tfoot"><div class="tfi">전체 <strong>${H.n(total)}</strong>건</div>
-        <div class="tfa">${onDel?`<button class="btn bsm berr" id="btnDel" style="display:none" onclick="Tbl.delSel()">🗑️ 선택삭제</button>`:''}</div>${pg}</div></div>`;
+      <div class="tfoot">
+        <div class="tfi">
+          ${total>0?`<strong style="color:var(--pri)">${H.n(from)}</strong>–<strong style="color:var(--pri)">${H.n(to)}</strong> / 전체 <strong>${H.n(total)}</strong>건`:'전체 <strong>0</strong>건'}
+        </div>
+        <div class="tfa">${onDel?`<button class="btn bsm berr" id="btnDel" style="display:none" onclick="Tbl.delSel()">🗑️ 선택삭제</button>`:''}</div>
+        ${pg}
+      </div></div>`;
     if(onRow)c.querySelectorAll('tbody tr').forEach(tr=>tr.addEventListener('click',ev=>{if(ev.target.type==='checkbox')return;const r=data.find(x=>String(x.id)===tr.dataset.id);if(r)onRow(r)}));
-    Tbl._onDel=onDel;Tbl._pgFn=p=>Tbl.render({el,cols,data,onDel,onRow,ps,page:p});
+    Tbl._onDel=onDel;
+    Tbl._cur={el,cols,data,onDel,onRow,ps,page};
   },
   chkAll(chk){document.querySelectorAll('.rck').forEach(c=>c.checked=chk.checked);this.onChk()},
   onChk(){
@@ -1647,7 +1684,9 @@ const Tbl={
   },
   getSel(){return Array.from(document.querySelectorAll('.rck:checked')).map(c=>c.value)},
   delSel(){const ids=this.getSel();if(!ids.length)return;Modal.confirm({title:'선택 삭제',msg:`선택한 ${ids.length}건을 삭제하시겠습니까?`,danger:true,onOk:()=>{if(this._onDel)this._onDel(ids)}})},
-  _pg(p){if(this._pgFn)this._pgFn(p)},
+  _pg(p){if(this._cur)Tbl.render({...this._cur,page:p})},
+  _psChange(ps){if(this._cur)Tbl.render({...this._cur,ps:Number(ps),page:1})},
+  _cur:null,
 };
 
 /* ══ 댓글 ══ */
@@ -1951,7 +1990,7 @@ function _validateItem(code){
 const TopNav={
   _map:{
     '기준정보':    [{label:'품목 등록',page:'items'},{label:'거래처 등록',page:'vendors'},{label:'사용자 등록',page:'users'}],
-    '품질관리':    [{label:'수입검사',page:'insp_in'},{label:'공정검사',page:'insp_pr'},{label:'구매검사',page:'insp_pu'},{label:'외주검사',page:'insp_ou'},{label:'최종검사',page:'insp_fi'},{label:'부적합 관리',page:'nc'},{label:'8D Report',page:'nc_8d'},{label:'반품/폐기',page:'nc_dispose'},{label:'불량 트렌드',page:'nc_trend'}],
+    '품질관리':    [{label:'품질현황 대시보드',page:'quality_dash'},{label:'수입검사',page:'insp_in'},{label:'공정검사',page:'insp_pr'},{label:'구매검사',page:'insp_pu'},{label:'외주검사',page:'insp_ou'},{label:'최종검사',page:'insp_fi'},{label:'부적합 관리',page:'nc'},{label:'8D Report',page:'nc_8d'},{label:'반품/폐기',page:'nc_dispose'},{label:'불량 트렌드',page:'nc_trend'}],
     '검사 고도화': [{label:'검사 기준서',page:'insp_std'},{label:'검사 성적서',page:'insp_cert'},{label:'LOT 추적성',page:'lot_trace'},{label:'Hold 관리',page:'hold_mgmt'},{label:'재검사 관리',page:'reinsp'}],
     '공급업체 품질':[{label:'업체 평가',page:'sqm_eval'},{label:'업체 심사',page:'sqm_audit'},{label:'SQM 대시보드',page:'sqm_dash'}],
     '계측기관리':  [{label:'계측기 등록',page:'equip'},{label:'교정 관리',page:'cal'},{label:'MSA 분석',page:'msa'}],
@@ -2123,7 +2162,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.16</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.17</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -2280,21 +2319,37 @@ async items(){
   const byType={};allItems.forEach(i=>{byType[i.category]=(byType[i.category]||0)+1});
   const withFile=allItems.filter(i=>FM.has(`item-${i.id}`)).length;
   const COLS=[
-    {key:'category',label:'분류',w:'72px',render:v=>`<span class="badge bblu">${H.e(v||'-')}</span>`},
-    {key:'item_code',label:'품목코드',w:'100px'},
-    {key:'item_name',label:'품목명'},
-    {key:'spec',label:'규격',w:'105px'},
-    {key:'unit',label:'단위',w:'48px',align:'center'},
-    {key:'material',label:'재질',w:'78px'},
-    {key:'vendor_name',label:'주 거래처',w:'110px'},
-    {key:'active',label:'사용',w:'52px',align:'center',render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'사용':'미사용'}</span>`},
-    {key:'created_at',label:'등록일',w:'84px'},
-    {key:'updated_at',label:'수정일',w:'84px'},
-    {key:'id',label:'파일',w:'68px',align:'center',render:(v)=>FM.btn(`item-${v}`)},
+    {key:'major_category',label:'대분류',  w:'80px', render:v=>`<span class="badge bgry">${H.e(v||'-')}</span>`},
+    {key:'category',      label:'품목분류', w:'78px', render:v=>`<span class="badge bblu">${H.e(v||'-')}</span>`},
+    {key:'item_code',     label:'품목코드', w:'100px'},
+    {key:'item_name',     label:'품목명'},
+    {key:'spec',          label:'규격',     w:'105px'},
+    {key:'unit',          label:'단위',     w:'48px', align:'center'},
+    {key:'material',      label:'재질',     w:'78px'},
+    {key:'vendor_name',   label:'주 거래처',w:'110px'},
+    {key:'active',        label:'사용',     w:'52px', align:'center',
+      render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'사용':'미사용'}</span>`},
+    {key:'created_at',    label:'등록일',   w:'84px'},
+    {key:'updated_at',    label:'수정일',   w:'84px'},
+    {key:'id',            label:'파일',     w:'68px', align:'center',
+      render:(v)=>FM.btn(`item-${v}`)},
   ];
   const render=()=>{
     const d=data.filter(i=>(search?i.item_name.includes(search)||i.item_code.includes(search):true)&&(cat?i.category===cat:true));
-    const tc=w.querySelector('#itbl');if(tc)Tbl.render({el:'#itbl',cols:COLS,data:d,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),onRow:row=>Pages._iForm(row)});
+    const tc=w.querySelector('#itbl');
+    if(tc) Tbl.render({el:'#itbl',cols:COLS,data:d,
+      /* 버그수정: onDel 실제 DB 삭제 반영 + SB 연동 */
+      onDel:async(ids)=>{
+        for(const id of ids){
+          await SB.deleteItem(id);
+        }
+        Toast.show(`${ids.length}건 삭제되었습니다.`,'ok');
+        // 로컬 캐시에서도 제거
+        DB.items=DB.items.filter(i=>!ids.includes(i.id));
+        data=data.filter(i=>!ids.includes(i.id));
+        render();
+      },
+      onRow:row=>Pages._iForm(row)});
   };
   w.innerHTML=`
     <div class="stat-dash">
@@ -2326,33 +2381,80 @@ async items(){
 },
 _iForm(row=null){
   const e=!!row;
+  const MAJOR=['기계','전자','화학','소재','기타'];
+  const CAT=['원자재','부자재','반제품','완제품','소모품'];
   Modal.open({title:e?'품목 수정':'품목 등록',size:'mlg',
     body:`<div class="fg2">
-      <div class="fgroup"><label class="fl req">분류</label><select class="fc" id="ica">${['원자재','부자재','반제품','완제품','소모품'].map(c=>`<option ${row?.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="fgroup"><label class="fl req">품목코드</label><input class="fc" id="ic" value="${H.e(row?.item_code||'')}" placeholder="예) RAW-001" ${e?'readonly':''}></div>
-      <div class="fgroup"><label class="fl req">품목명</label><input class="fc" id="in" value="${H.e(row?.item_name||'')}"></div>
-      <div class="fgroup"><label class="fl">규격</label><input class="fc" id="isp" value="${H.e(row?.spec||'')}" placeholder="예) SUS304 2T"></div>
-      <div class="fgroup"><label class="fl">단위</label><select class="fc" id="iu">${['EA','KG','L','M','BOX','SET','개','개소'].map(u=>`<option ${row?.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
-      <div class="fgroup"><label class="fl">재질</label><input class="fc" id="imt" value="${H.e(row?.material||'')}" placeholder="예) SUS304, AL6061"></div>
-      <div class="fgroup"><label class="fl">주 거래처</label><select class="fc" id="ivn"><option value="">선택</option>${DB.vendors.map(v=>`<option value="${v.id}" ${row?.vendor_id===v.id?'selected':''}>${H.e(v.vendor_name)}</option>`).join('')}</select></div>
-      <div class="fgroup"><label class="fl">사용여부</label><select class="fc" id="iuse"><option value="1" ${!row||row.active?'selected':''}>사용</option><option value="0" ${row&&!row.active?'selected':''}>미사용</option></select></div>
-      ${e?`<div class="fgroup"><label class="fl">등록일</label><input class="fc" value="${H.e(row?.created_at||'')}" readonly></div>`:'<div class="fgroup"></div>'}
-      ${e?`<div class="fgroup"><label class="fl">수정일</label><input class="fc" value="${H.e(row?.updated_at||H.today())}" readonly></div>`:'<div class="fgroup"></div>'}
-      ${e?`<div class="fgroup ff"><label class="fl">첨부파일</label>${FM.btn('item-'+row.id)} <span style="font-size:12px;color:var(--tm);margin-left:8px">${FM.has('item-'+row.id)?FM.get('item-'+row.id).length+'개 파일 등록됨':'등록된 파일 없음'}</span></div>`:''}
-      <div class="fgroup ff"><label class="fl">비고</label><textarea class="fc" id="irmk" rows="2">${H.e(row?.remark||'')}</textarea></div>
+      <div class="fgroup"><label class="fl">대분류</label>
+        <select class="fc" id="imaj">
+          <option value="">선택</option>
+          ${MAJOR.map(c=>`<option ${row?.major_category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fgroup"><label class="fl req">품목분류</label>
+        <select class="fc" id="ica">
+          ${CAT.map(c=>`<option ${row?.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fgroup"><label class="fl req">품목코드</label>
+        <input class="fc" id="ic" value="${H.e(row?.item_code||'')}" placeholder="예) RAW-001" ${e?'readonly':''}>
+      </div>
+      <div class="fgroup"><label class="fl req">품목명</label>
+        <input class="fc" id="in" value="${H.e(row?.item_name||'')}">
+      </div>
+      <div class="fgroup"><label class="fl">규격</label>
+        <input class="fc" id="isp" value="${H.e(row?.spec||'')}" placeholder="예) SUS304 2T">
+      </div>
+      <div class="fgroup"><label class="fl">단위</label>
+        <select class="fc" id="iu">
+          ${['EA','KG','L','M','BOX','SET','개','개소'].map(u=>`<option ${row?.unit===u?'selected':''}>${u}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fgroup"><label class="fl">재질</label>
+        <input class="fc" id="imt" value="${H.e(row?.material||'')}" placeholder="예) SUS304, AL6061">
+      </div>
+      <div class="fgroup"><label class="fl">주 거래처</label>
+        <select class="fc" id="ivn">
+          <option value="">선택</option>
+          ${DB.vendors.map(v=>`<option ${row?.vendor_id===v.id?'selected':''}>${H.e(v.vendor_name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fgroup"><label class="fl">사용여부</label>
+        <select class="fc" id="iuse">
+          <option value="1" ${!row||row.active?'selected':''}>사용</option>
+          <option value="0" ${row&&!row.active?'selected':''}>미사용</option>
+        </select>
+      </div>
+      ${e?`<div class="fgroup"><label class="fl">등록일</label>
+        <input class="fc" value="${H.e(row?.created_at||'')}" readonly style="background:#f8fafc"></div>`
+       :`<div class="fgroup"></div>`}
+      ${e?`<div class="fgroup"><label class="fl">수정일</label>
+        <input class="fc" value="${H.e(row?.updated_at||H.today())}" readonly style="background:#f8fafc"></div>`
+       :`<div class="fgroup"></div>`}
+      ${e?`<div class="fgroup ff"><label class="fl">첨부파일</label>
+        ${FM.btn('item-'+row.id)}
+        <span style="font-size:12px;color:var(--tm);margin-left:8px">
+          ${FM.has('item-'+row.id)?FM.get('item-'+row.id).length+'개 파일':'등록된 파일 없음'}
+        </span></div>`:''}
+      <div class="fgroup ff"><label class="fl">비고</label>
+        <textarea class="fc" id="irmk" rows="2">${H.e(row?.remark||'')}</textarea>
+      </div>
     </div>${e?`<div id="icmt"></div>`:''}`,
-    foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Pages._iSave(${row?.id||'null'})">${e?'저장':'등록'} <span class="kbd">F8</span></button>`
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+      <button class="btn bpri btn-f8" onclick="Pages._iSave(${row?.id||'null'})">
+        ${e?'저장':'등록'} <span class="kbd">F8</span>
+      </button>`
   });
   if(e)setTimeout(()=>Cmt.render('#icmt',`item-${row.id}`),80);
 },
-_iSave(id){
+async _iSave(id){
   const v=k=>document.getElementById(k)?.value.trim()||'';
-  const cat=v('ica'),code=v('ic'),name=v('in');
+  const major=v('imaj'), cat=v('ica'), code=v('ic'), name=v('in');
   // 필수값 검증
-  if(!cat){Toast.show('분류는 필수입니다.','warn');return}
+  if(!cat){Toast.show('품목분류는 필수입니다.','warn');return}
   if(!code){Toast.show('품목코드는 필수입니다.','warn');document.getElementById('ic')?.classList.add('err');return}
   if(!name){Toast.show('품목명은 필수입니다.','warn');document.getElementById('in')?.classList.add('err');return}
-  // 품목코드 중복 검사 (신규 등록 시 + 수정 시 다른 항목과 중복 여부)
+  // 품목코드 중복 검사
   const dup=DB.items.find(i=>i.item_code===code&&(!id||i.id!==id));
   if(dup){
     Toast.show(`⚠️ 품목코드 "${code}"는 이미 등록된 코드입니다. (${dup.item_name})`,'err',5000);
@@ -2360,21 +2462,25 @@ _iSave(id){
   }
   const today=H.today();
   const vidx=DB.vendors.find(vn=>vn.vendor_name===v('ivn'))?.id||null;
+  const row={
+    major_category:major, category:cat, item_code:code, item_name:name,
+    spec:v('isp'), unit:v('iu'), material:v('imt'),
+    vendor_name:v('ivn'), vendor_id:vidx,
+    active:Number(document.getElementById('iuse')?.value||1),
+    remark:v('irmk'),
+  };
   if(id){
-    const idx=DB.items.findIndex(i=>i.id===id);
-    if(idx>=0) DB.items[idx]={...DB.items[idx],category:cat,item_code:code,item_name:name,
-      spec:v('isp'),unit:v('iu'),material:v('imt'),vendor_name:v('ivn'),vendor_id:vidx,
-      active:Number(document.getElementById('iuse')?.value||1),remark:v('irmk'),updated_at:today};
+    // 수정: updated_at 자동 갱신
+    const res=await SB.updateItem(id,{...row, updated_at:today});
+    if(!res.ok) return;
     Toast.show('품목이 수정되었습니다.','ok');
   } else {
-    const newId=Math.max(0,...DB.items.map(i=>i.id))+1;
-    DB.items.push({id:newId,category:cat,item_code:code,item_name:name,spec:v('isp'),
-      unit:v('iu'),material:v('imt'),vendor_name:v('ivn'),vendor_id:vidx,
-      active:Number(document.getElementById('iuse')?.value||1),remark:v('irmk'),
-      created_at:today,updated_at:today});
+    // 신규: created_at + updated_at 자동 생성
+    const res=await SB.addItem({...row, created_at:today, updated_at:today});
+    if(!res.ok) return;
     Toast.show('품목이 등록되었습니다.','ok');
   }
-  Modal.close();Pages.items();
+  Modal.close(); Pages.items();
 },
 
 /* ── 거래처 ── */
@@ -4519,14 +4625,15 @@ const ExcelMgr={
     items:{
       title:'품목등록',
       cols:[
-        {key:'category',  label:'분류',      req:true,  sample:'원자재'},
-        {key:'item_code', label:'품목코드',   req:true,  sample:'RAW-001'},
-        {key:'item_name', label:'품목명',     req:true,  sample:'스테인레스 플레이트'},
-        {key:'spec',      label:'규격',       req:false, sample:'SUS304 2T'},
-        {key:'unit',      label:'단위',       req:false, sample:'EA'},
-        {key:'material',  label:'재질',       req:false, sample:'SUS304'},
-        {key:'vendor_name',label:'주 거래처', req:false, sample:'㈜한국스틸'},
-        {key:'active',    label:'사용여부',   req:false, sample:'사용'},
+        {key:'major_category',label:'대분류',    req:false, sample:'기계'},
+        {key:'category',  label:'품목분류',  req:true,  sample:'원자재'},
+        {key:'item_code', label:'품목코드',  req:true,  sample:'RAW-001'},
+        {key:'item_name', label:'품목명',    req:true,  sample:'스테인레스 플레이트'},
+        {key:'spec',      label:'규격',      req:false, sample:'SUS304 2T'},
+        {key:'unit',      label:'단위',      req:false, sample:'EA'},
+        {key:'material',  label:'재질',      req:false, sample:'SUS304'},
+        {key:'vendor_name',label:'주 거래처',req:false, sample:'㈜한국스틸'},
+        {key:'active',    label:'사용여부',  req:false, sample:'사용'},
         {key:'remark',    label:'비고',       req:false, sample:''},
       ],
       dupKey:'item_code',
@@ -4963,25 +5070,47 @@ const ExcelMgr={
   },
 
   /* ── 일괄등록 실행 ── */
-  _register(page){
+  async _register(page){
     if(!this._parsed){Toast.show('먼저 파일을 업로드하세요.','warn');return}
     const toRegister=this._parsed.filter(r=>!r._dup&&!r._validErr);
     if(!toRegister.length){Toast.show('등록가능한 데이터가 없습니다.','warn');return}
     const sc=this._schemas[page];
-    // 더미: 실제로는 DB에 추가 (백엔드 연동 전 시뮬레이션)
-    let nextId=(sc.getData().length>0?Math.max(...sc.getData().map(r=>r.id||0)):0)+1;
-    toRegister.forEach(r=>{
-      const newRow={id:nextId++,...r};
-      delete newRow._dup; delete newRow._keyVal;
-      // 숫자 변환
-      if(newRow.qty!==undefined)newRow.qty=Number(newRow.qty)||0;
-      if(newRow.active!==undefined)newRow.active=newRow.active==='사용'?1:0;
-      sc.getData().push(newRow);
-    });
-    Toast.show(`${toRegister.length}건이 등록되었습니다.`,'ok');
+    const today=H.today();
+    let successCnt=0, failCnt=0;
+
+    for(const r of toRegister){
+      const newRow={...r};
+      delete newRow._dup; delete newRow._keyVal; delete newRow._validErr;
+      // 공통 변환
+      if(newRow.qty!==undefined) newRow.qty=Number(newRow.qty)||0;
+      if(newRow.pass_qty!==undefined) newRow.pass_qty=Number(newRow.pass_qty)||0;
+      if(newRow.fail_qty!==undefined) newRow.fail_qty=Number(newRow.fail_qty)||0;
+      if(newRow.defect_rate!==undefined) newRow.defect_rate=Number(newRow.defect_rate)||0;
+      if(newRow.active!==undefined) newRow.active=newRow.active==='사용'?1:0;
+      // 등록일 자동생성 (버그수정: 일괄등록 시 created_at 없음)
+      if(!newRow.created_at) newRow.created_at=today;
+      if(!newRow.updated_at) newRow.updated_at=today;
+
+      // SB 연동 저장 (페이지별)
+      let res={ok:false};
+      if(page==='items') res=await SB.addItem(newRow);
+      else if(page==='vendors') res=await SB.addVendor(newRow);
+      else if(page==='users') res=await SB.addUser(newRow);
+      else {
+        // 기타 (검사 등): 더미 직접 추가
+        const nextId=(sc.getData().length>0?Math.max(...sc.getData().map(r=>r.id||0)):0)+1;
+        sc.getData().push({id:nextId,...newRow});
+        res={ok:true};
+      }
+      if(res.ok) successCnt++; else failCnt++;
+    }
+
+    const msg=failCnt>0
+      ?`${successCnt}건 등록, ${failCnt}건 실패`
+      :`${successCnt}건이 등록되었습니다.`;
+    Toast.show(msg, failCnt>0?'warn':'ok');
     Modal.close();
-    // 페이지 새로고침
-    if(Nav&&page)Nav.go(page);
+    if(Nav&&page) Nav.go(page);
   },
 
   /* ── 엑셀 다운로드 (현재 목록) ── */
