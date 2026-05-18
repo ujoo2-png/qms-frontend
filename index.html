@@ -67,7 +67,9 @@
   ║        [10] 성능: 건당 1건 insert → 500건 단위 bulk insert       ║
   ║            12,078건 기준: API 호출 12,078번→25번으로 감소        ║
   ║            실패 시 건별 재시도 폴백 + 진행률 Toast 표시          ║
-  ║        [11] 등록 건수 제한 없음 확인 (용량 500MB만 제한)         ║수정 (.topbar/.dt 충돌 해결, 통합)          ║
+  ║        [11] 등록 건수 제한 없음 확인 (용량 500MB만 제한)
+  ║        [12] 버그: 500건 청크 payload 초과 → 100건+50ms딜레이 수정║
+  ║        [13] 버그: FM 미리보기 url:null → ObjectURL 생성으로 수정║         ║수정 (.topbar/.dt 충돌 해결, 통합)          ║
   ╠══════════════════════════════════════════════════════════════╣
   ║  로그인: admin / admin1234                                    ║
   ║  향후 계획: Supabase 백엔드 연동 (프로젝트 URL + anon key)     ║
@@ -1872,22 +1874,25 @@ const FM={
       :files.map((f,i)=>{
         const canView=this._canPreview(f.name);
         const isImg=this._isImage(f.name);
+        /* previewBtn: url 있으면 바로보기, isLocal이면 로컬 ObjectURL로 보기, 없으면 비활성 */
         const previewBtn=f.url
-          ?`<button class="btn bxs bout" onclick="FM._preview('${f.url}','${H.e(f.name)}',${isImg})" title="바로보기">
+          ?`<button class="btn bxs bout" onclick="FM._preview('${f.url}','${H.e(f.name)}',${isImg})" title="${f.isLocal?'로컬 미리보기(탭 유지 시 사용 가능)':'바로보기'}">
               ${isImg?'🖼️ 보기':'👁️ 보기'}
             </button>`
-          :`<button class="btn bxs bout" style="opacity:.4" title="URL 없음(더미)">👁️</button>`;
+          :`<button class="btn bxs bout" style="opacity:.4" title="Supabase 연결 후 미리보기 가능">👁️</button>`;
         return`<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--bg);border-radius:var(--r);margin-bottom:6px">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
               ${canView?'📄':'📎'} ${H.e(f.name)}
+              ${f.isLocal?`<span style="font-size:10px;color:var(--acc);margin-left:6px;font-weight:400">로컬</span>`:''}
             </div>
             <div style="font-size:11px;color:var(--tm)">${f.size||''} · ${f.date||''}</div>
           </div>
           <div style="display:flex;gap:5px;flex-shrink:0">
             ${previewBtn}
-            ${f.url?`<a class="btn bxs bout" href="${f.url}" download="${H.e(f.name)}" onclick="event.stopPropagation()" title="다운로드">⬇️</a>`
-              :`<button class="btn bxs bout" style="opacity:.4" title="Supabase 연결 후 사용 가능">⬇️</button>`}
+            ${f.url&&!f.isLocal
+              ?`<a class="btn bxs bout" href="${f.url}" download="${H.e(f.name)}" onclick="event.stopPropagation()" title="다운로드">⬇️</a>`
+              :`<button class="btn bxs bout" style="opacity:.4" title="Supabase 연결 후 다운로드 가능">⬇️</button>`}
             <button class="btn bxs berr" onclick="FM.del('${k}',${i})" title="삭제">🗑️</button>
           </div>
         </div>`;
@@ -1943,18 +1948,23 @@ const FM={
     Toast.show(`${rawFiles.length}개 업로드 중...`,'info',60000);
 
     for(const f of rawFiles){
-      // Supabase Storage 업로드 시도
+      /* Supabase Storage 업로드 시도 */
       const uploaded=await SB.uploadFile(k,f);
       if(uploaded){
         App.files[k].push(uploaded);
       } else {
-        // 폴백: 로컬 더미 (Supabase 미연결 시)
+        /* 폴백: 로컬 ObjectURL 생성
+           - Supabase 미연결 또는 업로드 실패 시 사용
+           - URL.createObjectURL(): 탭 열려있는 동안 미리보기 가능
+           - 새로고침 후에는 url 만료 (sessionStorage는 name/size/date만 복원) */
+        const localUrl=URL.createObjectURL(f);
         App.files[k].push({
           name:f.name,
           size:H._fmtSize(f.size),
           date:H.today(),
           path:null,
-          url:null,
+          url:localUrl,
+          isLocal:true,
         });
       }
     }
@@ -5137,12 +5147,12 @@ const ExcelMgr={
 
   /* ── 일괄등록 실행 ──
      [v2.17 수정]
-     - 버그: active '사용'→1 변환 누락 수정
-     - 버그: 건당 1개씩 insert → API 분당 제한 초과
-       해결: 500건 단위 bulk insert (배열로 한 번에 전송)
-     - 진행률 Toast 표시
-     - Supabase 등록 건수 제한: 없음 (용량만 500MB 제한)
-       단, 무료 플랜 분당 API 요청 제한 → 청크 분할로 해결 */
+     - 버그: active '사용'→1 변환 누락 수정 (Number('사용')=NaN→0 문제)
+     - 버그: failCnt 이중 계산 수정
+     - 버그: 500건 청크 → Supabase payload 초과로 실패
+       해결: 100건 청크 + 50ms 딜레이 (분당 제한 회피)
+     - 안전: try/catch 로 청크 실패시 건별 재시도 후 계속 진행
+     - 등록 건수 제한: 없음 (Supabase DB 용량 500MB만 제한) */
   async _register(page){
     if(!this._parsed){Toast.show('먼저 파일을 업로드하세요.','warn');return}
     const toRegister=this._parsed.filter(r=>!r._dup&&!r._validErr);
@@ -5150,35 +5160,27 @@ const ExcelMgr={
     const sc=this._schemas[page];
     const today=H.today();
 
-    /* ── 데이터 전처리 (공통 변환) ── */
+    /* ── 데이터 전처리 ── */
     const rows=toRegister.map(r=>{
       const row={...r};
-      // 내부 처리용 필드 제거
       delete row._dup; delete row._keyVal; delete row._validErr;
-      // 숫자 변환
       if(row.qty!==undefined)         row.qty=Number(row.qty)||0;
       if(row.pass_qty!==undefined)    row.pass_qty=Number(row.pass_qty)||0;
       if(row.fail_qty!==undefined)    row.fail_qty=Number(row.fail_qty)||0;
       if(row.defect_rate!==undefined) row.defect_rate=Number(row.defect_rate)||0;
-      // active 변환: '사용'→1, '미사용'→0, 숫자→그대로
-      if(row.active!==undefined){
-        if(typeof row.active==='string'){
-          row.active=row.active==='사용'?1:row.active==='미사용'?0:1;
-        } else {
-          row.active=Number(row.active)||1;
-        }
+      /* active: '사용'→1, '미사용'→0, 숫자→그대로 */
+      if(typeof row.active==='string'){
+        row.active=row.active==='사용'?1:row.active==='미사용'?0:1;
       } else {
-        row.active=1; // 기본값: 사용
+        row.active=row.active!==undefined?Number(row.active):1;
       }
-      // 등록일 자동생성
       if(!row.created_at) row.created_at=today;
       if(!row.updated_at) row.updated_at=today;
       return row;
     });
 
-    /* ── Supabase 연결 여부에 따라 분기 ── */
+    /* ── 더미 모드 ── */
     if(!_sb){
-      /* 더미 모드: 로컬 DB에 직접 추가 */
       const data=sc.getData();
       let nextId=data.length>0?Math.max(...data.map(r=>r.id||0))+1:1;
       rows.forEach(row=>data.push({id:nextId++,...row}));
@@ -5188,77 +5190,87 @@ const ExcelMgr={
       return;
     }
 
-    /* ── Supabase bulk insert (청크 단위) ──
-       Supabase는 배열로 한 번에 insert 가능 → API 호출 수 대폭 감소
-       청크 크기: 500건 (안전한 크기, 무료 플랜 기준)
-       등록 건수 제한: 없음 (DB 용량 500MB만 제한) */
-    const CHUNK=500;
+    /* ── items 허용 컬럼 추출 함수 ── */
+    const toAllowed=row=>page==='items'?{
+      major_category:row.major_category||'',
+      category:      row.category||'',
+      item_code:     row.item_code||'',
+      item_name:     row.item_name||'',
+      spec:          row.spec||'',
+      unit:          row.unit||'EA',
+      material:      row.material||'',
+      vendor_id:     row.vendor_id||null,
+      vendor_name:   row.vendor_name||'',
+      active:        row.active,
+      remark:        row.remark||'',
+      created_at:    row.created_at||null,
+      updated_at:    row.updated_at||null,
+    }:row;
+
+    /* ── 테이블 매핑 ── */
+    const tableMap={
+      items:'items', vendors:'vendors', users:'users',
+      insp_in:'inspections', insp_pr:'inspections',
+      insp_pu:'inspections', insp_ou:'inspections', insp_fi:'inspections',
+      nc:'nonconformances', equip:'equipment',
+      cal:'calibrations', docs:'documents', car:'corrective_actions',
+    };
+    const tableName=tableMap[page]||page;
+
+    /* ── Supabase bulk insert: 100건 청크 + 50ms 딜레이 ──
+       100건: Supabase payload 안전 크기 (500건은 초과 가능)
+       딜레이: 분당 요청 제한 회피
+       failCnt 이중 계산 방지: chunk 실패→건별재시도 시 별도 카운트 */
+    const CHUNK=100;
     let successCnt=0, failCnt=0;
     const totalChunks=Math.ceil(rows.length/CHUNK);
 
-    /* 진행률 표시 */
-    const showProgress=(done,total)=>{
+    const showProgress=done=>{
       document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
-      Toast.show(`등록 중... ${done}/${total}건 (${Math.round(done/total*100)}%)`, 'info', 60000);
+      const pct=Math.round(done/rows.length*100);
+      Toast.show(`등록 중... ${done}/${rows.length}건 (${pct}%)`,'info',60000);
     };
 
     for(let ci=0;ci<totalChunks;ci++){
       const chunk=rows.slice(ci*CHUNK,(ci+1)*CHUNK);
-      showProgress(ci*CHUNK, rows.length);
+      showProgress(ci*CHUNK);
+      const insertRows=chunk.map(toAllowed);
 
-      /* items: 허용 컬럼만 추출 (schema 오류 방지) */
-      const insertRows = page==='items'
-        ? chunk.map(row=>({
-            major_category: row.major_category||'',
-            category:       row.category||'',
-            item_code:      row.item_code||'',
-            item_name:      row.item_name||'',
-            spec:           row.spec||'',
-            unit:           row.unit||'EA',
-            material:       row.material||'',
-            vendor_id:      row.vendor_id||null,
-            vendor_name:    row.vendor_name||'',
-            active:         row.active,
-            remark:         row.remark||'',
-            created_at:     row.created_at||null,
-            updated_at:     row.updated_at||null,
-          }))
-        : chunk;
-
-      /* 테이블 매핑 */
-      const tableMap={
-        items:'items', vendors:'vendors', users:'users',
-        insp_in:'inspections', insp_pr:'inspections',
-        insp_pu:'inspections', insp_ou:'inspections', insp_fi:'inspections',
-        nc:'nonconformances', equip:'equipment',
-        cal:'calibrations', docs:'documents', car:'corrective_actions',
-      };
-      const tableName=tableMap[page]||page;
-
-      const {error}=await _sb.from(tableName).insert(insertRows);
-      if(error){
-        console.error(`[SB] bulk insert 실패 chunk${ci}:`, error.message);
-        failCnt+=chunk.length;
-        /* 실패 시 건별 재시도 */
-        for(const row of insertRows){
-          const {error:e2}=await _sb.from(tableName).insert(row);
-          if(e2){ failCnt++; console.error('[SB] 단건 실패:', e2.message); }
-          else { successCnt++; failCnt--; }
+      try{
+        const {error}=await _sb.from(tableName).insert(insertRows);
+        if(!error){
+          successCnt+=chunk.length;
+          chunk.forEach(row=>sc.getData().push({id:Date.now()+Math.random(),...row}));
+        } else {
+          /* 청크 실패 → 건별 재시도 (failCnt 초기화 후 새로 카운트) */
+          console.warn(`[SB] 청크${ci} 실패(${error.message}) → 건별 재시도`);
+          for(const row of insertRows){
+            try{
+              const {error:e2}=await _sb.from(tableName).insert(row);
+              if(!e2){ successCnt++; sc.getData().push({id:Date.now()+Math.random(),...row}); }
+              else{ failCnt++; console.error('[SB] 단건 실패:', e2.message); }
+            }catch(e3){ failCnt++; }
+          }
         }
-      } else {
-        successCnt+=chunk.length;
-        /* 로컬 캐시에도 추가 */
-        const data=sc.getData();
-        chunk.forEach(row=>data.push({id:Date.now()+Math.random(),...row}));
+      }catch(e){
+        console.error('[SB] 청크 예외:', e);
+        for(const row of insertRows){
+          try{
+            const {error:e2}=await _sb.from(tableName).insert(row);
+            if(!e2) successCnt++; else failCnt++;
+          }catch(e3){ failCnt++; }
+        }
       }
+
+      /* 청크간 딜레이 50ms */
+      if(ci<totalChunks-1) await new Promise(res=>setTimeout(res,50));
     }
 
-    /* 결과 토스트 */
     document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
     const msg=failCnt>0
-      ?`✅ ${successCnt}건 등록 완료 / ❌ ${failCnt}건 실패`
+      ?`✅ ${successCnt}건 등록 / ❌ ${failCnt}건 실패`
       :`✅ ${successCnt}건 모두 등록 완료`;
-    Toast.show(msg, failCnt>0?'warn':'ok', 5000);
+    Toast.show(msg,failCnt>0?'warn':'ok',6000);
     Modal.close();
     if(Nav&&page) Nav.go(page);
   },
