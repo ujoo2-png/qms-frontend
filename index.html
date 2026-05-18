@@ -39,6 +39,9 @@
   ║        Supabase SDK 연결 + SB 헬퍼 전체 CRUD 완성              ║
   ║  v2.14 F5 새로고침 로그아웃 버그 수정 (2026-05-14)             ║
   ║        C안: sessionStorage 로그인 상태 + 마지막 페이지 복원      ║
+  ║  v2.16 품질현황 대시보드 신규 (C안, 2026-05-15)              ║
+  ║        검사5종 미니차트+토글+누적대형차트+KPI+상세테이블       ║
+  ║        CSS버그(.sp-head중복) 수정, 검사 더미데이터 23건 보강   ║
   ║  v2.15 파일관리 B안 완전 구현 + CSS 중복 수정 (2026-05-15)      ║
   ║        [1] FM 버그1: 업로드 후 버튼 즉시 갱신 (_refreshBtn)     ║
   ║        [2] FM 버그2: 새로고침 후 파일 복원 (sessionStorage)     ║
@@ -54,7 +57,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.15</title>
+<title>QMS - 품질경영시스템 v2.16</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -579,15 +582,16 @@ textarea.fc{resize:vertical;min-height:68px}
 .bout .kbd{background:#e2e8f0;color:#475569;border-color:#cbd5e1}
 
 /* ── 드래그 이동 가능 모달/팝업 헤더 ── */
-.sp-head{cursor:move;user-select:none}
+/* ── 드래그 이동 가능 SearchPop 헤더 ── */
+.sp-head{cursor:move;user-select:none;padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 
 /* ── Search 팝업 ── */
 .sp-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(2px);
   z-index:300;display:flex;align-items:center;justify-content:center;padding:16px}
 .sp-box{background:#fff;border-radius:var(--rx);width:100%;max-width:780px;max-height:88vh;
   display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.18);animation:mIn .2s ease}
-.sp-head{padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;
-  justify-content:space-between;flex-shrink:0;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:var(--rx) var(--rx) 0 0}
+/* .sp-head: cursor:move 통합됨 (위에 선언) — 여기는 추가 스타일만 */
+.sp-head{background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:var(--rx) var(--rx) 0 0}
 .sp-head h3{font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
 .sp-close{width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,.15);
   color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -667,7 +671,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.15</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.16</div>
         </div>
       </div>
     </div>
@@ -764,7 +768,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.15 (2026-05-15) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.16 (2026-05-15) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -775,7 +779,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.15</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.16</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1231,27 +1235,80 @@ const DB={
     {id:5,username:'eng01',  name:'최엔지니어',  department:'개발팀',tel:'010-4567-8901',email:'eng01@company.com',  role:'user',   active:1,created_at:'2026-01-05',updated_at:'2026-01-05'},
   ],
   inspections:[
-    {id:1,type:'수입',insp_no:'INS-20260501-001',insp_date:'2026-05-01',inspector:'이검사',wo_no:'',
+    /* 수입검사 — 월별 데이터 */
+    {id:1, type:'수입',insp_no:'INS-2026010-001',insp_date:'2026-01-05',inspector:'이검사',wo_no:'',
      vendor:'㈜한국스틸',item_code:'RAW-001',item_name:'스테인레스 플레이트',spec:'SUS304 2T',
-     insp_method:'치수검사+외관검사',result:'합격',qty:100,pass_qty:100,fail_qty:0,defect_rate:0,note:''},
-    {id:2,type:'수입',insp_no:'INS-20260430-001',insp_date:'2026-04-30',inspector:'이검사',wo_no:'',
+     insp_method:'치수검사+외관검사',result:'합격',qty:120,pass_qty:120,fail_qty:0,defect_rate:0,note:''},
+    {id:2, type:'수입',insp_no:'INS-2026010-002',insp_date:'2026-01-15',inspector:'이검사',wo_no:'',
      vendor:'알루미늄코리아',item_code:'RAW-002',item_name:'알루미늄 바',spec:'A6061 Ø20',
-     insp_method:'치수검사',result:'불합격',qty:50,pass_qty:0,fail_qty:50,defect_rate:100,note:'직경 치수 불량'},
-    {id:3,type:'공정',insp_no:'INS-20260429-001',insp_date:'2026-04-29',inspector:'김품질',wo_no:'WO-20260429',
-     vendor:'',item_code:'SFG-001',item_name:'가공 브라켓',spec:'도면 A-001',
-     insp_method:'치수검사+외관',result:'합격',qty:30,pass_qty:29,fail_qty:1,defect_rate:3.3,note:'1EA 외관불량 부적합'},
-    {id:4,type:'최종',insp_no:'INS-20260428-001',insp_date:'2026-04-28',inspector:'김품질',wo_no:'SO-20260428',
-     vendor:'',item_code:'FG-001',item_name:'완성 어셈블리',spec:'조립도 B-002',
-     insp_method:'기능시험+외관',result:'합격',qty:20,pass_qty:20,fail_qty:0,defect_rate:0,note:''},
-    {id:5,type:'수입',insp_no:'INS-20260427-001',insp_date:'2026-04-27',inspector:'이검사',wo_no:'',
+     insp_method:'치수검사',result:'불합격',qty:50,pass_qty:46,fail_qty:4,defect_rate:8.0,note:'직경 치수 불량'},
+    {id:3, type:'수입',insp_no:'INS-2026020-001',insp_date:'2026-02-03',inspector:'이검사',wo_no:'',
+     vendor:'㈜한국스틸',item_code:'RAW-003',item_name:'탄소강 봉재',spec:'S45C Ø30',
+     insp_method:'치수검사+경도',result:'합격',qty:80,pass_qty:80,fail_qty:0,defect_rate:0,note:''},
+    {id:4, type:'수입',insp_no:'INS-2026020-002',insp_date:'2026-02-18',inspector:'이검사',wo_no:'',
      vendor:'㈜부품나라',item_code:'SUB-001',item_name:'육각볼트 M8',spec:'M8×25 SUS',
-     insp_method:'외관검사+치수',result:'합격',qty:200,pass_qty:200,fail_qty:0,defect_rate:0,note:''},
-    {id:6,type:'구매',insp_no:'INS-20260426-001',insp_date:'2026-04-26',inspector:'이검사',wo_no:'PO-20260425',
+     insp_method:'외관검사+치수',result:'합격',qty:500,pass_qty:497,fail_qty:3,defect_rate:0.6,note:'나사산 불량 3EA'},
+    {id:5, type:'수입',insp_no:'INS-2026030-001',insp_date:'2026-03-07',inspector:'이검사',wo_no:'',
+     vendor:'알루미늄코리아',item_code:'RAW-004',item_name:'알루미늄 판재',spec:'A5052 3T',
+     insp_method:'외관+두께',result:'합격',qty:60,pass_qty:60,fail_qty:0,defect_rate:0,note:''},
+    {id:6, type:'수입',insp_no:'INS-2026040-001',insp_date:'2026-04-10',inspector:'이검사',wo_no:'',
+     vendor:'㈜한국스틸',item_code:'RAW-001',item_name:'스테인레스 플레이트',spec:'SUS304 2T',
+     insp_method:'치수검사+외관검사',result:'합격',qty:150,pass_qty:150,fail_qty:0,defect_rate:0,note:''},
+    {id:7, type:'수입',insp_no:'INS-2026050-001',insp_date:'2026-05-01',inspector:'이검사',wo_no:'',
+     vendor:'㈜부품나라',item_code:'SUB-002',item_name:'육각너트 M10',spec:'M10 SUS',
+     insp_method:'외관+치수',result:'합격',qty:200,pass_qty:200,fail_qty:0,defect_rate:0,note:''},
+    /* 공정검사 — 월별 데이터 */
+    {id:8, type:'공정',insp_no:'INS-2026010-010',insp_date:'2026-01-10',inspector:'김품질',wo_no:'WO-20260110',
+     vendor:'',item_code:'SFG-001',item_name:'가공 브라켓',spec:'도면 A-001',
+     insp_method:'치수검사+외관',result:'합격',qty:30,pass_qty:30,fail_qty:0,defect_rate:0,note:''},
+    {id:9, type:'공정',insp_no:'INS-2026020-010',insp_date:'2026-02-12',inspector:'김품질',wo_no:'WO-20260212',
+     vendor:'',item_code:'SFG-002',item_name:'용접 프레임',spec:'도면 B-003',
+     insp_method:'외관+용접비드',result:'불합격',qty:10,pass_qty:9,fail_qty:1,defect_rate:10.0,note:'용접 크랙 1EA'},
+    {id:10,type:'공정',insp_no:'INS-2026030-010',insp_date:'2026-03-15',inspector:'김품질',wo_no:'WO-20260315',
+     vendor:'',item_code:'SFG-003',item_name:'절삭 샤프트',spec:'도면 C-005',
+     insp_method:'치수 전수',result:'합격',qty:25,pass_qty:25,fail_qty:0,defect_rate:0,note:''},
+    {id:11,type:'공정',insp_no:'INS-2026040-010',insp_date:'2026-04-08',inspector:'김품질',wo_no:'WO-20260408',
+     vendor:'',item_code:'SFG-001',item_name:'가공 브라켓',spec:'도면 A-001',
+     insp_method:'치수검사+외관',result:'합격',qty:40,pass_qty:39,fail_qty:1,defect_rate:2.5,note:'외관 스크래치 1EA'},
+    {id:12,type:'공정',insp_no:'INS-2026050-010',insp_date:'2026-05-03',inspector:'김품질',wo_no:'WO-20260503',
+     vendor:'',item_code:'SFG-004',item_name:'조립 서브어셈블리',spec:'도면 D-007',
+     insp_method:'기능+치수',result:'합격',qty:20,pass_qty:20,fail_qty:0,defect_rate:0,note:''},
+    /* 구매검사 — 월별 데이터 */
+    {id:13,type:'구매',insp_no:'INS-2026010-020',insp_date:'2026-01-20',inspector:'이검사',wo_no:'PO-20260118',
      vendor:'화학산업㈜',item_code:'CONS-001',item_name:'방청오일',spec:'ISO VG 32',
-     insp_method:'외관검사+성분',result:'합격',qty:50,pass_qty:50,fail_qty:0,defect_rate:0,note:''},
-    {id:7,type:'외주',insp_no:'INS-20260425-001',insp_date:'2026-04-25',inspector:'김품질',wo_no:'OUT-20260424',
-     vendor:'정밀측정기㈜',item_code:'SFG-002',item_name:'정밀 가공품',spec:'도면 C-003',
-     insp_method:'치수검사 전수',result:'합격',qty:15,pass_qty:15,fail_qty:0,defect_rate:0,note:''},
+     insp_method:'외관+성분',result:'합격',qty:50,pass_qty:50,fail_qty:0,defect_rate:0,note:''},
+    {id:14,type:'구매',insp_no:'INS-2026030-020',insp_date:'2026-03-22',inspector:'이검사',wo_no:'PO-20260320',
+     vendor:'전자부품㈜',item_code:'ELEC-001',item_name:'PCB 기판',spec:'Rev2.1',
+     insp_method:'외관+전기테스트',result:'합격',qty:100,pass_qty:98,fail_qty:2,defect_rate:2.0,note:'패턴 불량 2EA'},
+    {id:15,type:'구매',insp_no:'INS-2026050-020',insp_date:'2026-05-08',inspector:'이검사',wo_no:'PO-20260506',
+     vendor:'화학산업㈜',item_code:'CONS-002',item_name:'세척제',spec:'Type A',
+     insp_method:'외관검사',result:'합격',qty:30,pass_qty:30,fail_qty:0,defect_rate:0,note:''},
+    /* 외주검사 — 월별 데이터 */
+    {id:16,type:'외주',insp_no:'INS-2026020-030',insp_date:'2026-02-25',inspector:'김품질',wo_no:'OUT-20260224',
+     vendor:'정밀측정기㈜',item_code:'SFG-005',item_name:'열처리 부품',spec:'HRC 55-60',
+     insp_method:'경도검사+외관',result:'합격',qty:40,pass_qty:40,fail_qty:0,defect_rate:0,note:''},
+    {id:17,type:'외주',insp_no:'INS-2026040-030',insp_date:'2026-04-18',inspector:'김품질',wo_no:'OUT-20260416',
+     vendor:'도금업체㈜',item_code:'SFG-006',item_name:'아연도금 부품',spec:'ZnNi 8-12μm',
+     insp_method:'두께+외관',result:'불합격',qty:60,pass_qty:55,fail_qty:5,defect_rate:8.3,note:'도금 두께 미달'},
+    {id:18,type:'외주',insp_no:'INS-2026050-030',insp_date:'2026-05-12',inspector:'김품질',wo_no:'OUT-20260510',
+     vendor:'정밀측정기㈜',item_code:'SFG-007',item_name:'정밀 가공품',spec:'도면 C-003',
+     insp_method:'치수 전수',result:'합격',qty:15,pass_qty:15,fail_qty:0,defect_rate:0,note:''},
+    /* 최종검사 — 월별 데이터 */
+    {id:19,type:'최종',insp_no:'INS-2026010-040',insp_date:'2026-01-28',inspector:'박검사',wo_no:'SO-20260128',
+     vendor:'',item_code:'FG-001',item_name:'완성 어셈블리 A',spec:'조립도 B-002',
+     insp_method:'기능+외관+포장',result:'합격',qty:20,pass_qty:20,fail_qty:0,defect_rate:0,note:''},
+    {id:20,type:'최종',insp_no:'INS-2026020-040',insp_date:'2026-02-28',inspector:'박검사',wo_no:'SO-20260227',
+     vendor:'',item_code:'FG-002',item_name:'완성 어셈블리 B',spec:'조립도 C-003',
+     insp_method:'기능+외관',result:'합격',qty:15,pass_qty:15,fail_qty:0,defect_rate:0,note:''},
+    {id:21,type:'최종',insp_no:'INS-2026030-040',insp_date:'2026-03-30',inspector:'박검사',wo_no:'SO-20260329',
+     vendor:'',item_code:'FG-001',item_name:'완성 어셈블리 A',spec:'조립도 B-002',
+     insp_method:'기능+외관+포장',result:'불합격',qty:25,pass_qty:24,fail_qty:1,defect_rate:4.0,note:'포장 불량 1EA'},
+    {id:22,type:'최종',insp_no:'INS-2026040-040',insp_date:'2026-04-25',inspector:'박검사',wo_no:'SO-20260424',
+     vendor:'',item_code:'FG-003',item_name:'완성 어셈블리 C',spec:'조립도 D-004',
+     insp_method:'기능+외관',result:'합격',qty:10,pass_qty:10,fail_qty:0,defect_rate:0,note:''},
+    {id:23,type:'최종',insp_no:'INS-2026050-040',insp_date:'2026-05-15',inspector:'박검사',wo_no:'SO-20260514',
+     vendor:'',item_code:'FG-002',item_name:'완성 어셈블리 B',spec:'조립도 C-003',
+     insp_method:'기능+외관',result:'합격',qty:18,pass_qty:18,fail_qty:0,defect_rate:0,note:''},
   ],
   nc:[
     {id:1,no:'NC-20260430-001',type:'수입',item:'알루미늄 바',date:'2026-04-30',status:'처리중',desc:'치수 불량 - 직경 기준 초과',assignee:'김품질'},
@@ -2026,7 +2083,7 @@ home(){
     {c:'mc-c1',icon:'📦',name:'기준정보',badge:0,
      subs:[{icon:'📦',label:'품목 등록',page:'items'},{icon:'🏢',label:'거래처 등록',page:'vendors'},{icon:'👥',label:'사용자 등록',page:'users'}]},
     {c:'mc-c2',icon:'🔍',name:'품질관리',badge:ncO,
-     subs:[{icon:'🔍',label:'수입검사',page:'insp_in'},{icon:'⚙️',label:'공정검사',page:'insp_pr'},{icon:'🛒',label:'구매검사',page:'insp_pu'},{icon:'🏭',label:'외주검사',page:'insp_ou'},{icon:'✅',label:'최종검사',page:'insp_fi'},{icon:'⚠️',label:'부적합 관리',page:'nc'},{icon:'📝',label:'8D Report',page:'nc_8d'},{icon:'♻️',label:'반품/폐기',page:'nc_dispose'},{icon:'📉',label:'불량 트렌드',page:'nc_trend'}]},
+     subs:[{icon:'📊',label:'품질현황 대시보드',page:'quality_dash'},{icon:'🔍',label:'수입검사',page:'insp_in'},{icon:'⚙️',label:'공정검사',page:'insp_pr'},{icon:'🛒',label:'구매검사',page:'insp_pu'},{icon:'🏭',label:'외주검사',page:'insp_ou'},{icon:'✅',label:'최종검사',page:'insp_fi'},{icon:'⚠️',label:'부적합 관리',page:'nc'},{icon:'📝',label:'8D Report',page:'nc_8d'},{icon:'♻️',label:'반품/폐기',page:'nc_dispose'},{icon:'📉',label:'불량 트렌드',page:'nc_trend'}]},
     {c:'mc-c3',icon:'📋',name:'검사 고도화',badge:0,
      subs:[{icon:'📋',label:'검사 기준서',page:'insp_std'},{icon:'📜',label:'검사 성적서',page:'insp_cert'},{icon:'🔗',label:'LOT 추적성',page:'lot_trace'},{icon:'🚫',label:'Hold 관리',page:'hold_mgmt'},{icon:'🔄',label:'재검사 관리',page:'reinsp'}]},
     {c:'mc-c4',icon:'⭐',name:'공급업체 품질',badge:0,
@@ -2066,7 +2123,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.15</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.16</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -2858,6 +2915,345 @@ _inspDetail2(row){
   });
   setTimeout(()=>Cmt.render('#inspCmt2',`insp-${row.id}`),80);
 },
+
+/* ── 품질현황 대시보드 (C안 — Modern SaaS Style)
+   구성: 검색조건(검사종류 토글+날짜기간) → 미니차트 5개 → 누적 대형차트 → KPI 요약
+   v2.16: 신규 추가
+   ─────────────────────────────────────────────────────────── */
+quality_dash(){
+  const w=document.getElementById('pw');
+
+  /* ── 상태 변수 (클로저로 유지) ── */
+  const state={
+    types:['수입','공정','구매','외주','최종'],
+    from:'2026-01-01',
+    to:'2026-05-31',
+  };
+
+  /* ── 데이터 집계 함수 ── */
+  const aggregate=(types,from,to)=>{
+    const fd=new Date(from), td=new Date(to);
+    const filtered=DB.inspections.filter(i=>{
+      const d=new Date(i.insp_date);
+      return types.includes(i.type)&&d>=fd&&d<=td;
+    });
+    const months={};
+    for(let m=1;m<=12;m++) months[m]={qty:0,pass:0,fail:0,cnt:0};
+    filtered.forEach(i=>{
+      const mo=Number(i.insp_date.split('-')[1]);
+      months[mo].qty+=i.qty; months[mo].pass+=i.pass_qty;
+      months[mo].fail+=i.fail_qty; months[mo].cnt++;
+    });
+    const byType={};
+    ['수입','공정','구매','외주','최종'].forEach(t=>{
+      const rows=DB.inspections.filter(i=>i.type===t&&new Date(i.insp_date)>=fd&&new Date(i.insp_date)<=td);
+      const qty=rows.reduce((a,b)=>a+b.qty,0);
+      const fail=rows.reduce((a,b)=>a+b.fail_qty,0);
+      byType[t]={qty,fail,cnt:rows.length,rate:qty>0?(fail/qty*100):0,
+        passRate:qty>0?((qty-fail)/qty*100):0};
+    });
+    const total=filtered.reduce((a,b)=>a+b.qty,0);
+    const totalFail=filtered.reduce((a,b)=>a+b.fail_qty,0);
+    return{filtered,months,byType,total,totalFail,
+      totalPass:total-totalFail,
+      defectRate:total>0?(totalFail/total*100):0,
+      passRate:total>0?((total-totalFail)/total*100):0};
+  };
+
+  /* ── 미니 막대그래프 카드 ── */
+  const miniBar=(type,data,selected)=>{
+    const icons={수입:'🔍',공정:'⚙️',구매:'🛒',외주:'🏭',최종:'✅'};
+    const colors={수입:'#3b82f6',공정:'#10b981',구매:'#f59e0b',외주:'#8b5cf6',최종:'#ef4444'};
+    const d=data.byType[type]; const color=selected?colors[type]:'#cbd5e1';
+    const pr=d.passRate;
+    return`<div class="qdash-mini ${selected?'active':''}" onclick="Pages._qdashToggle('${type}')"
+      style="border-color:${selected?colors[type]:'#e2e8f0'};background:${selected?'#fff':'#f8fafc'};
+      padding:14px;border-radius:12px;border:2px solid;cursor:pointer;transition:.2s">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:700;color:${selected?colors[type]:'#94a3b8'}">
+          ${icons[type]} ${type}검사</span>
+        <span style="font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;
+          background:${selected?(pr>=99?'#dcfce7':pr>=95?'#fef9c3':'#fee2e2'):'#f1f5f9'};
+          color:${selected?(pr>=99?'#166534':pr>=95?'#92400e':'#991b1b'):'#94a3b8'}">
+          ${d.cnt>0?pr.toFixed(1)+'%':'N/A'}</span>
+      </div>
+      <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${d.cnt>0?Math.min(pr,100).toFixed(1):0}%;
+          background:${selected?color:'#e2e8f0'};border-radius:4px;transition:width .4s ease"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8">
+        <span>${H.n(d.qty)}ea</span>
+        <span style="color:${selected&&d.fail>0?'#ef4444':'#94a3b8'}">불량 ${d.fail}ea</span>
+      </div>
+    </div>`;
+  };
+
+  /* ── SVG 월별 누적 차트 ── */
+  const bigChart=(data)=>{
+    const months=data.months;
+    const TARGET=0.5;
+    const W=760,CH=220,PAD={t:24,r:50,b:40,l:60};
+    const cW=W-PAD.l-PAD.r, cH=CH-PAD.t-PAD.b;
+    const maxQty=Math.max(...Object.values(months).map(m=>m.qty),1);
+    const maxRate=Math.max(...Object.values(months).map(m=>m.qty>0?m.fail/m.qty*100:0),TARGET*2,1);
+    const labels=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    const rY=r=>PAD.t+cH-(r/maxRate)*cH;
+
+    let bars='',line_pts=[],yAxis='',xLabels='';
+    /* Y축 그리드 */
+    for(let i=0;i<=4;i++){
+      const val=Math.round(maxQty/4*i);
+      const y=PAD.t+cH-Math.round(cH/4*i);
+      yAxis+=`<line x1="${PAD.l-4}" y1="${y}" x2="${PAD.l+cW}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>
+        <text x="${PAD.l-8}" y="${y+4}" font-size="10" fill="#94a3b8" text-anchor="end">${H.n(val)}</text>`;
+    }
+    /* 막대 + 꺾은선 포인트 */
+    const bW=Math.floor(cW/12*0.55);
+    for(let m=1;m<=12;m++){
+      const mo=months[m];
+      const x=PAD.l+(m-1)*(cW/12)+cW/24;
+      xLabels+=`<text x="${x}" y="${PAD.t+cH+16}" font-size="10" fill="#94a3b8" text-anchor="middle">${labels[m-1]}</text>`;
+      if(mo.qty>0){
+        const bH=Math.round((mo.qty/maxQty)*cH);
+        bars+=`<rect x="${x-bW/2}" y="${PAD.t+cH-bH}" width="${bW}" height="${bH}" fill="#bfdbfe" rx="3" opacity="0.85"/>`;
+        if(mo.fail>0){
+          const fH=Math.round((mo.fail/maxQty)*cH);
+          bars+=`<rect x="${x-bW/2}" y="${PAD.t+cH-fH}" width="${bW}" height="${fH}" fill="#ef4444" rx="3" opacity="0.85"/>`;
+        }
+        const rate=mo.fail/mo.qty*100;
+        line_pts.push({x,y:rY(rate),rate});
+      }
+    }
+    /* 꺾은선 */
+    const polyline=line_pts.length>1
+      ?`<polyline points="${line_pts.map(p=>`${p.x},${p.y}`).join(' ')}"
+        fill="none" stroke="#ef4444" stroke-width="2" opacity="0.8"/>`:'' ;
+    const dots=line_pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="#ef4444" stroke="#fff" stroke-width="2"/>`).join('');
+    /* TARGET 선 */
+    const tyY=rY(TARGET);
+    const targetLine=`<line x1="${PAD.l}" y1="${tyY}" x2="${PAD.l+cW}" y2="${tyY}"
+      stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.9"/>
+      <text x="${PAD.l+cW+4}" y="${tyY+4}" font-size="10" fill="#f59e0b">${TARGET}%</text>`;
+    /* 우측 Y축 (불량률) */
+    const rAxisX=PAD.l+cW;
+    for(let i=0;i<=4;i++){
+      const val=(maxRate/4*i).toFixed(1);
+      const y=PAD.t+cH-Math.round(cH/4*i);
+      yAxis+=`<text x="${rAxisX+6}" y="${y+4}" font-size="9" fill="#ef444488" text-anchor="start">${val}%</text>`;
+    }
+
+    return`<svg viewBox="0 0 ${W} ${CH}" style="width:100%;height:${CH}px">
+      ${yAxis}${xLabels}
+      <line x1="${PAD.l}" y1="${PAD.t}" x2="${PAD.l}" y2="${PAD.t+cH}" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="${PAD.l}" y1="${PAD.t+cH}" x2="${PAD.l+cW}" y2="${PAD.t+cH}" stroke="#e2e8f0" stroke-width="1"/>
+      ${bars}${targetLine}${polyline}${dots}
+      <!-- 범례 -->
+      <rect x="${PAD.l}" y="4" width="12" height="8" fill="#bfdbfe" rx="2"/>
+      <text x="${PAD.l+15}" y="12" font-size="10" fill="#64748b">검사수량</text>
+      <rect x="${PAD.l+72}" y="4" width="12" height="8" fill="#ef4444" rx="2"/>
+      <text x="${PAD.l+87}" y="12" font-size="10" fill="#64748b">불량수량</text>
+      <line x1="${PAD.l+145}" y1="8" x2="${PAD.l+162}" y2="8" stroke="#ef4444" stroke-width="2"/>
+      <text x="${PAD.l+165}" y="12" font-size="10" fill="#64748b">불량률(우축)</text>
+      <line x1="${PAD.l+240}" y1="8" x2="${PAD.l+257}" y2="8" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <text x="${PAD.l+260}" y="12" font-size="10" fill="#f59e0b">TARGET ${TARGET}%</text>
+    </svg>`;
+  };
+
+  /* ── 렌더 함수 ── */
+  const render=()=>{
+    const data=aggregate(state.types,state.from,state.to);
+    const TYPES=['수입','공정','구매','외주','최종'];
+    const COLORS={수입:'#3b82f6',공정:'#10b981',구매:'#f59e0b',외주:'#8b5cf6',최종:'#ef4444'};
+
+    w.innerHTML=`
+    <div class="ph">
+      <div><div class="ptit">📊 품질현황 대시보드</div>
+        <div class="psub">검사 5종 통합현황 · ${state.from} ~ ${state.to}</div></div>
+      <div class="pac">
+        <button class="btn bout bsm" onclick="Pages._qdashExcel()">📥 엑셀 내보내기</button>
+      </div>
+    </div>
+
+    <!-- ① 검색 조건 -->
+    <div class="card" style="margin-bottom:12px;padding:14px 18px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+        <span style="font-size:12px;font-weight:600;color:var(--tm)">검사종류</span>
+        <button class="btn bxs ${state.types.length===5?'bpri':'bout'}" onclick="Pages._qdashAll(true)">전체선택</button>
+        <button class="btn bxs bout" onclick="Pages._qdashAll(false)">전체해제</button>
+        ${TYPES.map(t=>{
+          const sel=state.types.includes(t);
+          const c=COLORS[t];
+          return`<button style="padding:4px 13px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
+            border:2px solid ${sel?c:'#e2e8f0'};background:${sel?c:'#fff'};color:${sel?'#fff':'#94a3b8'};transition:.15s"
+            onclick="Pages._qdashToggle('${t}')">${t}</button>`;
+        }).join('')}
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:var(--tm)">기간</span>
+          ${[['이번달','month'],['이번분기','quarter'],['올해','year'],['전체','all']].map(([lb,k])=>
+            `<button class="btn bxs bout" onclick="Pages._qdashPeriod('${k}')">${lb}</button>`).join('')}
+          <input type="date" class="fsel" value="${state.from}" id="qdFrom"
+            onchange="Pages._qdashDate()" style="width:128px;font-size:12px">
+          <span style="color:var(--tm)">~</span>
+          <input type="date" class="fsel" value="${state.to}" id="qdTo"
+            onchange="Pages._qdashDate()" style="width:128px;font-size:12px">
+        </div>
+      </div>
+    </div>
+
+    <!-- ② 검사종류별 미니차트 5개 -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">
+      ${TYPES.map(t=>miniBar(t,data,state.types.includes(t))).join('')}
+    </div>
+
+    <!-- ③ 누적 대형 차트 -->
+    <div class="card" style="margin-bottom:12px;padding:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:14px;font-weight:700;color:var(--tx)">
+          📈 월별 검사 현황
+          <span style="font-size:12px;font-weight:400;color:var(--tm);margin-left:8px">
+            ${state.types.length===0?'검사종류 선택 없음':state.types.join(' · ')}</span>
+        </div>
+        <div style="display:flex;gap:14px;font-size:12px;color:var(--tm);flex-wrap:wrap">
+          <span>총검사 <strong style="color:var(--tx)">${H.n(data.total)}ea</strong></span>
+          <span>불량 <strong style="color:#ef4444">${H.n(data.totalFail)}ea</strong></span>
+          <span>불량률 <strong style="color:${data.defectRate>0.5?'#ef4444':'#10b981'}">
+            ${data.defectRate.toFixed(2)}%</strong></span>
+        </div>
+      </div>
+      ${state.types.length===0
+        ?`<div style="text-align:center;padding:60px 20px;color:var(--tm)">
+            <div style="font-size:36px;margin-bottom:10px">📊</div>
+            위의 검사종류 버튼을 선택하면 차트가 표시됩니다.</div>`
+        :bigChart(data)}
+    </div>
+
+    <!-- ④ KPI 카드 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
+      ${[
+        {icon:'🔢',label:'총 검사건수',val:H.n(data.filtered.length)+'건',
+          sub:'선택 검사 합계',color:'#3b82f6',bg:'#dbeafe'},
+        {icon:'📦',label:'총 검사수량',val:H.n(data.total)+'ea',
+          sub:'합격+불합격',color:'#10b981',bg:'#dcfce7'},
+        {icon:'✅',label:'합격률',
+          val:data.total>0?data.passRate.toFixed(2)+'%':'N/A',
+          sub:`합격 ${H.n(data.totalPass)}ea`,
+          color:data.passRate>=99.5?'#166534':data.passRate>=98?'#92400e':'#991b1b',
+          bg:data.passRate>=99.5?'#dcfce7':data.passRate>=98?'#fef9c3':'#fee2e2'},
+        {icon:'⚠️',label:'불량률',
+          val:data.total>0?data.defectRate.toFixed(2)+'%':'N/A',
+          sub:'TARGET 0.50%',
+          color:data.defectRate<=0.5?'#166534':'#991b1b',
+          bg:data.defectRate<=0.5?'#dcfce7':'#fee2e2'},
+      ].map(k=>`
+        <div style="background:${k.bg};border-radius:12px;padding:16px 18px;border:1.5px solid ${k.color}33">
+          <div style="font-size:22px;margin-bottom:6px">${k.icon}</div>
+          <div style="font-size:11px;color:${k.color};font-weight:600;margin-bottom:4px">${k.label}</div>
+          <div style="font-size:22px;font-weight:800;color:${k.color}">${k.val}</div>
+          <div style="font-size:10px;color:${k.color};opacity:.7;margin-top:4px">${k.sub}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- ⑤ 검사종류별 상세 테이블 -->
+    <div class="card">
+      <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:12px">📋 검사종류별 상세 현황</div>
+      <div class="ts"><table class="dt">
+        <thead><tr>
+          <th>검사종류</th><th style="text-align:right">건수</th>
+          <th style="text-align:right">총수량</th><th style="text-align:right">합격</th>
+          <th style="text-align:right">불량</th><th style="text-align:right">합격률</th>
+          <th style="text-align:right">불량률</th><th style="text-align:center">TARGET</th>
+          <th style="text-align:center">판정</th>
+        </tr></thead>
+        <tbody>
+        ${TYPES.map(t=>{
+          const d=data.byType[t]; const sel=state.types.includes(t);
+          const c=COLORS[t]; const ok=d.rate<=0.5;
+          return`<tr style="${sel?'':'opacity:.4;background:#f8fafc'}">
+            <td><span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;
+              background:${c}22;color:${c}">${t}검사</span></td>
+            <td style="text-align:right">${H.n(d.cnt)}</td>
+            <td style="text-align:right">${H.n(d.qty)}</td>
+            <td style="text-align:right;color:#10b981;font-weight:600">${H.n(d.qty-d.fail)}</td>
+            <td style="text-align:right;color:${d.fail>0?'#ef4444':'var(--tx)'};font-weight:${d.fail>0?700:400}">${H.n(d.fail)}</td>
+            <td style="text-align:right;font-weight:700;color:${d.passRate>=99?'#10b981':d.passRate>=95?'#f59e0b':'#ef4444'}">
+              ${d.cnt>0?d.passRate.toFixed(2)+'%':'-'}</td>
+            <td style="text-align:right;color:${d.rate>0.5?'#ef4444':'var(--tm)'}">
+              ${d.cnt>0?d.rate.toFixed(2)+'%':'-'}</td>
+            <td style="text-align:center;color:var(--tm);font-size:12px">0.50%</td>
+            <td style="text-align:center">${d.cnt>0
+              ?`<span class="badge ${ok?'bgrn':'bred'}">${ok?'달성':'초과'}</span>`
+              :`<span style="color:var(--tl);font-size:11px">-</span>`}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:#f8fafc;font-weight:700;border-top:2px solid var(--bd)">
+          <td><strong>합 계</strong></td>
+          <td style="text-align:right">${H.n(data.filtered.length)}</td>
+          <td style="text-align:right">${H.n(data.total)}</td>
+          <td style="text-align:right;color:#10b981">${H.n(data.totalPass)}</td>
+          <td style="text-align:right;color:${data.totalFail>0?'#ef4444':'var(--tx)'}">${H.n(data.totalFail)}</td>
+          <td style="text-align:right;color:${data.passRate>=99?'#10b981':'#ef4444'}">
+            ${data.total>0?data.passRate.toFixed(2)+'%':'-'}</td>
+          <td style="text-align:right;color:${data.defectRate>0.5?'#ef4444':'var(--tm)'}">
+            ${data.total>0?data.defectRate.toFixed(2)+'%':'-'}</td>
+          <td style="text-align:center;font-size:12px;color:var(--tm)">0.50%</td>
+          <td style="text-align:center">${data.total>0
+            ?`<span class="badge ${data.defectRate<=0.5?'bgrn':'bred'}">${data.defectRate<=0.5?'달성':'초과'}</span>`:'-'}</td>
+        </tr>
+        </tbody>
+      </table></div>
+    </div>`;
+  };
+
+  Pages._qdashState=state;
+  Pages._qdashRender=render;
+  render();
+},
+
+/* 검사종류 토글 */
+_qdashToggle(type){
+  const s=Pages._qdashState;
+  const idx=s.types.indexOf(type);
+  if(idx>=0) s.types.splice(idx,1); else s.types.push(type);
+  Pages._qdashRender();
+},
+
+/* 전체선택/해제 */
+_qdashAll(sel){
+  Pages._qdashState.types=sel?['수입','공정','구매','외주','최종']:[];
+  Pages._qdashRender();
+},
+
+/* 날짜 퀵버튼 */
+_qdashPeriod(key){
+  const s=Pages._qdashState;
+  const now=new Date(), y=now.getFullYear(), m=now.getMonth()+1;
+  const fmt=d=>d.toISOString().slice(0,10);
+  if(key==='month'){
+    s.from=`${y}-${String(m).padStart(2,'0')}-01`;
+    s.to=fmt(new Date(y,m,0));
+  } else if(key==='quarter'){
+    const q=Math.ceil(m/3), qs=(q-1)*3+1;
+    s.from=`${y}-${String(qs).padStart(2,'0')}-01`;
+    s.to=fmt(new Date(y,qs+2,0));
+  } else if(key==='year'){
+    s.from=`${y}-01-01`; s.to=`${y}-12-31`;
+  } else {
+    s.from='2020-01-01'; s.to=`${y}-12-31`;
+  }
+  Pages._qdashRender();
+},
+
+/* 날짜 직접 입력 */
+_qdashDate(){
+  const s=Pages._qdashState;
+  const f=document.getElementById('qdFrom')?.value;
+  const t=document.getElementById('qdTo')?.value;
+  if(f) s.from=f; if(t) s.to=t;
+  Pages._qdashRender();
+},
+
+/* 엑셀 내보내기 */
+_qdashExcel(){Toast.show('엑셀 내보내기 — Supabase 연동 후 지원됩니다.','info');},
 
 /* ── 부적합 ── */
 nc(){
