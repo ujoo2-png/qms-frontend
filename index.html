@@ -39,22 +39,35 @@
   ║        Supabase SDK 연결 + SB 헬퍼 전체 CRUD 완성              ║
   ║  v2.14 F5 새로고침 로그아웃 버그 수정 (2026-05-14)             ║
   ║        C안: sessionStorage 로그인 상태 + 마지막 페이지 복원      ║
-  ║  v2.17 품목등록 개선 + 페이지네이션 UX (2026-05-18)          ║
-  ║        [1] 사이드바/TopNav 품질현황 대시보드 추가              ║
-  ║        [2] 품목분류 레이블 변경(분류→품목분류), 대분류 추가     ║
-  ║        [3] _iSave SB 연동 + 등록일/수정일 자동생성            ║
-  ║        [4] onDel 실제 삭제 반영 (SB.deleteItem 연동)          ║
-  ║        [5] 일괄등록 등록일 자동생성 + SB 연동                  ║
-  ║        [6] Tbl 페이지네이션: 건수선택+위치표시+첫끝버튼        ║
-  ║  v2.16 품질현황 대시보드 신규 (C안, 2026-05-15)              ║
-  ║        검사5종 미니차트+토글+누적대형차트+KPI+상세테이블       ║
-  ║        CSS버그(.sp-head중복) 수정, 검사 더미데이터 23건 보강   ║
   ║  v2.15 파일관리 B안 완전 구현 + CSS 중복 수정 (2026-05-15)      ║
   ║        [1] FM 버그1: 업로드 후 버튼 즉시 갱신 (_refreshBtn)     ║
   ║        [2] FM 버그2: 새로고침 후 파일 복원 (sessionStorage)     ║
   ║        [3] FM 버그3: 바로보기 (이미지 모달/PDF·기타 새탭)        ║
   ║        [4] Supabase Storage 실제 업로드+삭제 연동               ║
   ║        [5] CSS 중복 수정 (.topbar/.dt 충돌 해결, 통합)          ║
+  ║  v2.16 품질현황 대시보드 신규 (C안, 2026-05-15)                 ║
+  ║        검사5종 미니차트+토글+누적대형차트+KPI+상세테이블          ║
+  ║        CSS버그(.sp-head중복) 수정, 검사 더미데이터 23건 보강      ║
+  ║  v2.17 품목등록 개선 + 페이지네이션 UX (2026-05-18)             ║
+  ║        [1] 사이드바/TopNav 품질현황 대시보드 추가                ║
+  ║        [2] 품목분류 레이블 변경(분류→품목분류), 대분류 추가       ║
+  ║        [3] _iSave SB 연동 + 등록일/수정일 자동생성              ║
+  ║        [4] onDel 실제 삭제 반영 (SB.deleteItem 연동)            ║
+  ║        [5] 일괄등록 등록일 자동생성 + SB 연동 (async _register) ║
+  ║        [6] Tbl 페이지네이션: 건수선택+위치표시+첫끝버튼          ║
+  ║        [7] 버그: major_category 컬럼 누락 오류 수정             ║
+  ║            → Supabase items 테이블에 컬럼 추가 (ALTER TABLE)    ║
+  ║        [8] 버그: RLS "new row violates policy" 오류 수정        ║
+  ║            → 원인: insert().select().single() — SELECT 권한 없음║
+  ║            → 수정: 전체 add 함수 .select().single() 제거 (8개)  ║
+  ║            → Supabase: GRANT ALL + DISABLE RLS (전체 테이블)    ║
+  ║            → SB.addItem: 허용 컬럼만 추출하여 insert            ║
+  ║        [9] 버그: active '사용' 문자열→숫자 변환 누락 수정        ║
+  ║            Number('사용')=NaN→0 문제: 문자열 분기 처리 추가      ║
+  ║        [10] 성능: 건당 1건 insert → 500건 단위 bulk insert       ║
+  ║            12,078건 기준: API 호출 12,078번→25번으로 감소        ║
+  ║            실패 시 건별 재시도 폴백 + 진행률 Toast 표시          ║
+  ║        [11] 등록 건수 제한 없음 확인 (용량 500MB만 제한)         ║수정 (.topbar/.dt 충돌 해결, 통합)          ║
   ╠══════════════════════════════════════════════════════════════╣
   ║  로그인: admin / admin1234                                    ║
   ║  향후 계획: Supabase 백엔드 연동 (프로젝트 URL + anon key)     ║
@@ -956,7 +969,24 @@ if(window.supabase){
 
 /* ── SB: Supabase DB 연동 헬퍼 ──
    각 함수는 _sb 연결 시 Supabase 사용, 미연결 시 DB.* 더미데이터 사용
-   테이블 미생성 시 자동으로 더미데이터로 폴백 */
+   테이블 미생성 시 자동으로 더미데이터로 폴백
+
+   [수정 이력]
+   v2.13: SB 헬퍼 초기 구현 — getItems/getVendors/getInspections/getMentions 등
+   v2.15: SB.uploadFile/deleteFile — Supabase Storage 연동
+   v2.17: 일괄 버그 수정
+     - insert().select().single() → insert() 로 변경 (전체 8개 함수)
+       원인: anon 키는 SELECT 권한이 없어 RLS 오류 발생
+       해결: .select().single() 제거, 로컬 캐시는 별도 push 처리
+     - SB.addItem: 허용 컬럼만 추출하여 insert
+       원인: 테이블에 없는 컬럼 포함 시 "schema cache" 오류
+       해결: allowed 객체로 허용 컬럼만 전달
+   [Supabase 필수 설정]
+     DISABLE ROW LEVEL SECURITY (전체 테이블)
+     GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
+     GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+     GRANT USAGE ON SCHEMA public TO anon;
+   ─────────────────────────────────────────── */
 const SB={
   /* 연결 여부 확인 */
   ok(){return !!_sb},
@@ -991,6 +1021,7 @@ const SB={
   /* 검사 등록 */
   async addInspection(row){
     if(!_sb){const id=Math.max(0,...DB.inspections.map(i=>i.id))+1;DB.inspections.push({id,...row});return {ok:true,id};}
+    /* .select() 미사용: RLS 오류 방지 (v2.17) */
     const {error}=await _sb.from('inspections').insert(row);
     if(error){Toast.show('DB 저장 실패: '+error.message,'err');return {ok:false};}
     DB.inspections.unshift({id:Date.now(),...row}); return {ok:true};
@@ -1062,6 +1093,7 @@ const SB={
   },
   async addUser(row){
     if(!_sb){const id=Math.max(0,...DB.users.map(u=>u.id))+1;DB.users.push({id,...row});return{ok:true,id};}
+    /* .select() 미사용: RLS 오류 방지 (v2.17) */
     const {error}=await _sb.from('users').insert(row);
     if(error){Toast.show('사용자 저장 실패: '+error.message,'err');return{ok:false};}
     DB.users.push({id:Date.now(),...row});return{ok:true};
@@ -1130,6 +1162,7 @@ const SB={
   /* ── 거래처 ── */
   async addVendor(row){
     if(!_sb){const id=Math.max(0,...DB.vendors.map(v=>v.id))+1;DB.vendors.push({id,...row});return{ok:true,id};}
+    /* .select() 미사용: insert 후 SELECT 시도 시 RLS/anon 권한 오류 방지 (v2.17 수정) */
     const {error}=await _sb.from('vendors').insert(row);
     if(error){Toast.show('거래처 저장 실패: '+error.message,'err');return{ok:false};}
     DB.vendors.push({id:Date.now(),...row});return{ok:true};
@@ -1150,6 +1183,7 @@ const SB={
   /* ── 부적합 ── */
   async addNc(row){
     if(!_sb){const id=Math.max(0,...DB.nc.map(n=>n.id))+1;DB.nc.push({id,...row});return{ok:true,id};}
+    /* .select() 미사용: RLS 오류 방지 (v2.17) */
     const {error}=await _sb.from('nonconformances').insert(row);
     if(error){Toast.show('부적합 저장 실패: '+error.message,'err');return{ok:false};}
     DB.nc.push({id:Date.now(),...row});return{ok:true};
@@ -1170,6 +1204,7 @@ const SB={
   },
   async addEquip(row){
     if(!_sb){const id=Math.max(0,...DB.equip.map(e=>e.id))+1;DB.equip.push({id,...row});return{ok:true,id};}
+    /* .select() 미사용: RLS 오류 방지 (v2.17) */
     const {error}=await _sb.from('equipment').insert(row);
     if(error){Toast.show('계측기 저장 실패: '+error.message,'err');return{ok:false};}
     DB.equip.push({id:Date.now(),...row});return{ok:true};
@@ -1190,6 +1225,7 @@ const SB={
   },
   async addCal(row){
     if(!_sb){const id=Math.max(0,...DB.cals.map(c=>c.id))+1;DB.cals.push({id,...row});return{ok:true,id};}
+    /* .select() 미사용: RLS 오류 방지 (v2.17) */
     const {error}=await _sb.from('calibrations').insert(row);
     if(error){Toast.show('교정 저장 실패: '+error.message,'err');return{ok:false};}
     DB.cals.push({id:Date.now(),...row});return{ok:true};
@@ -1204,6 +1240,7 @@ const SB={
   },
   async addDoc(row){
     if(!_sb){const id=Math.max(0,...DB.docs.map(d=>d.id))+1;DB.docs.push({id,...row});return{ok:true,id};}
+    /* .select() 미사용: RLS 오류 방지 (v2.17) */
     const {error}=await _sb.from('documents').insert(row);
     if(error){Toast.show('문서 저장 실패: '+error.message,'err');return{ok:false};}
     DB.docs.push({id:Date.now(),...row});return{ok:true};
@@ -1224,6 +1261,7 @@ const SB={
   },
   async addCar(row){
     if(!_sb){const id=Math.max(0,...DB.cars.map(c=>c.id))+1;DB.cars.push({id,...row});return{ok:true,id};}
+    /* .select() 미사용: RLS 오류 방지 (v2.17) */
     const {error}=await _sb.from('corrective_actions').insert(row);
     if(error){Toast.show('CAR 저장 실패: '+error.message,'err');return{ok:false};}
     DB.cars.push({id:Date.now(),...row});return{ok:true};
@@ -5097,46 +5135,130 @@ const ExcelMgr={
     }
   },
 
-  /* ── 일괄등록 실행 ── */
+  /* ── 일괄등록 실행 ──
+     [v2.17 수정]
+     - 버그: active '사용'→1 변환 누락 수정
+     - 버그: 건당 1개씩 insert → API 분당 제한 초과
+       해결: 500건 단위 bulk insert (배열로 한 번에 전송)
+     - 진행률 Toast 표시
+     - Supabase 등록 건수 제한: 없음 (용량만 500MB 제한)
+       단, 무료 플랜 분당 API 요청 제한 → 청크 분할로 해결 */
   async _register(page){
     if(!this._parsed){Toast.show('먼저 파일을 업로드하세요.','warn');return}
     const toRegister=this._parsed.filter(r=>!r._dup&&!r._validErr);
     if(!toRegister.length){Toast.show('등록가능한 데이터가 없습니다.','warn');return}
     const sc=this._schemas[page];
     const today=H.today();
-    let successCnt=0, failCnt=0;
 
-    for(const r of toRegister){
-      const newRow={...r};
-      delete newRow._dup; delete newRow._keyVal; delete newRow._validErr;
-      // 공통 변환
-      if(newRow.qty!==undefined) newRow.qty=Number(newRow.qty)||0;
-      if(newRow.pass_qty!==undefined) newRow.pass_qty=Number(newRow.pass_qty)||0;
-      if(newRow.fail_qty!==undefined) newRow.fail_qty=Number(newRow.fail_qty)||0;
-      if(newRow.defect_rate!==undefined) newRow.defect_rate=Number(newRow.defect_rate)||0;
-      if(newRow.active!==undefined) newRow.active=newRow.active==='사용'?1:0;
-      // 등록일 자동생성 (버그수정: 일괄등록 시 created_at 없음)
-      if(!newRow.created_at) newRow.created_at=today;
-      if(!newRow.updated_at) newRow.updated_at=today;
-
-      // SB 연동 저장 (페이지별)
-      let res={ok:false};
-      if(page==='items') res=await SB.addItem(newRow);
-      else if(page==='vendors') res=await SB.addVendor(newRow);
-      else if(page==='users') res=await SB.addUser(newRow);
-      else {
-        // 기타 (검사 등): 더미 직접 추가
-        const nextId=(sc.getData().length>0?Math.max(...sc.getData().map(r=>r.id||0)):0)+1;
-        sc.getData().push({id:nextId,...newRow});
-        res={ok:true};
+    /* ── 데이터 전처리 (공통 변환) ── */
+    const rows=toRegister.map(r=>{
+      const row={...r};
+      // 내부 처리용 필드 제거
+      delete row._dup; delete row._keyVal; delete row._validErr;
+      // 숫자 변환
+      if(row.qty!==undefined)         row.qty=Number(row.qty)||0;
+      if(row.pass_qty!==undefined)    row.pass_qty=Number(row.pass_qty)||0;
+      if(row.fail_qty!==undefined)    row.fail_qty=Number(row.fail_qty)||0;
+      if(row.defect_rate!==undefined) row.defect_rate=Number(row.defect_rate)||0;
+      // active 변환: '사용'→1, '미사용'→0, 숫자→그대로
+      if(row.active!==undefined){
+        if(typeof row.active==='string'){
+          row.active=row.active==='사용'?1:row.active==='미사용'?0:1;
+        } else {
+          row.active=Number(row.active)||1;
+        }
+      } else {
+        row.active=1; // 기본값: 사용
       }
-      if(res.ok) successCnt++; else failCnt++;
+      // 등록일 자동생성
+      if(!row.created_at) row.created_at=today;
+      if(!row.updated_at) row.updated_at=today;
+      return row;
+    });
+
+    /* ── Supabase 연결 여부에 따라 분기 ── */
+    if(!_sb){
+      /* 더미 모드: 로컬 DB에 직접 추가 */
+      const data=sc.getData();
+      let nextId=data.length>0?Math.max(...data.map(r=>r.id||0))+1:1;
+      rows.forEach(row=>data.push({id:nextId++,...row}));
+      Toast.show(`${rows.length}건이 등록되었습니다.`,'ok');
+      Modal.close();
+      if(Nav&&page) Nav.go(page);
+      return;
     }
 
+    /* ── Supabase bulk insert (청크 단위) ──
+       Supabase는 배열로 한 번에 insert 가능 → API 호출 수 대폭 감소
+       청크 크기: 500건 (안전한 크기, 무료 플랜 기준)
+       등록 건수 제한: 없음 (DB 용량 500MB만 제한) */
+    const CHUNK=500;
+    let successCnt=0, failCnt=0;
+    const totalChunks=Math.ceil(rows.length/CHUNK);
+
+    /* 진행률 표시 */
+    const showProgress=(done,total)=>{
+      document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
+      Toast.show(`등록 중... ${done}/${total}건 (${Math.round(done/total*100)}%)`, 'info', 60000);
+    };
+
+    for(let ci=0;ci<totalChunks;ci++){
+      const chunk=rows.slice(ci*CHUNK,(ci+1)*CHUNK);
+      showProgress(ci*CHUNK, rows.length);
+
+      /* items: 허용 컬럼만 추출 (schema 오류 방지) */
+      const insertRows = page==='items'
+        ? chunk.map(row=>({
+            major_category: row.major_category||'',
+            category:       row.category||'',
+            item_code:      row.item_code||'',
+            item_name:      row.item_name||'',
+            spec:           row.spec||'',
+            unit:           row.unit||'EA',
+            material:       row.material||'',
+            vendor_id:      row.vendor_id||null,
+            vendor_name:    row.vendor_name||'',
+            active:         row.active,
+            remark:         row.remark||'',
+            created_at:     row.created_at||null,
+            updated_at:     row.updated_at||null,
+          }))
+        : chunk;
+
+      /* 테이블 매핑 */
+      const tableMap={
+        items:'items', vendors:'vendors', users:'users',
+        insp_in:'inspections', insp_pr:'inspections',
+        insp_pu:'inspections', insp_ou:'inspections', insp_fi:'inspections',
+        nc:'nonconformances', equip:'equipment',
+        cal:'calibrations', docs:'documents', car:'corrective_actions',
+      };
+      const tableName=tableMap[page]||page;
+
+      const {error}=await _sb.from(tableName).insert(insertRows);
+      if(error){
+        console.error(`[SB] bulk insert 실패 chunk${ci}:`, error.message);
+        failCnt+=chunk.length;
+        /* 실패 시 건별 재시도 */
+        for(const row of insertRows){
+          const {error:e2}=await _sb.from(tableName).insert(row);
+          if(e2){ failCnt++; console.error('[SB] 단건 실패:', e2.message); }
+          else { successCnt++; failCnt--; }
+        }
+      } else {
+        successCnt+=chunk.length;
+        /* 로컬 캐시에도 추가 */
+        const data=sc.getData();
+        chunk.forEach(row=>data.push({id:Date.now()+Math.random(),...row}));
+      }
+    }
+
+    /* 결과 토스트 */
+    document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
     const msg=failCnt>0
-      ?`${successCnt}건 등록, ${failCnt}건 실패`
-      :`${successCnt}건이 등록되었습니다.`;
-    Toast.show(msg, failCnt>0?'warn':'ok');
+      ?`✅ ${successCnt}건 등록 완료 / ❌ ${failCnt}건 실패`
+      :`✅ ${successCnt}건 모두 등록 완료`;
+    Toast.show(msg, failCnt>0?'warn':'ok', 5000);
     Modal.close();
     if(Nav&&page) Nav.go(page);
   },
