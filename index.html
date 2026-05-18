@@ -53,6 +53,13 @@
   ║            Tbl.getSel: c.value → Number(c.value)              ║
   ║        [2] 전체 11개 페이지 onDel 더미→실제 삭제+재렌더 적용   ║
   ║        [3] 미리보기 방향: C안(Supabase Storage) 권고           ║
+  ║  v2.22 로그인 DB.users 연계 (2026-05-19)                     ║
+  ║        [1] Auth.login() async 전환 + DB.users 연계           ║
+  ║            admin 외 사용자 로그인 작동                        ║
+  ║        [2] Auth.findId() DB.users 연계 (이름+이메일)          ║
+  ║        [3] Auth.findPwStep1() DB.users 연계 (id+이메일)      ║
+  ║        [4] sessionStorage 복원 시 실제 사용자 정보 표시       ║
+  ║            (이전: 항상 시스템관리자 하드코딩)                  ║
   ║  v2.21 일괄등록 완전수정 + SB 경로 최적화 (2026-05-18)      ║
   ║        [1] 버그: "제품" 오인식 수정                            ║
   ║            원인: 인덱스 기반 파싱 → 엑셀 헤더 기반 파싱으로   ║
@@ -111,7 +118,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.21</title>
+<title>QMS - 품질경영시스템 v2.22</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -725,7 +732,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.21</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.22</div>
         </div>
       </div>
     </div>
@@ -822,7 +829,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.21 (2026-05-18) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.22 (2026-05-19) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -833,7 +840,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.21</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.22</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1580,7 +1587,11 @@ const Auth={
     if(ico)ico.textContent=this._pwV?'🙈':'👁️';
   },
 
-  login(){
+  /* ── 로그인 처리 ──
+     [v2.21 수정] DB.users(Supabase 사용자 목록)와 연계
+     - admin/admin1234: 시스템 계정 (항상 허용)
+     - 그 외 사용자: DB.users에서 username+password 매칭 */
+  async login(){
     const id=(document.getElementById('lid')?.value||'').trim();
     const pw=(document.getElementById('lpw')?.value||'').trim();
     const eId=document.getElementById('errId'),ePw=document.getElementById('errPw');
@@ -1591,33 +1602,47 @@ const Auth={
     if(!pw){if(ePw){ePw.textContent='비밀번호를 입력하세요.';ePw.style.display='block'}if(iPw)iPw.classList.add('err');ok=false;}
     else{if(ePw)ePw.style.display='none';if(iPw)iPw.classList.remove('err');}
     if(!ok)return;
+    /* admin 계정: 하드코딩 유지 */
     if(id==='admin'&&pw==='admin1234'){
-      this._cur='admin';
-      this._u={id:1,username:'admin',name:'시스템관리자',role:'admin',dept:'IT팀'};
-      /* C안: sessionStorage에 로그인 상태 저장 — F5 새로고침 후 복원 */
-      sessionStorage.setItem('qms_auth', JSON.stringify({
-        cur:'admin',
-        u:{id:1,username:'admin',name:'시스템관리자',role:'admin',dept:'IT팀'}
-      }));
-      ['uav','uname','urole','tbuser'].forEach((el,i)=>{
-        const e=document.getElementById(el);
-        if(e)e.textContent=['관','시스템관리자','시스템관리자','시스템관리자'][i];
-      });
-      const active=App.notices.filter(n=>n.show);
-      if(active.length){
-        const cnt=document.getElementById('npCount');if(cnt)cnt.textContent=`총 ${active.length}건`;
-        const body=document.getElementById('npBody');
-        if(body)body.innerHTML=active.map(n=>`
-          <div class="npi"><div class="npi-t">${H.e(n.title)}</div>
-          <div class="npi-b">${H.e(n.body)}</div>
-          <div class="npi-m"><span>✍ ${H.e(n.author)}</span><span>📅 ${n.date} ~ ${n.expire}</span></div></div>`).join('');
-        document.getElementById('npOverlay').classList.remove('hidden');
-      } else { this.enterApp(); }
+      this._doLoginSuccess({id:1,username:'admin',name:'시스템관리자',role:'admin',dept:'IT팀'});
+      return;
+    }
+    /* 일반 사용자: DB.users에서 조회 (없으면 SB에서 로드) */
+    if(!DB.users||DB.users.length===0) DB.users=await SB.getUsers();
+    /* password 필드명이 다양할 수 있으므로 여러 키 시도 */
+    const user=DB.users.find(u=>u.username===id&&(u.password===pw||u.pw===pw||u.pass===pw));
+    if(user&&user.active!==0){
+      this._doLoginSuccess(user);
+    } else if(user&&user.active===0){
+      if(eId){eId.textContent='비활성화된 계정입니다. 관리자에게 문의하세요.';eId.style.display='block';}
+      if(iId)iId.classList.add('err');
     } else {
-      if(eId){eId.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';eId.style.display='block'}
+      if(eId){eId.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';eId.style.display='block';}
       if(iId)iId.classList.add('err');if(iPw)iPw.classList.add('err');
     }
   },
+
+  /* 로그인 성공 공통 처리 */
+  _doLoginSuccess(user){
+    this._cur='user'; this._u=user;
+    sessionStorage.setItem('qms_auth',JSON.stringify({cur:'user',u:user}));
+    const roleLabel={'admin':'관','manager':'장','user':'사'};
+    ['uav','uname','urole','tbuser'].forEach((el,i)=>{
+      const e=document.getElementById(el);
+      if(e)e.textContent=[roleLabel[user.role]||'사', user.name, user.name, user.name][i];
+    });
+    const active=App.notices.filter(n=>n.show);
+    if(active.length){
+      const cnt=document.getElementById('npCount');if(cnt)cnt.textContent=`총 ${active.length}건`;
+      const body=document.getElementById('npBody');
+      if(body)body.innerHTML=active.map(n=>`
+          <div class="npi"><div class="npi-t">${H.e(n.title)}</div>
+          <div class="npi-b">${H.e(n.body)}</div>
+          <div class="npi-m"><span>✍ ${H.e(n.author)}</span><span>📅 ${n.date} ~ ${n.expire}</span></div></div>`).join('');
+      document.getElementById('npOverlay').classList.remove('hidden');
+    } else { this.enterApp(); }
+  },
+
 
   enterApp(){
     document.getElementById('npOverlay').classList.add('hidden');
@@ -1642,25 +1667,51 @@ const Auth={
     Toast.show('로그아웃되었습니다.','info');
   },
 
-  findId(){
+  /* ── 아이디 찾기 ──
+     [v2.21 수정] DB.users 연계 (이름+이메일로 username 검색)
+     admin 계정도 포함하여 조회 */
+  async findId(){
     const name=(document.getElementById('findIdName')?.value||'').trim();
     const email=(document.getElementById('findIdEmail')?.value||'').trim();
     if(!name||!email){Toast.show('이름과 이메일을 입력하세요.','warn');return}
+    /* admin 계정 */
     if(name==='시스템관리자'&&email.includes('@')){
       const r=document.getElementById('findIdResult'),fi=document.getElementById('foundId');
-      if(fi)fi.textContent='admin';if(r)r.style.display='block';
-    } else { Toast.show('일치하는 계정을 찾을 수 없습니다.','err'); }
+      if(fi)fi.textContent='admin';if(r)r.style.display='block';return;
+    }
+    /* DB.users 조회 */
+    if(!DB.users||DB.users.length===0) DB.users=await SB.getUsers();
+    const user=DB.users.find(u=>u.name===name&&(u.email||'')===email);
+    if(user){
+      const r=document.getElementById('findIdResult'),fi=document.getElementById('foundId');
+      if(fi)fi.textContent=user.username;if(r)r.style.display='block';
+    } else {
+      document.getElementById('findIdResult')?.style&&(document.getElementById('findIdResult').style.display='none');
+      Toast.show('일치하는 계정을 찾을 수 없습니다.','err');
+    }
   },
 
-  findPwStep1(){
+  /* ── 비밀번호 찾기 Step1 ──
+     [v2.21 수정] DB.users 연계 (아이디+이메일로 계정 확인)
+     실제 이메일 발송은 미구현 → 데모 코드 123456 안내 */
+  async findPwStep1(){
     const id=(document.getElementById('fpId')?.value||'').trim();
     const email=(document.getElementById('fpEmail')?.value||'').trim();
     if(!id||!email){Toast.show('아이디와 이메일을 입력하세요.','warn');return}
-    if(id==='admin'&&email.includes('@')){
+    /* admin 계정 */
+    const isAdmin=id==='admin'&&email.includes('@');
+    let found=isAdmin;
+    if(!isAdmin){
+      if(!DB.users||DB.users.length===0) DB.users=await SB.getUsers();
+      found=DB.users.some(u=>u.username===id&&(u.email||'')===email);
+    }
+    if(found){
       const s1=document.getElementById('fpStep1'),s2=document.getElementById('fpStep2');
       if(s1)s1.style.display='none';if(s2)s2.style.display='block';
       Toast.show('인증 코드가 발송되었습니다. (데모: 123456)','info',5000);
-    } else { Toast.show('일치하는 계정을 찾을 수 없습니다.','err'); }
+    } else {
+      Toast.show('아이디 또는 이메일이 일치하는 계정을 찾을 수 없습니다.','err');
+    }
   },
 
   findPwStep2(){
@@ -2294,7 +2345,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.21</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.22</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -5848,18 +5899,16 @@ function setupHotkeys(){
   if(savedAuth){
     try{
       const {cur, u} = JSON.parse(savedAuth);
-      // 로그인 상태 복원
+      /* [v2.21 수정] 복원 시 저장된 사용자 정보로 표시 (admin 하드코딩 제거) */
       Auth._cur = cur;
       Auth._u   = u;
-      // 사이드바 사용자 정보 업데이트
+      const roleLabel={'admin':'관','manager':'장','user':'사'};
       ['uav','uname','urole','tbuser'].forEach((id,i)=>{
         const el=document.getElementById(id);
-        if(el)el.textContent=['관','시스템관리자','시스템관리자','시스템관리자'][i];
+        if(el)el.textContent=[roleLabel[u.role]||'사', u.name||u.username, u.name||u.username, u.name||u.username][i];
       });
-      // 앱 화면 표시
       document.getElementById('loginOv').style.display='none';
       document.getElementById('app').classList.remove('hidden');
-      // 마지막 페이지 복원 (없으면 홈)
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
       setTimeout(()=>{
         Nav.go(savedPage);
@@ -5868,7 +5917,6 @@ function setupHotkeys(){
         }
       }, 80);
     } catch(e){
-      // 복원 실패 시 sessionStorage 삭제 후 로그인 화면
       sessionStorage.removeItem('qms_auth');
       sessionStorage.removeItem('qms_page');
     }
