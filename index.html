@@ -2800,7 +2800,10 @@ _vForm(row=null){
   });
   if(e)setTimeout(()=>Cmt.render('#vcmt',`vendor-${row.id}`),80);
 },
-_vSave(id){
+/* [v2.20 수정] async로 전환 + SB.addVendor/updateVendor 연동
+   기존: DB.vendors.push(더미) → vendors() 재로드 시 SB 결과로 덮어씌워져 사라짐
+   수정: SB.addVendor/updateVendor 호출 → Supabase에 실제 저장 */
+async _vSave(id){
   const g=k=>document.getElementById(k)?.value.trim()||'';
   const biz=g('vf_biz'),name=g('vf_name'),tel=g('vf_tel'),email=g('vf_email');
   if(!biz){Toast.show('사업자번호는 필수입니다.','warn');document.getElementById('vf_biz')?.classList.add('err');return}
@@ -2815,22 +2818,20 @@ _vSave(id){
     document.getElementById('vf_biz')?.classList.add('err');return;
   }
   const today=H.today();
+  const row={
+    vendor_name:name, biz_no:biz, vendor_type:g('vf_type'),
+    ceo_name:g('vf_ceo'), tel, fax:g('vf_fax'), email,
+    manager:g('vf_mgr'), manager_tel:g('vf_mtel'), manager_email:g('vf_memail'),
+    address:g('vf_addr'),
+    active:Number(document.getElementById('vf_active')?.value||1),
+  };
   if(id){
-    const idx=DB.vendors.findIndex(v=>v.id===id);
-    if(idx>=0){
-      DB.vendors[idx]={...DB.vendors[idx],vendor_name:name,biz_no:biz,vendor_type:g('vf_type'),
-        ceo_name:g('vf_ceo'),tel,fax:g('vf_fax'),email,manager:g('vf_mgr'),
-        manager_tel:g('vf_mtel'),manager_email:g('vf_memail'),address:g('vf_addr'),
-        active:Number(document.getElementById('vf_active')?.value||1),updated_at:today};
-    }
+    const res=await SB.updateVendor(id,{...row,updated_at:today});
+    if(!res.ok) return;
     Toast.show('거래처가 수정되었습니다.','ok');
   } else {
-    const newId=Math.max(0,...DB.vendors.map(v=>v.id))+1;
-    DB.vendors.push({id:newId,vendor_name:name,biz_no:biz,vendor_type:g('vf_type'),
-      ceo_name:g('vf_ceo'),tel,fax:g('vf_fax'),email,manager:g('vf_mgr'),
-      manager_tel:g('vf_mtel'),manager_email:g('vf_memail'),address:g('vf_addr'),
-      active:Number(document.getElementById('vf_active')?.value||1),
-      created_at:today,updated_at:today});
+    const res=await SB.addVendor({...row,created_at:today,updated_at:today});
+    if(!res.ok) return;
     Toast.show('거래처가 등록되었습니다.','ok');
   }
   Modal.close();Pages.vendors();
@@ -2959,7 +2960,10 @@ _uForm(row=null){
           <button class="btn bpri btn-f8" onclick="Pages._uSave(${row?.id||'null'})">${e?'저장':'등록'} <span class="kbd">F8</span></button>`
   });
 },
-_uSave(id){
+/* [v2.20 수정] async로 전환 + SB.addUser/updateUser 연동
+   기존: DB.users.push(더미) → users() 재로드 시 SB 결과로 덮어씌워져 사라짐
+   수정: SB.addUser/updateUser 호출 → Supabase에 실제 저장 */
+async _uSave(id){
   const g=k=>document.getElementById(k)?.value.trim()||'';
   const uid=g('uf_id'),name=g('uf_name'),pw=g('uf_pw'),pw2=g('uf_pw2');
   if(!uid){Toast.show('아이디는 필수입니다.','warn');return}
@@ -2970,16 +2974,19 @@ _uSave(id){
   const email=g('uf_email');
   if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){Toast.show('올바른 이메일 형식을 입력하세요.','warn');return}
   const today=H.today();
-  const obj={username:uid,name,department:g('uf_dept'),tel:g('uf_tel'),email,
+  const row={
+    username:uid, name,
+    department:g('uf_dept'), tel:g('uf_tel'), email,
     role:document.getElementById('uf_role')?.value||'user',
-    active:Number(document.getElementById('uf_active')?.value||1),updated_at:today};
+    active:Number(document.getElementById('uf_active')?.value||1),
+  };
   if(id){
-    const idx=DB.users.findIndex(u=>u.id===id);
-    if(idx>=0)DB.users[idx]={...DB.users[idx],...obj};
+    const res=await SB.updateUser(id,{...row,updated_at:today});
+    if(!res.ok) return;
     Toast.show('사용자가 수정되었습니다.','ok');
   } else {
-    const newId=Math.max(0,...DB.users.map(u=>u.id))+1;
-    DB.users.push({id:newId,...obj,created_at:today});
+    const res=await SB.addUser({...row,created_at:today,updated_at:today});
+    if(!res.ok) return;
     Toast.show('사용자가 등록되었습니다.','ok');
   }
   Modal.close();Pages.users();
