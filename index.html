@@ -53,6 +53,12 @@
   ║            Tbl.getSel: c.value → Number(c.value)              ║
   ║        [2] 전체 11개 페이지 onDel 더미→실제 삭제+재렌더 적용   ║
   ║        [3] 미리보기 방향: C안(Supabase Storage) 권고           ║
+  ║  v2.19 대시보드 실시간 집계 + 삭제 즉시 반영 (2026-05-18)    ║
+  ║        [1] SB.get* 더미폴백 제거 (빈 DB 시 더미 표시 버그)     ║
+  ║        [2] items/vendors/users SB 연동 완성                    ║
+  ║        [3] 통계 카드 render() 시 실시간 재계산 (전체 메뉴)     ║
+  ║        [4] Tbl.getSel Number 변환 (삭제 타입 불일치 수정)      ║
+  ║        [5] 전체 11개 페이지 onDel 실제 삭제+즉시 재렌더       ║
   ║  v2.18 일괄등록 완전 수정 + 대분류 변경 (2026-05-18)          ║
   ║        [1] 대분류: 수지가공/금속가공/VALVE/FITTING/PUMP/유량계/소재판매║
   ║        [2] 핵심버그: UNIQUE 제약 위반→청크전체실패 수정          ║
@@ -1009,7 +1015,7 @@ const SB={
     if(!_sb) return DB.items;
     const {data,error}=await _sb.from('items').select('*').order('id');
     if(error){console.warn('[SB] items 조회 실패 → 더미데이터',error.message);return DB.items;}
-    return data.length>0?data:DB.items;
+    return data; // Supabase 결과 그대로 반환 (빈 배열 포함)
   },
 
   /* 거래처 목록 조회 */
@@ -1017,7 +1023,7 @@ const SB={
     if(!_sb) return DB.vendors;
     const {data,error}=await _sb.from('vendors').select('*').order('id');
     if(error){console.warn('[SB] vendors 조회 실패 → 더미데이터',error.message);return DB.vendors;}
-    return data.length>0?data:DB.vendors;
+    return data;
   },
 
   /* 검사 목록 조회 */
@@ -1028,7 +1034,7 @@ const SB={
     const {data,error}=await q;
     if(error){console.warn('[SB] inspections 조회 실패 → 더미데이터',error.message);
       return type?DB.inspections.filter(i=>i.type===type):DB.inspections;}
-    return data.length>0?data:(type?DB.inspections.filter(i=>i.type===type):DB.inspections);
+    return data.length>0?data:type?data.filter(i=>i.type===type):data;
   },
 
   /* 검사 등록 */
@@ -1045,7 +1051,7 @@ const SB={
     if(!_sb) return DB.nc;
     const {data,error}=await _sb.from('nonconformances').select('*').order('date',{ascending:false});
     if(error){console.warn('[SB] nc 조회 실패 → 더미데이터',error.message);return DB.nc;}
-    return data.length>0?data:DB.nc;
+    return data;
   },
 
   /* 멘션 목록 조회 */
@@ -1053,7 +1059,7 @@ const SB={
     if(!_sb) return DB.mentions;
     const {data,error}=await _sb.from('mentions').select('*').order('created_at',{ascending:false});
     if(error){console.warn('[SB] mentions 조회 실패 → 더미데이터',error.message);return DB.mentions;}
-    return data.length>0?data:DB.mentions;
+    return data;
   },
 
   /* 멘션 등록 */
@@ -1102,7 +1108,7 @@ const SB={
     if(!_sb) return DB.users;
     const {data,error}=await _sb.from('users').select('*').order('id');
     if(error){console.warn('[SB] users 실패→더미',error.message);return DB.users;}
-    return data.length>0?data:DB.users;
+    return data;
   },
   async addUser(row){
     if(!_sb){const id=Math.max(0,...DB.users.map(u=>u.id))+1;DB.users.push({id,...row});return{ok:true,id};}
@@ -1213,7 +1219,7 @@ const SB={
     if(!_sb) return DB.equip;
     const {data,error}=await _sb.from('equipment').select('*').order('id');
     if(error){console.warn('[SB] equip 실패→더미',error.message);return DB.equip;}
-    return data.length>0?data:DB.equip;
+    return data;
   },
   async addEquip(row){
     if(!_sb){const id=Math.max(0,...DB.equip.map(e=>e.id))+1;DB.equip.push({id,...row});return{ok:true,id};}
@@ -1234,7 +1240,7 @@ const SB={
     if(!_sb) return DB.cals;
     const {data,error}=await _sb.from('calibrations').select('*').order('date',{ascending:false});
     if(error){console.warn('[SB] cals 실패→더미',error.message);return DB.cals;}
-    return data.length>0?data:DB.cals;
+    return data;
   },
   async addCal(row){
     if(!_sb){const id=Math.max(0,...DB.cals.map(c=>c.id))+1;DB.cals.push({id,...row});return{ok:true,id};}
@@ -1249,7 +1255,7 @@ const SB={
     if(!_sb) return DB.docs;
     const {data,error}=await _sb.from('documents').select('*').order('id');
     if(error){console.warn('[SB] docs 실패→더미',error.message);return DB.docs;}
-    return data.length>0?data:DB.docs;
+    return data;
   },
   async addDoc(row){
     if(!_sb){const id=Math.max(0,...DB.docs.map(d=>d.id))+1;DB.docs.push({id,...row});return{ok:true,id};}
@@ -1270,7 +1276,7 @@ const SB={
     if(!_sb) return DB.cars;
     const {data,error}=await _sb.from('corrective_actions').select('*').order('date',{ascending:false});
     if(error){console.warn('[SB] cars 실패→더미',error.message);return DB.cars;}
-    return data.length>0?data:DB.cars;
+    return data;
   },
   async addCar(row){
     if(!_sb){const id=Math.max(0,...DB.cars.map(c=>c.id))+1;DB.cars.push({id,...row});return{ok:true,id};}
@@ -2420,52 +2426,75 @@ dash(){
 
 /* ── 품목 등록 (컬럼 재설계) ── */
 async items(){
+  /* ── 품목 등록 페이지
+     [v2.19 수정] 통계 카드 실시간 재계산:
+     render() 호출 시마다 data 기준으로 통계 재계산
+     삭제/등록 후 즉시 숫자 반영 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   const allItems=await SB.getItems();
-  DB.items=allItems; // 로컬 캐시 갱신
-  let data=[...allItems],search='',cat='';
-  const total=allItems.length;
-  const active=allItems.filter(i=>i.active).length;
-  const byType={};allItems.forEach(i=>{byType[i.category]=(byType[i.category]||0)+1});
-  const withFile=allItems.filter(i=>FM.has(`item-${i.id}`)).length;
+  DB.items=allItems;
+  let data=[...allItems], search='', cat='';
+
   const COLS=[
     {key:'major_category',label:'대분류',  w:'80px', render:v=>`<span class="badge bgry">${H.e(v||'-')}</span>`},
     {key:'category',      label:'품목분류', w:'78px', render:v=>`<span class="badge bblu">${H.e(v||'-')}</span>`},
     {key:'item_code',     label:'품목코드', w:'100px'},
     {key:'item_name',     label:'품목명'},
-    {key:'spec',          label:'규격',     w:'105px'},
-    {key:'unit',          label:'단위',     w:'48px', align:'center'},
-    {key:'material',      label:'재질',     w:'78px'},
+    {key:'spec',          label:'규격',    w:'105px'},
+    {key:'unit',          label:'단위',    w:'48px', align:'center'},
+    {key:'material',      label:'재질',    w:'78px'},
     {key:'vendor_name',   label:'주 거래처',w:'110px'},
-    {key:'active',        label:'사용',     w:'52px', align:'center',
+    {key:'active',        label:'사용',    w:'52px', align:'center',
       render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'사용':'미사용'}</span>`},
-    {key:'created_at',    label:'등록일',   w:'84px'},
-    {key:'updated_at',    label:'수정일',   w:'84px'},
-    {key:'id',            label:'파일',     w:'68px', align:'center',
+    {key:'created_at',    label:'등록일',  w:'84px'},
+    {key:'updated_at',    label:'수정일',  w:'84px'},
+    {key:'id',            label:'파일',    w:'68px', align:'center',
       render:(v)=>FM.btn(`item-${v}`)},
   ];
+
+  /* ── render: 통계 카드 + 테이블 동시 갱신 ── */
   const render=()=>{
-    const d=data.filter(i=>(search?i.item_name.includes(search)||i.item_code.includes(search):true)&&(cat?i.category===cat:true));
+    const d=data.filter(i=>
+      (search?i.item_name.includes(search)||i.item_code.includes(search):true)&&
+      (cat?i.category===cat:true)
+    );
+    /* 통계 실시간 재계산 (삭제/등록 후 즉시 반영) */
+    const total=data.length;
+    const active=data.filter(i=>i.active).length;
+    const byType={};data.forEach(i=>{byType[i.category]=(byType[i.category]||0)+1});
+    const withFile=data.filter(i=>FM.has(`item-${i.id}`)).length;
+
+    /* 통계 카드 업데이트 (DOM 존재 시) */
+    const sd=w.querySelector('.stat-dash');
+    if(sd){
+      const vals=sd.querySelectorAll('.sd-val');
+      if(vals[0]) vals[0].textContent=total;
+      if(vals[1]) vals[1].textContent=active;
+      if(vals[2]) vals[2].textContent=total-active;
+      if(vals[3]) vals[3].textContent=withFile;
+    }
+
+    /* 테이블 렌더링 */
     const tc=w.querySelector('#itbl');
     if(tc) Tbl.render({el:'#itbl',cols:COLS,data:d,
-      /* 버그수정: onDel 실제 DB 삭제 반영 + SB 연동
-         ids: 숫자 배열 (Tbl.getSel에서 Number 변환)
-         i.id도 숫자이므로 includes 정상 작동 */
       onDel:async(ids)=>{
-        const numIds=ids.map(Number); // 타입 확실히 숫자 변환
-        for(const id of numIds){
-          await SB.deleteItem(id);
-        }
-        // 로컬 캐시에서 즉시 제거
+        const numIds=ids.map(Number);
+        for(const id of numIds) await SB.deleteItem(id);
         DB.items=DB.items.filter(i=>!numIds.includes(Number(i.id)));
         data=data.filter(i=>!numIds.includes(Number(i.id)));
         Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
-        // 삭제 후 테이블 즉시 재렌더링
         render();
       },
       onRow:row=>Pages._iForm(row)});
   };
+
+  /* ── 초기 렌더링 ── */
+  const total=data.length;
+  const active=data.filter(i=>i.active).length;
+  const byType={};data.forEach(i=>{byType[i.category]=(byType[i.category]||0)+1});
+  const withFile=data.filter(i=>FM.has(`item-${i.id}`)).length;
+
   w.innerHTML=`
     <div class="stat-dash">
       <div class="sd-card"><div class="sd-icon" style="background:#dbeafe;color:#2563eb">📦</div>
@@ -2478,12 +2507,14 @@ async items(){
         <div><div class="sd-val">${withFile}</div><div class="sd-lbl">파일 첨부</div></div></div>
       ${Object.entries(byType).map(([t,n])=>`<div class="sd-card sd-sm"><div class="sd-lbl">${H.e(t)}</div><div class="sd-val" style="font-size:17px">${n}</div></div>`).join('')}
     </div>
-    <div class="ph" style="margin-top:14px"><div><div class="ptit">📦 품목 등록</div><div class="psub">검사·관리에 사용되는 품목 기준정보</div></div>
-    <div class="pac">
-      <button class="btn bpri btn-f2" onclick="Pages._iForm()">+ 품목 등록 <span class="kbd">F2</span></button>
-      <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('items')" title="엑셀 양식 내려받기">📥 양식 내려받기</button>
-      <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('items')" title="엑셀 일괄등록">📤 자료 일괄등록</button>
-    </div></div>
+    <div class="ph" style="margin-top:14px">
+      <div><div class="ptit">📦 품목 등록</div><div class="psub">검사·관리에 사용되는 품목 기준정보</div></div>
+      <div class="pac">
+        <button class="btn bpri btn-f2" onclick="Pages._iForm()">+ 품목 등록 <span class="kbd">F2</span></button>
+        <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('items')" title="엑셀 양식 내려받기">📥 양식 내려받기</button>
+        <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('items')" title="엑셀 일괄등록">📤 자료 일괄등록</button>
+      </div>
+    </div>
     <div class="tbar">
       <div class="sw2"><input type="text" placeholder="품목코드, 품목명 검색..." oninput="Pages._iS(this.value)"></div>
       <select class="fsel" onchange="Pages._iC(this.value)">
@@ -2492,116 +2523,20 @@ async items(){
       <button class="btn bout bsm" onclick="SearchPop.open('items')" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>
     </div>
     <div id="itbl"></div>`;
-  Pages._iS=v=>{search=v;render()};Pages._iC=v=>{cat=v;render()};render();
-},
-_iForm(row=null){
-  const e=!!row;
-  const MAJOR=['수지가공','금속가공','VALVE','FITTING','PUMP','유량계','소재판매'];
-  const CAT=['원자재','부자재','반제품','완제품','소모품'];
-  Modal.open({title:e?'품목 수정':'품목 등록',size:'mlg',
-    body:`<div class="fg2">
-      <div class="fgroup"><label class="fl">대분류</label>
-        <select class="fc" id="imaj">
-          <option value="">선택</option>
-          ${MAJOR.map(c=>`<option ${row?.major_category===c?'selected':''}>${c}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fgroup"><label class="fl req">품목분류</label>
-        <select class="fc" id="ica">
-          ${CAT.map(c=>`<option ${row?.category===c?'selected':''}>${c}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fgroup"><label class="fl req">품목코드</label>
-        <input class="fc" id="ic" value="${H.e(row?.item_code||'')}" placeholder="예) RAW-001" ${e?'readonly':''}>
-      </div>
-      <div class="fgroup"><label class="fl req">품목명</label>
-        <input class="fc" id="in" value="${H.e(row?.item_name||'')}">
-      </div>
-      <div class="fgroup"><label class="fl">규격</label>
-        <input class="fc" id="isp" value="${H.e(row?.spec||'')}" placeholder="예) SUS304 2T">
-      </div>
-      <div class="fgroup"><label class="fl">단위</label>
-        <select class="fc" id="iu">
-          ${['EA','KG','L','M','BOX','SET','개','개소'].map(u=>`<option ${row?.unit===u?'selected':''}>${u}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fgroup"><label class="fl">재질</label>
-        <input class="fc" id="imt" value="${H.e(row?.material||'')}" placeholder="예) SUS304, AL6061">
-      </div>
-      <div class="fgroup"><label class="fl">주 거래처</label>
-        <select class="fc" id="ivn">
-          <option value="">선택</option>
-          ${DB.vendors.map(v=>`<option ${row?.vendor_id===v.id?'selected':''}>${H.e(v.vendor_name)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fgroup"><label class="fl">사용여부</label>
-        <select class="fc" id="iuse">
-          <option value="1" ${!row||row.active?'selected':''}>사용</option>
-          <option value="0" ${row&&!row.active?'selected':''}>미사용</option>
-        </select>
-      </div>
-      ${e?`<div class="fgroup"><label class="fl">등록일</label>
-        <input class="fc" value="${H.e(row?.created_at||'')}" readonly style="background:#f8fafc"></div>`
-       :`<div class="fgroup"></div>`}
-      ${e?`<div class="fgroup"><label class="fl">수정일</label>
-        <input class="fc" value="${H.e(row?.updated_at||H.today())}" readonly style="background:#f8fafc"></div>`
-       :`<div class="fgroup"></div>`}
-      ${e?`<div class="fgroup ff"><label class="fl">첨부파일</label>
-        ${FM.btn('item-'+row.id)}
-        <span style="font-size:12px;color:var(--tm);margin-left:8px">
-          ${FM.has('item-'+row.id)?FM.get('item-'+row.id).length+'개 파일':'등록된 파일 없음'}
-        </span></div>`:''}
-      <div class="fgroup ff"><label class="fl">비고</label>
-        <textarea class="fc" id="irmk" rows="2">${H.e(row?.remark||'')}</textarea>
-      </div>
-    </div>${e?`<div id="icmt"></div>`:''}`,
-    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
-      <button class="btn bpri btn-f8" onclick="Pages._iSave(${row?.id||'null'})">
-        ${e?'저장':'등록'} <span class="kbd">F8</span>
-      </button>`
-  });
-  if(e)setTimeout(()=>Cmt.render('#icmt',`item-${row.id}`),80);
-},
-async _iSave(id){
-  const v=k=>document.getElementById(k)?.value.trim()||'';
-  const major=v('imaj'), cat=v('ica'), code=v('ic'), name=v('in');
-  // 필수값 검증
-  if(!cat){Toast.show('품목분류는 필수입니다.','warn');return}
-  if(!code){Toast.show('품목코드는 필수입니다.','warn');document.getElementById('ic')?.classList.add('err');return}
-  if(!name){Toast.show('품목명은 필수입니다.','warn');document.getElementById('in')?.classList.add('err');return}
-  // 품목코드 중복 검사
-  const dup=DB.items.find(i=>i.item_code===code&&(!id||i.id!==id));
-  if(dup){
-    Toast.show(`⚠️ 품목코드 "${code}"는 이미 등록된 코드입니다. (${dup.item_name})`,'err',5000);
-    document.getElementById('ic')?.classList.add('err');return;
-  }
-  const today=H.today();
-  const vidx=DB.vendors.find(vn=>vn.vendor_name===v('ivn'))?.id||null;
-  const row={
-    major_category:major, category:cat, item_code:code, item_name:name,
-    spec:v('isp'), unit:v('iu'), material:v('imt'),
-    vendor_name:v('ivn'), vendor_id:vidx,
-    active:Number(document.getElementById('iuse')?.value||1),
-    remark:v('irmk'),
-  };
-  if(id){
-    // 수정: updated_at 자동 갱신
-    const res=await SB.updateItem(id,{...row, updated_at:today});
-    if(!res.ok) return;
-    Toast.show('품목이 수정되었습니다.','ok');
-  } else {
-    // 신규: created_at + updated_at 자동 생성
-    const res=await SB.addItem({...row, created_at:today, updated_at:today});
-    if(!res.ok) return;
-    Toast.show('품목이 등록되었습니다.','ok');
-  }
-  Modal.close(); Pages.items();
+
+  Pages._iS=v=>{search=v; render()};
+  Pages._iC=v=>{cat=v; render()};
+  render();
 },
 
 /* ── 거래처 ── */
-vendors(){
+async vendors(){
+  /* [v2.19] SB 연동 + 통계 실시간 갱신 */
   const w=document.getElementById('pw');
-  const data=DB.vendors;
+  w.innerHTML='<div class="spin"></div>';
+  const allVendors=await SB.getVendors();
+  DB.vendors=allVendors;
+  let data=[...allVendors];
   const total=data.length;
   const active=data.filter(v=>v.active).length;
   const byType={};data.forEach(v=>{byType[v.vendor_type]=(byType[v.vendor_type]||0)+1});
@@ -2657,7 +2592,20 @@ _vFilter(){
   Pages._vRender(d);
 },
 _vRender(data){
+  /* [v2.19] 통계 카드 실시간 갱신 */
   data=data||DB.vendors;
+  /* 통계 업데이트 */
+  const total=data.length, active=data.filter(v=>v.active).length;
+  const byType={};data.forEach(v=>{byType[v.vendor_type]=(byType[v.vendor_type]||0)+1});
+  const topType=Object.entries(byType).sort((a,b)=>b[1]-a[1])[0];
+  const sd=document.querySelector('.pw .stat-dash');
+  if(sd){
+    const vals=sd.querySelectorAll('.sd-val');
+    if(vals[0]) vals[0].textContent=total;
+    if(vals[1]) vals[1].textContent=active;
+    if(vals[2]) vals[2].textContent=total-active;
+    if(vals[3]) vals[3].textContent=topType?topType[0]:'-';
+  }
   Tbl.render({el:'#vtbl',cols:[
     {key:'vendor_type',label:'유형',      w:'70px', render:v=>`<span class="badge bpur">${H.e(v||'-')}</span>`},
     {key:'biz_no',     label:'사업자번호',w:'108px'},
@@ -2783,8 +2731,12 @@ _vRefreshFile(id){
 },
 
 /* ── 사용자 ── */
-users(){
+async users(){
+  /* [v2.19] SB 연동 */
   const w=document.getElementById('pw');
+  w.innerHTML='<div class="spin"></div>';
+  const allUsers=await SB.getUsers();
+  DB.users=allUsers;
   const utotal=DB.users.length,uactive=DB.users.filter(u=>u.active).length;
   const uroles={};DB.users.forEach(u=>{uroles[u.role]=(uroles[u.role]||0)+1});
   const udepts=new Set(DB.users.map(u=>u.department)).size;
