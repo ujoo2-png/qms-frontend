@@ -1081,14 +1081,41 @@ const SB={
 
   /* ── 품목 ── */
   async addItem(row){
-    if(!_sb){const id=Math.max(0,...DB.items.map(i=>i.id))+1;DB.items.push({id,...row});return{ok:true,id};}
-    const {data,error}=await _sb.from('items').insert(row).select().single();
+    if(!_sb){
+      const id=Math.max(0,...DB.items.map(i=>i.id))+1;
+      DB.items.push({id,...row});
+      return{ok:true,id};
+    }
+    /* Supabase items 테이블 허용 컬럼만 추출
+       테이블에 없는 필드 포함 시 "could not find column" 오류 발생 방지 */
+    const allowed={
+      major_category: row.major_category||'',
+      category:       row.category||'',
+      item_code:      row.item_code||'',
+      item_name:      row.item_name||'',
+      spec:           row.spec||'',
+      unit:           row.unit||'EA',
+      material:       row.material||'',
+      vendor_id:      row.vendor_id||null,
+      vendor_name:    row.vendor_name||'',
+      active:         row.active!==undefined?Number(row.active):1,
+      remark:         row.remark||'',
+      created_at:     row.created_at||null,
+      updated_at:     row.updated_at||null,
+    };
+    const {data,error}=await _sb.from('items').insert(allowed).select().single();
     if(error){Toast.show('품목 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.items.push(data);return{ok:true,id:data.id};
+    DB.items.push(data);
+    return{ok:true,id:data.id};
   },
   async updateItem(id,patch){
     if(!_sb){const i=DB.items.find(i=>i.id===id);if(i)Object.assign(i,patch);return{ok:true};}
-    const {error}=await _sb.from('items').update(patch).eq('id',id);
+    /* 허용 컬럼만 추출 */
+    const allowed={};
+    const keys=['major_category','category','item_code','item_name','spec','unit',
+      'material','vendor_id','vendor_name','active','remark','updated_at'];
+    keys.forEach(k=>{if(patch[k]!==undefined)allowed[k]=patch[k];});
+    const {error}=await _sb.from('items').update(allowed).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
     const i=DB.items.find(i=>i.id===id);if(i)Object.assign(i,patch);return{ok:true};
   },
