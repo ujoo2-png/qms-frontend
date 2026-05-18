@@ -53,6 +53,18 @@
   ║            Tbl.getSel: c.value → Number(c.value)              ║
   ║        [2] 전체 11개 페이지 onDel 더미→실제 삭제+재렌더 적용   ║
   ║        [3] 미리보기 방향: C안(Supabase Storage) 권고           ║
+  ║  v2.22 보안 강화 + 멘션 SB 연동 (2026-05-19)                ║
+  ║        [A2] SHA-256 해시: H.sha256() Web Crypto API 추가     ║
+  ║             _uSave: password 해시 저장 (password 컬럼)       ║
+  ║             Auth.login: SHA-256 해시 비교로 인증              ║
+  ║             아이디 중복 검사 추가                             ║
+  ║        [B2] 비밀번호 찾기: 관리자 초기화 방식                 ║
+  ║             _uResetPw: 8자리 임시비밀번호 발급 (관리자 전용)  ║
+  ║             _uForm: 임시비밀번호 발급 버튼 추가               ║
+  ║        [C1] 멘션 SB 연동: Cmt 객체 완전 재구현               ║
+  ║             mentions() async + SB.getMentions 로드           ║
+  ║             Cmt.submit: SB.addMention 저장                   ║
+  ║             Cmt._del: SB.deleteMention 연동                  ║
   ║  v2.22 로그인 DB.users 연계 (2026-05-19)                     ║
   ║        [1] Auth.login() async 전환 + DB.users 연계           ║
   ║            admin 외 사용자 로그인 작동                        ║
@@ -813,13 +825,15 @@ textarea.fc{resize:vertical;min-height:68px}
           <button class="lo-btn" onclick="Auth.findPwStep1()">인증 코드 발송</button>
         </div>
         <div id="fpStep2" style="display:none">
-          <div style="padding:11px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r);font-size:12px;color:#1d4ed8;margin-bottom:14px">
-            📧 인증 코드가 발송되었습니다. (데모: <strong>123456</strong>)
+          <div style="padding:16px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--r);font-size:13px;margin-bottom:14px">
+            <div style="font-weight:700;color:#92400e;margin-bottom:8px">✅ 계정이 확인되었습니다.</div>
+            <div style="color:#78350f;line-height:1.8">
+              비밀번호 재설정은 <strong>시스템 관리자</strong>에게 문의하세요.<br>
+              관리자가 임시 비밀번호를 발급해 드립니다.<br>
+              <span style="font-size:11px;color:#a16207">📞 관리자 문의 → 아래 버튼을 클릭하세요</span>
+            </div>
           </div>
-          <div class="lfg"><label>인증 코드 (6자리)</label><input type="text" id="fpCode" placeholder="인증 코드 입력" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')"></div>
-          <div class="lfg"><label>새 비밀번호</label><input type="password" id="fpNewPw" placeholder="8자 이상"></div>
-          <div class="lfg"><label>새 비밀번호 확인</label><input type="password" id="fpNewPw2" placeholder="비밀번호 재입력"></div>
-          <button class="lo-btn" onclick="Auth.findPwStep2()">비밀번호 변경</button>
+          <button class="lo-btn lo-sec" onclick="Auth.findPwStep2()" style="width:100%">📞 관리자에게 문의하기</button>
           <div style="text-align:center;margin-top:10px">
             <span class="lo-link" style="font-size:12px" onclick="Auth.resetFindPw()">← 다시 입력</span>
           </div>
@@ -1473,6 +1487,13 @@ const H={
   n(n){return Number(n||0).toLocaleString('ko-KR')},
   today(){return this.d(new Date())},
   _fmtSize(b){if(!b)return'0B';const u=['B','KB','MB','GB'];let i=0;while(b>=1024&&i<3){b/=1024;i++;}return b.toFixed(i>0?1:0)+u[i]},
+  /* sha256: 비밀번호 해시 (Web Crypto API)
+     [v2.22] A2안: 평문 대신 SHA-256 해시로 저장/비교 */
+  async sha256(str){
+    if(!str) return '';
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  },
 };
 
 /* ══ 토스트 ══ */
@@ -1588,9 +1609,9 @@ const Auth={
   },
 
   /* ── 로그인 처리 ──
-     [v2.21 수정] DB.users(Supabase 사용자 목록)와 연계
+     [v2.22] A2: SHA-256 해시 비교
      - admin/admin1234: 시스템 계정 (항상 허용)
-     - 그 외 사용자: DB.users에서 username+password 매칭 */
+     - 일반 사용자: DB.users에서 username 조회 후 password(해시) 비교 */
   async login(){
     const id=(document.getElementById('lid')?.value||'').trim();
     const pw=(document.getElementById('lpw')?.value||'').trim();
@@ -1602,23 +1623,30 @@ const Auth={
     if(!pw){if(ePw){ePw.textContent='비밀번호를 입력하세요.';ePw.style.display='block'}if(iPw)iPw.classList.add('err');ok=false;}
     else{if(ePw)ePw.style.display='none';if(iPw)iPw.classList.remove('err');}
     if(!ok)return;
-    /* admin 계정: 하드코딩 유지 */
+    /* admin 계정: 하드코딩 유지 (시스템 관리자) */
     if(id==='admin'&&pw==='admin1234'){
       this._doLoginSuccess({id:1,username:'admin',name:'시스템관리자',role:'admin',dept:'IT팀'});
       return;
     }
-    /* 일반 사용자: DB.users에서 조회 (없으면 SB에서 로드) */
+    /* 일반 사용자: DB.users 조회 (없으면 SB 로드) */
     if(!DB.users||DB.users.length===0) DB.users=await SB.getUsers();
-    /* password 필드명이 다양할 수 있으므로 여러 키 시도 */
-    const user=DB.users.find(u=>u.username===id&&(u.password===pw||u.pw===pw||u.pass===pw));
-    if(user&&user.active!==0){
-      this._doLoginSuccess(user);
-    } else if(user&&user.active===0){
+    const user=DB.users.find(u=>u.username===id);
+    if(!user){
+      if(eId){eId.textContent='등록되지 않은 아이디입니다.';eId.style.display='block';}
+      if(iId)iId.classList.add('err');return;
+    }
+    if(user.active===0){
       if(eId){eId.textContent='비활성화된 계정입니다. 관리자에게 문의하세요.';eId.style.display='block';}
-      if(iId)iId.classList.add('err');
+      if(iId)iId.classList.add('err');return;
+    }
+    /* SHA-256 해시 비교 */
+    const pwHash=await H.sha256(pw);
+    const match=user.password===pwHash;
+    if(match){
+      this._doLoginSuccess(user);
     } else {
-      if(eId){eId.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';eId.style.display='block';}
-      if(iId)iId.classList.add('err');if(iPw)iPw.classList.add('err');
+      if(ePw){ePw.textContent='비밀번호가 올바르지 않습니다.';ePw.style.display='block';}
+      if(iPw)iPw.classList.add('err');
     }
   },
 
@@ -1691,27 +1719,35 @@ const Auth={
     }
   },
 
-  /* ── 비밀번호 찾기 Step1 ──
-     [v2.21 수정] DB.users 연계 (아이디+이메일로 계정 확인)
-     실제 이메일 발송은 미구현 → 데모 코드 123456 안내 */
+  /* ── 비밀번호 찾기 ──
+     [v2.22] B2안: 관리자 초기화 방식
+     실제 이메일 발송 인프라 없음 → 관리자에게 초기화 요청 안내
+     아이디+이름 확인 후 안내 메시지 표시 */
   async findPwStep1(){
     const id=(document.getElementById('fpId')?.value||'').trim();
     const email=(document.getElementById('fpEmail')?.value||'').trim();
     if(!id||!email){Toast.show('아이디와 이메일을 입력하세요.','warn');return}
     /* admin 계정 */
-    const isAdmin=id==='admin'&&email.includes('@');
-    let found=isAdmin;
-    if(!isAdmin){
-      if(!DB.users||DB.users.length===0) DB.users=await SB.getUsers();
-      found=DB.users.some(u=>u.username===id&&(u.email||'')===email);
+    if(id==='admin'){
+      Toast.show('관리자 계정은 비밀번호를 변경할 수 없습니다.','warn');return;
     }
-    if(found){
-      const s1=document.getElementById('fpStep1'),s2=document.getElementById('fpStep2');
+    /* DB.users 조회 */
+    if(!DB.users||DB.users.length===0) DB.users=await SB.getUsers();
+    const user=DB.users.find(u=>u.username===id&&(u.email||'')=== email);
+    const s1=document.getElementById('fpStep1'),s2=document.getElementById('fpStep2');
+    if(user){
       if(s1)s1.style.display='none';if(s2)s2.style.display='block';
-      Toast.show('인증 코드가 발송되었습니다. (데모: 123456)','info',5000);
     } else {
       Toast.show('아이디 또는 이메일이 일치하는 계정을 찾을 수 없습니다.','err');
     }
+  },
+
+  findPwStep2(){
+    /* B2안: 코드 인증 없이 관리자 문의 안내 */
+    this.resetFindPw();
+    this.switchTab('login',document.querySelectorAll('.lo-tab')[0]);
+    /* contactAdmin 호출 */
+    setTimeout(()=>this.contactAdmin(),200);
   },
 
   findPwStep2(){
@@ -1843,28 +1879,56 @@ const Tbl={
 };
 
 /* ══ 댓글 ══ */
+/* ── 댓글/멘션 위젯 ──
+   [v2.22] C1: SB.addMention 연동
+   댓글은 mentions 테이블에 key(item-id, vendor-id 등)로 저장
+   _d: 로컬 캐시 (key별) */
 const Cmt={
   _d:{},
-  render(cont,key){
+
+  /* 댓글 목록 렌더링 */
+  async render(cont,key){
     const el=typeof cont==='string'?document.querySelector(cont):cont;
     if(!el)return;
-    if(!this._d[key])this._d[key]=[
-      {id:1,author:'김품질',dept:'품질팀',text:'확인 완료. @시스템관리자 결재 부탁드립니다.',time:'10분 전'},
-      {id:2,author:'시스템관리자',dept:'IT팀',text:'검토하겠습니다.',time:'5분 전'},
-    ];
-    const items=this._d[key];
-    el.innerHTML=`<div class="csec"><div class="cst">💬 댓글 (${items.length})</div>
-      <div class="clist">${items.map(c=>`
-        <div class="ci"><div class="cm"><div class="cauth"><div class="cav">${c.author.charAt(0)}</div>
-          <div><div class="cun">${H.e(c.author)} <span style="color:var(--tm);font-size:11px">${H.e(c.dept)}</span></div><div class="cdt">${c.time}</div></div></div>
-          <div style="display:flex;gap:5px">
-            <button class="btn bxs bgh" onclick="Toast.show('수정—백엔드 연동 후','info')">수정</button>
-            <button class="btn bxs bgh" style="color:var(--err)" onclick="Toast.show('삭제—백엔드 연동 후','info')">삭제</button>
-          </div></div>
-        <div class="cbody">${c.text.replace(/@(\S+)/g,'<span class="mtag">@$1</span>')}</div></div>`).join('')}
+    /* SB에서 로드 (없으면 로컬 캐시 사용) */
+    if(!this._d[key]){
+      const all=await SB.getMentions();
+      /* key 필터 */
+      this._d[key]=all.filter(m=>m.ref_key===key||m.target===key||m.key===key);
+    }
+    this._drawList(el,key);
+  },
+
+  /* 댓글 목록 HTML 렌더 */
+  _drawList(el,key){
+    const items=this._d[key]||[];
+    const me=Auth.cur();
+    el.innerHTML=`<div class="csec">
+      <div class="cst">💬 댓글 (${items.length})</div>
+      <div class="clist">${items.length===0
+        ?'<div style="text-align:center;padding:16px;color:var(--tm);font-size:13px">댓글이 없습니다.</div>'
+        :items.map(c=>`
+        <div class="ci">
+          <div class="cm">
+            <div class="cauth">
+              <div class="cav">${(c.author||c.from_name||'?').charAt(0)}</div>
+              <div>
+                <div class="cun">${H.e(c.author||c.from_name||'사용자')}
+                  <span style="color:var(--tm);font-size:11px">${H.e(c.dept||c.from_dept||'')}</span>
+                </div>
+                <div class="cdt">${H.e(c.time||c.created_at||'')}</div>
+              </div>
+            </div>
+            ${me&&(me.username===(c.username||c.from)||me.role==='admin')
+              ?`<button class="btn bxs berr" onclick="Cmt._del('${key}',${c.id})" title="삭제">🗑️</button>`:''}
+          </div>
+          <div class="cbody">${H.e(c.text||c.message||'').replace(/@(\S+)/g,'<span class="mtag">@$1</span>')}</div>
+        </div>`).join('')}
       </div>
-      <div class="ciw"><div class="cav" style="margin-top:3px">${(Auth.cur()?.name||'A').charAt(0)}</div>
-        <div style="flex:1"><textarea id="ct-${key}" class="fc" placeholder="댓글 입력. @이름 으로 멘션 가능" rows="2"></textarea>
+      <div class="ciw">
+        <div class="cav" style="margin-top:3px">${(me?.name||'A').charAt(0)}</div>
+        <div style="flex:1">
+          <textarea id="ct-${key}" class="fc" placeholder="댓글 입력. @이름 으로 멘션 가능" rows="2"></textarea>
           <div style="display:flex;justify-content:flex-end;gap:5px;margin-top:5px">
             <button class="btn bsm bgh" onclick="document.getElementById('ct-${key}').value=''">취소</button>
             <button class="btn bsm bpri" onclick="Cmt.submit('${key}')">등록</button>
@@ -1873,14 +1937,51 @@ const Cmt={
       </div>
     </div>`;
   },
-  submit(key){
+
+  /* 댓글 등록 */
+  async submit(key){
     const ta=document.getElementById(`ct-${key}`);
     if(!ta?.value.trim()){Toast.show('내용을 입력하세요.','warn');return}
-    if(!this._d[key])this._d[key]=[];
-    this._d[key].push({id:Date.now(),author:Auth.cur()?.name||'사용자',dept:'',text:ta.value.trim(),time:'방금 전'});
+    const me=Auth.cur();
+    const row={
+      ref_key:  key,
+      message:  ta.value.trim(),
+      from_name:me?.name||'사용자',
+      from_dept:me?.dept||me?.department||'',
+      from:     me?.username||'',
+      read:     false,
+      created_at:H.today(),
+      /* mentions 테이블 호환 필드 */
+      text:     ta.value.trim(),
+      author:   me?.name||'사용자',
+      dept:     me?.dept||me?.department||'',
+      time:     '방금 전',
+      key:      key,
+    };
+    /* SB 저장 */
+    const res=await SB.addMention(row);
+    if(!res.ok) return;
+    /* 로컬 캐시 갱신 */
+    if(!this._d[key]) this._d[key]=[];
+    this._d[key].push({id:res.id||Date.now(),...row});
+    ta.value='';
     Toast.show('등록되었습니다.','ok');
-    const p=ta.closest('.csec')?.parentElement;if(p)this.render(p,key);
-  }
+    /* 재렌더 */
+    const p=ta.closest('.csec')?.parentElement;
+    if(p) this._drawList(p,key);
+  },
+
+  /* 댓글 삭제 */
+  async _del(key,id){
+    Modal.confirm({title:'댓글 삭제',msg:'이 댓글을 삭제하시겠습니까?',danger:true,onOk:async()=>{
+      await SB.deleteMention(id);
+      if(this._d[key]) this._d[key]=this._d[key].filter(c=>c.id!==id);
+      /* 재렌더 */
+      const el=document.querySelector('#icmt,#vcmt,[id^="cmt"]');
+      if(el) this._drawList(el,key);
+      Toast.show('삭제되었습니다.','ok');
+    }});
+  },
 };
 
 /* ══ 파일 ══ */
@@ -3017,12 +3118,13 @@ _uForm(row=null){
            <div class="fgroup"><label class="fl">수정일</label><input class="fc" value="${today}" readonly></div>`:''}
     </div>`,
     foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+          ${e&&Auth._u?.role==='admin'?`<button class="btn bamb bsm" onclick="Pages._uResetPw(${row.id},'${H.e(row.username)}')" title="임시 비밀번호 발급 (관리자 전용)">🔑 임시비밀번호 발급</button>`:''}
           <button class="btn bpri btn-f8" onclick="Pages._uSave(${row?.id||'null'})">${e?'저장':'등록'} <span class="kbd">F8</span></button>`
   });
 },
-/* [v2.20 수정] async로 전환 + SB.addUser/updateUser 연동
-   기존: DB.users.push(더미) → users() 재로드 시 SB 결과로 덮어씌워져 사라짐
-   수정: SB.addUser/updateUser 호출 → Supabase에 실제 저장 */
+/* [v2.22] A2: SHA-256 해시 저장 + password 컬럼 포함
+   기존: password 필드 row에 없음 → 로그인 불가
+   수정: pw를 SHA-256 해시 후 password 컬럼으로 저장 */
 async _uSave(id){
   const g=k=>document.getElementById(k)?.value.trim()||'';
   const uid=g('uf_id'),name=g('uf_name'),pw=g('uf_pw'),pw2=g('uf_pw2');
@@ -3033,16 +3135,28 @@ async _uSave(id){
   if(pw&&pw!==pw2){Toast.show('비밀번호가 일치하지 않습니다.','warn');return}
   const email=g('uf_email');
   if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){Toast.show('올바른 이메일 형식을 입력하세요.','warn');return}
+  // 아이디 중복 검사 (신규 등록 시)
+  if(!id){
+    const dup=DB.users.find(u=>u.username===uid);
+    if(dup){Toast.show(`⚠️ 아이디 "${uid}"는 이미 사용 중입니다.`,'err',5000);return}
+  }
   const today=H.today();
+  // SHA-256 해시 처리
+  const pwHash=pw?await H.sha256(pw):null;
   const row={
     username:uid, name,
     department:g('uf_dept'), tel:g('uf_tel'), email,
     role:document.getElementById('uf_role')?.value||'user',
     active:Number(document.getElementById('uf_active')?.value||1),
   };
+  // password 해시 포함 (신규 등록 시 필수, 수정 시 입력한 경우만)
+  if(pwHash) row.password=pwHash;
   if(id){
     const res=await SB.updateUser(id,{...row,updated_at:today});
     if(!res.ok) return;
+    // 로컬 캐시 갱신
+    const idx=DB.users.findIndex(u=>u.id===id);
+    if(idx>=0) DB.users[idx]={...DB.users[idx],...row,updated_at:today};
     Toast.show('사용자가 수정되었습니다.','ok');
   } else {
     const res=await SB.addUser({...row,created_at:today,updated_at:today});
@@ -3051,6 +3165,38 @@ async _uSave(id){
   }
   Modal.close();Pages.users();
 },
+
+/* ── 임시비밀번호 발급 (관리자 전용, B2안) ──
+   [v2.22] 관리자가 사용자 비밀번호를 임시값으로 초기화
+   임시 비밀번호: 8자리 랜덤 → SHA-256 해시 → DB 저장
+   화면에 표시 후 관리자가 사용자에게 직접 전달 */
+async _uResetPw(userId, username){
+  if(Auth._u?.role!=='admin'){Toast.show('관리자만 사용할 수 있습니다.','err');return}
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const tmpPw=Array.from({length:8},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  const pwHash=await H.sha256(tmpPw);
+  const res=await SB.updateUser(userId,{password:pwHash,updated_at:H.today()});
+  if(!res.ok) return;
+  const u=DB.users.find(u=>u.id===userId);if(u) u.password=pwHash;
+  Modal.close();
+  Modal.open({title:'🔑 임시비밀번호 발급 완료',size:'sm',
+    body:`<div style="text-align:center;padding:16px 0">
+      <div style="font-size:13px;color:var(--tm);margin-bottom:12px">
+        <strong>${H.e(username)}</strong> 계정의 임시 비밀번호가 발급되었습니다.
+      </div>
+      <div style="background:#fef3c7;border:2px dashed #f59e0b;border-radius:10px;padding:18px;margin:8px 0">
+        <div style="font-size:11px;color:#92400e;margin-bottom:6px">임시 비밀번호</div>
+        <div style="font-size:28px;font-weight:700;color:#92400e;letter-spacing:4px">${tmpPw}</div>
+      </div>
+      <div style="font-size:11px;color:var(--tm);margin-top:12px">
+        ⚠️ 사용자에게 직접 전달하세요.<br>
+        로그인 후 반드시 비밀번호를 변경하도록 안내하세요.
+      </div>
+    </div>`,
+    foot:`<button class="btn bpri" onclick="Modal.close()">확인</button>`
+  });
+},
+
 
 
 /* ══════════════════════════════════════════════════════
@@ -3916,8 +4062,13 @@ audit(){document.getElementById('pw').innerHTML=`<div class="ph"><div><div class
    - 수정: supabase.from('mentions').update({text}).eq('id',id)
    - 삭제: supabase.from('mentions').delete().eq('id',id)
    - 히스토리: deleted_at 필드로 soft delete 관리 (백엔드) */
-mentions(){
+/* [v2.22] C1: SB.getMentions 연동 */
+async mentions(){
   const w=document.getElementById('pw');
+  w.innerHTML='<div class="spin"></div>';
+  /* SB에서 멘션 목록 로드 */
+  const allMentions=await SB.getMentions();
+  DB.mentions=allMentions;
   const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
 
