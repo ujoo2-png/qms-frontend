@@ -48,6 +48,11 @@
   ║  v2.16 품질현황 대시보드 신규 (C안, 2026-05-15)                 ║
   ║        검사5종 미니차트+토글+누적대형차트+KPI+상세테이블          ║
   ║        CSS버그(.sp-head중복) 수정, 검사 더미데이터 23건 보강      ║
+  ║  v2.19 삭제 즉시반영 + 전페이지 onDel 수정 (2026-05-18)      ║
+  ║        [1] 핵심버그: id 타입 불일치 수정 (문자열→숫자 변환)     ║
+  ║            Tbl.getSel: c.value → Number(c.value)              ║
+  ║        [2] 전체 11개 페이지 onDel 더미→실제 삭제+재렌더 적용   ║
+  ║        [3] 미리보기 방향: C안(Supabase Storage) 권고           ║
   ║  v2.18 일괄등록 완전 수정 + 대분류 변경 (2026-05-18)          ║
   ║        [1] 대분류: 수지가공/금속가공/VALVE/FITTING/PUMP/유량계/소재판매║
   ║        [2] 핵심버그: UNIQUE 제약 위반→청크전체실패 수정          ║
@@ -85,7 +90,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.18</title>
+<title>QMS - 품질경영시스템 v2.19</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -699,7 +704,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.18</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.19</div>
         </div>
       </div>
     </div>
@@ -796,7 +801,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.18 (2026-05-18) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.19 (2026-05-18) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -807,7 +812,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.18</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.19</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1756,7 +1761,9 @@ const Tbl={
     if(ca){ca.indeterminate=chk.length>0&&chk.length<all.length;ca.checked=chk.length===all.length&&all.length>0}
     const d=document.getElementById('btnDel');if(d)d.style.display=chk.length?'':'none';
   },
-  getSel(){return Array.from(document.querySelectorAll('.rck:checked')).map(c=>c.value)},
+  /* getSel: checkbox value는 문자열 → 숫자로 변환하여 id 타입 통일
+     버그수정: ids.includes(i.id) 에서 '1'.includes(1)=false 문제 */
+  getSel(){return Array.from(document.querySelectorAll('.rck:checked')).map(c=>Number(c.value))},
   delSel(){const ids=this.getSel();if(!ids.length)return;Modal.confirm({title:'선택 삭제',msg:`선택한 ${ids.length}건을 삭제하시겠습니까?`,danger:true,onOk:()=>{if(this._onDel)this._onDel(ids)}})},
   _pg(p){if(this._cur)Tbl.render({...this._cur,page:p})},
   _psChange(ps){if(this._cur)Tbl.render({...this._cur,ps:Number(ps),page:1})},
@@ -2266,7 +2273,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.18</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.19</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -2442,15 +2449,19 @@ async items(){
     const d=data.filter(i=>(search?i.item_name.includes(search)||i.item_code.includes(search):true)&&(cat?i.category===cat:true));
     const tc=w.querySelector('#itbl');
     if(tc) Tbl.render({el:'#itbl',cols:COLS,data:d,
-      /* 버그수정: onDel 실제 DB 삭제 반영 + SB 연동 */
+      /* 버그수정: onDel 실제 DB 삭제 반영 + SB 연동
+         ids: 숫자 배열 (Tbl.getSel에서 Number 변환)
+         i.id도 숫자이므로 includes 정상 작동 */
       onDel:async(ids)=>{
-        for(const id of ids){
+        const numIds=ids.map(Number); // 타입 확실히 숫자 변환
+        for(const id of numIds){
           await SB.deleteItem(id);
         }
-        Toast.show(`${ids.length}건 삭제되었습니다.`,'ok');
-        // 로컬 캐시에서도 제거
-        DB.items=DB.items.filter(i=>!ids.includes(i.id));
-        data=data.filter(i=>!ids.includes(i.id));
+        // 로컬 캐시에서 즉시 제거
+        DB.items=DB.items.filter(i=>!numIds.includes(Number(i.id)));
+        data=data.filter(i=>!numIds.includes(Number(i.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        // 삭제 후 테이블 즉시 재렌더링
         render();
       },
       onRow:row=>Pages._iForm(row)});
@@ -2662,7 +2673,13 @@ _vRender(data){
     {key:'created_at', label:'등록일',    w:'88px'},
     {key:'updated_at', label:'수정일',    w:'88px',  render:v=>H.e(v||'-')},
     {key:'id',         label:'파일',      w:'70px',  align:'center',render:(v)=>FM.btn(`vendor-${v}`)},
-  ],data,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),onRow:row=>Pages._vForm(row)});
+  ],data,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        for(const id of numIds) await SB.deleteVendor(id);
+        DB.vendors=DB.vendors.filter(v=>!numIds.includes(Number(v.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        Pages._vRender();
+      },onRow:row=>Pages._vForm(row)});
 },
 _vForm(row=null){
   const e=!!row;
@@ -2825,7 +2842,13 @@ _uRender(data){
     {key:'active',     label:'상태',         w:'52px',  align:'center', render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'활성':'비활성'}</span>`},
     {key:'created_at', label:'등록일',       w:'88px'},
     {key:'updated_at', label:'수정일',       w:'88px',  render:v=>H.e(v||'-')},
-  ],data,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),onRow:row=>Pages._uForm(row)});
+  ],data,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        for(const id of numIds) await SB.deleteUser(id);
+        DB.users=DB.users.filter(u=>!numIds.includes(Number(u.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        Pages._uRender();
+      },onRow:row=>Pages._uForm(row)});
 },
 _uForm(row=null){
   const e=!!row;
@@ -2955,7 +2978,12 @@ _insp(type){
       /* 파일 컬럼 — FM(파일관리) 연동, Supabase Storage 배포 시 URL 교체 */
       {key:'id',         label:'파일',        w:'80px',  align:'center', render:(_v,row)=>FM.btn(`insp-${row.id}`)},
     ],data:fd,
-    onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),
+    onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        render();
+      },
     onRow:row=>Pages._inspDetail2(row)});
   };
 
@@ -3486,7 +3514,12 @@ nc(){
     {key:'no',label:'부적합번호',w:'142px'},{key:'type',label:'유형',w:'60px',render:v=>`<span class="badge bblu">${H.e(v)}</span>`},
     {key:'item',label:'품목명'},{key:'date',label:'발생일',w:'86px'},{key:'desc',label:'내용'},{key:'assignee',label:'담당자',w:'72px'},
     {key:'status',label:'상태',w:'68px',render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='처리중'?'bamb':'bgry'}">${H.e(v)}</span>`},
-  ],data:DB.nc,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),onRow:row=>Pages._ncDetail(row)});
+  ],data:DB.nc,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        DB.nc=DB.nc.filter(n=>!numIds.includes(Number(n.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        Pages.nc();
+      },onRow:row=>Pages._ncDetail(row)});
 },
 _ncForm(){Modal.open({title:'부적합 등록',size:'mlg',body:`<div class="fg2">
   <div class="fgroup"><label class="fl req">발생 유형</label><select class="fc"><option>수입</option><option>공정</option><option>출하</option><option>기타</option></select></div>
@@ -3538,7 +3571,12 @@ equip(){
     {key:'maker',label:'제조사',w:'82px'},{key:'range',label:'측정범위',w:'112px'},{key:'loc',label:'위치',w:'72px'},
     {key:'next',label:'차기교정일',w:'92px',render:v=>{const d=Math.ceil((new Date(v)-new Date())/(864e5));return`<span ${d<0?'class="badge bred"':d<30?'class="badge bamb"':''}>${v}</span>`}},
     {key:'status',label:'상태',w:'66px',render:v=>`<span class="badge ${v==='정상'?'bgrn':v==='교정중'?'bamb':'bred'}">${H.e(v)}</span>`},
-  ],data:DB.equip,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),onRow:row=>Pages._eqDetail(row)});
+  ],data:DB.equip,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        DB.equip=DB.equip.filter(e=>!numIds.includes(Number(e.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        Pages.equip();
+      },onRow:row=>Pages._eqDetail(row)});
 },
 _eqForm(row=null){Modal.open({title:row?'계측기 수정':'계측기 등록',size:'mlg',body:`<div class="fg2">
   <div class="fgroup"><label class="fl req">계측기코드</label><input class="fc" value="${H.e(row?.code||'')}" placeholder="EQ-001" ${row?'readonly':''}></div>
@@ -3583,7 +3621,12 @@ cal(){
     {key:'cert',label:'성적서번호',w:'112px'},
     {key:'result',label:'결과',w:'62px',align:'center',render:v=>`<span class="badge ${v==='합격'?'bgrn':'bred'}">${H.e(v)}</span>`},
     {key:'next',label:'차기교정일',w:'92px'},
-  ],data:DB.cals,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok')});
+  ],data:DB.cals,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        DB.cals=DB.cals.filter(r=>!numIds.includes(Number(r.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        Pages.cal_list?.();
+      }});
 },
 _calForm(){Modal.open({title:'교정 등록',size:'mmd',body:`<div class="fg2">
   <div class="fgroup ff"><label class="fl req">계측기</label><select class="fc"><option value="">선택</option>${DB.equip.map(e=>`<option>${H.e(e.code)}-${H.e(e.name)}</option>`).join('')}</select></div>
@@ -3646,7 +3689,12 @@ docs(){
     {key:'title',label:'제목'},{key:'rev',label:'개정번호',w:'72px',align:'center'},
     {key:'date',label:'발행일',w:'86px'},{key:'author',label:'작성자',w:'72px'},
     {key:'status',label:'상태',w:'62px',render:v=>`<span class="badge ${v==='유효'?'bgrn':v==='초안'?'bamb':'bgry'}">${H.e(v)}</span>`},
-  ],data:DB.docs,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),onRow:row=>Pages._docDetail(row)});
+  ],data:DB.docs,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        DB.docs=DB.docs.filter(r=>!numIds.includes(Number(r.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        Pages.docs?.();
+      },onRow:row=>Pages._docDetail(row)});
 },
 _docForm(row=null){Modal.open({title:row?'문서 수정':'문서 등록',size:'mlg',body:`<div class="fg2">
   <div class="fgroup"><label class="fl req">유형</label><select class="fc">${['절차서','지침서','양식','매뉴얼','규정'].map(t=>`<option ${row?.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
@@ -3690,7 +3738,12 @@ car(){
     {key:'title',label:'제목'},{key:'open',label:'개시일',w:'86px'},{key:'due',label:'완료기한',w:'86px'},
     {key:'assignee',label:'담당자',w:'72px'},
     {key:'status',label:'상태',w:'66px',render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='처리중'?'bamb':'bgry'}">${H.e(v)}</span>`},
-  ],data:DB.cars,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),onRow:row=>Pages._carDetail(row)});
+  ],data:DB.cars,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        DB.cars=DB.cars.filter(r=>!numIds.includes(Number(r.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        Pages.car?.();
+      },onRow:row=>Pages._carDetail(row)});
 },
 _carForm(){Modal.open({title:'CAR 등록',size:'mlg',body:`<div class="fg2">
   <div class="fgroup"><label class="fl req">발생원</label><select class="fc">${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option>${s}</option>`).join('')}</select></div>
@@ -4252,7 +4305,12 @@ hold_mgmt(){
     {key:'qty',label:'수량',w:'58px',align:'right',render:v=>H.n(v)},{key:'location',label:'보관위치',w:'118px'},
     {key:'reason',label:'Hold 사유'},{key:'hold_date',label:'Hold일',w:'86px'},{key:'assignee',label:'담당자',w:'70px'},
     {key:'status',label:'상태',w:'76px',render:v=>`<span class="badge ${v==='Hold중'?'bred':'bgrn'}">${H.e(v)}</span>`},
-  ],data,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok'),onRow:row=>Pages._holdDetail(row)});
+  ],data,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        data=data.filter(r=>!numIds.includes(Number(r.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        render?.();
+      },onRow:row=>Pages._holdDetail(row)});
 },
 _holdForm(){Modal.open({title:'🚫 Hold 등록',size:'mlg',body:`<div class="fg2">
   <div class="fgroup"><label class="fl req">LOT번호</label><input class="fc" placeholder="LOT번호 입력"></div>
@@ -4384,7 +4442,12 @@ sqm_audit(){
     {key:'auditor',label:'심사자',w:'70px'},{key:'score',label:'점수',w:'60px',align:'center',render:v=>v?`<span style="font-weight:700;color:${v>=85?'var(--ok)':v>=70?'var(--warn)':'var(--err)'}">${v}</span>`:'-'},
     {key:'findings',label:'지적사항'},{key:'status',label:'상태',w:'60px',render:v=>`<span class="badge ${v==='완료'?'bgrn':'bamb'}">${H.e(v)}</span>`},
     {key:'next_date',label:'차기심사일',w:'86px',render:v=>v||'-'},
-  ],data,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok')});
+  ],data,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        data=data.filter(r=>!numIds.includes(Number(r.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        render?.();
+      }});
 },
 _sqmAuditForm(){Modal.open({title:'🔎 업체 심사 등록',size:'mlg',body:`<div class="fg2">
   <div class="fgroup"><label class="fl req">거래처</label><select class="fc"><option value="">선택</option>${DB.vendors.map(v=>`<option>${H.e(v.vendor_name)}</option>`).join('')}</select></div>
@@ -4649,7 +4712,12 @@ nc_dispose(){
     {key:'rework_qty',label:'재작업',w:'62px',align:'right'},
     {key:'cost',label:'비용(원)',w:'88px',align:'right',render:v=>`<strong>${H.n(v)}</strong>`},
     {key:'action_date',label:'처리일',w:'88px'},{key:'status',label:'상태',w:'68px',render:v=>`<span class="badge ${v==='완료'?'bgrn':'bamb'}">${H.e(v)}</span>`},
-  ],data,onDel:ids=>Toast.show(`${ids.length}건 삭제(더미)`,'ok')});
+  ],data,onDel:async(ids)=>{
+        const numIds=ids.map(Number);
+        data=data.filter(r=>!numIds.includes(Number(r.id)));
+        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+        render?.();
+      }});
 },
 _disposeForm(){Modal.open({title:'♻️ 반품/폐기 등록',size:'mlg',body:`<div class="fg2">
   <div class="fgroup"><label class="fl req">연계 부적합</label><select class="fc"><option value="">선택</option>${DB.nc.map(n=>`<option>${H.e(n.no)}</option>`).join('')}</select></div>
