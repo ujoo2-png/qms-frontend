@@ -53,6 +53,17 @@
   ║            Tbl.getSel: c.value → Number(c.value)              ║
   ║        [2] 전체 11개 페이지 onDel 더미→실제 삭제+재렌더 적용   ║
   ║        [3] 미리보기 방향: C안(Supabase Storage) 권고           ║
+  ║  v2.25 중복규칙 재정의 + 회원가입 + 멘션 답장 (2026-05-19)  ║
+  ║        [1.1] items: 품목코드만 중복, 필수외 빈칸 허용          ║
+  ║        [1.2] vendors: 거래처명만 중복, 필수외 빈칸 허용        ║
+  ║        [1.3] insp_*: 품목코드+거래처명 없으면 등록 안 됨       ║
+  ║               동일시트 내 동일 품목코드 중복 허용(allowFileDup) ║
+  ║        [1.4] 통합양식 검사4종 추가(공정/구매/외주/최종)        ║
+  ║        [2]   멘션 답장 기능 추가(_mentionReply/ReplySend)     ║
+  ║        [3]   회원가입 탭 복구 + 관리자 승인 플로우             ║
+  ║               _approveUser / _rejectUser 추가                ║
+  ║               설정>사용자관리에 승인 대기 목록 표시            ║
+  ║        [4]   사용자 목록 role 컬럼 삭제 확인                  ║
   ║  v2.24 멀티시트 통합 업로드 A+C안 (2026-05-19)              ║
   ║        [A] downloadAll: 4시트 통합 양식 다운로드              ║
   ║        [A] openUploadAll: 멀티시트 업로드 모달                ║
@@ -150,7 +161,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.24</title>
+<title>QMS - 품질경영시스템 v2.25</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -767,18 +778,19 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.24</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.25</div>
         </div>
       </div>
     </div>
 
     <!-- 카드 바디: 탭 + 폼 -->
     <div class="lo-card-body">
-      <!-- 탭: 로그인 / 아이디 찾기 / 비밀번호 찾기 -->
+      <!-- 탭: 로그인 / 아이디 찾기 / 비밀번호 찾기 / 회원가입 -->
       <div class="lo-tabs">
         <div class="lo-tab on" onclick="Auth.switchTab('login',this)">로그인</div>
         <div class="lo-tab" onclick="Auth.switchTab('findId',this)">아이디 찾기</div>
         <div class="lo-tab" onclick="Auth.switchTab('findPw',this)">비밀번호 찾기</div>
+        <div class="lo-tab" onclick="Auth.switchTab('signup',this)">회원가입</div>
       </div>
 
       <!-- ① 로그인 패널 -->
@@ -866,7 +878,37 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.24 (2026-05-19) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+      <!-- ④ 회원가입 패널 [v2.24 복구] -->
+      <div id="tabSignup" class="lo-panel">
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:36px;margin-bottom:6px">📝</div>
+          <div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:4px">회원가입</div>
+          <div style="font-size:12px;color:var(--tm)">가입 후 관리자 승인이 완료되면 로그인 가능합니다.</div>
+        </div>
+        <div class="lfg"><label>아이디 <span style="color:#ef4444">*</span></label>
+          <input type="text" id="suId" placeholder="영문/숫자 4자 이상" autocomplete="off"></div>
+        <div class="lfg"><label>이름 <span style="color:#ef4444">*</span></label>
+          <input type="text" id="suName" placeholder="실명을 입력하세요"></div>
+        <div class="lfg"><label>비밀번호 <span style="color:#ef4444">*</span></label>
+          <input type="password" id="suPw" placeholder="8자 이상 (영문+숫자 권장)"></div>
+        <div class="lfg"><label>비밀번호 확인 <span style="color:#ef4444">*</span></label>
+          <input type="password" id="suPw2" placeholder="비밀번호를 한 번 더 입력하세요"></div>
+        <div class="lfg"><label>부서</label>
+          <input type="text" id="suDept" placeholder="예) 품질팀"></div>
+        <div class="lfg"><label>E-MAIL</label>
+          <input type="email" id="suEmail" placeholder="example@company.com"></div>
+        <div class="lfg"><label>연락처</label>
+          <input type="text" id="suTel" placeholder="010-0000-0000"></div>
+        <div style="padding:10px 12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--r);font-size:12px;color:#92400e;margin-bottom:14px">
+          ⚠️ 가입 신청 후 <strong>관리자 승인</strong>이 완료되어야 로그인 가능합니다.
+        </div>
+        <div class="lo-errmsg" id="errSignup"></div>
+        <button class="lo-btn" onclick="Auth.signup()">가입 신청</button>
+        <div style="text-align:center;margin-top:12px">
+          <span class="lo-link" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
+        </div>
+      </div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.25 (2026-05-19) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -877,7 +919,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.24</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.25</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1628,7 +1670,7 @@ const Auth={
     document.querySelectorAll('.lo-tab').forEach(t=>t.classList.remove('on'));
     document.querySelectorAll('.lo-panel').forEach(p=>p.classList.remove('on'));
     if(btn)btn.classList.add('on');
-    const m={login:'tabLogin',findId:'tabFindId',findPw:'tabFindPw'};
+    const m={login:'tabLogin',findId:'tabFindId',findPw:'tabFindPw',signup:'tabSignup'};
     const el=document.getElementById(m[name]);if(el)el.classList.add('on');
     ['errId','errPw'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none'});
     ['lid','lpw'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('err')});
@@ -1728,9 +1770,47 @@ const Auth={
     Toast.show('로그아웃되었습니다.','info');
   },
 
-  /* ── 아이디 찾기 ──
-     [v2.21 수정] DB.users 연계 (이름+이메일로 username 검색)
-     admin 계정도 포함하여 조회 */
+  /* ── 회원가입 [v2.24 복구] ──
+     절차: 가입 신청 → DB에 pending(active=0) 저장 → 관리자가 설정>사용자관리에서 승인 */
+  async signup(){
+    const g=k=>(document.getElementById(k)?.value||'').trim();
+    const id=g('suId'),name=g('suName'),pw=g('suPw'),pw2=g('suPw2');
+    const errEl=document.getElementById('errSignup');
+    const showErr=msg=>{if(errEl){errEl.textContent=msg;errEl.style.display='block';}};
+    const clearErr=()=>{if(errEl){errEl.textContent='';errEl.style.display='none';}};
+    clearErr();
+    if(!id||id.length<4){showErr('아이디는 4자 이상이어야 합니다.');return}
+    if(!/^[a-zA-Z0-9_]+$/.test(id)){showErr('아이디는 영문/숫자/_만 사용 가능합니다.');return}
+    if(!name){showErr('이름을 입력하세요.');return}
+    if(!pw||pw.length<8){showErr('비밀번호는 8자 이상이어야 합니다.');return}
+    if(pw!==pw2){showErr('비밀번호가 일치하지 않습니다.');return}
+    /* 중복 확인 */
+    if(!DB.users||DB.users.length===0) DB.users=await SB.getUsers();
+    if(id==='admin'||DB.users.some(u=>u.username===id)){
+      showErr(`아이디 "${id}"는 이미 사용 중입니다.`);return;
+    }
+    const pwHash=await H.sha256(pw);
+    const row={
+      username:id, name,
+      department:g('suDept'), email:g('suEmail'), tel:g('suTel'),
+      password:pwHash,
+      role:'user',
+      active:0,          /* 관리자 승인 전: 비활성 */
+      pending:true,      /* 승인 대기 표시 */
+      created_at:H.today(), updated_at:H.today(),
+    };
+    const res=await SB.addUser(row);
+    if(!res.ok) return;
+    DB.users.push({id:res.id||Date.now(),...row});
+    /* 가입 완료 메시지 */
+    ['suId','suName','suPw','suPw2','suDept','suEmail','suTel'].forEach(k=>{
+      const el=document.getElementById(k);if(el)el.value='';
+    });
+    this.switchTab('login',document.querySelectorAll('.lo-tab')[0]);
+    Toast.show('가입 신청이 완료되었습니다.\n관리자 승인 후 로그인 가능합니다.','ok',5000);
+  },
+
+  /* ── 아이디 찾기 ── DB.users 연계 (이름+이메일로 username 검색) */
   async findId(){
     const name=(document.getElementById('findIdName')?.value||'').trim();
     const email=(document.getElementById('findIdEmail')?.value||'').trim();
@@ -2479,7 +2559,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.24</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.25</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -2550,6 +2630,84 @@ home(){
 },
 
 /* ── 개인정보 수정 ── */
+/* ── 멘션 답장 [v2.24] ── */
+async _mentionReply(parentId, toUser){
+  const parent=DB.mentions.find(m=>m.id===parentId);
+  if(!parent){Toast.show('원본 멘션을 찾을 수 없습니다.','err');return}
+  const me=Auth._u;
+  const meUser=DB.users.find(u=>u.username===(me?.username||Auth._cur))||{name:'관리자',department:'IT팀'};
+  Modal.open({title:`↩ 답장 — @${H.e(toUser)}에게`,size:'mmd',
+    body:`<div style="padding:10px 12px;background:var(--bg);border-radius:var(--r);border-left:3px solid var(--pri);margin-bottom:12px;font-size:12px;color:var(--tm)">
+        <strong>원본:</strong> ${H.e(parent.text?.slice(0,80)||'')}${parent.text?.length>80?'...':''}
+      </div>
+      <div class="lfg"><label>받는 사람</label>
+        <select class="fc" id="rplyTo">
+          ${DB.users.filter(u=>u.active!==0).map(u=>`<option value="${H.e(u.username)}"${u.username===toUser||u.name===toUser?'selected':''}>${H.e(u.name)}</option>`).join('')}
+        </select></div>
+      <div class="lfg"><label>메시지 <span style="color:#ef4444">*</span></label>
+        <textarea class="fc" id="rplyText" rows="4" placeholder="답장 내용을 입력하세요..."></textarea></div>`,
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+          <button class="btn bpri" onclick="Pages._mentionReplySend(${parentId})">↩ 답장 발송</button>`
+  });
+  setTimeout(()=>document.getElementById('rplyText')?.focus(),80);
+},
+
+async _mentionReplySend(parentId){
+  const text=(document.getElementById('rplyText')?.value||'').trim();
+  const to=(document.getElementById('rplyTo')?.value||'').trim();
+  if(!text){Toast.show('내용을 입력하세요.','warn');return}
+  const me=Auth._u;
+  const meUser=DB.users.find(u=>u.username===(me?.username||Auth._cur))||{name:'관리자',department:'IT팀'};
+  const toUser=DB.users.find(u=>u.username===to);
+  const reply={
+    from:      meUser.name||me?.name||'관리자',
+    from_name: meUser.name||me?.name||'관리자',
+    dept:      meUser.department||'',
+    to:        toUser?.name||to,
+    text,
+    message:   text,
+    time:      '방금 전',
+    created_at:H.today(),
+    read:      false,
+    reply_to:  parentId,   /* 원본 멘션 참조 */
+    ref:       DB.mentions.find(m=>m.id===parentId)?.ref||'',
+    ref_key:   `mention-${parentId}`,
+    key:       `mention-${parentId}`,
+  };
+  const res=await SB.addMention(reply);
+  if(!res.ok) return;
+  /* 로컬 replies 배열에도 추가 */
+  const parent=DB.mentions.find(m=>m.id===parentId);
+  if(parent){
+    if(!parent.replies) parent.replies=[];
+    parent.replies.push({...reply,id:res.id||Date.now()});
+  }
+  Modal.close();
+  Toast.show('답장이 발송되었습니다.','ok');
+  Pages.mentions();
+},
+async _approveUser(userId, username){
+  if(Auth._u?.role!=='admin'){Toast.show('관리자만 승인 가능합니다.','err');return}
+  const res=await SB.updateUser(userId,{active:1,pending:false,updated_at:H.today()});
+  if(!res.ok) return;
+  const u=DB.users.find(u=>u.id===userId);
+  if(u){u.active=1;u.pending=false;}
+  Toast.show(`${username} 계정이 승인되었습니다.`,'ok');
+  Pages.settings(); // 사용자 관리 탭 새로고침
+},
+
+async _rejectUser(userId, username){
+  if(Auth._u?.role!=='admin'){Toast.show('관리자만 처리 가능합니다.','err');return}
+  Modal.confirm({title:'가입 거절',msg:`"${username}" 가입 신청을 거절하고 계정을 삭제하시겠습니까?`,danger:true,
+    onOk:async()=>{
+      await SB.deleteUser(userId);
+      DB.users=DB.users.filter(u=>u.id!==userId);
+      Toast.show(`${username} 가입 신청이 거절되었습니다.`,'ok');
+      Pages.settings();
+    }
+  });
+},
+
 /* ── 사용자 권한 변경 (설정 > 사용자 관리, v2.23) ── */
 async _setUserRole(userId, username, newRole){
   if(Auth._u?.role!=='admin'){Toast.show('관리자만 권한을 변경할 수 있습니다.','err');return}
@@ -4235,6 +4393,9 @@ async mentions(){
               ${!m.read?`<button class="btn bxs bout" onclick="Pages._mentionRead(${m.id})">읽음</button>`
                 :`<span style="font-size:10px;color:var(--tl);padding:2px 6px">읽음</span>`}
               ${isMine?`<button class="btn bxs bout" onclick="Pages._mentionEdit(${m.id})">수정</button>`:''}
+              <!-- [v2.24] 답장 버튼 추가 -->
+              <button class="btn bxs" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe"
+                onclick="Pages._mentionReply(${m.id},'${H.e(m.from)}')">↩ 답장</button>
               ${canDel
                 ?`<button class="btn bxs berr" onclick="Pages._mentionDel(${m.id})">삭제</button>`
                 :!isMine?'':`<button class="btn bxs" style="background:#f1f5f9;color:#94a3b8;cursor:not-allowed;font-size:11px" title="댓글이 있어 삭제 불가">삭제불가</button>`}
@@ -4412,27 +4573,40 @@ settings(){
 
   /* 사용자 목록 테이블 렌더 */
   const renderUserMgmt=()=>{
-    const users=DB.users;
-    return`<div class="card" style="margin-bottom:14px">
-      <div class="ch"><div class="ct">👥 사용자 목록 (${users.length}명)</div>
+    const allUsers=DB.users;
+    const pendingUsers=allUsers.filter(u=>u.pending||(!u.active&&u.active!==undefined));
+    const activeUsers=allUsers.filter(u=>!u.pending&&u.active!==0);
+    return (pendingUsers.length?`<div class="card" style="margin-bottom:14px;border:1px solid #f59e0b">
+      <div class="ch" style="background:#fef3c7"><div class="ct">⏳ 승인 대기 (${pendingUsers.length}명)</div></div>
+      <div class="ts"><table class="dt"><thead><tr>
+        <th>아이디</th><th>이름</th><th>부서</th><th>이메일</th><th>신청일</th><th>처리</th>
+      </tr></thead><tbody>${pendingUsers.map(u=>`<tr>
+        <td><strong>${H.e(u.username)}</strong></td><td>${H.e(u.name)}</td>
+        <td>${H.e(u.department||'-')}</td><td>${H.e(u.email||'-')}</td>
+        <td>${H.e(u.created_at||'-')}</td>
+        <td style="display:flex;gap:4px">
+          <button class="btn bsm bgrn" onclick="Pages._approveUser(${u.id},'${H.e(u.username)}')">✅ 승인</button>
+          <button class="btn bsm berr" onclick="Pages._rejectUser(${u.id},'${H.e(u.username)}')">❌ 거절</button>
+        </td>
+      </tr>`).join('')}</tbody></table></div></div>`:'')
+    +`<div class="card" style="margin-bottom:14px">
+      <div class="ch"><div class="ct">👥 사용자 목록 (${activeUsers.length}명)</div>
         <button class="btn bpri bsm" onclick="Nav.go('users')">+ 사용자 등록</button>
       </div>
       <div class="ts"><table class="dt">
         <thead><tr>
           <th>이름</th><th>아이디</th><th>부서</th><th>권한</th><th>상태</th><th>비밀번호</th>
         </tr></thead>
-        <tbody>${users.length===0
-          ?`<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--tm)">등록된 사용자가 없습니다.</td></tr>`
-          :users.map(u=>`<tr>
+        <tbody>${activeUsers.length===0
+          ?'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--tm)">등록된 사용자가 없습니다.</td></tr>'
+          :activeUsers.map(u=>`<tr>
             <td><strong>${H.e(u.name||u.username)}</strong></td>
             <td style="color:var(--tm)">${H.e(u.username)}</td>
             <td>${H.e(u.department||'-')}</td>
-            <td>
-              <select class="fsel" style="font-size:11px;padding:2px 4px"
-                onchange="Pages._setUserRole(${u.id},'${H.e(u.username)}',this.value)">
-                ${ROLES.map(r=>`<option value="${r}"${u.role===r?' selected':''}>${ROLE_LABEL[r]}</option>`).join('')}
-              </select>
-            </td>
+            <td><select class="fsel" style="font-size:11px;padding:2px 4px"
+              onchange="Pages._setUserRole(${u.id},'${H.e(u.username)}',this.value)">
+              ${ROLES.map(r=>`<option value="${r}"${u.role===r?' selected':''}>${ROLE_LABEL[r]}</option>`).join('')}
+            </select></td>
             <td><span class="badge ${u.active?'bgrn':'bgry'}">${u.active?'활성':'비활성'}</span></td>
             <td><button class="btn bsm bamb" onclick="Pages._uResetPw(${u.id},'${H.e(u.username)}')">🔑 초기화</button></td>
           </tr>`).join('')}
@@ -5313,26 +5487,30 @@ const ExcelMgr={
         {key:'active',    label:'사용여부',  req:false, sample:'사용'},
         {key:'remark',    label:'비고',       req:false, sample:''},
       ],
+      /* [v2.24] 품목코드만 중복 확인, 필수값 외 빈칸 허용 */
       dupKey:'item_code',
       dupLabel:'품목코드',
+      dupOnly:true,        // 중복 확인만, 빈칸은 무시
       getData:()=>DB.items,
     },
     vendors:{
       title:'거래처등록',
       cols:[
         {key:'vendor_type',   label:'유형',         req:false, sample:'원자재'},
-        {key:'biz_no',        label:'사업자번호',   req:true,  sample:'123-45-67890'},
+        {key:'biz_no',        label:'사업자번호',   req:false, sample:'123-45-67890'},
         {key:'vendor_name',   label:'거래처명',     req:true,  sample:'새거래처㈜'},
         {key:'ceo_name',      label:'대표자',       req:false, sample:'홍길동'},
-        {key:'tel',           label:'전화번호',     req:true,  sample:'02-0000-0000'},
+        {key:'tel',           label:'전화번호',     req:false, sample:'02-0000-0000'},
         {key:'fax',           label:'FAX번호',      req:false, sample:'02-0000-0001'},
-        {key:'email',         label:'E-MAIL',       req:true,  sample:'info@company.co.kr'},
+        {key:'email',         label:'E-MAIL',       req:false, sample:'info@company.co.kr'},
         {key:'manager',       label:'담당자',       req:false, sample:'김담당'},
         {key:'manager_tel',   label:'담당자 연락처',req:false, sample:'010-0000-0000'},
         {key:'manager_email', label:'담당자 E-MAIL',req:false, sample:'manager@company.co.kr'},
       ],
-      dupKey:'biz_no',
-      dupLabel:'사업자번호',
+      /* [v2.24] 거래처명만 중복 확인, 필수값 외 빈칸 허용 */
+      dupKey:'vendor_name',
+      dupLabel:'거래처명',
+      dupOnly:true,
       getData:()=>DB.vendors,
     },
     users:{
@@ -5353,11 +5531,11 @@ const ExcelMgr={
       title:'수입검사',
       cols:[
         {key:'type',        label:'검사구분',    req:false, sample:'수입'},
-        {key:'vendor',      label:'거래처명',    req:true,  sample:'㈜한국스틸',    note:'거래처등록에 있는 거래처만 사용'},
+        {key:'vendor',      label:'거래처명',    req:true,  sample:'㈜한국스틸'},
         {key:'insp_no',     label:'검사번호',    req:true,  sample:'INS-20260601-001'},
         {key:'insp_date',   label:'검사일',      req:true,  sample:'2026-06-01'},
-        {key:'inspector',   label:'검사자',      req:true,  sample:'이검사'},
-        {key:'item_code',   label:'품목코드',    req:true,  sample:'RAW-001',        note:'품목등록에 있는 품목코드만 사용'},
+        {key:'inspector',   label:'검사자',      req:false, sample:'이검사'},
+        {key:'item_code',   label:'품목코드',    req:true,  sample:'RAW-001', note:'품목등록에 있는 품목코드만 사용'},
         {key:'item_name',   label:'품목명',      req:false, sample:'스테인레스 플레이트'},
         {key:'spec',        label:'규격',        req:false, sample:'SUS304 2T'},
         {key:'insp_method', label:'검사방법',    req:false, sample:'치수검사+외관검사'},
@@ -5369,13 +5547,13 @@ const ExcelMgr={
         {key:'wo_no',       label:'작업지시번호',req:false, sample:''},
         {key:'note',        label:'특이사항',    req:false, sample:''},
       ],
+      /* [v2.24] 품목코드+거래처명 없으면 등록 안 됨, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='수입'),
       validateRow:(row)=>{
-        if(row.vendor&&!DB.vendors.some(v=>v.vendor_name===row.vendor))
-          return `거래처 "${row.vendor}" 미등록`;
-        if(!DB.items.some(i=>i.item_code===row.item_code))
-          return `품목코드 "${row.item_code}" 미등록`;
+        if(!row.item_code) return '품목코드 필수';
+        if(!row.vendor)    return '거래처명 필수';
         return null;
       },
     },
@@ -5400,7 +5578,12 @@ const ExcelMgr={
         {key:'note',        label:'특이사항',    req:false, sample:''},
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
+      /* [v2.24] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='공정'),
+      validateRow:(row)=>{if(!row.item_code) return '품목코드 필수'; if(!row.vendor) return '거래처명 필수'; return null;},
       validateRow:(row)=>{
         if(!DB.items.some(i=>i.item_code===row.item_code))
           return `품목코드 "${row.item_code}" 미등록`;
@@ -5428,7 +5611,12 @@ const ExcelMgr={
         {key:'note',        label:'특이사항',    req:false, sample:''},
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
+      /* [v2.24] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='구매'),
+      validateRow:(row)=>{if(!row.item_code) return '품목코드 필수'; if(!row.vendor) return '거래처명 필수'; return null;},
       validateRow:(row)=>{
         if(row.vendor&&!DB.vendors.some(v=>v.vendor_name===row.vendor))
           return `거래처 "${row.vendor}" 미등록`;
@@ -5458,7 +5646,12 @@ const ExcelMgr={
         {key:'note',        label:'특이사항',    req:false, sample:''},
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
+      /* [v2.24] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='외주'),
+      validateRow:(row)=>{if(!row.item_code) return '품목코드 필수'; if(!row.vendor) return '거래처명 필수'; return null;},
       validateRow:(row)=>{
         if(row.vendor&&!DB.vendors.some(v=>v.vendor_name===row.vendor))
           return `거래처 "${row.vendor}" 미등록`;
@@ -5488,7 +5681,12 @@ const ExcelMgr={
         {key:'note',        label:'특이사항',    req:false, sample:''},
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
+      /* [v2.24] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      dupKey:'insp_no', dupLabel:'검사번호',
+      allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='최종'),
+      validateRow:(row)=>{if(!row.item_code) return '품목코드 필수'; if(!row.vendor) return '거래처명 필수'; return null;},
       validateRow:(row)=>{
         if(!DB.items.some(i=>i.item_code===row.item_code))
           return `품목코드 "${row.item_code}" 미등록`;
@@ -5987,7 +6185,8 @@ const ExcelMgr={
   downloadAll(){
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
     const wb=XLSX.utils.book_new();
-    ['items','vendors','users','insp_in'].forEach(key=>{
+    /* [v2.24] 검사 4종 추가 */
+    ['items','vendors','users','insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].forEach(key=>{
       const sc=this._schemas[key];
       if(!sc) return;
       const header=[...sc.cols.map(c=>c.req?c.label+' *':c.label),'결과'];
@@ -5997,7 +6196,7 @@ const ExcelMgr={
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
     XLSX.writeFile(wb,'QMS_통합업로드양식_'+H.today()+'.xlsx');
-    Toast.show('멀티시트 양식이 다운로드되었습니다.','ok');
+    Toast.show('멀티시트 양식이 다운로드되었습니다. (8개 시트)','ok');
   },
 
   /* 멀티시트 업로드 모달 */
@@ -6050,8 +6249,10 @@ const ExcelMgr={
     reader.onload=async(ev)=>{
       try{
         const wb=XLSX.read(ev.target.result,{type:'array'});
-        /* 시트명 → 스키마 키 매핑 */
-        const SMAP={'품목등록':'items','거래처등록':'vendors','사용자등록':'users','수입검사':'insp_in'};
+        /* 시트명 → 스키마 키 매핑 — [v2.24] 검사 4종 추가 */
+        const SMAP={'품목등록':'items','거래처등록':'vendors','사용자등록':'users',
+          '수입검사':'insp_in','공정검사':'insp_pr','구매검사':'insp_pu',
+          '외주검사':'insp_ou','최종검사':'insp_fi'};
         const results={};
         let totalOk=0,totalErr=0,totalDup=0;
         /* DB 최신 로드 (참조 정합성 검사용) */
@@ -6096,10 +6297,19 @@ const ExcelMgr={
             sc.cols.forEach(c=>{if(obj[c.key]===undefined) obj[c.key]='';});
             obj._rowNum=ri+2;
             obj._errors=[];
-            /* ① 필수값 */
-            sc.cols.filter(c=>c.req).forEach(c=>{
-              if(!obj[c.key]) obj._errors.push('필수값 누락: '+c.label);
-            });
+            /* ① 필수값 — dupOnly=true(품목/거래처)이면 req 외 빈칸 허용
+               validateRow가 있으면 validateRow로 검사 */
+            if(sc.validateRow){
+              const vErr=sc.validateRow(obj);
+              if(vErr) obj._errors.push(vErr);
+            } else if(!sc.dupOnly){
+              sc.cols.filter(c=>c.req).forEach(c=>{
+                if(!obj[c.key]) obj._errors.push('필수값 누락: '+c.label);
+              });
+            } else {
+              /* dupOnly=true: 최소 필수값(dupKey)만 체크 */
+              if(!obj[sc.dupKey]) obj._errors.push('필수값 누락: '+sc.dupLabel);
+            }
             /* ② 허용값 */
             Object.entries(ALLOWED).forEach(([k,vals])=>{
               if(obj[k]!==undefined&&obj[k]!==''&&!vals.includes(obj[k]))
@@ -6114,13 +6324,15 @@ const ExcelMgr={
               if(!DB.items.some(i=>i.item_code===obj.item_code))
                 obj._errors.push('참조 오류: 품목코드 "'+obj.item_code+'" 미등록');
             }
-            /* ④ 파일 내 중복 */
+            /* ④ 파일 내 중복 — allowFileDup=true면 건너뜀 (검사류) */
             const kv=obj[sc.dupKey]||'';
-            if(kv){
+            if(kv&&!sc.allowFileDup){
               if(fileKeys.has(kv)) obj._errors.push('파일 내 중복: '+sc.dupLabel+'="'+kv+'"');
               else fileKeys.add(kv);
+            } else if(kv&&sc.allowFileDup){
+              fileKeys.add(kv); // 추적은 하되 오류는 아님
             }
-            /* ⑤ DB 중복 */
+            /* ⑤ DB 중복 — dupOnly=true면 중복만 체크 (다른 오류 무시) */
             if(kv&&dbKeys.has(kv)){
               obj._dup=true;
               obj._errors.push('DB 중복: '+sc.dupLabel+'="'+kv+'"');
