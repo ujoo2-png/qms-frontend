@@ -53,6 +53,13 @@
   ║            Tbl.getSel: c.value → Number(c.value)              ║
   ║        [2] 전체 11개 페이지 onDel 더미→실제 삭제+재렌더 적용   ║
   ║        [3] 미리보기 방향: C안(Supabase Storage) 권고           ║
+  ║  v2.26 Supabase 1000건 제한 완전 해제 (2026-05-19)          ║
+  ║        [핵심] _sbFetchAll: 5000건씩 청크 반복조회 헬퍼 추가   ║
+  ║        모든 get* 함수에 적용 (10개 함수)                      ║
+  ║        getItems/Vendors/Users/Inspections/Nc/Equip/Cals     ║
+  ║        /Docs/Cars/Mentions → 무제한 반환                     ║
+  ║        삭제 버그: deleteItems IN 쿼리 일괄 삭제 추가          ║
+  ║        SB 로드 실패 시 빈 배열 초기화 (구 캐시 오판 방지)     ║
   ║  v2.25 중복규칙 재정의 + 회원가입 + 멘션 답장 (2026-05-19)  ║
   ║        [1.1] items: 품목코드만 중복, 필수외 빈칸 허용          ║
   ║        [1.2] vendors: 거래처명만 중복, 필수외 빈칸 허용        ║
@@ -161,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.25</title>
+<title>QMS - 품질경영시스템 v2.26</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -778,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.25</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.26</div>
         </div>
       </div>
     </div>
@@ -878,37 +885,76 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-      <!-- ④ 회원가입 패널 [v2.24 복구] -->
+      <!-- ④ 회원가입 패널 [v2.26 컴팩트] -->
       <div id="tabSignup" class="lo-panel">
-        <div style="text-align:center;margin-bottom:16px">
-          <div style="font-size:36px;margin-bottom:6px">📝</div>
-          <div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:4px">회원가입</div>
-          <div style="font-size:12px;color:var(--tm)">가입 후 관리자 승인이 완료되면 로그인 가능합니다.</div>
+        <!-- 헤더: 아이콘 축소 + 안내 인라인 -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <span style="font-size:24px">📝</span>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--tx)">회원가입</div>
+            <div style="font-size:11px;color:var(--tm)">가입 후 관리자 승인 시 로그인 가능합니다.</div>
+          </div>
         </div>
-        <div class="lfg"><label>아이디 <span style="color:#ef4444">*</span></label>
-          <input type="text" id="suId" placeholder="영문/숫자 4자 이상" autocomplete="off"></div>
-        <div class="lfg"><label>이름 <span style="color:#ef4444">*</span></label>
-          <input type="text" id="suName" placeholder="실명을 입력하세요"></div>
-        <div class="lfg"><label>비밀번호 <span style="color:#ef4444">*</span></label>
-          <input type="password" id="suPw" placeholder="8자 이상 (영문+숫자 권장)"></div>
-        <div class="lfg"><label>비밀번호 확인 <span style="color:#ef4444">*</span></label>
-          <input type="password" id="suPw2" placeholder="비밀번호를 한 번 더 입력하세요"></div>
-        <div class="lfg"><label>부서</label>
-          <input type="text" id="suDept" placeholder="예) 품질팀"></div>
-        <div class="lfg"><label>E-MAIL</label>
-          <input type="email" id="suEmail" placeholder="example@company.com"></div>
-        <div class="lfg"><label>연락처</label>
-          <input type="text" id="suTel" placeholder="010-0000-0000"></div>
-        <div style="padding:10px 12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--r);font-size:12px;color:#92400e;margin-bottom:14px">
+        <!-- 입력 영역: 2열 그리드로 압축 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-bottom:10px">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:3px">
+              아이디 <span style="color:#ef4444">*</span>
+            </div>
+            <input class="fc" style="padding:7px 10px;font-size:12px" type="text" id="suId"
+              placeholder="영문/숫자 4자 이상" autocomplete="off">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:3px">
+              이름 <span style="color:#ef4444">*</span>
+            </div>
+            <input class="fc" style="padding:7px 10px;font-size:12px" type="text" id="suName"
+              placeholder="실명 입력">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:3px">
+              비밀번호 <span style="color:#ef4444">*</span>
+            </div>
+            <input class="fc" style="padding:7px 10px;font-size:12px" type="password" id="suPw"
+              placeholder="8자 이상">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:3px">
+              비밀번호 확인 <span style="color:#ef4444">*</span>
+            </div>
+            <input class="fc" style="padding:7px 10px;font-size:12px" type="password" id="suPw2"
+              placeholder="비밀번호 재입력">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:3px">부서</div>
+            <input class="fc" style="padding:7px 10px;font-size:12px" type="text" id="suDept"
+              placeholder="예) 품질팀">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:3px">연락처</div>
+            <input class="fc" style="padding:7px 10px;font-size:12px" type="text" id="suTel"
+              placeholder="010-0000-0000">
+          </div>
+          <div style="grid-column:1/-1">
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:3px">E-MAIL</div>
+            <input class="fc" style="padding:7px 10px;font-size:12px" type="email" id="suEmail"
+              placeholder="example@company.com">
+          </div>
+        </div>
+        <!-- 안내 + 오류 -->
+        <div style="padding:7px 10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--r);font-size:11px;color:#92400e;margin-bottom:8px">
           ⚠️ 가입 신청 후 <strong>관리자 승인</strong>이 완료되어야 로그인 가능합니다.
         </div>
-        <div class="lo-errmsg" id="errSignup"></div>
-        <button class="lo-btn" onclick="Auth.signup()">가입 신청</button>
-        <div style="text-align:center;margin-top:12px">
-          <span class="lo-link" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
+        <div class="lo-errmsg" id="errSignup" style="margin-bottom:6px"></div>
+        <button class="lo-btn" onclick="Auth.signup()" style="padding:10px">가입 신청</button>
+        <div style="text-align:center;margin-top:8px">
+          <span class="lo-link" style="font-size:12px"
+            onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">
+            ← 로그인으로 돌아가기
+          </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.25 (2026-05-19) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.26 (2026-05-19) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -919,7 +965,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.25</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.26</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1120,32 +1166,49 @@ if(window.supabase){
 const SB={
   /* 연결 여부 확인 */
   ok(){return !!_sb},
-
-  /* 품목 목록 조회 */
-  async getItems(){
-    if(!_sb) return DB.items;
-    const {data,error}=await _sb.from('items').select('*').order('id');
-    if(error){console.warn('[SB] items 조회 실패',error.message);return [];}
-    return data; // Supabase 결과 그대로 반환 (빈 배열 포함)
+  async _sbFetchAll(table, orderCol='id', ascending=true, filter=null){
+    if(!_sb) return null;
+    const CHUNK=5000; // Supabase 안전 청크 크기
+    let all=[], from=0, hasMore=true;
+    while(hasMore){
+      let q=_sb.from(table).select('*').order(orderCol,{ascending});
+      if(filter) q=filter(q);
+      q=q.range(from, from+CHUNK-1);
+      const {data,error}=await q;
+      if(error){console.warn(`[SB] ${table} 조회 실패`,error.message);return null;}
+      if(!data||data.length===0) break;
+      all=[...all,...data];
+      hasMore=data.length===CHUNK;
+      from+=CHUNK;
+    }
+    return all;
   },
 
-  /* 거래처 목록 조회 */
+  /* 품목 목록 조회 — 전체 반환 */
+  async getItems(){
+    if(!_sb) return DB.items;
+    const data=await this._sbFetchAll('items','id',true);
+    if(data===null){console.warn('[SB] items 조회 실패');return [];}
+    return data;
+  },
+
+  /* 거래처 목록 조회 — 전체 반환 */
+  /* 거래처 목록 조회 — 전체 반환 */
   async getVendors(){
     if(!_sb) return DB.vendors;
-    const {data,error}=await _sb.from('vendors').select('*').order('id');
-    if(error){console.warn('[SB] vendors 조회 실패',error.message);return [];}
+    const data=await this._sbFetchAll('vendors','id',true);
+    if(data===null){console.warn('[SB] vendors 조회 실패');return [];}
     return data;
   },
 
   /* 검사 목록 조회 */
   async getInspections(type=null){
     if(!_sb) return type?DB.inspections.filter(i=>i.type===type):DB.inspections;
-    let q=_sb.from('inspections').select('*').order('insp_date',{ascending:false});
-    if(type) q=q.eq('type',type);
-    const {data,error}=await q;
-    if(error){console.warn('[SB] inspections 조회 실패 → 더미데이터',error.message);
-      return type?DB.inspections.filter(i=>i.type===type):DB.inspections;}
-    return data.length>0?data:type?data.filter(i=>i.type===type):data;
+    /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
+    const data=await this._sbFetchAll('inspections','insp_date',false,
+      type?q=>q.eq('type',type):null);
+    if(data===null){console.warn('[SB] inspections 조회 실패');return [];}
+    return data;
   },
 
   /* 검사 등록 */
@@ -1160,16 +1223,18 @@ const SB={
   /* 부적합 목록 조회 */
   async getNc(){
     if(!_sb) return DB.nc;
-    const {data,error}=await _sb.from('nonconformances').select('*').order('date',{ascending:false});
-    if(error){console.warn('[SB] nc 조회 실패',error.message);return [];}
+    /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
+    const data=await this._sbFetchAll('nonconformances','date',false);
+    if(data===null){console.warn('[SB] nc 조회 실패');return [];}
     return data;
   },
 
   /* 멘션 목록 조회 */
   async getMentions(){
     if(!_sb) return DB.mentions;
-    const {data,error}=await _sb.from('mentions').select('*').order('created_at',{ascending:false});
-    if(error){console.warn('[SB] mentions 조회 실패 → 더미데이터',error.message);return DB.mentions;}
+    /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
+    const data=await this._sbFetchAll('mentions','created_at',false);
+    if(data===null){console.warn('[SB] mentions 조회 실패 → 더미데이터',error.message);return DB.mentions;}
     return data;
   },
 
@@ -1217,8 +1282,9 @@ const SB={
   /* ── 사용자 ── */
   async getUsers(){
     if(!_sb) return DB.users;
-    const {data,error}=await _sb.from('users').select('*').order('id');
-    if(error){console.warn('[SB] users 조회 실패',error.message);return [];}
+    /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
+    const data=await this._sbFetchAll('users','id',true);
+    if(data===null){console.warn('[SB] users 조회 실패');return [];}
     return data;
   },
   async addUser(row){
@@ -1355,8 +1421,9 @@ const SB={
   /* ── 계측기 ── */
   async getEquip(){
     if(!_sb) return DB.equip;
-    const {data,error}=await _sb.from('equipment').select('*').order('id');
-    if(error){console.warn('[SB] equip 조회 실패',error.message);return [];}
+    /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
+    const data=await this._sbFetchAll('equipment','id',true);
+    if(data===null){console.warn('[SB] equip 조회 실패');return [];}
     return data;
   },
   async addEquip(row){
@@ -1376,8 +1443,9 @@ const SB={
   /* ── 교정 ── */
   async getCals(){
     if(!_sb) return DB.cals;
-    const {data,error}=await _sb.from('calibrations').select('*').order('date',{ascending:false});
-    if(error){console.warn('[SB] cals 조회 실패',error.message);return [];}
+    /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
+    const data=await this._sbFetchAll('calibrations','date',false);
+    if(data===null){console.warn('[SB] cals 조회 실패');return [];}
     return data;
   },
   async addCal(row){
@@ -1391,8 +1459,9 @@ const SB={
   /* ── 문서 ── */
   async getDocs(){
     if(!_sb) return DB.docs;
-    const {data,error}=await _sb.from('documents').select('*').order('id');
-    if(error){console.warn('[SB] docs 조회 실패',error.message);return [];}
+    /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
+    const data=await this._sbFetchAll('documents','id',true);
+    if(data===null){console.warn('[SB] docs 조회 실패');return [];}
     return data;
   },
   async addDoc(row){
@@ -1412,8 +1481,9 @@ const SB={
   /* ── 시정조치(CAR) ── */
   async getCars(){
     if(!_sb) return DB.cars;
-    const {data,error}=await _sb.from('corrective_actions').select('*').order('date',{ascending:false});
-    if(error){console.warn('[SB] cars 조회 실패',error.message);return [];}
+    /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
+    const data=await this._sbFetchAll('corrective_actions','date',false);
+    if(data===null){console.warn('[SB] cars 조회 실패');return [];}
     return data;
   },
   async addCar(row){
@@ -2586,7 +2656,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.25</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.26</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
