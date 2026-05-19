@@ -6315,15 +6315,12 @@ const ExcelMgr={
               if(obj[k]!==undefined&&obj[k]!==''&&!vals.includes(obj[k]))
                 obj._errors.push('허용값 오류: '+k+'="'+obj[k]+'" (허용: '+vals.filter(v=>v).join('/')+')');
             });
-            /* ③ 참조 검사 */
-            if(pKey==='items'&&obj.vendor_name&&obj.vendor_name!==''){
-              if(!DB.vendors.some(v=>v.vendor_name===obj.vendor_name))
-                obj._errors.push('참조 오류: 거래처 "'+obj.vendor_name+'" 미등록');
+            /* ③ 참조 검사 — dupOnly=true(품목/거래처)는 참조 검사 제외
+               검사 시트(validateRow 있음)만 item_code/vendor 참조 확인 */
+            if(!sc.dupOnly&&!sc.validateRow){
+              /* 검사 외 시트에서도 참조 필요한 경우 향후 추가 */
             }
-            if(pKey==='insp_in'&&obj.item_code&&obj.item_code!==''){
-              if(!DB.items.some(i=>i.item_code===obj.item_code))
-                obj._errors.push('참조 오류: 품목코드 "'+obj.item_code+'" 미등록');
-            }
+            /* 검사 시트: validateRow에서 이미 처리 (①에서 호출됨) */
             /* ④ 파일 내 중복 — allowFileDup=true면 건너뜀 (검사류) */
             const kv=obj[sc.dupKey]||'';
             if(kv&&!sc.allowFileDup){
