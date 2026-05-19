@@ -6255,9 +6255,9 @@ const ExcelMgr={
           '외주검사':'insp_ou','최종검사':'insp_fi'};
         const results={};
         let totalOk=0,totalErr=0,totalDup=0;
-        /* DB 최신 로드 (참조 정합성 검사용) */
+        /* DB 최신 로드 (참조 정합성 검사용) — [v2.25] window._sb → _sb 수정 */
         try{
-          if(window._sb){
+          if(_sb){
             DB.items=await SB.getItems();
             DB.vendors=await SB.getVendors();
             DB.users=await SB.getUsers();
@@ -6441,7 +6441,9 @@ const ExcelMgr={
         let att=0,ok=false;
         while(att<3&&!ok){
           try{
-            if(!window._sb){
+            /* [v2.25 수정] window._sb → _sb (모듈 스코프 일치)
+               기존 window._sb는 항상 undefined → 항상 더미모드로 실행됨 */
+            if(!_sb){
               const data=sc.getData();
               let nid=data.length>0?Math.max(...data.map(x=>x.id||0))+1:1;
               ins.forEach(x=>data.push({id:nid++,...x}));
