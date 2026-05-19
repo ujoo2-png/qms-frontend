@@ -1,26 +1,3 @@
-
-  /* [v2.26] deleteInspections: 검사 일괄 삭제 */
-  async deleteInspections(ids){
-    const numIds=ids.map(Number);
-    if(!numIds.length) return{ok:true};
-    if(!_sb){DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));return{ok:true};}
-    const {error}=await _sb.from('inspections').delete().in('id',numIds);
-    DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));
-    if(error){console.error('[SB] deleteInspections 실패:',error.message);return{ok:false,msg:error.message};}
-    return{ok:true};
-  },
-
-  /* [v2.26] deleteVendors: 일괄 삭제 */
-  async deleteVendors(ids){
-    const numIds=ids.map(Number);
-    if(!numIds.length) return{ok:true};
-    if(!_sb){DB.vendors=DB.vendors.filter(v=>!numIds.includes(Number(v.id)));return{ok:true};}
-    const {error}=await _sb.from('vendors').delete().in('id',numIds);
-    DB.vendors=DB.vendors.filter(v=>!numIds.includes(Number(v.id)));
-    if(error){console.error('[SB] deleteVendors 실패:',error.message);return{ok:false,msg:error.message};}
-    return{ok:true};
-  },
-
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
@@ -1422,6 +1399,17 @@ const SB={
     }
     return{ok:true};
   },
+  /* [v2.26] deleteInspections: 검사 일괄 삭제 */
+  async deleteInspections(ids){
+    const numIds=ids.map(Number);
+    if(!numIds.length) return{ok:true};
+    if(!_sb){DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));return{ok:true};}
+    const {error}=await _sb.from('inspections').delete().in('id',numIds);
+    DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));
+    if(error){console.error('[SB] deleteInspections 실패:',error.message);return{ok:false,msg:error.message};}
+    return{ok:true};
+  },
+
 
   /* ── 거래처 ── */
   async addVendor(row){
