@@ -53,6 +53,17 @@
   ║            Tbl.getSel: c.value → Number(c.value)              ║
   ║        [2] 전체 11개 페이지 onDel 더미→실제 삭제+재렌더 적용   ║
   ║        [3] 미리보기 방향: C안(Supabase Storage) 권고           ║
+  ║  v2.23 UX 개선 + 사용자 관리 (2026-05-19)                   ║
+  ║        [1-B] 로그아웃 버튼 → 우측 상단 이름 옆으로 이동       ║
+  ║               사이드바 로그아웃 버튼 제거                      ║
+  ║        [2-B] TopNav 이름 클릭 → 개인정보 팝업                 ║
+  ║               _profileEdit: Auth._u 실제 정보 반영            ║
+  ║               _profileSave: SB 연동 + Auth._u 즉시 갱신       ║
+  ║        [3-A] 설정 > 사용자 관리 탭 추가 (관리자 전용)         ║
+  ║               - 사용자 목록 + 권한 변경 + 임시비밀번호 발급    ║
+  ║               - 메뉴별 접근 권한 테이블                        ║
+  ║               - 비밀번호 변경 (SHA-256)                       ║
+  ║               _uForm에서 role 필드 제거 → 설정으로 이동       ║
   ║  v2.22 보안 강화 + 멘션 SB 연동 (2026-05-19)                ║
   ║        [A2] SHA-256 해시: H.sha256() Web Crypto API 추가     ║
   ║             _uSave: password 해시 저장 (password 컬럼)       ║
@@ -130,7 +141,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.22</title>
+<title>QMS - 품질경영시스템 v2.23</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -416,6 +427,9 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .hw-profile-btn:hover{background:rgba(59,130,246,.18)}
 .hw-logout-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:20px;cursor:pointer;transition:.15s;flex-shrink:0;font-size:12px;font-weight:600;color:#ef4444}
 .hw-logout-btn:hover{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4)}
+/* [v2.23] 1-B: TopNav 로그아웃 버튼 */
+.tb-logout-btn{display:flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:16px;cursor:pointer;font-size:12px;font-weight:600;color:#ef4444;transition:.15s;flex-shrink:0;margin-left:4px}
+.tb-logout-btn:hover{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.4)}
 .hw-profile-avatar{width:26px;height:26px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 .hw-profile-name{font-size:12px;font-weight:600;color:#1e40af}
 
@@ -744,7 +758,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.22</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.23</div>
         </div>
       </div>
     </div>
@@ -843,7 +857,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.22 (2026-05-19) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.23 (2026-05-19) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -854,7 +868,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.22</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.23</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -920,7 +934,7 @@ textarea.fc{resize:vertical;min-height:68px}
       </div>
     </nav>
     <div class="sbf">
-      <button class="lob" onclick="Auth.logout()"><span>🚪</span><span>로그아웃</span></button>
+      <!-- [v2.23] 1-B: 로그아웃 버튼 → 우측 상단으로 이동 -->
     </div>
   </aside>
 
@@ -940,7 +954,17 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="tb-right">
         <div class="tbd" id="tbd"></div>
         <button class="ib" onclick="UI.toggleMpop()" title="멘션">🔔<span class="bdot" id="bdot"></span></button>
-        <div class="tbu" id="tbuser">관리자</div>
+        <!-- [v2.23] 2-B: 이름 클릭 → 개인정보 팝업 -->
+        <div class="tbu" id="tbuser"
+          onclick="Pages._profileEdit()"
+          title="클릭하여 개인정보 수정"
+          style="cursor:pointer"
+          onmouseover="this.style.textDecoration='underline'"
+          onmouseout="this.style.textDecoration='none'">관리자</div>
+        <!-- [v2.23] 1-B: 이름 옆 로그아웃 버튼 -->
+        <button class="tb-logout-btn" onclick="Auth.logout()" title="로그아웃">
+          <span>🚪</span><span>로그아웃</span>
+        </button>
       </div>
     </div>
     <!-- 서브탭 (모듈별 세부메뉴) -->
@@ -2446,7 +2470,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.22</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.23</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -2517,49 +2541,120 @@ home(){
 },
 
 /* ── 개인정보 수정 ── */
+/* ── 사용자 권한 변경 (설정 > 사용자 관리, v2.23) ── */
+async _setUserRole(userId, username, newRole){
+  if(Auth._u?.role!=='admin'){Toast.show('관리자만 권한을 변경할 수 있습니다.','err');return}
+  const res=await SB.updateUser(userId,{role:newRole,updated_at:H.today()});
+  if(!res.ok) return;
+  const u=DB.users.find(u=>u.id===userId);
+  if(u) u.role=newRole;
+  Toast.show(`${username} 권한이 ${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[newRole]||newRole}으로 변경되었습니다.`,'ok');
+},
+
+/* 접근 권한 저장 (sessionStorage, v2.23) */
+_savePerms(){
+  try{
+    sessionStorage.setItem('qms_perms',JSON.stringify(App.perms||{}));
+    Toast.show('권한 설정이 저장되었습니다.','ok');
+  }catch(e){Toast.show('저장 실패','err');}
+},
+
+/* 비밀번호 변경 (설정 탭, v2.23) */
+async _changePw(){
+  const g=k=>document.getElementById(k)?.value.trim()||'';
+  const cur=g('sPwCur'),nw=g('sPwNew'),nw2=g('sPwNew2');
+  if(!cur){Toast.show('현재 비밀번호를 입력하세요.','warn');return}
+  if(!nw||nw.length<8){Toast.show('새 비밀번호는 8자 이상이어야 합니다.','warn');return}
+  if(nw!==nw2){Toast.show('새 비밀번호가 일치하지 않습니다.','warn');return}
+  const user=Auth._u;
+  if(!user){Toast.show('로그인 정보를 찾을 수 없습니다.','err');return}
+  /* admin 계정 */
+  if(user.username==='admin'){
+    if(cur!=='admin1234'){Toast.show('현재 비밀번호가 올바르지 않습니다.','err');return}
+  } else {
+    const curHash=await H.sha256(cur);
+    if(curHash!==user.password){Toast.show('현재 비밀번호가 올바르지 않습니다.','err');return}
+  }
+  const newHash=await H.sha256(nw);
+  if(user.id&&user.username!=='admin'){
+    const res=await SB.updateUser(user.id,{password:newHash,updated_at:H.today()});
+    if(!res.ok) return;
+  }
+  if(Auth._u) Auth._u.password=newHash;
+  sessionStorage.setItem('qms_auth',JSON.stringify({cur:Auth._cur||'user',u:Auth._u}));
+  ['sPwCur','sPwNew','sPwNew2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  Toast.show('비밀번호가 변경되었습니다.','ok');
+},
+/* ── 개인정보 팝업 ──
+   [v2.23] 2-B: 로그인 사용자 실제 정보 표시
+   Auth._u에서 직접 읽어 항상 최신 정보 반영 */
 _profileEdit(){
-  const cur=Auth._cur||'admin';
-  const user=DB.users.find(u=>u.username===cur)||{id:null,username:cur,name:'관리자',department:'',tel:'',email:'',role:'admin'};
-  Modal.open({title:'👤 개인정보 수정',size:'mmd',
+  /* Auth._u가 없으면 sessionStorage에서 복원 */
+  let user=Auth._u;
+  if(!user){
+    try{ const s=sessionStorage.getItem('qms_auth'); user=s?JSON.parse(s).u:null; }catch(e){}
+  }
+  if(!user) user={id:null,username:'admin',name:'시스템관리자',department:'IT팀',tel:'',email:'',role:'admin'};
+  const roleMap={admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'};
+  Modal.open({title:'👤 내 정보',size:'mmd',
     body:`<div style="text-align:center;margin-bottom:18px">
-      <div style="width:56px;height:56px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;margin:0 auto 8px">${H.e(user.name.charAt(0))}</div>
-      <div style="font-size:13px;color:#64748b">${H.e(user.username)} · ${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[user.role]||user.role}</div>
+      <div style="width:56px;height:56px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;margin:0 auto 8px">${H.e((user.name||user.username||'?').charAt(0))}</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:2px">${H.e(user.name||user.username)}</div>
+      <div style="font-size:12px;color:#64748b">${H.e(user.username)} · ${roleMap[user.role]||user.role||''}</div>
     </div>
     <div class="fg2">
-      <div class="fgroup ff"><label class="fl">아이디</label><input class="fc" value="${H.e(user.username)}" readonly style="background:#f1f5f9;color:#64748b"></div>
-      <div class="fgroup ff"><label class="fl req">이름</label><input class="fc" id="pf_name" value="${H.e(user.name||'')}"></div>
-      <div class="fgroup ff"><label class="fl">부서</label><input class="fc" id="pf_dept" value="${H.e(user.department||'')}" placeholder="예) 품질팀"></div>
-      <div class="fgroup ff"><label class="fl">연락처</label><input class="fc" id="pf_tel" value="${H.e(user.tel||'')}" placeholder="010-0000-0000"></div>
-      <div class="fgroup ff"><label class="fl">E-MAIL</label><input class="fc" id="pf_email" type="email" value="${H.e(user.email||'')}" placeholder="user@company.com"></div>
-      <div class="fgroup ff"><label class="fl">새 비밀번호</label><input class="fc" id="pf_pw" type="password" placeholder="변경 시만 입력 (8자 이상)"></div>
-      <div class="fgroup ff"><label class="fl">비밀번호 확인</label><input class="fc" id="pf_pw2" type="password" placeholder="변경 시만 입력"></div>
+      <div class="fgroup ff"><label class="fl">아이디</label>
+        <input class="fc" value="${H.e(user.username||'')}" readonly style="background:#f1f5f9;color:#64748b"></div>
+      <div class="fgroup ff"><label class="fl req">이름</label>
+        <input class="fc" id="pf_name" value="${H.e(user.name||'')}"></div>
+      <div class="fgroup ff"><label class="fl">부서</label>
+        <input class="fc" id="pf_dept" value="${H.e(user.department||user.dept||'')}" placeholder="예) 품질팀"></div>
+      <div class="fgroup ff"><label class="fl">연락처</label>
+        <input class="fc" id="pf_tel" value="${H.e(user.tel||'')}" placeholder="010-0000-0000"></div>
+      <div class="fgroup ff"><label class="fl">E-MAIL</label>
+        <input class="fc" id="pf_email" type="email" value="${H.e(user.email||'')}" placeholder="user@company.com"></div>
+      <div class="fgroup ff"><label class="fl">새 비밀번호</label>
+        <input class="fc" id="pf_pw" type="password" placeholder="변경 시만 입력 (8자 이상)"></div>
+      <div class="fgroup ff"><label class="fl">비밀번호 확인</label>
+        <input class="fc" id="pf_pw2" type="password" placeholder="변경 시만 입력"></div>
     </div>`,
     foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
-          <button class="btn bpri" onclick="Pages._profileSave('${H.e(cur)}')">저장</button>`
+          <button class="btn bpri" onclick="Pages._profileSave(${user.id||'null'},'${H.e(user.username)}')">저장</button>`
   });
 },
-_profileSave(cur){
+/* [v2.23] _profileSave — userId + username 기반으로 수정
+   Auth._u 실시간 갱신 + SB 업데이트 */
+async _profileSave(userId, username){
   const g=k=>document.getElementById(k)?.value.trim()||'';
-  const name=g('pf_name'),pw=g('pf_pw'),pw2=g('pf_pw2');
-  const email=g('pf_email');
+  const name=g('pf_name'),pw=g('pf_pw'),pw2=g('pf_pw2'),email=g('pf_email');
   if(!name){Toast.show('이름은 필수입니다.','warn');return}
   if(pw&&pw.length<8){Toast.show('비밀번호는 8자 이상이어야 합니다.','warn');return}
   if(pw&&pw!==pw2){Toast.show('비밀번호가 일치하지 않습니다.','warn');return}
   if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){Toast.show('올바른 이메일 형식을 입력하세요.','warn');return}
-  const idx=DB.users.findIndex(u=>u.username===cur);
-  if(idx>=0){
-    DB.users[idx]={...DB.users[idx],name,department:g('pf_dept'),tel:g('pf_tel'),email,updated_at:H.today()};
-    // 화면 반영
-    const uname=document.getElementById('uname');
-    if(uname) uname.textContent=name;
-    const tbuser=document.getElementById('tbuser');
-    if(tbuser) tbuser.textContent=name;
-    Toast.show('개인정보가 수정되었습니다.','ok');
+  const today=H.today();
+  const patch={name, department:g('pf_dept'), tel:g('pf_tel'), email, updated_at:today};
+  if(pw) patch.password=await H.sha256(pw);
+  /* admin 계정은 DB에 없으므로 세션만 갱신 */
+  if(username==='admin'||!userId||userId==='null'){
+    if(Auth._u) Object.assign(Auth._u, patch);
+    sessionStorage.setItem('qms_auth',JSON.stringify({cur:Auth._cur||'user',u:Auth._u}));
   } else {
-    Toast.show('사용자 정보를 찾을 수 없습니다. 사용자 등록 메뉴에서 먼저 등록해 주세요.','warn');
+    const res=await SB.updateUser(userId,patch);
+    if(!res.ok) return;
+    /* 로컬 캐시 갱신 */
+    const idx=DB.users.findIndex(u=>u.username===username);
+    if(idx>=0) Object.assign(DB.users[idx],patch);
+    /* Auth._u 갱신 */
+    if(Auth._u?.username===username) Object.assign(Auth._u,patch);
+    sessionStorage.setItem('qms_auth',JSON.stringify({cur:Auth._cur||'user',u:Auth._u}));
   }
+  /* TopNav 이름 즉시 반영 */
+  const tbuser=document.getElementById('tbuser');
+  if(tbuser) tbuser.textContent=name;
+  const uname=document.getElementById('uname');
+  if(uname) uname.textContent=name;
+  Toast.show('개인정보가 수정되었습니다.','ok');
   Modal.close();
-  Pages.home();
 },
 _homeCard(subs){/* 레거시 */},
 
@@ -3108,8 +3203,12 @@ _uForm(row=null){
       <!-- 4열: E-MAIL, 권한 -->
       <div class="fgroup"><label class="fl">E-MAIL</label>
         <input class="fc" id="uf_email" type="email" value="${H.e(row?.email||'')}" placeholder="user@company.com"></div>
+      <!-- [v2.23] 권한 설정은 설정 > 사용자 관리로 이동 -->
       <div class="fgroup"><label class="fl">권한</label>
-        <select class="fc" id="uf_role">${['admin','manager','user','viewer'].map(r=>`<option value="${r}" ${row?.role===r?'selected':''}>${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[r]}</option>`).join('')}</select></div>
+        <div class="fc" style="background:#f8fafc;display:flex;align-items:center;gap:8px;color:var(--tm);font-size:12px">
+          <span class="badge ${row?.role==='admin'?'berr':row?.role==='manager'?'bamb':'bblu'}">${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[row?.role||'user']||'사용자'}</span>
+          <span>권한 변경은 <a style="color:var(--pri);cursor:pointer;text-decoration:underline" onclick="Modal.close();Nav.go('settings')">설정 > 사용자 관리</a>에서 가능합니다.</span>
+        </div></div>
       <!-- 5열: 상태, (수정 시) 날짜 -->
       <div class="fgroup"><label class="fl">상태</label>
         <select class="fc" id="uf_active"><option value="1" ${!row||row.active?'selected':''}>활성</option><option value="0" ${row&&!row.active?'selected':''}>비활성</option></select></div>
@@ -3146,7 +3245,9 @@ async _uSave(id){
   const row={
     username:uid, name,
     department:g('uf_dept'), tel:g('uf_tel'), email,
-    role:document.getElementById('uf_role')?.value||'user',
+    /* [v2.23] role은 설정 > 사용자 관리에서 변경
+       신규 등록 시 기본값 'user', 수정 시 기존 role 유지 */
+    role: id ? (DB.users.find(u=>u.id===id)?.role||'user') : 'user',
     active:Number(document.getElementById('uf_active')?.value||1),
   };
   // password 해시 포함 (신규 등록 시 필수, 수정 시 입력한 경우만)
@@ -4253,71 +4354,173 @@ _mentionDel(id){
 /* ── 설정 ── */
 settings(){
   const w=document.getElementById('pw');
+  const isAdmin=Auth._u?.role==='admin';
   const notices=App.notices;
+
+  /* [v2.23] 3-A: 탭 구조 (기존 설정 + 사용자 관리)
+     사용자 관리 탭은 관리자만 활성화 */
+  const renderTab=(tab)=>{
+    document.querySelectorAll('.stab-btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+    document.querySelectorAll('.stab-pane').forEach(p=>p.style.display=p.dataset.tab===tab?'block':'none');
+  };
+
+  /* ── 메뉴별 접근 권한 정의 ── */
+  const MENU_GROUPS=[
+    {group:'기준정보', pages:[
+      {page:'items',    label:'품목 등록'},
+      {page:'vendors',  label:'거래처 등록'},
+      {page:'users',    label:'사용자 등록'},
+    ]},
+    {group:'품질관리', pages:[
+      {page:'quality_dash', label:'품질현황 대시보드'},
+      {page:'insp_in',  label:'수입검사'},
+      {page:'insp_pr',  label:'공정검사'},
+      {page:'insp_pu',  label:'구매검사'},
+      {page:'insp_ou',  label:'외주검사'},
+      {page:'insp_fi',  label:'최종검사'},
+      {page:'nc',       label:'부적합 관리'},
+    ]},
+    {group:'계측기관리', pages:[
+      {page:'equip',    label:'장비 현황'},
+      {page:'cal',      label:'교정 관리'},
+    ]},
+    {group:'문서관리', pages:[
+      {page:'docs',     label:'문서 목록'},
+      {page:'car',      label:'시정조치'},
+    ]},
+  ];
+  const ROLES=['admin','manager','user','viewer'];
+  const ROLE_LABEL={admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'};
+  /* 기본 권한: admin은 전체, manager는 대부분, user/viewer는 제한 */
+  const DEFAULT_PERM={admin:true,manager:true,user:true,viewer:false};
+  const App_perms=App.perms=App.perms||{};
+
+  const permKey=(page,role)=>`${page}_${role}`;
+  const getPerm=(page,role)=>App_perms[permKey(page,role)]??DEFAULT_PERM[role]??false;
+  const setPerm=(page,role,val)=>{App_perms[permKey(page,role)]=val;};
+
+  /* 사용자 목록 테이블 렌더 */
+  const renderUserMgmt=()=>{
+    const users=DB.users;
+    return`<div class="card" style="margin-bottom:14px">
+      <div class="ch"><div class="ct">👥 사용자 목록 (${users.length}명)</div>
+        <button class="btn bpri bsm" onclick="Nav.go('users')">+ 사용자 등록</button>
+      </div>
+      <div class="ts"><table class="dt">
+        <thead><tr>
+          <th>이름</th><th>아이디</th><th>부서</th><th>권한</th><th>상태</th><th>비밀번호</th>
+        </tr></thead>
+        <tbody>${users.length===0
+          ?`<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--tm)">등록된 사용자가 없습니다.</td></tr>`
+          :users.map(u=>`<tr>
+            <td><strong>${H.e(u.name||u.username)}</strong></td>
+            <td style="color:var(--tm)">${H.e(u.username)}</td>
+            <td>${H.e(u.department||'-')}</td>
+            <td>
+              <select class="fsel" style="font-size:11px;padding:2px 4px"
+                onchange="Pages._setUserRole(${u.id},'${H.e(u.username)}',this.value)">
+                ${ROLES.map(r=>`<option value="${r}"${u.role===r?' selected':''}>${ROLE_LABEL[r]}</option>`).join('')}
+              </select>
+            </td>
+            <td><span class="badge ${u.active?'bgrn':'bgry'}">${u.active?'활성':'비활성'}</span></td>
+            <td><button class="btn bsm bamb" onclick="Pages._uResetPw(${u.id},'${H.e(u.username)}')">🔑 초기화</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  };
+
+  /* 접근 권한 테이블 렌더 */
+  const renderPermTable=()=>{
+    return`<div class="card">
+      <div class="ch"><div class="ct">🔐 메뉴별 접근 권한</div>
+        <button class="btn bsm bout" onclick="Pages._savePerms()" style="margin-left:auto">💾 저장</button>
+      </div>
+      <div class="ts"><table class="dt" style="font-size:12px">
+        <thead><tr>
+          <th style="min-width:100px">메뉴</th>
+          ${ROLES.map(r=>`<th style="width:72px;text-align:center">${ROLE_LABEL[r]}</th>`).join('')}
+        </tr></thead>
+        <tbody>${MENU_GROUPS.map(g=>`
+          <tr><td colspan="5" style="background:var(--bg2);font-weight:700;padding:6px 10px;font-size:11px;color:var(--tm)">${g.group}</td></tr>
+          ${g.pages.map(p=>`<tr>
+            <td style="padding-left:18px">${p.label}</td>
+            ${ROLES.map(r=>`<td style="text-align:center">
+              ${r==='admin'
+                ?`<span title="관리자는 항상 접근 가능">✅</span>`
+                :`<input type="checkbox" ${getPerm(p.page,r)?'checked':''}
+                   onchange="App.perms['${permKey(p.page,r)}']=this.checked">`}
+            </td>`).join('')}
+          </tr>`).join('')}`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  };
+
   w.innerHTML=`<div class="ph"><div><div class="ptit">⚙️ 설정</div></div></div>
+  <!-- 탭 버튼 -->
+  <div style="display:flex;gap:6px;margin-bottom:16px">
+    <button class="btn stab-btn on" data-tab="general" onclick="renderTab('general')" style="border-radius:8px">⚙️ 일반 설정</button>
+    <button class="btn stab-btn ${isAdmin?'':'bout'}" data-tab="usermgmt"
+      onclick="${isAdmin?"renderTab('usermgmt')":`Toast.show('관리자만 접근 가능합니다.','warn')`}"
+      style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}"
+      title="${isAdmin?'사용자 관리':'관리자만 접근 가능'}">👥 사용자 관리${isAdmin?'':' 🔒'}</button>
+  </div>
+  <!-- 일반 설정 탭 -->
+  <div class="stab-pane" data-tab="general" style="display:block">
   <div class="g2" style="margin-bottom:14px">
     <!-- 로고 관리 -->
     <div class="card">
       <div class="ch"><div class="ct">🖼️ 회사 로고 관리</div></div>
       <div id="logoPreview" style="margin-bottom:13px;min-height:78px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:var(--r);border:1px dashed var(--bd2)">
         ${App.logo?`<img src="${App.logo}" style="max-height:68px;max-width:195px;object-fit:contain">`:
-        `<div style="color:var(--tm);font-size:13px;text-align:center"><div style="font-size:24px">🖼️</div>등록된 로고 없음</div>`}
+        `<div style="color:var(--tm);font-size:13px;text-align:center"><div style="font-size:28px;margin-bottom:4px">🖼️</div>로고 미등록</div>`}
       </div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap">
-        <label class="btn bout bsm" style="cursor:pointer">📁 로고 등록/수정
-          <input type="file" accept="image/*" style="display:none" onchange="Cfg.uploadLogo(this)">
+      <div style="display:flex;gap:8px">
+        <label class="btn bout bsm" style="cursor:pointer">📁 로고 업로드
+          <input type="file" accept="image/*" style="display:none" onchange="Pages._uploadLogo(this)">
         </label>
-        ${App.logo?`<button class="btn berr bsm" onclick="Cfg.deleteLogo()">🗑️ 로고 삭제</button>`:''}
+        ${App.logo?`<button class="btn berr bsm" onclick="Pages._removeLogo()">🗑️ 삭제</button>`:''}
       </div>
-      <div style="margin-top:9px;font-size:11px;color:var(--tm)">권장: PNG/SVG, 가로 200px 이상, 배경 투명</div>
     </div>
-    <!-- 회사 정보 -->
+    <!-- 공지사항 -->
     <div class="card">
-      <div class="ch"><div class="ct">🏢 회사 정보</div></div>
-      <div class="fgroup" style="margin-bottom:10px"><label class="fl">회사명</label><input class="fc" value="㈜품질우수기업"></div>
-      <div class="fgroup" style="margin-bottom:10px"><label class="fl">사업자번호</label><input class="fc" value="123-45-67890"></div>
-      <div class="fgroup" style="margin-bottom:10px"><label class="fl">대표자</label><input class="fc" value="홍길동"></div>
-      <div class="fgroup" style="margin-bottom:10px"><label class="fl">연락처</label><input class="fc" value="02-1234-5678"></div>
-      <button class="btn bpri bsm" onclick="Toast.show('저장되었습니다.','ok')">저장</button>
-    </div>
-  </div>
-  <!-- 공지사항 관리 -->
-  <div class="card" style="margin-bottom:14px">
-    <div class="ch">
-      <div class="ct">📢 공지사항 관리</div>
-      <button class="btn bpri bsm" onclick="Cfg.noticeForm()">+ 공지 등록</button>
-    </div>
-    <div id="noticeList">
-      ${notices.length===0?`<div style="text-align:center;padding:26px;color:var(--tm)">등록된 공지사항이 없습니다.</div>`
-      :notices.map((n,i)=>`
-        <div style="display:flex;align-items:flex-start;gap:13px;padding:12px 0;border-bottom:1px solid var(--bd)">
-          <div style="flex:1">
-            <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
-              <span class="badge ${n.show?'bamb':'bgry'}">${n.show?'게시중':'게시중지'}</span>
-              <span style="font-size:13px;font-weight:600">${H.e(n.title)}</span>
-            </div>
-            <div style="font-size:12px;color:var(--tm);margin-bottom:3px">${H.e(n.body)}</div>
-            <div style="font-size:11px;color:var(--tl)">✍ ${H.e(n.author)} | 📅 ${n.date} ~ ${n.expire}</div>
-          </div>
-          <div style="display:flex;gap:5px;flex-shrink:0">
-            <button class="btn bxs bout" onclick="Cfg.noticeForm(${i})">수정</button>
-            <button class="btn bxs bout" onclick="Cfg.noticeToggle(${i})">${n.show?'중지':'게시'}</button>
-            <button class="btn bxs berr" onclick="Cfg.noticeDel(${i})">삭제</button>
-          </div>
-        </div>`).join('')}
+      <div class="ch"><div class="ct">📢 공지사항 관리</div></div>
+      ${notices.map((n,i)=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;padding:8px;background:var(--bg);border-radius:var(--r)">
+        <input type="checkbox" ${n.show?'checked':''} onchange="App.notices[${i}].show=this.checked" style="margin-top:3px">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${H.e(n.title)}</div>
+          <div style="font-size:11px;color:var(--tm)">${n.date} ~ ${n.expire}</div>
+        </div>
+        <button class="btn bxs bgh" onclick="Pages._editNotice(${i})">수정</button>
+      </div>`).join('')}
+      <button class="btn bout bsm" onclick="Pages._addNotice()">+ 공지 추가</button>
     </div>
   </div>
   <!-- 비밀번호 변경 -->
-  <div class="card" style="max-width:415px">
+  <div class="card" style="max-width:420px">
     <div class="ch"><div class="ct">🔐 비밀번호 변경</div></div>
-    <div class="fgroup" style="margin-bottom:10px"><label class="fl">현재 비밀번호</label><input class="fc" type="password"></div>
-    <div class="fgroup" style="margin-bottom:10px"><label class="fl">새 비밀번호</label><input class="fc" type="password"></div>
-    <div class="fgroup" style="margin-bottom:10px"><label class="fl">새 비밀번호 확인</label><input class="fc" type="password"></div>
-    <button class="btn bpri bsm" onclick="Toast.show('변경되었습니다.','ok')">변경</button>
+    <div class="fgroup ff"><label class="fl req">현재 비밀번호</label><input class="fc" id="sPwCur" type="password"></div>
+    <div class="fgroup ff"><label class="fl req">새 비밀번호</label><input class="fc" id="sPwNew" type="password" placeholder="8자 이상"></div>
+    <div class="fgroup ff"><label class="fl req">비밀번호 확인</label><input class="fc" id="sPwNew2" type="password"></div>
+    <button class="btn bpri bsm" onclick="Pages._changePw()">변경</button>
+  </div>
+  </div>
+  <!-- 사용자 관리 탭 (관리자만) -->
+  <div class="stab-pane" data-tab="usermgmt" style="display:none">
+    ${isAdmin
+      ? renderUserMgmt()+renderPermTable()
+      : `<div class="card" style="text-align:center;padding:40px">
+          <div style="font-size:48px;margin-bottom:12px">🔒</div>
+          <div style="font-weight:700;margin-bottom:6px">관리자 전용 메뉴</div>
+          <div style="color:var(--tm);font-size:13px">이 메뉴는 관리자만 접근할 수 있습니다.</div>
+        </div>`}
   </div>`;
-},
-};
 
+  /* renderTab을 전역으로 등록 */
+  window.renderTab=renderTab;
+},
+}; /* Pages 객체 끝 */
 /* ══ 설정 액션 ══ */
 const Cfg={
   uploadLogo(inp){
