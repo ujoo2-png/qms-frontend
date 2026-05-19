@@ -1282,11 +1282,38 @@ const SB={
     if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
     const i=DB.items.find(i=>i.id===id);if(i)Object.assign(i,patch);return{ok:true};
   },
+  /* [v2.25] deleteItem: 단건/복수 삭제 지원 */
   async deleteItem(id){
-    if(!_sb){DB.items=DB.items.filter(i=>i.id!==id);return{ok:true};}
-    const {error}=await _sb.from('items').delete().eq('id',id);
-    if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
-    DB.items=DB.items.filter(i=>i.id!==id);return{ok:true};
+    if(!_sb){
+      DB.items=DB.items.filter(i=>Number(i.id)!==Number(id));
+      return{ok:true};
+    }
+    const {error}=await _sb.from('items').delete().eq('id',Number(id));
+    if(error){
+      console.error('[SB] deleteItem 실패:',error.message);
+      /* 오류 원인 출력 후에도 로컬 캐시에서는 제거 */
+      DB.items=DB.items.filter(i=>Number(i.id)!==Number(id));
+      return{ok:false,msg:error.message};
+    }
+    DB.items=DB.items.filter(i=>Number(i.id)!==Number(id));
+    return{ok:true};
+  },
+
+  /* [v2.25] deleteItems: 복수 일괄 삭제 (IN 쿼리로 1번에 처리) */
+  async deleteItems(ids){
+    const numIds=ids.map(Number);
+    if(!_sb){
+      DB.items=DB.items.filter(i=>!numIds.includes(Number(i.id)));
+      return{ok:true};
+    }
+    const {error}=await _sb.from('items').delete().in('id',numIds);
+    /* SB 성공 여부와 무관하게 로컬 캐시 즉시 제거 */
+    DB.items=DB.items.filter(i=>!numIds.includes(Number(i.id)));
+    if(error){
+      console.error('[SB] deleteItems 실패:',error.message);
+      return{ok:false,msg:error.message};
+    }
+    return{ok:true};
   },
 
   /* ── 거래처 ── */
@@ -2915,11 +2942,14 @@ async items(){
     if(tc) Tbl.render({el:'#itbl',cols:COLS,data:d,
       onDel:async(ids)=>{
         const numIds=ids.map(Number);
-        for(const id of numIds) await SB.deleteItem(id);
+        /* [v2.25] 즉시 로컬 제거 → 화면 먼저 갱신 */
         DB.items=DB.items.filter(i=>!numIds.includes(Number(i.id)));
         data=data.filter(i=>!numIds.includes(Number(i.id)));
-        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
         render();
+        /* SB 일괄 삭제 (IN 쿼리 1번) */
+        const res=await SB.deleteItems(numIds);
+        if(res.ok) Toast.show(numIds.length+'건 삭제되었습니다.','ok');
+        else Toast.show('삭제 오류: '+(res.msg||''),'warn',5000);
       },
       onRow:row=>Pages._iForm(row)});
   };
@@ -6255,14 +6285,18 @@ const ExcelMgr={
           '외주검사':'insp_ou','최종검사':'insp_fi'};
         const results={};
         let totalOk=0,totalErr=0,totalDup=0;
-        /* DB 최신 로드 (참조 정합성 검사용) — [v2.25] window._sb → _sb 수정 */
-        try{
-          if(_sb){
+        /* [v2.25 버그수정] SB 최신 데이터 강제 로드
+           실패 시 빈 배열로 초기화 → 구 캐시로 인한 중복 오판 방지 */
+        if(_sb){
+          try{
             DB.items=await SB.getItems();
             DB.vendors=await SB.getVendors();
             DB.users=await SB.getUsers();
+          }catch(e2){
+            DB.items=[]; DB.vendors=[]; DB.users=[];
+            console.warn('[멀티업로드] SB 로드 실패, 빈 캐시로 진행');
           }
-        }catch(e2){console.warn('[멀티업로드] SB 로드 실패, 로컬 DB 사용');}
+        }
         for(const [sName,pKey] of Object.entries(SMAP)){
           const ws=wb.Sheets[sName];
           if(!ws){results[pKey]={skip:true,sheetName:sName};continue;}
