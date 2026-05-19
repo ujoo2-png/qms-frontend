@@ -1,3 +1,26 @@
+
+  /* [v2.26] deleteInspections: 검사 일괄 삭제 */
+  async deleteInspections(ids){
+    const numIds=ids.map(Number);
+    if(!numIds.length) return{ok:true};
+    if(!_sb){DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));return{ok:true};}
+    const {error}=await _sb.from('inspections').delete().in('id',numIds);
+    DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));
+    if(error){console.error('[SB] deleteInspections 실패:',error.message);return{ok:false,msg:error.message};}
+    return{ok:true};
+  },
+
+  /* [v2.26] deleteVendors: 일괄 삭제 */
+  async deleteVendors(ids){
+    const numIds=ids.map(Number);
+    if(!numIds.length) return{ok:true};
+    if(!_sb){DB.vendors=DB.vendors.filter(v=>!numIds.includes(Number(v.id)));return{ok:true};}
+    const {error}=await _sb.from('vendors').delete().in('id',numIds);
+    DB.vendors=DB.vendors.filter(v=>!numIds.includes(Number(v.id)));
+    if(error){console.error('[SB] deleteVendors 실패:',error.message);return{ok:false,msg:error.message};}
+    return{ok:true};
+  },
+
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
@@ -1166,21 +1189,26 @@ if(window.supabase){
 const SB={
   /* 연결 여부 확인 */
   ok(){return !!_sb},
+  /* ── _sbFetchAll: Supabase 1000건 제한 완전 해제 ──
+     [v2.26 근본수정] hasMore 로직 버그 수정
+     CHUNK=1000으로 SB 기본 단위와 일치시켜 페이지네이션
+     data.length < CHUNK 이면 마지막 페이지 → 종료 */
   async _sbFetchAll(table, orderCol='id', ascending=true, filter=null){
     if(!_sb) return null;
-    const CHUNK=5000; // Supabase 안전 청크 크기
-    let all=[], from=0, hasMore=true;
-    while(hasMore){
+    const CHUNK=1000; // SB Free tier 기본 단위
+    let all=[], from=0;
+    while(true){
       let q=_sb.from(table).select('*').order(orderCol,{ascending});
       if(filter) q=filter(q);
       q=q.range(from, from+CHUNK-1);
       const {data,error}=await q;
-      if(error){console.warn(`[SB] ${table} 조회 실패`,error.message);return null;}
+      if(error){console.warn('[SB] '+table+' 조회 실패',error.message);return null;}
       if(!data||data.length===0) break;
       all=[...all,...data];
-      hasMore=data.length===CHUNK;
+      if(data.length<CHUNK) break; // 마지막 페이지
       from+=CHUNK;
     }
+    console.log('[SB] '+table+' 전체 '+all.length+'건 로드');
     return all;
   },
 
@@ -1306,6 +1334,18 @@ const SB={
     if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
     DB.users=DB.users.filter(u=>u.id!==id);return{ok:true};
   },
+  /* [v2.26] deleteUsers: 일괄 삭제 */
+  async deleteUsers(ids){
+    const numIds=ids.map(Number);
+    if(!numIds.length) return{ok:true};
+    if(!_sb){DB.users=DB.users.filter(u=>!numIds.includes(Number(u.id)));return{ok:true};}
+    const {error}=await _sb.from('users').delete().in('id',numIds);
+    DB.users=DB.users.filter(u=>!numIds.includes(Number(u.id)));
+    if(error){console.error('[SB] deleteUsers 실패:',error.message);return{ok:false,msg:error.message};}
+    return{ok:true};
+  },
+
+
 
   /* ── 품목 ── */
   async addItem(row){
@@ -1368,6 +1408,7 @@ const SB={
   /* [v2.25] deleteItems: 복수 일괄 삭제 (IN 쿼리로 1번에 처리) */
   async deleteItems(ids){
     const numIds=ids.map(Number);
+    if(!numIds.length) return{ok:true}; /* 빈 배열 전달 시 전체 삭제 방지 */
     if(!_sb){
       DB.items=DB.items.filter(i=>!numIds.includes(Number(i.id)));
       return{ok:true};
@@ -3167,10 +3208,12 @@ _vRender(data){
     {key:'id',         label:'파일',      w:'70px',  align:'center',render:(v)=>FM.btn(`vendor-${v}`)},
   ],data,onDel:async(ids)=>{
         const numIds=ids.map(Number);
-        for(const id of numIds) await SB.deleteVendor(id);
+        if(!numIds.length) return;
         DB.vendors=DB.vendors.filter(v=>!numIds.includes(Number(v.id)));
-        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
         Pages._vRender();
+        const res=await SB.deleteVendors(numIds);
+        if(res.ok) Toast.show(numIds.length+'건 삭제되었습니다.','ok');
+        else Toast.show('삭제 오류: '+(res.msg||''),'warn',5000);
       },onRow:row=>Pages._vForm(row)});
 },
 /* ── 품목 상세/등록/수정 팝업 ──
@@ -3443,10 +3486,12 @@ _uRender(data){
     {key:'updated_at', label:'수정일',       w:'88px',  render:v=>H.e(v||'-')},
   ],data,onDel:async(ids)=>{
         const numIds=ids.map(Number);
-        for(const id of numIds) await SB.deleteUser(id);
+        if(!numIds.length) return;
         DB.users=DB.users.filter(u=>!numIds.includes(Number(u.id)));
-        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
         Pages._uRender();
+        const res=await SB.deleteUsers(numIds);
+        if(res.ok) Toast.show(numIds.length+'건 삭제되었습니다.','ok');
+        else Toast.show('삭제 오류: '+(res.msg||''),'warn',5000);
       },onRow:row=>Pages._uForm(row)});
 },
 _uForm(row=null){
@@ -3636,9 +3681,14 @@ _insp(type){
     ],data:fd,
     onDel:async(ids)=>{
         const numIds=ids.map(Number);
+        if(!numIds.length) return;
+        /* [v2.26] 즉시 로컬 제거 → 화면 먼저 갱신 */
         DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));
-        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
         render();
+        /* SB 일괄 삭제 */
+        const res=await SB.deleteInspections(numIds);
+        if(res.ok) Toast.show(numIds.length+'건 삭제되었습니다.','ok');
+        else Toast.show('삭제 오류: '+(res.msg||''),'warn',5000);
       },
     onRow:row=>Pages._inspDetail2(row)});
   };
