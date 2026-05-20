@@ -1192,6 +1192,42 @@ const SB={
     return all;
   },
 
+  /* ── [Phase 1 v2.28] 서버사이드 페이지네이션 헬퍼 ──
+     대용량 데이터(10만건+)에서도 안정적으로 동작
+     params: { table, orderCol, ascending, page, pageSize, filters, search }
+     filters: [{col, op, val}]  op: eq|ilike|gte|lte|neq
+     search:  [{col, kw}]       ilike '%kw%' OR 조건
+     반환: { data:[], total:number, pages:number }  */
+  async _sbPage({table, orderCol='id', ascending=false, page=0, pageSize=100, filters=[], search=[]}){
+    if(!_sb) return {data:[],total:0,pages:0};
+    const from=page*pageSize, to=from+pageSize-1;
+
+    /* 데이터 쿼리 */
+    let q=_sb.from(table).select('*',{count:'exact'})
+      .order(orderCol,{ascending})
+      .range(from,to);
+    /* 필터 적용 */
+    for(const f of filters){
+      if(f.val===null||f.val===undefined||f.val==='') continue;
+      if(f.op==='eq')   q=q.eq(f.col,f.val);
+      if(f.op==='neq')  q=q.neq(f.col,f.val);
+      if(f.op==='ilike')q=q.ilike(f.col,`%${f.val}%`);
+      if(f.op==='gte')  q=q.gte(f.col,f.val);
+      if(f.op==='lte')  q=q.lte(f.col,f.val);
+    }
+    /* 검색 (OR 조건: 여러 컬럼 중 하나라도 포함) */
+    if(search.length>0&&search[0].kw){
+      const kw=search[0].kw;
+      const orStr=search.map(s=>`${s.col}.ilike.%${kw}%`).join(',');
+      q=q.or(orStr);
+    }
+
+    const {data,error,count}=await q;
+    if(error){console.warn('[SB] _sbPage 오류:',table,error.message);return {data:[],total:0,pages:0};}
+    const total=count||0;
+    return {data:data||[], total, pages:Math.ceil(total/pageSize)};
+  },
+
   /* 품목 목록 조회 — 전체 반환 */
   async getItems(){
     if(!_sb) return DB.items;
@@ -1239,10 +1275,10 @@ const SB={
 
   /* 멘션 목록 조회 */
   async getMentions(){
-    if(!_sb) return DB.mentions;
+    if(!_sb) return DB.mentions||[];
     /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('mentions','created_at',false);
-    if(data===null){console.warn('[SB] mentions 조회 실패 → 더미데이터',error.message);return DB.mentions;}
+    if(data===null){console.warn('[SB] mentions 조회 실패');return DB.mentions||[];}
     return data;
   },
 
@@ -3092,9 +3128,39 @@ async items(){
      삭제/등록 후 즉시 숫자 반영 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
-  const allItems=await SB.getItems();
-  DB.items=allItems;
-  let data=[...allItems], search='', cat='';
+  /* [Phase 1 v2.28] 서버사이드 페이지네이션
+     전체 로드 → 첫 100건만 로드 후 검색/필터는 SB 쿼리로 처리
+     대용량(10만건+) 환경에서도 안정적 동작 */
+  let _page=0, _pageSize=100, _search='', _cat='', _majorCat='';
+  let _totalItems=0, _pageItems=[];
+
+  const _loadItems=async()=>{
+    const res=await SB._sbPage({
+      table:'items', orderCol:'id', ascending:true,
+      page:_page, pageSize:_pageSize,
+      filters:[
+        {col:'category',    op:'eq',    val:_cat},
+        {col:'major_category', op:'eq', val:_majorCat},
+      ],
+      search:_search?[
+        {col:'item_code', kw:_search},
+        {col:'item_name', kw:_search},
+      ]:[],
+    });
+    _totalItems=res.total;
+    _pageItems=res.data;
+    DB.items=_pageItems; // 현재 페이지 데이터만 캐싱
+    return res;
+  };
+
+  /* SB 미연결 시 로컬 더미 데이터 사용 */
+  if(!_sb){
+    _pageItems=DB.items||[];
+    _totalItems=_pageItems.length;
+  } else {
+    await _loadItems();
+  }
+  let data=[..._pageItems], search='', cat='';
 
   const COLS=[
     {key:'major_category',label:'대분류',  w:'80px', render:v=>`<span class="badge bgry">${H.e(v||'-')}</span>`},
@@ -3114,7 +3180,7 @@ async items(){
     {key:'active',        label:'사용',    w:'52px', align:'center',
       render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'사용':'미사용'}</span>`},
     {key:'created_at',    label:'등록일',  w:'84px'},
-    {key:'updated_at',    label:'수정일',  w:'84px'},
+    {key:'updated_at',    label:'수정일',  w:'84px', render:v=>v?H.e(v):''},
     {key:'id',            label:'파일',    w:'68px', align:'center',
       render:(v)=>FM.btn(`item-${v}`)},
   ];
@@ -3575,7 +3641,6 @@ _uRender(data){
     {key:'department', label:'부서',         w:'88px'},
     {key:'tel',        label:'연락처',       w:'112px', render:v=>H.e(v||'-')},
     {key:'email',      label:'E-MAIL',       w:'160px', render:v=>v?`<a href="mailto:${H.e(v)}" style="color:var(--acc)">${H.e(v)}</a>`:'-'},
-    {key:'role',       label:'권한',         w:'72px',  render:v=>`<span class="badge ${roleClr[v]||'bgry'}">${roleMap[v]||v}</span>`},
     {key:'active',     label:'상태',         w:'52px',  align:'center', render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'활성':'비활성'}</span>`},
     {key:'created_at', label:'등록일',       w:'88px'},
     {key:'updated_at', label:'수정일',       w:'88px',  render:v=>v?H.e(v):''},
@@ -3738,21 +3803,55 @@ _insp(type){
     insp_fi:{lbl:'최종검사', icon:'✅', key:'최종'},
   };
   const {lbl,icon,key}=TYPES[type];
-  let data=DB.inspections.filter(r=>r.type===key);
+  /* [Phase 1 v2.28] 서버사이드 페이지네이션
+     검사 데이터는 50,000건+ 가능 → 전체 로드 금지
+     필터/검색 모두 SB 쿼리로 처리 */
+  let _page=0, _pageSize=100, _total=0;
   let fromV='',toV='';
 
-  const render=()=>{
+  /* SB 쿼리 실행 */
+  const _loadInsp=async()=>{
+    w.innerHTML='<div class="spin"></div>';
     const sv=(document.getElementById('inspSV')?.value||'').trim();
     const rv=document.getElementById('inspRV')?.value||'';
     fromV=document.getElementById('inspFrom')?.value||'';
     toV=document.getElementById('inspTo')?.value||'';
-    const fd=data.filter(r=>{
-      if(sv&&!r.insp_no?.includes(sv)&&!r.item_name?.includes(sv)&&!r.item_code?.includes(sv)&&!r.vendor?.includes(sv))return false;
-      if(rv&&r.result!==rv)return false;
-      if(fromV&&r.insp_date<fromV)return false;
-      if(toV&&r.insp_date>toV)return false;
-      return true;
+    if(!_sb){
+      // 로컬 더미 데이터
+      let local=DB.inspections.filter(r=>r.type===key);
+      if(sv) local=local.filter(r=>r.insp_no?.includes(sv)||r.item_name?.includes(sv)||r.item_code?.includes(sv)||r.vendor?.includes(sv));
+      if(rv) local=local.filter(r=>r.result===rv);
+      if(fromV) local=local.filter(r=>r.insp_date>=fromV);
+      if(toV)   local=local.filter(r=>r.insp_date<=toV);
+      _total=local.length;
+      const sliced=local.slice(_page*_pageSize,(_page+1)*_pageSize);
+      render(sliced);
+      return;
+    }
+    const res=await SB._sbPage({
+      table:'inspections', orderCol:'insp_date', ascending:false,
+      page:_page, pageSize:_pageSize,
+      filters:[
+        {col:'type',      op:'eq',    val:key},
+        {col:'result',    op:'eq',    val:rv},
+        {col:'insp_date', op:'gte',   val:fromV},
+        {col:'insp_date', op:'lte',   val:toV},
+      ],
+      search:sv?[
+        {col:'insp_no',   kw:sv},
+        {col:'item_name', kw:sv},
+        {col:'item_code', kw:sv},
+        {col:'vendor',    kw:sv},
+      ]:[],
     });
+    _total=res.total;
+    render(res.data);
+  };
+
+  let data=[];
+
+  const render=(fd=[])=>{
+    /* [Phase 1 v2.28] fd는 _loadInsp에서 SB 쿼리 결과로 전달 */
     Tbl.render({el:'#inspTbl',cols:[
       /* 컬럼 순서: 검사구분→거래처명→검사번호→검사일→검사자→품목코드→품목명→규격→검사방법→검사결과→검사수량→합격수량→불합격수량→불량률→작업지시번호→특이사항→파일 */
       {key:'type',       label:'검사구분',    w:'78px',  align:'center', render:v=>`<span class="badge bblu">${H.e(v)}검사</span>`},
@@ -3831,8 +3930,8 @@ _insp(type){
   <div id="inspTbl"></div>`;
 
   /* 동적 렌더 함수 등록 */
-  Pages[`_inspRender_${type}`]=render;
-  render();
+  Pages[`_inspRender_${type}`]=()=>{ _page=0; _loadInsp(); };
+  _loadInsp();
 },
 
 _inspForm2(type){
@@ -4585,7 +4684,8 @@ async mentions(){
   w.innerHTML='<div class="spin"></div>';
   /* SB에서 멘션 목록 로드 */
   const allMentions=await SB.getMentions();
-  DB.mentions=allMentions;
+  /* [v2.28] null/undefined 방어 */
+  DB.mentions=Array.isArray(allMentions)?allMentions:[];
   const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
 
@@ -4635,10 +4735,30 @@ async mentions(){
       +'<div class="pac"><button class="btn bpri btn-f2" onclick="Pages._mentionWrite()">+ 작성하기 <span class=\"kbd\">F2</span></button></div></div>'
       +'<div class="card" style="padding:0;overflow:hidden">'+tableHtml+'</div>';
   };
-  // 홈 멘션 뱃지 업데이트
-  Toast.show('읽음 처리되었습니다.','ok');
-  Pages.mentions();
+  render();
+  Pages._mentionRender=render;
+  // 단축키 F2
+  document.addEventListener('keydown',function _mKey(e){
+    if(e.key==='F2'){Pages._mentionWrite();e.preventDefault();}
+    if(e.key==='Escape'){document.removeEventListener('keydown',_mKey);}
+  });
 },
+
+/* [v2.28] _mentionRead: 읽음 처리 */
+_mentionRead(id){
+  const m=DB.mentions.find(x=>Number(x.id)===Number(id));
+  if(!m) return;
+  m.read=true;
+  /* SB 업데이트 */
+  if(_sb) _sb.from('mentions').update({read:true}).eq('id',Number(id))
+    .then(({error})=>{ if(error) console.warn('[SB] _mentionRead 오류',error.message); });
+  Toast.show('읽음 처리되었습니다.','ok',1500);
+  if(Pages._mentionRender) Pages._mentionRender();
+  /* 홈 멘션 뱃지 업데이트 */
+  const badge=document.getElementById('mentionBadge');
+  if(badge){const unread=DB.mentions.filter(x=>!x.read).length;badge.textContent=unread;badge.style.display=unread?'':'none';}
+},
+
 
 /* 멘션 작성하기 팝업 */
 _mentionWrite(editId=null){
@@ -4791,6 +4911,7 @@ settings(){
     const allUsers=DB.users;
     const pendingUsers=allUsers.filter(u=>u.pending||(!u.active&&u.active!==undefined));
     const activeUsers=allUsers.filter(u=>!u.pending&&u.active!==0);
+    let no=0;
     return (pendingUsers.length?`<div class="card" style="margin-bottom:14px;border:1px solid #f59e0b">
       <div class="ch" style="background:#fef3c7"><div class="ct">⏳ 승인 대기 (${pendingUsers.length}명)</div></div>
       <div class="ts"><table class="dt"><thead><tr>
@@ -4808,23 +4929,36 @@ settings(){
       <div class="ch"><div class="ct">👥 사용자 목록 (${activeUsers.length}명)</div>
         <button class="btn bpri bsm" onclick="Nav.go('users')">+ 사용자 등록</button>
       </div>
-      <div class="ts"><table class="dt">
+      <div class="ts"><table class="dt" style="font-size:12px">
         <thead><tr>
-          <th>이름</th><th>아이디</th><th>부서</th><th>권한</th><th>상태</th><th>비밀번호</th>
+          <th style="width:28px"><input type="checkbox" id="umgmtAllChk"
+            onchange="document.querySelectorAll('.umgmt-chk').forEach(c=>c.checked=this.checked)"></th>
+          <th style="width:36px">No</th>
+          <th>이름</th><th>아이디</th><th>부서</th><th>권한</th><th>상태</th>
+          <th style="width:90px">등록일</th>
+          <th style="width:90px">수정일</th>
+          <th style="width:110px">최근 로그인</th>
+          <th>비밀번호</th>
         </tr></thead>
         <tbody>${activeUsers.length===0
-          ?'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--tm)">등록된 사용자가 없습니다.</td></tr>'
-          :activeUsers.map(u=>`<tr>
-            <td><strong>${H.e(u.name||u.username)}</strong></td>
-            <td style="color:var(--tm)">${H.e(u.username)}</td>
-            <td>${H.e(u.department||'-')}</td>
-            <td><select class="fsel" style="font-size:11px;padding:2px 4px"
-              onchange="Pages._setUserRole(${u.id},'${H.e(u.username)}',this.value)">
-              ${ROLES.map(r=>`<option value="${r}"${u.role===r?' selected':''}>${ROLE_LABEL[r]}</option>`).join('')}
-            </select></td>
-            <td><span class="badge ${u.active?'bgrn':'bgry'}">${u.active?'활성':'비활성'}</span></td>
-            <td><button class="btn bsm bamb" onclick="Pages._uResetPw(${u.id},'${H.e(u.username)}')">🔑 초기화</button></td>
-          </tr>`).join('')}
+          ?'<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--tm)">등록된 사용자가 없습니다.</td></tr>'
+          :activeUsers.map(u=>{
+            no++;
+            const roleOpts=ROLES.map(r=>'<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_LABEL[r]+'</option>').join('');
+            return '<tr>'
+              +'<td><input type="checkbox" class="umgmt-chk" value="'+u.id+'"></td>'
+              +'<td style="text-align:center;color:var(--tm)">'+no+'</td>'
+              +'<td><strong>'+H.e(u.name||u.username)+'</strong></td>'
+              +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
+              +'<td>'+H.e(u.department||'-')+'</td>'
+              +'<td><select class="fsel" style="font-size:11px;padding:2px 4px" onchange="Pages._setUserRole('+u.id+',&#39;'+H.e(u.username)+'&#39;,this.value)">'+roleOpts+'</select></td>'
+              +'<td><span class="badge '+(u.active?'bgrn':'bgry')+'">'+(u.active?'활성':'비활성')+'</span></td>'
+              +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.created_at||'-')+'</td>'
+              +'<td style="font-size:11px;color:var(--tm)">'+(u.updated_at?H.e(u.updated_at):'')+'</td>'
+              +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.last_login||'-')+'</td>'
+              +'<td><button class="btn bsm bamb" onclick="Pages._uResetPw('+u.id+',&#39;'+H.e(u.username)+'&#39;)">🔑 초기화</button></td>'
+              +'</tr>';
+          }).join('')}
         </tbody>
       </table></div>
     </div>`;
