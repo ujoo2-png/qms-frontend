@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.27</title>
+<title>QMS - 품질경영시스템 v2.28</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.27</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.28</div>
         </div>
       </div>
     </div>
@@ -954,7 +954,7 @@ textarea.fc{resize:vertical;min-height:68px}
           </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.27 (2026-05-20) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.28 (2026-05-20) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -965,7 +965,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.27</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.28</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1027,7 +1027,10 @@ textarea.fc{resize:vertical;min-height:68px}
       </div>
       <div class="ns"><div class="nst">시스템</div>
         <div class="ni" data-p="mentions" onclick="Nav.go('mentions')"><span class="nii">💬</span><span class="nt">멘션함</span><span class="nb" id="mnb">3</span></div>
-        <div class="ni" data-p="settings" onclick="Nav.go('settings')"><span class="nii">⚙️</span><span class="nt">설정</span></div>
+        <!-- [v2.27] 설정 메뉴: 관리자만 표시 -->
+        <div class="ni" data-p="settings" onclick="Nav.go('settings')"
+          style="display:none" id="ni_settings">
+          <span class="nii">⚙️</span><span class="nt">설정</span></div>
       </div>
     </nav>
     <div class="sbf">
@@ -1246,7 +1249,31 @@ const SB={
   /* 멘션 등록 */
   async addMention(row){
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
-    const {error}=await _sb.from('mentions').insert(row);
+    /* [v2.27] 허용 컬럼만 추출 — schema cache 오류 방지
+       from_name, from_dept 등 없는 컬럼 제거 */
+    const allowed={
+      from:       row.from||row.from_name||'',
+      dept:       row.dept||'',
+      to:         row.to||'',
+      text:       row.text||row.message||'',
+      message:    row.message||row.text||'',
+      ref:        row.ref||'',
+      ref_key:    row.ref_key||row.key||'',
+      reply_to:   row.reply_to||null,
+      read:       row.read||false,
+      created_at: row.created_at||null,
+    };
+    /* 동적 컬럼 오류 제거 (vendor와 동일 방식) */
+    let insertRow={...allowed};
+    let {error}=await _sb.from('mentions').insert(insertRow);
+    let retries=0;
+    while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<5){
+      retries++;
+      const m=error.message.match(/['"`](\w+)['"`]\s*column/);
+      if(m&&m[1]){delete insertRow[m[1]];console.warn('[SB] addMention 컬럼 제거:',m[1]);}
+      else break;
+      ({error}=await _sb.from('mentions').insert(insertRow));
+    }
     if(error){Toast.show('멘션 저장 실패: '+error.message,'err');return {ok:false};}
     return {ok:true};
   },
@@ -1935,6 +1962,9 @@ const Auth={
       const e=document.getElementById(el);
       if(e)e.textContent=[roleLabel[user.role]||'사', user.name, user.name, user.name][i];
     });
+    /* [v2.27] 설정 메뉴: 관리자만 표시 */
+    const settingsMenu=document.getElementById('ni_settings');
+    if(settingsMenu) settingsMenu.style.display=(user.role==='admin')?'':'none';
     const active=App.notices.filter(n=>n.show);
     if(active.length){
       const cnt=document.getElementById('npCount');if(cnt)cnt.textContent=`총 ${active.length}건`;
@@ -2760,7 +2790,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.27</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.28</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3269,7 +3299,7 @@ _vRender(data){
     {key:'manager_email',label:'담당자 E-MAIL',w:'150px',render:v=>v?`<a href="mailto:${H.e(v)}" style="color:var(--acc)">${H.e(v)}</a>`:'-'},
     {key:'active',     label:'상태',      w:'55px',  align:'center',render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'정상':'비활성'}</span>`},
     {key:'created_at', label:'등록일',    w:'88px'},
-    {key:'updated_at', label:'수정일',    w:'88px',  render:v=>H.e(v||'-')},
+    {key:'updated_at', label:'수정일',    w:'88px',  render:v=>v?H.e(v):''},
     {key:'id',         label:'파일',      w:'70px',  align:'center',render:(v)=>FM.btn(`vendor-${v}`)},
   ],data,onDel:async(ids)=>{
         const numIds=ids.map(Number);
@@ -3548,7 +3578,7 @@ _uRender(data){
     {key:'role',       label:'권한',         w:'72px',  render:v=>`<span class="badge ${roleClr[v]||'bgry'}">${roleMap[v]||v}</span>`},
     {key:'active',     label:'상태',         w:'52px',  align:'center', render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'활성':'비활성'}</span>`},
     {key:'created_at', label:'등록일',       w:'88px'},
-    {key:'updated_at', label:'수정일',       w:'88px',  render:v=>H.e(v||'-')},
+    {key:'updated_at', label:'수정일',       w:'88px',  render:v=>v?H.e(v):''},
   ],data,onDel:async(ids)=>{
         const numIds=ids.map(Number);
         if(!numIds.length) return;
@@ -4560,83 +4590,51 @@ async mentions(){
   const isAdmin=(Auth._u?.role==='admin');
 
   const render=()=>{
-    w.innerHTML=`
-    <div class="ph">
-      <div><div class="ptit">💬 멘션함</div><div class="psub">멘션 및 협업 메시지 관리</div></div>
-      <div class="pac">
-        <button class="btn bout bsm" onclick="Pages._mentionMarkAll()">✉️ 전체 읽음</button>
-        <button class="btn bpri btn-f2" onclick="Pages._mentionWrite()">+ 작성하기 <span class="kbd">F2</span></button>
-      </div>
-    </div>
-    <div class="card">
-      ${DB.mentions.length===0
-        ?`<div class="es"><div class="es-icon">💬</div><div>멘션이 없습니다.</div></div>`
-        :DB.mentions.map(m=>{
-          const isMine = m.from===me||(me==='admin'&&m.from==='관리자');
-          const hasReply = (m.replies||[]).length>0;
-          const canDel = isAdmin || (isMine && !hasReply);
-          return`<div id="mention-${m.id}" style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--bd)">
-            <!-- 아바타 -->
-            <div style="position:relative;flex-shrink:0">
-              <div class="cav" style="width:38px;height:38px;font-size:15px">${H.e(m.from.charAt(0))}</div>
-              ${!m.read?`<span style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:var(--err);border-radius:50%;border:2px solid #fff"></span>`:''}
-            </div>
-            <!-- 내용 -->
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                <span style="font-size:13px;font-weight:700">${H.e(m.from)}
-                  <span style="font-weight:400;color:var(--tm);font-size:11px">${H.e(m.dept||'')}</span>
-                  ${m.to?`<span style="font-size:11px;color:var(--acc)"> → @${H.e(m.to)}</span>`:''}
-                </span>
-                <span style="font-size:11px;color:var(--tm)">${m.time}</span>
-              </div>
-              <div style="font-size:13px;line-height:1.6;word-break:break-all">
-                ${H.e(m.text).replace(/@(\S+)/g,'<span class="mtag">@$1</span>')}
-              </div>
-              <div style="font-size:11px;color:var(--acc);margin-top:4px">📌 ${H.e(m.ref)}</div>
-              <!-- 댓글 목록 -->
-              ${(m.replies||[]).length>0?`
-              <div style="margin-top:10px;padding-left:12px;border-left:3px solid var(--bd)">
-                ${(m.replies||[]).map(r=>`
-                  <div style="font-size:12px;padding:4px 0;color:var(--tm)">
-                    <strong style="color:var(--tx)">${H.e(r.from)}</strong>
-                    <span style="margin:0 6px">·</span>${H.e(r.text)}
-                    <span style="color:var(--tl);font-size:11px;margin-left:8px">${r.time}</span>
-                  </div>`).join('')}
-              </div>`:''}
-            </div>
-            <!-- 액션 버튼 -->
-            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
-              ${!m.read?`<button class="btn bxs bout" onclick="Pages._mentionRead(${m.id})">읽음</button>`
-                :`<span style="font-size:10px;color:var(--tl);padding:2px 6px">읽음</span>`}
-              ${isMine?`<button class="btn bxs bout" onclick="Pages._mentionEdit(${m.id})">수정</button>`:''}
-              <!-- [v2.24] 답장 버튼 추가 -->
-              <button class="btn bxs" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe"
-                onclick="Pages._mentionReply(${m.id},'${H.e(m.from)}')">↩ 답장</button>
-              ${canDel
-                ?`<button class="btn bxs berr" onclick="Pages._mentionDel(${m.id})">삭제</button>`
-                :!isMine?'':`<button class="btn bxs" style="background:#f1f5f9;color:#94a3b8;cursor:not-allowed;font-size:11px" title="댓글이 있어 삭제 불가">삭제불가</button>`}
-            </div>
-          </div>`;
-        }).join('')}
-    </div>`;
+    /* [v2.27] B안: 테이블형 레이아웃 — 문자열 연결 방식 (중첩 백틱 방지) */
+    const thead='<thead><tr>'
+      +'<th style="width:28px"><input type="checkbox" id="mentionAllChk" onchange="document.querySelectorAll(\'.mention-chk\').forEach(c=>c.checked=this.checked)"></th>'
+      +'<th style="min-width:70px">발신자</th>'
+      +'<th style="min-width:60px">수신자</th>'
+      +'<th style="min-width:80px">메뉴/분류</th>'
+      +'<th>내용 요약</th>'
+      +'<th style="width:80px">시간</th>'
+      +'<th style="width:34px;text-align:center">읽음</th>'
+      +'<th style="width:100px;text-align:center">작업</th>'
+      +'</tr></thead>';
+    const tbody=DB.mentions.map(m=>{
+      const isMine=(m.from===me)||(me==='admin'&&m.from==='관리자');
+      const hasReply=(m.replies||[]).length>0;
+      const canDel=isAdmin||(isMine&&!hasReply);
+      const unread=!m.read;
+      const bg=unread?'background:var(--bg2);font-weight:600':'';
+      const dot=unread?'<span style="width:6px;height:6px;background:var(--err);border-radius:50%;display:inline-block;margin-left:3px"></span>':'';
+      const readBtn=m.read
+        ?'<span style="color:var(--ok);font-size:13px">✓</span>'
+        :'<button class="btn bxs bpri" style="font-size:10px;padding:1px 5px" onclick="Pages._mentionRead('+m.id+')">읽음</button>';
+      const editBtn=isMine?'<button class="btn bxs bout" style="font-size:10px" onclick="Pages._mentionEdit('+m.id+')">수정</button>':'';
+      const delBtn=canDel?'<button class="btn bxs berr" style="font-size:10px" onclick="Pages._mentionDel('+m.id+')">삭제</button>':'';
+      const replyBtn='<button class="btn bxs" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;font-size:10px" onclick="Pages._mentionReply('+m.id+','+JSON.stringify(m.from||'')+')">↩</button>';
+      const txt=m.text||m.message||'';
+      const replySuffix=m.reply_to?'<span style="color:var(--tm);font-size:10px">↩ </span>':'';
+      return '<tr id="mention-'+m.id+'" style="'+bg+'">'
+        +'<td><input type="checkbox" class="mention-chk" value="'+m.id+'"></td>'
+        +'<td><div style="display:flex;align-items:center;gap:4px"><div class="cav" style="width:22px;height:22px;font-size:10px;flex-shrink:0">'+H.e((m.from||'?').charAt(0))+'</div>'+H.e(m.from||'-')+dot+'</div></td>'
+        +'<td><span style="color:var(--pri)">@'+H.e(m.to||'-')+'</span></td>'
+        +'<td><span class="badge bpur" style="font-size:10px">'+H.e(m.ref||'-')+'</span></td>'
+        +'<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+H.e(txt)+'">'+replySuffix+H.e(txt.slice(0,60))+(txt.length>60?'…':'')+'</td>'
+        +'<td style="color:var(--tm);font-size:11px;white-space:nowrap">'+H.e(m.time||m.created_at||'')+'</td>'
+        +'<td style="text-align:center">'+readBtn+'</td>'
+        +'<td style="text-align:center"><div style="display:flex;gap:2px;justify-content:center">'+replyBtn+editBtn+delBtn+'</div></td>'
+        +'</tr>';
+    }).join('');
+    const tableHtml=DB.mentions.length===0
+      ?'<div class="es"><div class="es-icon">💬</div><div>멘션이 없습니다.</div></div>'
+      :'<div class="ts"><table class="dt" style="font-size:12px">'+thead+'<tbody>'+tbody+'</tbody></table></div>';
+    w.innerHTML=
+      '<div class="ph"><div><div class="ptit">💬 멘션함</div></div>'
+      +'<div class="pac"><button class="btn bpri btn-f2" onclick="Pages._mentionWrite()">+ 작성하기 <span class=\"kbd\">F2</span></button></div></div>'
+      +'<div class="card" style="padding:0;overflow:hidden">'+tableHtml+'</div>';
   };
-  render();
-  // 렌더 함수 저장 (수정/삭제 후 재렌더용)
-  Pages._mentionRender=render;
-},
-
-/* 멘션 전체 읽음 */
-_mentionMarkAll(){
-  DB.mentions.forEach(m=>m.read=true);
-  Toast.show('전체 읽음 처리되었습니다.','ok');
-  Pages.mentions();
-},
-
-/* 멘션 개별 읽음 */
-_mentionRead(id){
-  const m=DB.mentions.find(m=>m.id===id);
-  if(m){m.read=true;}
   // 홈 멘션 뱃지 업데이트
   Toast.show('읽음 처리되었습니다.','ok');
   Pages.mentions();
@@ -4928,6 +4926,11 @@ Pages._copySql=function(){
   var e=document.getElementById('sqlBox');
   if(e) navigator.clipboard.writeText(e.textContent).then(function(){Toast.show('복사됨!','ok');});
 };
+/* [v2.27] settings 공지/로고 — Cfg에 실제 구현, Pages에서 위임 */
+Pages._addNotice  =function(){Cfg.noticeForm();};
+Pages._editNotice =function(i){Cfg.noticeForm(i);};
+Pages._uploadLogo =function(inp){Cfg.uploadLogo(inp);};
+Pages._removeLogo =function(){Cfg.deleteLogo();};
 /* ══ 설정 액션 ══ */
 const Cfg={
   uploadLogo(inp){
@@ -6800,10 +6803,29 @@ const SearchPop={
       get:(f)=>DB.items.filter(r=>{if(f.sq_cat&&r.category!==f.sq_cat)return false;if(f.sq_code&&!r.item_code.includes(f.sq_code))return false;if(f.sq_name&&!r.item_name.includes(f.sq_name))return false;if(f.sq_spec&&!(r.spec||'').includes(f.sq_spec))return false;if(f.sq_mat&&!(r.material||'').includes(f.sq_mat))return false;if(f.sq_vendor&&!(r.vendor_name||'').includes(f.sq_vendor))return false;if(f.sq_use==='사용'&&!r.active)return false;if(f.sq_use==='미사용'&&r.active)return false;return true;}),
       row:(r)=>[`<span class="badge bblu">${H.e(r.category)}</span>`,H.e(r.item_code),H.e(r.item_name),H.e(r.spec||'-'),H.e(r.unit),H.e(r.material||'-'),H.e(r.vendor_name),`<span class="badge ${r.active?'bgrn':'bgry'}">${r.active?'사용':'미사용'}</span>`]},
     vendors:{title:'거래처 검색',
-      fields:[{id:'sv_type',label:'유형',type:'select',opts:['','원자재','부자재','소모품','외주','기타']},{id:'sv_code',label:'거래처코드',type:'text',ph:'VEN-001'},{id:'sv_name',label:'거래처명',type:'text',ph:'거래처명'},{id:'sv_biz',label:'사업자번호',type:'text',ph:'000-00-00000'},{id:'sv_ceo',label:'대표자',type:'text',ph:'대표자명'},{id:'sv_mgr',label:'담당자',type:'text',ph:'담당자명'}],
-      cols:['거래처코드','거래처명','유형','사업자번호','대표자','전화번호','담당자','담당자 연락처','상태'],
-      get:(f)=>DB.vendors.filter(r=>{if(f.sv_type&&r.vendor_type!==f.sv_type)return false;if(f.sv_code&&!r.vendor_code.includes(f.sv_code))return false;if(f.sv_name&&!r.vendor_name.includes(f.sv_name))return false;if(f.sv_biz&&!(r.biz_no||'').includes(f.sv_biz))return false;if(f.sv_ceo&&!(r.ceo_name||'').includes(f.sv_ceo))return false;if(f.sv_mgr&&!(r.manager||'').includes(f.sv_mgr))return false;return true;}),
-      row:(r)=>[H.e(r.vendor_code||'-'),H.e(r.vendor_name),`<span class="badge bpur">${H.e(r.vendor_type)}</span>`,H.e(r.biz_no),H.e(r.ceo_name),H.e(r.tel),H.e(r.manager),H.e(r.manager_tel||'-'),`<span class="badge ${r.active?'bgrn':'bgry'}">${r.active?'정상':'비활성'}</span>`]},
+      fields:[
+        {id:'sv_type', label:'유형',     type:'select',opts:['','원자재','부자재','소모품','외주','기타']},
+        {id:'sv_name', label:'거래처명', type:'text',  ph:'거래처명'},
+        {id:'sv_biz',  label:'사업자번호',type:'text', ph:'000-00-00000'},
+        {id:'sv_ceo',  label:'대표자',   type:'text',  ph:'대표자명'},
+        {id:'sv_mgr',  label:'담당자',   type:'text',  ph:'담당자명'},
+      ],
+      cols:['거래처명','유형','사업자번호','대표자','전화번호','담당자','담당자 연락처','상태'],
+      get:(f)=>DB.vendors.filter(r=>{
+        if(f.sv_type&&r.vendor_type!==f.sv_type)return false;
+        if(f.sv_name&&!(r.vendor_name||'').includes(f.sv_name))return false;
+        if(f.sv_biz &&!(r.biz_no||'').includes(f.sv_biz))return false;
+        if(f.sv_ceo &&!(r.ceo_name||'').includes(f.sv_ceo))return false;
+        if(f.sv_mgr &&!(r.manager||'').includes(f.sv_mgr))return false;
+        return true;
+      }),
+      row:(r)=>[
+        H.e(r.vendor_name),
+        `<span class="badge bpur">${H.e(r.vendor_type||'-')}</span>`,
+        H.e(r.biz_no||'-'),H.e(r.ceo_name||'-'),H.e(r.tel||'-'),
+        H.e(r.manager||'-'),H.e(r.manager_tel||'-'),
+        `<span class="badge ${r.active?'bgrn':'bgry'}">${r.active?'정상':'비활성'}</span>`
+      ]},
     users:{title:'사용자 검색',
       fields:[{id:'su_name',label:'이름',type:'text',ph:'이름'},{id:'su_id',label:'아이디',type:'text',ph:'아이디'},{id:'su_dept',label:'부서',type:'text',ph:'부서명'},{id:'su_email',label:'E-MAIL',type:'text',ph:'이메일'},{id:'su_role',label:'권한',type:'select',opts:['','admin','manager','user','viewer']}],
       cols:['아이디','이름','부서','연락처','E-MAIL','권한','상태','등록일'],
