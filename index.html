@@ -3128,39 +3128,13 @@ async items(){
      삭제/등록 후 즉시 숫자 반영 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
-  /* [Phase 1 v2.28] 서버사이드 페이지네이션
-     전체 로드 → 첫 100건만 로드 후 검색/필터는 SB 쿼리로 처리
-     대용량(10만건+) 환경에서도 안정적 동작 */
-  let _page=0, _pageSize=100, _search='', _cat='', _majorCat='';
-  let _totalItems=0, _pageItems=[];
-
-  const _loadItems=async()=>{
-    const res=await SB._sbPage({
-      table:'items', orderCol:'id', ascending:true,
-      page:_page, pageSize:_pageSize,
-      filters:[
-        {col:'category',    op:'eq',    val:_cat},
-        {col:'major_category', op:'eq', val:_majorCat},
-      ],
-      search:_search?[
-        {col:'item_code', kw:_search},
-        {col:'item_name', kw:_search},
-      ]:[],
-    });
-    _totalItems=res.total;
-    _pageItems=res.data;
-    DB.items=_pageItems; // 현재 페이지 데이터만 캐싱
-    return res;
-  };
-
-  /* SB 미연결 시 로컬 더미 데이터 사용 */
-  if(!_sb){
-    _pageItems=DB.items||[];
-    _totalItems=_pageItems.length;
-  } else {
-    await _loadItems();
-  }
-  let data=[..._pageItems], search='', cat='';
+  /* [v2.28 수정] _sbFetchAll 전체 로드 복원
+     Phase1 _sbPage는 count 오류로 데이터 사라짐 버그 발생
+     → _sbFetchAll로 안전하게 전체 로드 후 로컬 필터 방식 유지
+     대용량 시: 향후 올바른 페이지네이션 방식으로 단계적 전환 */
+  const allItems=await SB.getItems();
+  DB.items=Array.isArray(allItems)?allItems:[];
+  let data=[...DB.items], search='', cat='';
 
   const COLS=[
     {key:'major_category',label:'대분류',  w:'80px', render:v=>`<span class="badge bgry">${H.e(v||'-')}</span>`},
@@ -3793,7 +3767,7 @@ insp_pu(){this._insp('insp_pu')},
 insp_ou(){this._insp('insp_ou')},
 insp_fi(){this._insp('insp_fi')},
 
-_insp(type){
+async _insp(type){
   const w=document.getElementById('pw');
   const TYPES={
     insp_in:{lbl:'수입검사', icon:'🔍', key:'수입'},
@@ -3803,55 +3777,27 @@ _insp(type){
     insp_fi:{lbl:'최종검사', icon:'✅', key:'최종'},
   };
   const {lbl,icon,key}=TYPES[type];
-  /* [Phase 1 v2.28] 서버사이드 페이지네이션
-     검사 데이터는 50,000건+ 가능 → 전체 로드 금지
-     필터/검색 모두 SB 쿼리로 처리 */
-  let _page=0, _pageSize=100, _total=0;
+  /* [v2.28 복원] _sbFetchAll 전체 로드 후 로컬 필터 방식
+     Phase1은 DOM 순서 문제로 무한 스피너 버그 발생 → 복원 */
+  w.innerHTML='<div class="spin"></div>';
+  const allInsp=await SB.getInspections();
+  DB.inspections=Array.isArray(allInsp)?allInsp:[];
+  let data=DB.inspections.filter(r=>r.type===key);
   let fromV='',toV='';
 
-  /* SB 쿼리 실행 */
-  const _loadInsp=async()=>{
-    w.innerHTML='<div class="spin"></div>';
+  const render=()=>{
+    /* [v2.28 복원] 로컬 필터 방식 */
     const sv=(document.getElementById('inspSV')?.value||'').trim();
     const rv=document.getElementById('inspRV')?.value||'';
     fromV=document.getElementById('inspFrom')?.value||'';
     toV=document.getElementById('inspTo')?.value||'';
-    if(!_sb){
-      // 로컬 더미 데이터
-      let local=DB.inspections.filter(r=>r.type===key);
-      if(sv) local=local.filter(r=>r.insp_no?.includes(sv)||r.item_name?.includes(sv)||r.item_code?.includes(sv)||r.vendor?.includes(sv));
-      if(rv) local=local.filter(r=>r.result===rv);
-      if(fromV) local=local.filter(r=>r.insp_date>=fromV);
-      if(toV)   local=local.filter(r=>r.insp_date<=toV);
-      _total=local.length;
-      const sliced=local.slice(_page*_pageSize,(_page+1)*_pageSize);
-      render(sliced);
-      return;
-    }
-    const res=await SB._sbPage({
-      table:'inspections', orderCol:'insp_date', ascending:false,
-      page:_page, pageSize:_pageSize,
-      filters:[
-        {col:'type',      op:'eq',    val:key},
-        {col:'result',    op:'eq',    val:rv},
-        {col:'insp_date', op:'gte',   val:fromV},
-        {col:'insp_date', op:'lte',   val:toV},
-      ],
-      search:sv?[
-        {col:'insp_no',   kw:sv},
-        {col:'item_name', kw:sv},
-        {col:'item_code', kw:sv},
-        {col:'vendor',    kw:sv},
-      ]:[],
+    const fd=data.filter(r=>{
+      if(sv&&!r.insp_no?.includes(sv)&&!r.item_name?.includes(sv)&&!r.item_code?.includes(sv)&&!r.vendor?.includes(sv))return false;
+      if(rv&&r.result!==rv)return false;
+      if(fromV&&r.insp_date<fromV)return false;
+      if(toV&&r.insp_date>toV)return false;
+      return true;
     });
-    _total=res.total;
-    render(res.data);
-  };
-
-  let data=[];
-
-  const render=(fd=[])=>{
-    /* [Phase 1 v2.28] fd는 _loadInsp에서 SB 쿼리 결과로 전달 */
     Tbl.render({el:'#inspTbl',cols:[
       /* 컬럼 순서: 검사구분→거래처명→검사번호→검사일→검사자→품목코드→품목명→규격→검사방법→검사결과→검사수량→합격수량→불합격수량→불량률→작업지시번호→특이사항→파일 */
       {key:'type',       label:'검사구분',    w:'78px',  align:'center', render:v=>`<span class="badge bblu">${H.e(v)}검사</span>`},
@@ -3930,8 +3876,8 @@ _insp(type){
   <div id="inspTbl"></div>`;
 
   /* 동적 렌더 함수 등록 */
-  Pages[`_inspRender_${type}`]=()=>{ _page=0; _loadInsp(); };
-  _loadInsp();
+  Pages[`_inspRender_${type}`]=render;
+  render();
 },
 
 _inspForm2(type){
