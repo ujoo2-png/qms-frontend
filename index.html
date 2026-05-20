@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.26</title>
+<title>QMS - 품질경영시스템 v2.27</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.26</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.27</div>
         </div>
       </div>
     </div>
@@ -954,7 +954,7 @@ textarea.fc{resize:vertical;min-height:68px}
           </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.26 (2026-05-19) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.27 (2026-05-20) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -965,7 +965,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.26</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.27</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1282,6 +1282,17 @@ const SB={
     if(!_sb) return;
     const {error}=await _sb.storage.from('qms-files').remove([path]);
     if(error) console.warn('[SB] 파일 삭제 실패',error.message);
+  },
+
+  /* [v2.26] deleteVendors: 일괄 삭제 */
+  async deleteVendors(ids){
+    const numIds=ids.map(Number);
+    if(!numIds.length) return{ok:true};
+    if(!_sb){DB.vendors=DB.vendors.filter(v=>!numIds.includes(Number(v.id)));return{ok:true};}
+    const {error}=await _sb.from('vendors').delete().in('id',numIds);
+    DB.vendors=DB.vendors.filter(v=>!numIds.includes(Number(v.id)));
+    if(error){console.error('[SB] deleteVendors 실패:',error.message);return{ok:false,msg:error.message};}
+    return{ok:true};
   },
 
   /* ── 사용자 ── */
@@ -2685,7 +2696,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.26</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.27</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3128,6 +3139,8 @@ async vendors(){
         <button class="btn bpri btn-f2" onclick="Pages._vForm()">+ 거래처 등록 <span class="kbd">F2</span></button>
         <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('vendors')" title="엑셀 양식 내려받기">📥 양식 내려받기</button>
         <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('vendors')" title="엑셀 일괄등록">📤 자료 일괄등록</button>
+        <button class="btn bsm" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none"
+          onclick="ExcelMgr.openUploadAll('vendors')" title="거래처 통합 일괄등록">🗂️ 통합 일괄등록</button>
       </div>
     </div>
     <!-- 툴바 -->
@@ -3701,6 +3714,8 @@ _insp(type){
       <button class="btn bpri btn-f2" onclick="Pages._inspForm2('${type}')">+ 검사 등록 <span class="kbd">F2</span></button>
       <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('${type}')">📥 양식 내려받기</button>
       <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('${type}')">📤 자료 일괄등록</button>
+      <button class="btn bsm" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none"
+        onclick="ExcelMgr.openUploadAll('${type}')" title="통합 일괄등록">🗂️ 통합 일괄등록</button>
     </div>
   </div>
   <!-- 날짜 퀵버튼 + 기간 검색 -->
@@ -6319,12 +6334,14 @@ const ExcelMgr={
         오류 행에 결과 열 자동 추가, 결과 엑셀 내보내기
      ════════════════════════════════════════════════════ */
 
-  /* 멀티시트 양식 다운로드 */
-  downloadAll(){
+  /* 멀티시트 양식 다운로드
+     [v2.26] pageFilter: 특정 시트만 포함 (null=전체) */
+  downloadAll(pageFilter=''){
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
     const wb=XLSX.utils.book_new();
-    /* [v2.24] 검사 4종 추가 */
-    ['items','vendors','users','insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].forEach(key=>{
+    const ALL_KEYS=['items','vendors','users','insp_in','insp_pr','insp_pu','insp_ou','insp_fi'];
+    const keys=pageFilter?[pageFilter]:ALL_KEYS;
+    keys.forEach(key=>{
       const sc=this._schemas[key];
       if(!sc) return;
       const header=[...sc.cols.map(c=>c.req?c.label+' *':c.label),'결과'];
@@ -6333,26 +6350,40 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    XLSX.writeFile(wb,'QMS_통합업로드양식_'+H.today()+'.xlsx');
-    Toast.show('멀티시트 양식이 다운로드되었습니다. (8개 시트)','ok');
+    const fname=pageFilter&&this._schemas[pageFilter]
+      ?`QMS_${this._schemas[pageFilter].title}_양식_${H.today()}.xlsx`
+      :`QMS_통합업로드양식_${H.today()}.xlsx`;
+    XLSX.writeFile(wb,fname);
+    Toast.show(`양식이 다운로드되었습니다. (${keys.length}개 시트)`,'ok');
   },
 
-  /* 멀티시트 업로드 모달 */
-  openUploadAll(){
+  /* 멀티시트 업로드 모달
+     [v2.26] pageFilter: 특정 시트만 표시 (예: 'vendors', 'insp_in' 등)
+             null이면 전체 8개 시트 표시 */
+  openUploadAll(pageFilter=null){
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
     this._multiParsed=null;
-    Modal.open({title:'📊 통합 자료 일괄등록',size:'mxl',
+    this._pageFilter=pageFilter; // 필터 저장
+
+    /* 표시할 시트 제목 */
+    const filterLabels={
+      items:'품목등록', vendors:'거래처등록', users:'사용자등록',
+      insp_in:'수입검사', insp_pr:'공정검사', insp_pu:'구매검사',
+      insp_ou:'외주검사', insp_fi:'최종검사',
+    };
+    const targetLabel=pageFilter?filterLabels[pageFilter]||pageFilter:'전체 (8개 시트)';
+
+    Modal.open({title:`📊 통합 자료 일괄등록 — ${targetLabel}`,size:'mxl',
       body:`
         <div style="padding:12px 14px;background:#eff6ff;border-radius:var(--r);border:1px solid #bfdbfe;font-size:12px;line-height:1.9;margin-bottom:14px">
           <strong>📋 통합 일괄등록 안내</strong><br>
           ① <strong>통합 양식 내려받기</strong>로 멀티시트 양식을 다운로드하세요.<br>
-          ② 각 시트(품목등록/거래처등록/사용자등록/수입검사)에 데이터를 입력하세요.<br>
-          ③ 빨간색(*) 필수 항목, 샘플 행(2행)은 삭제 후 작성하세요.<br>
-          ④ 업로드 후 <strong>전체 정합성 검사</strong>를 통과해야 등록 버튼이 활성화됩니다.<br>
-          ⑤ 오류 시 <strong>결과 열</strong>에 오류 원인 표시 → 수정 후 재업로드하세요.
+          ② 데이터를 입력하고 빨간색(*) 필수 항목, 샘플 행(2행)은 삭제 후 작성하세요.<br>
+          ③ 업로드 후 <strong>전체 정합성 검사</strong>를 통과해야 등록 버튼이 활성화됩니다.<br>
+          ④ 오류 시 <strong>결과 열</strong>에 오류 원인 표시 → 수정 후 재업로드하세요.
         </div>
         <div style="margin-bottom:12px">
-          <button class="btn bpri bsm" onclick="ExcelMgr.downloadAll()">📥 통합 양식 내려받기</button>
+          <button class="btn bpri bsm" onclick="ExcelMgr.downloadAll('${pageFilter||''}')">📥 양식 내려받기</button>
         </div>
         <div class="xl-drop" id="xlDropAll"
           onclick="document.getElementById('xlFileAll').click()"
@@ -6361,7 +6392,7 @@ const ExcelMgr={
           ondrop="event.preventDefault();this.classList.remove('over');ExcelMgr._parseMultiSheet(event.dataTransfer.files[0])">
           <div class="xl-drop-icon">📂</div>
           <div class="xl-drop-text">엑셀 파일을 드래그하거나 클릭하여 선택</div>
-          <div class="xl-drop-sub">.xlsx, .xls 파일 지원 (멀티시트)</div>
+          <div class="xl-drop-sub">.xlsx, .xls 파일 지원</div>
           <input type="file" id="xlFileAll" accept=".xlsx,.xls" style="display:none"
             onchange="ExcelMgr._parseMultiSheet(this.files[0])">
         </div>
@@ -6374,6 +6405,7 @@ const ExcelMgr={
         </button>`
     });
   },
+
 
   /* 멀티시트 파싱 + 단계별 정합성 검사 */
   async _parseMultiSheet(file){
@@ -6388,9 +6420,14 @@ const ExcelMgr={
       try{
         const wb=XLSX.read(ev.target.result,{type:'array'});
         /* 시트명 → 스키마 키 매핑 — [v2.24] 검사 4종 추가 */
-        const SMAP={'품목등록':'items','거래처등록':'vendors','사용자등록':'users',
+        const SMAP_ALL={'품목등록':'items','거래처등록':'vendors','사용자등록':'users',
           '수입검사':'insp_in','공정검사':'insp_pr','구매검사':'insp_pu',
           '외주검사':'insp_ou','최종검사':'insp_fi'};
+        /* [v2.26] pageFilter: 특정 시트만 파싱 */
+        const pf=this._pageFilter;
+        const SMAP=pf
+          ?Object.fromEntries(Object.entries(SMAP_ALL).filter(([,v])=>v===pf))
+          :SMAP_ALL;
         const results={};
         let totalOk=0,totalErr=0,totalDup=0;
         /* [v2.25 버그수정] SB 최신 데이터 강제 로드
@@ -6592,7 +6629,7 @@ const ExcelMgr={
       for(let ci=0;ci<totalC;ci++){
         const chunk=rows.slice(ci*CHUNK,(ci+1)*CHUNK);
 
-        /* items: 허용 컬럼만 추출 */
+        /* items/vendors: 허용 컬럼만 추출 (schema 오류 방지) */
         const ins=pKey==='items'?chunk.map(r=>({
           major_category:r.major_category||'',
           category:      r.category||'',
@@ -6605,6 +6642,20 @@ const ExcelMgr={
           vendor_id:     null,
           active:        typeof r.active==='number'?r.active:1,
           remark:        r.remark||'',
+          created_at:    r.created_at||null,
+          updated_at:    r.updated_at||null,
+        })):pKey==='vendors'?chunk.map(r=>({
+          vendor_type:   r.vendor_type||'',
+          biz_no:        r.biz_no||'',
+          vendor_name:   r.vendor_name||'',
+          ceo_name:      r.ceo_name||'',
+          tel:           r.tel||'',
+          fax:           r.fax||'',
+          email:         r.email||'',
+          manager:       r.manager||'',
+          manager_tel:   r.manager_tel||'',
+          manager_email: r.manager_email||'',
+          active:        typeof r.active==='number'?r.active:1,
           created_at:    r.created_at||null,
           updated_at:    r.updated_at||null,
         })):chunk;
@@ -6656,7 +6707,15 @@ const ExcelMgr={
     }
     this._multiParsed=null;
     Modal.close();
-    if(totalSuccess>0) Nav.go('items');
+    /* [v2.26] pageFilter 기반으로 적절한 페이지로 이동 + 대시보드 재집계 */
+    const pf2=this._pageFilter;
+    this._pageFilter=null;
+    if(totalSuccess>0){
+      /* SB 최신 데이터 재로드 */
+      if(pf2==='vendors')     { DB.vendors=await SB.getVendors(); Nav.go('vendors'); }
+      else if(pf2&&pf2.startsWith('insp')) { DB.inspections=await SB.getInspections(); Nav.go(pf2); }
+      else                    { DB.items=await SB.getItems(); Nav.go('items'); }
+    }
   },
   /* 오류 결과 엑셀 내보내기 */
   _exportResult(){
