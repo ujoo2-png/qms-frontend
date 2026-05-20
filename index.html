@@ -6580,22 +6580,89 @@ const ExcelMgr={
   },
 
   /* 전체 등록 실행 (정합성 통과 후) */
+  /* 전체 등록 실행 (정합성 통과 후) */
   async _registerAll(){
     if(!this._multiParsed){Toast.show('먼저 파일을 업로드하세요.','warn');return}
     const today=H.today();
     const sleep=ms=>new Promise(res=>setTimeout(res,ms));
     const CHUNK=50;
     const isRL=e=>e&&(e.status===429||String(e.message||'').includes('rate'));
+    const isColErr=e=>e&&(e.message?.includes('column')||e.message?.includes('schema'));
 
-    /* 테이블/충돌키 매핑 */
     const tblMap={items:'items',vendors:'vendors',users:'users',
       insp_in:'inspections',insp_pr:'inspections',
       insp_pu:'inspections',insp_ou:'inspections',insp_fi:'inspections'};
     const cfMap={items:'item_code',vendors:'vendor_name',
       users:'username',inspections:'insp_no'};
 
+    /* [C안] 테이블별 안전 컬럼 — Supabase 기본 생성 시 확실히 존재 */
+    const SAFE_COLS={
+      vendors:['vendor_name','biz_no','vendor_type','tel','email','active','created_at','updated_at'],
+      inspections:['type','vendor','insp_no','insp_date','inspector',
+        'item_code','item_name','result','qty','pass_qty','fail_qty','created_at','updated_at'],
+    };
+
+    /* [C안] 누락 컬럼 추가 SQL */
+    const REQUIRED_SQL={
+      vendors:`-- 거래처 테이블 컬럼 추가 (Supabase SQL Editor에서 실행)
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS ceo_name TEXT DEFAULT '';
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS fax TEXT DEFAULT '';
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS manager TEXT DEFAULT '';
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS manager_tel TEXT DEFAULT '';
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS manager_email TEXT DEFAULT '';
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS address TEXT DEFAULT '';
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS active INTEGER DEFAULT 1;`,
+      inspections:`-- 검사 테이블 컬럼 추가 (Supabase SQL Editor에서 실행)
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS spec TEXT DEFAULT '';
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS insp_method TEXT DEFAULT '';
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS wo_no TEXT DEFAULT '';
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS note TEXT DEFAULT '';
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS defect_rate NUMERIC DEFAULT 0;`,
+    };
+
+    /* 전체 컬럼 행 생성 */
+    const toFullRow=(pKey,r)=>{
+      if(pKey==='items') return{
+        major_category:r.major_category||'',category:r.category||'',
+        item_code:r.item_code||'',item_name:r.item_name||'',
+        spec:r.spec||'',unit:r.unit||'EA',material:r.material||'',
+        vendor_name:r.vendor_name||'',vendor_id:null,
+        active:typeof r.active==='number'?r.active:1,
+        remark:r.remark||'',created_at:r.created_at||null,updated_at:r.updated_at||null,
+      };
+      if(pKey==='vendors') return{
+        vendor_type:r.vendor_type||'',biz_no:r.biz_no||'',
+        vendor_name:r.vendor_name||'',ceo_name:r.ceo_name||'',
+        tel:r.tel||'',fax:r.fax||'',email:r.email||'',
+        manager:r.manager||'',manager_tel:r.manager_tel||'',
+        manager_email:r.manager_email||'',
+        active:typeof r.active==='number'?r.active:1,
+        created_at:r.created_at||null,updated_at:r.updated_at||null,
+      };
+      if(tblMap[pKey]==='inspections') return{
+        type:r.type||'',vendor:r.vendor||'',insp_no:r.insp_no||'',
+        insp_date:r.insp_date||'',inspector:r.inspector||'',
+        item_code:r.item_code||'',item_name:r.item_name||'',
+        spec:r.spec||'',insp_method:r.insp_method||'',
+        result:r.result||'',qty:Number(r.qty)||0,
+        pass_qty:Number(r.pass_qty)||0,fail_qty:Number(r.fail_qty)||0,
+        defect_rate:Number(r.defect_rate)||0,wo_no:r.wo_no||'',note:r.note||'',
+        created_at:r.created_at||null,updated_at:r.updated_at||null,
+      };
+      return r;
+    };
+
+    /* 안전 컬럼만 추출 */
+    const toSafeRow=(pKey,r)=>{
+      const tbl=tblMap[pKey];
+      const safe=SAFE_COLS[tbl];
+      if(!safe) return toFullRow(pKey,r);
+      return Object.fromEntries(safe.map(k=>[k,r[k]!==undefined?r[k]:'']));
+    };
+
     let totalSuccess=0,totalFail=0;
     const failMsgs=[];
+    const colErrors={};
 
     const btn=document.getElementById('btnRegisterAll');
     if(btn){btn.disabled=true;btn.textContent='등록 중...';}
@@ -6607,58 +6674,23 @@ const ExcelMgr={
       const tbl=tblMap[pKey]||pKey;
       const cfCol=cfMap[tbl]||null;
 
-      /* [v2.25] 전처리 버그 수정: ||'' 제거, active 정확히 변환 */
       const rows=result.okRows.map(r=>{
         const row={};
-        sc.cols.forEach(c=>{
-          const v=r[c.key];
-          row[c.key]=(v===undefined||v===null)?'':v;
-        });
+        sc.cols.forEach(c=>{const v=r[c.key];row[c.key]=(v===undefined||v===null)?'':v;});
         if(row.active==='사용') row.active=1;
         else if(row.active==='미사용') row.active=0;
         else row.active=Number(row.active)||1;
         ['qty','pass_qty','fail_qty','defect_rate'].forEach(k=>{
           if(row[k]!==undefined) row[k]=Number(row[k])||0;
         });
-        row.created_at=today;
-        row.updated_at=today;
+        row.created_at=today; row.updated_at=today;
         return row;
       });
 
       const totalC=Math.ceil(rows.length/CHUNK);
       for(let ci=0;ci<totalC;ci++){
         const chunk=rows.slice(ci*CHUNK,(ci+1)*CHUNK);
-
-        /* items/vendors: 허용 컬럼만 추출 (schema 오류 방지) */
-        const ins=pKey==='items'?chunk.map(r=>({
-          major_category:r.major_category||'',
-          category:      r.category||'',
-          item_code:     r.item_code||'',
-          item_name:     r.item_name||'',
-          spec:          r.spec||'',
-          unit:          r.unit||'EA',
-          material:      r.material||'',
-          vendor_name:   r.vendor_name||'',
-          vendor_id:     null,
-          active:        typeof r.active==='number'?r.active:1,
-          remark:        r.remark||'',
-          created_at:    r.created_at||null,
-          updated_at:    r.updated_at||null,
-        })):pKey==='vendors'?chunk.map(r=>({
-          vendor_type:   r.vendor_type||'',
-          biz_no:        r.biz_no||'',
-          vendor_name:   r.vendor_name||'',
-          ceo_name:      r.ceo_name||'',
-          tel:           r.tel||'',
-          fax:           r.fax||'',
-          email:         r.email||'',
-          manager:       r.manager||'',
-          manager_tel:   r.manager_tel||'',
-          manager_email: r.manager_email||'',
-          active:        typeof r.active==='number'?r.active:1,
-          created_at:    r.created_at||null,
-          updated_at:    r.updated_at||null,
-        })):chunk;
+        let ins=chunk.map(r=>toFullRow(pKey,r));
 
         if(!_sb){
           const data=sc.getData();
@@ -6673,20 +6705,27 @@ const ExcelMgr={
             let error;
             if(cfCol)({error}=await _sb.from(tbl).upsert(ins,{onConflict:cfCol,ignoreDuplicates:true}));
             else ({error}=await _sb.from(tbl).insert(ins));
+
             if(!error){totalSuccess+=chunk.length;ok=true;}
             else if(isRL(error)){await sleep(Math.pow(2,att)*1500);att++;}
+            else if(isColErr(error)){
+              /* [C안] 컬럼 오류 → 안전 컬럼으로 재시도 */
+              colErrors[tbl]=error.message;
+              const insFallback=chunk.map(r=>toSafeRow(pKey,r));
+              let err2;
+              if(cfCol)({error:err2}=await _sb.from(tbl).upsert(insFallback,{onConflict:cfCol,ignoreDuplicates:true}));
+              else ({error:err2}=await _sb.from(tbl).insert(insFallback));
+              if(!err2){totalSuccess+=chunk.length;ok=true;}
+              else{totalFail+=chunk.length;failMsgs.push('['+tbl+'] '+err2.message);ok=true;}
+            }
             else{
-              /* [v2.25] 오류 메시지 수집 */
               const msg='['+tbl+'] 청크'+(ci+1)+': '+error.message;
-              console.error('[SB]',msg);
               if(failMsgs.length<3) failMsgs.push(msg);
               totalFail+=chunk.length;ok=true;
             }
           }catch(e){
-            const msg='['+tbl+'] 예외: '+String(e);
-            console.error('[SB]',msg);
-            if(failMsgs.length<3) failMsgs.push(msg);
             totalFail+=chunk.length;ok=true;
+            failMsgs.push('['+tbl+'] 예외: '+String(e).slice(0,60));
           }
         }
         if(!ok) totalFail+=chunk.length;
@@ -6695,28 +6734,46 @@ const ExcelMgr={
     }
 
     document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
-    if(totalFail>0){
-      const detail=failMsgs.length>0?' | 원인: '+failMsgs[0].slice(0,60):'';
+    Modal.close();
+
+    /* [C안] 컬럼 오류 발생 시 SQL 안내 팝업 */
+    if(Object.keys(colErrors).length>0){
+      const sqlTexts=Object.keys(colErrors)
+        .map(t=>REQUIRED_SQL[t]||'').filter(Boolean).join('\n\n');
+      const sqlEsc=H.e(sqlTexts);
+      const copyBtn='<button class="btn bsm bpri" style="position:absolute;top:8px;right:8px"'
+        +' onclick="navigator.clipboard.writeText('
+        +"document.getElementById('sqlBox').textContent"
+        +').then(()=>Toast.show(\'복사됨!\',\'ok\'))">📋 복사</button>';
+      Modal.open({title:'⚠️ 컬럼 누락 안내',size:'mxl',
+        body:'<div style="padding:12px 14px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--r);font-size:13px;margin-bottom:14px">'
+          +'<strong>✅ '+totalSuccess+'건 등록 완료</strong> (안전 컬럼으로 저장됨)<br>'
+          +'<span style="color:#92400e">일부 컬럼이 Supabase 테이블에 없어 기본 컬럼으로만 저장했습니다.<br>'
+          +'아래 SQL을 실행하면 <strong>모든 컬럼</strong>을 저장할 수 있습니다.</span>'
+          +'</div>'
+          +'<div style="font-size:12px;font-weight:600;margin-bottom:6px">📋 Supabase SQL Editor에서 실행하세요:</div>'
+          +'<div style="position:relative">'
+          +'<pre id="sqlBox" style="background:#1e293b;color:#e2e8f0;padding:14px;border-radius:var(--r);font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre-wrap">'+sqlEsc+'</pre>'
+          +copyBtn
+          +'</div>'
+          +'<div style="margin-top:10px;font-size:12px;color:var(--tm)">SQL 실행 후 다시 업로드하면 모든 컬럼이 저장됩니다.</div>',
+        foot:'<button class="btn bpri" onclick="Modal.close()">확인</button>'
+      });
+    } else if(totalFail>0){
+      const detail=failMsgs.length>0?' | 원인: '+failMsgs[0].slice(0,80):'';
       Toast.show('✅ '+totalSuccess+'건 등록 / ❌ '+totalFail+'건 실패'+detail,'err',10000);
-      if(failMsgs.some(m=>m.includes('security')||m.includes('policy')))
-        setTimeout(()=>Toast.show('Supabase RLS 오류 → SQL Editor에서 DISABLE ROW LEVEL SECURITY 실행','warn',8000),600);
-      if(failMsgs.some(m=>m.includes('column')||m.includes('schema')))
-        setTimeout(()=>Toast.show('컬럼 오류 → Supabase에서 ALTER TABLE로 누락 컬럼 추가 필요','warn',8000),600);
     } else {
       Toast.show('✅ '+totalSuccess+'건 전체 등록 완료','ok',5000);
     }
     this._multiParsed=null;
-    Modal.close();
-    /* [v2.26] pageFilter 기반으로 적절한 페이지로 이동 + 대시보드 재집계 */
-    const pf2=this._pageFilter;
-    this._pageFilter=null;
+    const pf2=this._pageFilter; this._pageFilter=null;
     if(totalSuccess>0){
-      /* SB 최신 데이터 재로드 */
-      if(pf2==='vendors')     { DB.vendors=await SB.getVendors(); Nav.go('vendors'); }
-      else if(pf2&&pf2.startsWith('insp')) { DB.inspections=await SB.getInspections(); Nav.go(pf2); }
-      else                    { DB.items=await SB.getItems(); Nav.go('items'); }
+      if(pf2==='vendors'){DB.vendors=await SB.getVendors();Nav.go('vendors');}
+      else if(pf2&&pf2.startsWith('insp')){DB.inspections=await SB.getInspections();Nav.go(pf2);}
+      else{DB.items=await SB.getItems();Nav.go('items');}
     }
   },
+
   /* 오류 결과 엑셀 내보내기 */
   _exportResult(){
     if(!this._multiParsed){Toast.show('분석된 데이터가 없습니다.','warn');return}
