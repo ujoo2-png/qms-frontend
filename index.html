@@ -6703,17 +6703,19 @@ ALTER TABLE inspections ADD COLUMN IF NOT EXISTS defect_rate NUMERIC DEFAULT 0;`
         while(att<3&&!ok){
           try{
             let error;
-            if(cfCol)({error}=await _sb.from(tbl).upsert(ins,{onConflict:cfCol,ignoreDuplicates:true}));
+            /* [v2.27] ignoreDuplicates:false → 재업로드 시 기존 행 UPDATE (새 컬럼 데이터 반영) */
+            if(cfCol)({error}=await _sb.from(tbl).upsert(ins,{onConflict:cfCol,ignoreDuplicates:false}));
             else ({error}=await _sb.from(tbl).insert(ins));
 
             if(!error){totalSuccess+=chunk.length;ok=true;}
             else if(isRL(error)){await sleep(Math.pow(2,att)*1500);att++;}
             else if(isColErr(error)){
-              /* [C안] 컬럼 오류 → 안전 컬럼으로 재시도 */
+              /* [C안] 컬럼 오류 → 안전 컬럼으로 재시도
+                 [v2.27 수정] ignoreDuplicates:false → 기존 행 UPDATE (컬럼 추가 후 재업로드 시 반영) */
               colErrors[tbl]=error.message;
               const insFallback=chunk.map(r=>toSafeRow(pKey,r));
               let err2;
-              if(cfCol)({error:err2}=await _sb.from(tbl).upsert(insFallback,{onConflict:cfCol,ignoreDuplicates:true}));
+              if(cfCol)({error:err2}=await _sb.from(tbl).upsert(insFallback,{onConflict:cfCol,ignoreDuplicates:false}));
               else ({error:err2}=await _sb.from(tbl).insert(insFallback));
               if(!err2){totalSuccess+=chunk.length;ok=true;}
               else{totalFail+=chunk.length;failMsgs.push('['+tbl+'] '+err2.message);ok=true;}
@@ -6747,9 +6749,10 @@ ALTER TABLE inspections ADD COLUMN IF NOT EXISTS defect_rate NUMERIC DEFAULT 0;`
         +').then(()=>Toast.show(\'복사됨!\',\'ok\'))">📋 복사</button>';
       Modal.open({title:'⚠️ 컬럼 누락 안내',size:'mxl',
         body:'<div style="padding:12px 14px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--r);font-size:13px;margin-bottom:14px">'
-          +'<strong>✅ '+totalSuccess+'건 등록 완료</strong> (안전 컬럼으로 저장됨)<br>'
-          +'<span style="color:#92400e">일부 컬럼이 Supabase 테이블에 없어 기본 컬럼으로만 저장했습니다.<br>'
-          +'아래 SQL을 실행하면 <strong>모든 컬럼</strong>을 저장할 수 있습니다.</span>'
+          +'<strong>✅ '+totalSuccess+'건 기본 컬럼으로 저장 완료</strong><br>'
+          +'<span style="color:#92400e">일부 컬럼이 Supabase 테이블에 없어 기본 컬럼(거래처명·연락처 등)만 저장했습니다.<br>'
+          +'<strong>①</strong> 아래 SQL을 복사하여 Supabase에서 실행하세요.<br>'
+          +'<strong>②</strong> 실행 후 <strong>같은 파일로 다시 업로드</strong>하면 모든 컬럼이 저장됩니다. (중복 자동 업데이트)</span>'
           +'</div>'
           +'<div style="font-size:12px;font-weight:600;margin-bottom:6px">📋 Supabase SQL Editor에서 실행하세요:</div>'
           +'<div style="position:relative">'
