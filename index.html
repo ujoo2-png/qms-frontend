@@ -1426,28 +1426,59 @@ const SB={
     async addVendor(row){
     if(!_sb){const id=Math.max(0,...DB.vendors.map(v=>v.id))+1;DB.vendors.push({id,...row});return{ok:true,id};}
     /* [v2.27] 허용 컬럼만 추출 */
-    const allowed={vendor_type:row.vendor_type||'',biz_no:row.biz_no||'',vendor_name:row.vendor_name||'',ceo_name:row.ceo_name||'',tel:row.tel||'',fax:row.fax||'',email:row.email||'',manager:row.manager||'',manager_tel:row.manager_tel||'',manager_email:row.manager_email||'',address:row.address||'',active:row.active!==undefined?Number(row.active):1,created_at:row.created_at||null,updated_at:row.updated_at||null};
-    const {error}=await _sb.from('vendors').insert(allowed);
-    if(error){
-      if(error.message?.includes('column')||error.message?.includes('schema')){
-        /* 컬럼 누락 → 안전 컬럼으로 재시도 */
-        const safe={biz_no:allowed.biz_no,vendor_name:allowed.vendor_name,tel:allowed.tel,email:allowed.email,active:allowed.active,created_at:allowed.created_at,updated_at:allowed.updated_at};
-        const {error:e2}=await _sb.from('vendors').insert(safe);
-        if(!e2){
-          DB.vendors.push({id:Date.now(),...safe});
-          if(!SB._vendorColWarned){SB._vendorColWarned=true;SB._showVendorColSQL();}
-          return{ok:true};
-        }
-        Toast.show('거래처 저장 실패: '+e2.message,'err');return{ok:false};
+    const allowed={
+      vendor_type:   row.vendor_type||'',
+      biz_no:        row.biz_no||'',
+      vendor_name:   row.vendor_name||'',
+      ceo_name:      row.ceo_name||'',
+      tel:           row.tel||'',
+      fax:           row.fax||'',
+      email:         row.email||'',
+      manager:       row.manager||'',
+      manager_tel:   row.manager_tel||'',
+      manager_email: row.manager_email||'',
+      address:       row.address||'',
+      active:        row.active!==undefined?Number(row.active):1,
+      created_at:    row.created_at||null,
+      updated_at:    row.updated_at||null,
+    };
+    /* 1차 시도 */
+    let insertRow={...allowed};
+    let {error}=await _sb.from('vendors').insert(insertRow);
+    /* 컬럼 오류 → 오류 난 컬럼을 제거하고 최대 5회 재시도 */
+    let retries=0;
+    while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<5){
+      retries++;
+      /* 오류 메시지에서 컬럼명 추출: "Could not find the 'xxx' column" */
+      const m=error.message.match(/['"`](\w+)['"`]\s*column/);
+      if(m&&m[1]){
+        delete insertRow[m[1]];
+        console.warn('[SB] addVendor: 컬럼 제거 후 재시도 →',m[1]);
+      } else {
+        /* 컬럼명 추출 실패 → 최소 컬럼만 유지 */
+        insertRow={vendor_name:allowed.vendor_name,biz_no:allowed.biz_no,tel:allowed.tel,email:allowed.email,active:allowed.active,created_at:allowed.created_at,updated_at:allowed.updated_at};
+        retries=5; // 더 이상 반복 안 함
       }
-      Toast.show('거래처 저장 실패: '+error.message,'err');return{ok:false};
+      ({error}=await _sb.from('vendors').insert(insertRow));
     }
-    SB._vendorColWarned=false;
-    DB.vendors.push({id:Date.now(),...allowed});return{ok:true};
+    if(error){
+      Toast.show('거래처 저장 실패: '+error.message,'err');
+      return{ok:false};
+    }
+    /* 누락 컬럼이 있었으면 SQL 안내 */
+    if(retries>0&&!SB._vendorColWarned){
+      SB._vendorColWarned=true;
+      SB._showVendorColSQL();
+    } else {
+      SB._vendorColWarned=false;
+    }
+    DB.vendors.push({id:Date.now(),...insertRow});
+    return{ok:true};
   },
   /* [v2.27] vendors 컬럼 추가 SQL 안내 팝업 */
   _showVendorColSQL(){
-    const sqlText='ALTER TABLE vendors ADD COLUMN IF NOT EXISTS vendor_type TEXT DEFAULT \'\';\n'
+    const sqlText='-- vendors 테이블 누락 컬럼 추가\n'
+      +'ALTER TABLE vendors ADD COLUMN IF NOT EXISTS vendor_type TEXT DEFAULT \'\';\n'
       +'ALTER TABLE vendors ADD COLUMN IF NOT EXISTS ceo_name TEXT DEFAULT \'\';\n'
       +'ALTER TABLE vendors ADD COLUMN IF NOT EXISTS fax TEXT DEFAULT \'\';\n'
       +'ALTER TABLE vendors ADD COLUMN IF NOT EXISTS manager TEXT DEFAULT \'\';\n'
