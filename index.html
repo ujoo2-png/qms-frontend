@@ -1266,11 +1266,23 @@ const SB={
     if(!_sb){const id=Math.max(0,...DB.inspections.map(i=>i.id))+1;DB.inspections.push({id,...row});return {ok:true,id};}
     /* [v2.28] 허용 컬럼만 추출 — SB inspections 실제 컬럼만 포함
        SQL 미실행 시 없는 컬럼(spec, insp_method, wo_no, note, defect_rate) 자동 제거 */
+    /* [v2.29] 엑셀 날짜 시리얼 → YYYY-MM-DD 변환 (SB insert 전 방어) */
+    const _fmtDate=(v)=>{
+      if(!v||v==='') return null;
+      const s=String(v).trim();
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      const n=Number(s);
+      if(!isNaN(n)&&n>30000&&n<100000){
+        const d=new Date((n-25569)*86400*1000);
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+      }
+      return s||null;
+    };
     const allowed={
       type:        row.type||'',
       vendor:      row.vendor||'',
       insp_no:     row.insp_no||'',
-      insp_date:   row.insp_date||'',
+      insp_date:   _fmtDate(row.insp_date),
       inspector:   row.inspector||'',
       item_code:   row.item_code||'',
       item_name:   row.item_name||'',
@@ -1659,6 +1671,18 @@ const SB={
   async addEquip(row){
     if(!_sb){const id=Math.max(0,...DB.equip.map(e=>e.id))+1;DB.equip.push({id,...row});return{ok:true,id};}
     /* [v2.29] 허용 컬럼만 추출 + 동적 컬럼 오류 제거 */
+    /* [v2.29] 날짜 시리얼 변환 */
+    const _fmtD=(v)=>{
+      if(!v||v==='') return null;
+      const s=String(v).trim();
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      const n=Number(s);
+      if(!isNaN(n)&&n>30000&&n<100000){
+        const d=new Date((n-25569)*86400*1000);
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+      }
+      return s||null;
+    };
     const allowed={
       code:        row.code||'',
       name:        row.name||'',
@@ -1668,8 +1692,8 @@ const SB={
       res:         row.res||'',
       loc:         row.loc||'',
       status:      row.status||'정상',
-      next:        row.next||null,
-      last:        row.last||null,
+      next:        _fmtD(row.next),
+      last:        _fmtD(row.last),
       updated_at:  null,
       created_at:  row.created_at||null,
     };
@@ -6809,7 +6833,8 @@ const ExcelMgr={
           const ws=wb.Sheets[sName];
           if(!ws){results[pKey]={skip:true,sheetName:sName};continue;}
           const sc=this._schemas[pKey];
-          const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+          /* [v2.29] raw:false + dateNF → 엑셀 날짜 시리얼 번호를 YYYY-MM-DD 문자열로 자동 변환 */
+          const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});
           if(!raw||raw.length<2){results[pKey]={skip:true,sheetName:sName,reason:'데이터 없음'};continue;}
           /* 헤더 기반 매핑 */
           const hdr=raw[0].map(h=>String(h||'').replace(/\s*\*\s*$/,'').trim());
@@ -6835,7 +6860,29 @@ const ExcelMgr={
           };
           const parsedRows=dataRows.map((row,ri)=>{
             const obj={};
-            cMap.forEach((key,i)=>{if(key) obj[key]=String(row[i]||'').trim();});
+            /* [v2.29] 날짜 시리얼 → YYYY-MM-DD 변환 헬퍼
+             raw:false로도 "46037" 형태가 올 수 있어 2중 방어 */
+          const toDateStr=(v)=>{
+            if(!v||v==='') return '';
+            const s=String(v).trim();
+            /* 이미 YYYY-MM-DD 형식이면 그대로 */
+            if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+            /* 엑셀 시리얼 숫자 (정수) → 날짜 변환 */
+            const n=Number(s);
+            if(!isNaN(n)&&n>30000&&n<100000){
+              /* 엑셀 기준일: 1900-01-00 (실제: 1899-12-30) */
+              const d=new Date((n-25569)*86400*1000);
+              const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();
+              return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+            }
+            return s;
+          };
+          const DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next']);
+          cMap.forEach((key,i)=>{
+            if(!key) return;
+            const raw_v=String(row[i]||'').trim();
+            obj[key]=DATE_KEYS.has(key)?toDateStr(raw_v):raw_v;
+          });
             sc.cols.forEach(c=>{if(obj[c.key]===undefined) obj[c.key]='';});
             obj._rowNum=ri+2;
             obj._errors=[];
@@ -6967,23 +7014,36 @@ const ExcelMgr={
     const REQUIRED_SQL={
       inspections:"-- 검사 테이블 컬럼 추가\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS spec TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS insp_method TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS wo_no TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS note TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS defect_rate NUMERIC DEFAULT 0;",
     };
+    /* [v2.29] 엑셀 날짜 시리얼 → YYYY-MM-DD 변환 (registerAll 공용) */
+    const _toDate=(v)=>{
+      if(!v||v==='') return null;
+      const s=String(v).trim();
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      const n=Number(s);
+      if(!isNaN(n)&&n>30000&&n<100000){
+        const d=new Date((n-25569)*86400*1000);
+        const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();
+        return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+      }
+      return s||null;
+    };
     const toFullRow=(pKey,r)=>{
       if(pKey==='items') return{major_category:r.major_category||'',category:r.category||'',item_code:r.item_code||'',item_name:r.item_name||'',spec:r.spec||'',unit:r.unit||'EA',material:r.material||'',vendor_name:r.vendor_name||'',vendor_id:null,active:typeof r.active==='number'?r.active:1,remark:r.remark||'',created_at:r.created_at||null,updated_at:r.updated_at||null};
       /* [v2.29] 검사5종 — SB.addInspection allowed와 동일 컬럼 */
       if(['insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].includes(pKey)){
         const typeMap={insp_in:'수입',insp_pr:'공정',insp_pu:'구매',insp_ou:'외주',insp_fi:'최종'};
         return{type:r.type||typeMap[pKey]||'',vendor:r.vendor||'',insp_no:r.insp_no||'',
-          insp_date:r.insp_date||'',inspector:r.inspector||'',item_code:r.item_code||'',
+          insp_date:_toDate(r.insp_date),inspector:r.inspector||'',item_code:r.item_code||'',
           item_name:r.item_name||'',spec:r.spec||'',insp_method:r.insp_method||'',
           result:r.result||'합격',qty:Number(r.qty)||0,pass_qty:Number(r.pass_qty)||0,
           fail_qty:Number(r.fail_qty)||0,defect_rate:Number(r.defect_rate)||0,
-          wo_no:r.wo_no||'',note:r.note||'',created_at:r.created_at||null,updated_at:null};
+          wo_no:r.wo_no||'',note:r.note||'',created_at:_toDate(r.created_at),updated_at:null};
       }
       /* [v2.29] 계측기 — SB.addEquip allowed와 동일 컬럼 */
       if(pKey==='equipment') return{code:r.code||'',name:r.name||'',model:r.model||'',
         maker:r.maker||'',range:r.range||'',res:r.res||'',loc:r.loc||'',
-        status:r.status||'정상',next:r.next||null,last:r.last||null,
-        updated_at:null,created_at:r.created_at||null};
+        status:r.status||'정상',next:_toDate(r.next),last:_toDate(r.last),
+        updated_at:null,created_at:_toDate(r.created_at)};
       if(tblMap[pKey]==='inspections') return{type:r.type||'',vendor:r.vendor||'',insp_no:r.insp_no||'',insp_date:r.insp_date||'',inspector:r.inspector||'',item_code:r.item_code||'',item_name:r.item_name||'',spec:r.spec||'',insp_method:r.insp_method||'',result:r.result||'',qty:Number(r.qty)||0,pass_qty:Number(r.pass_qty)||0,fail_qty:Number(r.fail_qty)||0,defect_rate:Number(r.defect_rate)||0,wo_no:r.wo_no||'',note:r.note||'',created_at:r.created_at||null,updated_at:r.updated_at||null};
       return r;
     };
