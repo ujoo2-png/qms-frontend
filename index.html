@@ -1258,10 +1258,42 @@ const SB={
   /* 검사 등록 */
   async addInspection(row){
     if(!_sb){const id=Math.max(0,...DB.inspections.map(i=>i.id))+1;DB.inspections.push({id,...row});return {ok:true,id};}
-    /* .select() 미사용: RLS 오류 방지 (v2.17) */
-    const {error}=await _sb.from('inspections').insert(row);
+    /* [v2.28] 허용 컬럼만 추출 — SB inspections 실제 컬럼만 포함
+       SQL 미실행 시 없는 컬럼(spec, insp_method, wo_no, note, defect_rate) 자동 제거 */
+    const allowed={
+      type:        row.type||'',
+      vendor:      row.vendor||'',
+      insp_no:     row.insp_no||'',
+      insp_date:   row.insp_date||'',
+      inspector:   row.inspector||'',
+      item_code:   row.item_code||'',
+      item_name:   row.item_name||'',
+      spec:        row.spec||'',
+      insp_method: row.insp_method||'',
+      result:      row.result||'',
+      qty:         row.qty!=null?Number(row.qty):0,
+      pass_qty:    row.pass_qty!=null?Number(row.pass_qty):0,
+      fail_qty:    row.fail_qty!=null?Number(row.fail_qty):0,
+      defect_rate: row.defect_rate!=null?Number(row.defect_rate):0,
+      wo_no:       row.wo_no||'',
+      note:        row.note||'',
+      created_at:  row.created_at||null,
+      updated_at:  null,  /* [v2.28] 등록 시 수정일 비움 */
+    };
+    /* 동적 컬럼 오류 제거 — SQL 미실행 컬럼 자동 감지/제거 */
+    let insertRow={...allowed};
+    let {error}=await _sb.from('inspections').insert(insertRow);
+    let retries=0;
+    while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<8){
+      retries++;
+      const m=error.message.match(/['"`](\w+)['"`]\s*column/);
+      if(m&&m[1]){delete insertRow[m[1]];console.warn('[SB] addInspection 컬럼 제거:',m[1]);}
+      else break;
+      ({error}=await _sb.from('inspections').insert(insertRow));
+    }
     if(error){Toast.show('DB 저장 실패: '+error.message,'err');return {ok:false};}
-    DB.inspections.unshift({id:Date.now(),...row}); return {ok:true};
+    DB.inspections.unshift({id:Date.now(),...insertRow});
+    return {ok:true};
   },
 
   /* 부적합 목록 조회 */
@@ -1366,15 +1398,18 @@ const SB={
     return data;
   },
   async addUser(row){
-    if(!_sb){const id=Math.max(0,...DB.users.map(u=>u.id))+1;DB.users.push({id,...row});return{ok:true,id};}
-    /* .select() 미사용: RLS 오류 방지 (v2.17) */
-    const {error}=await _sb.from('users').insert(row);
+    if(!_sb){const id=Math.max(0,...DB.users.map(u=>u.id))+1;DB.users.push({id,...row,updated_at:null});return{ok:true,id};}
+    /* [v2.28] updated_at null로 명시 — 등록 시 수정일 비움 */
+    const insertRow={...row, updated_at:null};
+    const {error}=await _sb.from('users').insert(insertRow);
     if(error){Toast.show('사용자 저장 실패: '+error.message,'err');return{ok:false};}
     DB.users.push({id:Date.now(),...row});return{ok:true};
   },
   async updateUser(id,patch){
     if(!_sb){const u=DB.users.find(u=>u.id===id);if(u)Object.assign(u,patch);return{ok:true};}
-    const {error}=await _sb.from('users').update(patch).eq('id',id);
+    /* [v2.28] updated_at 오늘 날짜로 명시 — 수정 시만 기록 */
+    const patchWithDate={...patch, updated_at:H.today()};
+    const {error}=await _sb.from('users').update(patchWithDate).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
     const u=DB.users.find(u=>u.id===id);if(u)Object.assign(u,patch);return{ok:true};
   },
@@ -1502,7 +1537,7 @@ const SB={
       address:       row.address||'',
       active:        row.active!==undefined?Number(row.active):1,
       created_at:    row.created_at||null,
-      updated_at:    row.updated_at||null,
+      updated_at:    null,  /* [v2.28] 등록 시 수정일 비움 */
     };
     /* 1차 시도 */
     let insertRow={...allowed};
@@ -2944,7 +2979,6 @@ async _mentionReplySend(parentId){
     to:        toUser?.name||to,
     text,
     message:   text,
-    time:      '방금 전',
     created_at:H.today(),
     read:      false,
     reply_to:  parentId,
@@ -3624,7 +3658,8 @@ _uRender(data){
     {key:'department', label:'부서',         w:'88px'},
     {key:'tel',        label:'연락처',       w:'112px', render:v=>H.e(v||'-')},
     {key:'email',      label:'E-MAIL',       w:'160px', render:v=>v?`<a href="mailto:${H.e(v)}" style="color:var(--acc)">${H.e(v)}</a>`:'-'},
-    {key:'active',     label:'상태',         w:'52px',  align:'center', render:v=>`<span class="badge ${v?'bgrn':'bgry'}">${v?'활성':'비활성'}</span>`},
+    {key:'active',     label:'상태',         w:'52px',  align:'center',
+      render:v=>`<span class="badge ${v?'bgrn':'bgry'}" style="pointer-events:none">${v?'활성':'비활성'}</span>`},
     {key:'created_at', label:'등록일',       w:'88px'},
     {key:'updated_at', label:'수정일',       w:'88px',  render:v=>v?H.e(v):''},
   ],data,onDel:async(ids)=>{
