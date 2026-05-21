@@ -1131,7 +1131,13 @@ textarea.fc{resize:vertical;min-height:68px}
    5. Supabase Auth 연동:
       Auth.login()  -> _sb.auth.signInWithPassword({email,password})
       Auth.logout() -> _sb.auth.signOut()
-   ---------------------------------------------------------- */
+   ---------------------------------------------------------- 
+  ║  v2.29 안정화 패치 (2026-05-21)                             ║
+  ║  [1] addInspection 허용컬럼+동적제거 (엑셀업로드 오류 수정)  ║
+  ║  [2] addMention ref_key/time 제거, reply_to 유지            ║
+  ║  [3] mentions 누락컬럼 SQL 팝업 자동 안내                   ║
+  ║  [4] #utbl 상태 클릭 방지, 수정일 null 처리                 ║
+  */
 
 /* Supabase 클라이언트 초기화 */
 const SUPABASE_URL  = 'https://phxlsnghgvowrxdlcsph.supabase.co';
