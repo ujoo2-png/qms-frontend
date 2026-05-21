@@ -6955,8 +6955,9 @@ const ExcelMgr={
     const isColErr=e=>e&&(e.message?.includes('column')||e.message?.includes('schema'));
     const tblMap={items:'items',vendors:'vendors',users:'users',
       insp_in:'inspections',insp_pr:'inspections',
-      insp_pu:'inspections',insp_ou:'inspections',insp_fi:'inspections'};
-    const cfMap={items:'item_code',vendors:null,users:'username',inspections:'insp_no'};
+      insp_pu:'inspections',insp_ou:'inspections',insp_fi:'inspections',
+      equipment:'equipment',cal:'calibrations'};
+    const cfMap={items:'item_code',vendors:null,users:'username',inspections:'insp_no',equipment:'code',calibrations:'cert'};
     const SAFE_COLS={
       inspections:['type','vendor','insp_no','insp_date','inspector',
         'item_code','item_name','spec','insp_method','result',
@@ -6968,6 +6969,21 @@ const ExcelMgr={
     };
     const toFullRow=(pKey,r)=>{
       if(pKey==='items') return{major_category:r.major_category||'',category:r.category||'',item_code:r.item_code||'',item_name:r.item_name||'',spec:r.spec||'',unit:r.unit||'EA',material:r.material||'',vendor_name:r.vendor_name||'',vendor_id:null,active:typeof r.active==='number'?r.active:1,remark:r.remark||'',created_at:r.created_at||null,updated_at:r.updated_at||null};
+      /* [v2.29] 검사5종 — SB.addInspection allowed와 동일 컬럼 */
+      if(['insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].includes(pKey)){
+        const typeMap={insp_in:'수입',insp_pr:'공정',insp_pu:'구매',insp_ou:'외주',insp_fi:'최종'};
+        return{type:r.type||typeMap[pKey]||'',vendor:r.vendor||'',insp_no:r.insp_no||'',
+          insp_date:r.insp_date||'',inspector:r.inspector||'',item_code:r.item_code||'',
+          item_name:r.item_name||'',spec:r.spec||'',insp_method:r.insp_method||'',
+          result:r.result||'합격',qty:Number(r.qty)||0,pass_qty:Number(r.pass_qty)||0,
+          fail_qty:Number(r.fail_qty)||0,defect_rate:Number(r.defect_rate)||0,
+          wo_no:r.wo_no||'',note:r.note||'',created_at:r.created_at||null,updated_at:null};
+      }
+      /* [v2.29] 계측기 — SB.addEquip allowed와 동일 컬럼 */
+      if(pKey==='equipment') return{code:r.code||'',name:r.name||'',model:r.model||'',
+        maker:r.maker||'',range:r.range||'',res:r.res||'',loc:r.loc||'',
+        status:r.status||'정상',next:r.next||null,last:r.last||null,
+        updated_at:null,created_at:r.created_at||null};
       if(tblMap[pKey]==='inspections') return{type:r.type||'',vendor:r.vendor||'',insp_no:r.insp_no||'',insp_date:r.insp_date||'',inspector:r.inspector||'',item_code:r.item_code||'',item_name:r.item_name||'',spec:r.spec||'',insp_method:r.insp_method||'',result:r.result||'',qty:Number(r.qty)||0,pass_qty:Number(r.pass_qty)||0,fail_qty:Number(r.fail_qty)||0,defect_rate:Number(r.defect_rate)||0,wo_no:r.wo_no||'',note:r.note||'',created_at:r.created_at||null,updated_at:r.updated_at||null};
       return r;
     };
@@ -6996,6 +7012,36 @@ const ExcelMgr={
           if(cnt>0&&cnt%100===0){
             document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
             Toast.show('거래처 등록 중... '+totalSuccess+'/'+rows.length+'건','info',30000);
+          }
+          await sleep(30);
+        }
+        continue;
+      }
+      /* [v2.29] 검사5종: SB.addInspection 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
+      if(['insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].includes(pKey)&&_sb){
+        let cnt=0;
+        for(const r of rows){
+          const res=await SB.addInspection(toFullRow(pKey,r));
+          if(res.ok){totalSuccess++;cnt++;}
+          else{totalFail++;failMsgs.push('['+pKey+'] '+H.e((r.insp_no||r.item_name||'')));}
+          if(cnt>0&&cnt%100===0){
+            document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
+            Toast.show('검사 등록 중... '+totalSuccess+'/'+rows.length+'건','info',30000);
+          }
+          await sleep(30);
+        }
+        continue;
+      }
+      /* [v2.29] 계측기: SB.addEquip 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
+      if(pKey==='equipment'&&_sb){
+        let cnt=0;
+        for(const r of rows){
+          const res=await SB.addEquip(toFullRow(pKey,r));
+          if(res.ok){totalSuccess++;cnt++;}
+          else{totalFail++;failMsgs.push('[equipment] '+H.e((r.code||r.name||'')));}
+          if(cnt>0&&cnt%100===0){
+            document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
+            Toast.show('계측기 등록 중... '+totalSuccess+'/'+rows.length+'건','info',30000);
           }
           await sleep(30);
         }
