@@ -1266,16 +1266,16 @@ const SB={
     if(!_sb){const id=Math.max(0,...DB.inspections.map(i=>i.id))+1;DB.inspections.push({id,...row});return {ok:true,id};}
     /* [v2.28] 허용 컬럼만 추출 — SB inspections 실제 컬럼만 포함
        SQL 미실행 시 없는 컬럼(spec, insp_method, wo_no, note, defect_rate) 자동 제거 */
-    /* [v2.29] 엑셀 날짜 시리얼 → YYYY-MM-DD 변환 (SB insert 전 방어) */
+    /* [v2.29] 엑셀 날짜 → YYYY-MM-DD (Date객체/시리얼/문자열 모두 처리) */
     const _fmtDate=(v)=>{
-      if(!v||v==='') return null;
+      if(!v&&v!==0) return null;
+      if(v instanceof Date){const y=v.getUTCFullYear(),mo=v.getUTCMonth()+1,dy=v.getUTCDate();return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;}
       const s=String(v).trim();
+      if(!s) return null;
       if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      if(s.includes(' ')&&s.length>8){const d=new Date(s);if(!isNaN(d.getTime())){const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;}}
       const n=Number(s);
-      if(!isNaN(n)&&n>30000&&n<100000){
-        const d=new Date((n-25569)*86400*1000);
-        return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
-      }
+      if(!isNaN(n)&&n>30000&&n<100000){const d=new Date(Math.round((n-25569)*86400)*1000);const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;}
       return s||null;
     };
     const allowed={
@@ -1671,16 +1671,16 @@ const SB={
   async addEquip(row){
     if(!_sb){const id=Math.max(0,...DB.equip.map(e=>e.id))+1;DB.equip.push({id,...row});return{ok:true,id};}
     /* [v2.29] 허용 컬럼만 추출 + 동적 컬럼 오류 제거 */
-    /* [v2.29] 날짜 시리얼 변환 */
+    /* [v2.29] 날짜 시리얼/객체 → YYYY-MM-DD 변환 */
     const _fmtD=(v)=>{
-      if(!v||v==='') return null;
+      if(!v&&v!==0) return null;
+      if(v instanceof Date){const y=v.getUTCFullYear(),mo=v.getUTCMonth()+1,dy=v.getUTCDate();return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;}
       const s=String(v).trim();
+      if(!s) return null;
       if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      if(s.includes(' ')&&s.length>8){const d=new Date(s);if(!isNaN(d.getTime())){const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;}}
       const n=Number(s);
-      if(!isNaN(n)&&n>30000&&n<100000){
-        const d=new Date((n-25569)*86400*1000);
-        return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
-      }
+      if(!isNaN(n)&&n>30000&&n<100000){const d=new Date(Math.round((n-25569)*86400)*1000);const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;}
       return s||null;
     };
     const allowed={
@@ -6833,8 +6833,8 @@ const ExcelMgr={
           const ws=wb.Sheets[sName];
           if(!ws){results[pKey]={skip:true,sheetName:sName};continue;}
           const sc=this._schemas[pKey];
-          /* [v2.29] raw:false + dateNF → 엑셀 날짜 시리얼 번호를 YYYY-MM-DD 문자열로 자동 변환 */
-          const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});
+          /* [v2.29] raw:true 유지 — 셀 직접 접근으로 날짜 변환 처리 */
+          const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
           if(!raw||raw.length<2){results[pKey]={skip:true,sheetName:sName,reason:'데이터 없음'};continue;}
           /* 헤더 기반 매핑 */
           const hdr=raw[0].map(h=>String(h||'').replace(/\s*\*\s*$/,'').trim());
@@ -6860,28 +6860,51 @@ const ExcelMgr={
           };
           const parsedRows=dataRows.map((row,ri)=>{
             const obj={};
-            /* [v2.29] 날짜 시리얼 → YYYY-MM-DD 변환 헬퍼
-             raw:false로도 "46037" 형태가 올 수 있어 2중 방어 */
-          const toDateStr=(v)=>{
-            if(!v||v==='') return '';
-            const s=String(v).trim();
-            /* 이미 YYYY-MM-DD 형식이면 그대로 */
+            /* [v2.29] 날짜 변환 헬퍼
+             우선순위: ① ws 셀의 .w(포맷문자열) ② 시리얼숫자 변환 ③ 원본값
+             엑셀 날짜 시리얼(46027 등)을 YYYY-MM-DD로 변환 */
+          const _cellToDateStr=(colIdx,rowIdx,rawVal)=>{
+            try{
+              const addr=XLSX.utils.encode_cell({r:rowIdx,c:colIdx});
+              const cell=ws[addr];
+              if(cell){
+                /* 날짜 타입 셀: .w는 포맷된 문자열 */
+                if(cell.t==='d'||cell.t==='n'){
+                  /* .w가 날짜 형식이면 사용 */
+                  if(cell.w&&/\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(cell.w)){
+                    const m=cell.w.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+                    if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+                  }
+                  /* .v가 시리얼 숫자면 변환 */
+                  const n=Number(cell.v);
+                  if(!isNaN(n)&&n>30000&&n<100000){
+                    const d=new Date(Math.round((n-25569)*86400)*1000);
+                    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+                  }
+                }
+              }
+            }catch(e){}
+            /* 폴백: rawVal 직접 처리 */
+            const s=String(rawVal||'').trim();
+            if(!s) return '';
             if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-            /* 엑셀 시리얼 숫자 (정수) → 날짜 변환 */
             const n=Number(s);
             if(!isNaN(n)&&n>30000&&n<100000){
-              /* 엑셀 기준일: 1900-01-00 (실제: 1899-12-30) */
-              const d=new Date((n-25569)*86400*1000);
-              const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();
-              return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+              const d=new Date(Math.round((n-25569)*86400)*1000);
+              return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
             }
             return s;
           };
-          const DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next']);
+          const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','expire_date']);
           cMap.forEach((key,i)=>{
             if(!key) return;
-            const raw_v=String(row[i]||'').trim();
-            obj[key]=DATE_KEYS.has(key)?toDateStr(raw_v):raw_v;
+            const rawVal=row[i];
+            if(_DATE_KEYS.has(key)){
+              /* 실제 행 인덱스: raw.slice(1)에서 ri번째 → ws 행 인덱스는 ri+1 */
+              obj[key]=_cellToDateStr(i, ri+1, rawVal)||'';
+            } else {
+              obj[key]=String(rawVal||'').trim();
+            }
           });
             sc.cols.forEach(c=>{if(obj[c.key]===undefined) obj[c.key]='';});
             obj._rowNum=ri+2;
@@ -7014,14 +7037,30 @@ const ExcelMgr={
     const REQUIRED_SQL={
       inspections:"-- 검사 테이블 컬럼 추가\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS spec TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS insp_method TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS wo_no TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS note TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS defect_rate NUMERIC DEFAULT 0;",
     };
-    /* [v2.29] 엑셀 날짜 시리얼 → YYYY-MM-DD 변환 (registerAll 공용) */
+    /* [v2.29] 엑셀 날짜 → YYYY-MM-DD (Date객체/시리얼/문자열 모두 처리) */
     const _toDate=(v)=>{
-      if(!v||v==='') return null;
+      if(!v&&v!==0) return null;
+      /* JS Date 객체 */
+      if(v instanceof Date){
+        const y=v.getUTCFullYear(),mo=v.getUTCMonth()+1,dy=v.getUTCDate();
+        return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+      }
       const s=String(v).trim();
+      if(!s) return null;
+      /* YYYY-MM-DD 형식 */
       if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      /* 로케일 날짜 문자열 (Thu Jan 15 2026...) */
+      if(s.includes(' ')&&s.length>8){
+        const d=new Date(s);
+        if(!isNaN(d.getTime())){
+          const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();
+          return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+        }
+      }
+      /* 엑셀 시리얼 숫자 */
       const n=Number(s);
       if(!isNaN(n)&&n>30000&&n<100000){
-        const d=new Date((n-25569)*86400*1000);
+        const d=new Date(Math.round((n-25569)*86400)*1000);
         const y=d.getUTCFullYear(),mo=d.getUTCMonth()+1,dy=d.getUTCDate();
         return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
       }
