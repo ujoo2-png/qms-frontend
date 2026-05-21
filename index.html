@@ -1825,82 +1825,8 @@ const DB={
     {id:4,username:'prod01', name:'박생산',      department:'생산팀',tel:'010-3456-7890',email:'prod01@company.com', role:'user',   active:1,created_at:'2026-01-04',updated_at:'2026-03-15'},
     {id:5,username:'eng01',  name:'최엔지니어',  department:'개발팀',tel:'010-4567-8901',email:'eng01@company.com',  role:'user',   active:1,created_at:'2026-01-05',updated_at:'2026-01-05'},
   ],
-  inspections:[
-    /* 수입검사 — 월별 데이터 */
-    {id:1, type:'수입',insp_no:'INS-2026010-001',insp_date:'2026-01-05',inspector:'이검사',wo_no:'',
-     vendor:'㈜한국스틸',item_code:'RAW-001',item_name:'스테인레스 플레이트',spec:'SUS304 2T',
-     insp_method:'치수검사+외관검사',result:'합격',qty:120,pass_qty:120,fail_qty:0,defect_rate:0,note:''},
-    {id:2, type:'수입',insp_no:'INS-2026010-002',insp_date:'2026-01-15',inspector:'이검사',wo_no:'',
-     vendor:'알루미늄코리아',item_code:'RAW-002',item_name:'알루미늄 바',spec:'A6061 Ø20',
-     insp_method:'치수검사',result:'불합격',qty:50,pass_qty:46,fail_qty:4,defect_rate:8.0,note:'직경 치수 불량'},
-    {id:3, type:'수입',insp_no:'INS-2026020-001',insp_date:'2026-02-03',inspector:'이검사',wo_no:'',
-     vendor:'㈜한국스틸',item_code:'RAW-003',item_name:'탄소강 봉재',spec:'S45C Ø30',
-     insp_method:'치수검사+경도',result:'합격',qty:80,pass_qty:80,fail_qty:0,defect_rate:0,note:''},
-    {id:4, type:'수입',insp_no:'INS-2026020-002',insp_date:'2026-02-18',inspector:'이검사',wo_no:'',
-     vendor:'㈜부품나라',item_code:'SUB-001',item_name:'육각볼트 M8',spec:'M8×25 SUS',
-     insp_method:'외관검사+치수',result:'합격',qty:500,pass_qty:497,fail_qty:3,defect_rate:0.6,note:'나사산 불량 3EA'},
-    {id:5, type:'수입',insp_no:'INS-2026030-001',insp_date:'2026-03-07',inspector:'이검사',wo_no:'',
-     vendor:'알루미늄코리아',item_code:'RAW-004',item_name:'알루미늄 판재',spec:'A5052 3T',
-     insp_method:'외관+두께',result:'합격',qty:60,pass_qty:60,fail_qty:0,defect_rate:0,note:''},
-    {id:6, type:'수입',insp_no:'INS-2026040-001',insp_date:'2026-04-10',inspector:'이검사',wo_no:'',
-     vendor:'㈜한국스틸',item_code:'RAW-001',item_name:'스테인레스 플레이트',spec:'SUS304 2T',
-     insp_method:'치수검사+외관검사',result:'합격',qty:150,pass_qty:150,fail_qty:0,defect_rate:0,note:''},
-    {id:7, type:'수입',insp_no:'INS-2026050-001',insp_date:'2026-05-01',inspector:'이검사',wo_no:'',
-     vendor:'㈜부품나라',item_code:'SUB-002',item_name:'육각너트 M10',spec:'M10 SUS',
-     insp_method:'외관+치수',result:'합격',qty:200,pass_qty:200,fail_qty:0,defect_rate:0,note:''},
-    /* 공정검사 — 월별 데이터 */
-    {id:8, type:'공정',insp_no:'INS-2026010-010',insp_date:'2026-01-10',inspector:'김품질',wo_no:'WO-20260110',
-     vendor:'',item_code:'SFG-001',item_name:'가공 브라켓',spec:'도면 A-001',
-     insp_method:'치수검사+외관',result:'합격',qty:30,pass_qty:30,fail_qty:0,defect_rate:0,note:''},
-    {id:9, type:'공정',insp_no:'INS-2026020-010',insp_date:'2026-02-12',inspector:'김품질',wo_no:'WO-20260212',
-     vendor:'',item_code:'SFG-002',item_name:'용접 프레임',spec:'도면 B-003',
-     insp_method:'외관+용접비드',result:'불합격',qty:10,pass_qty:9,fail_qty:1,defect_rate:10.0,note:'용접 크랙 1EA'},
-    {id:10,type:'공정',insp_no:'INS-2026030-010',insp_date:'2026-03-15',inspector:'김품질',wo_no:'WO-20260315',
-     vendor:'',item_code:'SFG-003',item_name:'절삭 샤프트',spec:'도면 C-005',
-     insp_method:'치수 전수',result:'합격',qty:25,pass_qty:25,fail_qty:0,defect_rate:0,note:''},
-    {id:11,type:'공정',insp_no:'INS-2026040-010',insp_date:'2026-04-08',inspector:'김품질',wo_no:'WO-20260408',
-     vendor:'',item_code:'SFG-001',item_name:'가공 브라켓',spec:'도면 A-001',
-     insp_method:'치수검사+외관',result:'합격',qty:40,pass_qty:39,fail_qty:1,defect_rate:2.5,note:'외관 스크래치 1EA'},
-    {id:12,type:'공정',insp_no:'INS-2026050-010',insp_date:'2026-05-03',inspector:'김품질',wo_no:'WO-20260503',
-     vendor:'',item_code:'SFG-004',item_name:'조립 서브어셈블리',spec:'도면 D-007',
-     insp_method:'기능+치수',result:'합격',qty:20,pass_qty:20,fail_qty:0,defect_rate:0,note:''},
-    /* 구매검사 — 월별 데이터 */
-    {id:13,type:'구매',insp_no:'INS-2026010-020',insp_date:'2026-01-20',inspector:'이검사',wo_no:'PO-20260118',
-     vendor:'화학산업㈜',item_code:'CONS-001',item_name:'방청오일',spec:'ISO VG 32',
-     insp_method:'외관+성분',result:'합격',qty:50,pass_qty:50,fail_qty:0,defect_rate:0,note:''},
-    {id:14,type:'구매',insp_no:'INS-2026030-020',insp_date:'2026-03-22',inspector:'이검사',wo_no:'PO-20260320',
-     vendor:'전자부품㈜',item_code:'ELEC-001',item_name:'PCB 기판',spec:'Rev2.1',
-     insp_method:'외관+전기테스트',result:'합격',qty:100,pass_qty:98,fail_qty:2,defect_rate:2.0,note:'패턴 불량 2EA'},
-    {id:15,type:'구매',insp_no:'INS-2026050-020',insp_date:'2026-05-08',inspector:'이검사',wo_no:'PO-20260506',
-     vendor:'화학산업㈜',item_code:'CONS-002',item_name:'세척제',spec:'Type A',
-     insp_method:'외관검사',result:'합격',qty:30,pass_qty:30,fail_qty:0,defect_rate:0,note:''},
-    /* 외주검사 — 월별 데이터 */
-    {id:16,type:'외주',insp_no:'INS-2026020-030',insp_date:'2026-02-25',inspector:'김품질',wo_no:'OUT-20260224',
-     vendor:'정밀측정기㈜',item_code:'SFG-005',item_name:'열처리 부품',spec:'HRC 55-60',
-     insp_method:'경도검사+외관',result:'합격',qty:40,pass_qty:40,fail_qty:0,defect_rate:0,note:''},
-    {id:17,type:'외주',insp_no:'INS-2026040-030',insp_date:'2026-04-18',inspector:'김품질',wo_no:'OUT-20260416',
-     vendor:'도금업체㈜',item_code:'SFG-006',item_name:'아연도금 부품',spec:'ZnNi 8-12μm',
-     insp_method:'두께+외관',result:'불합격',qty:60,pass_qty:55,fail_qty:5,defect_rate:8.3,note:'도금 두께 미달'},
-    {id:18,type:'외주',insp_no:'INS-2026050-030',insp_date:'2026-05-12',inspector:'김품질',wo_no:'OUT-20260510',
-     vendor:'정밀측정기㈜',item_code:'SFG-007',item_name:'정밀 가공품',spec:'도면 C-003',
-     insp_method:'치수 전수',result:'합격',qty:15,pass_qty:15,fail_qty:0,defect_rate:0,note:''},
-    /* 최종검사 — 월별 데이터 */
-    {id:19,type:'최종',insp_no:'INS-2026010-040',insp_date:'2026-01-28',inspector:'박검사',wo_no:'SO-20260128',
-     vendor:'',item_code:'FG-001',item_name:'완성 어셈블리 A',spec:'조립도 B-002',
-     insp_method:'기능+외관+포장',result:'합격',qty:20,pass_qty:20,fail_qty:0,defect_rate:0,note:''},
-    {id:20,type:'최종',insp_no:'INS-2026020-040',insp_date:'2026-02-28',inspector:'박검사',wo_no:'SO-20260227',
-     vendor:'',item_code:'FG-002',item_name:'완성 어셈블리 B',spec:'조립도 C-003',
-     insp_method:'기능+외관',result:'합격',qty:15,pass_qty:15,fail_qty:0,defect_rate:0,note:''},
-    {id:21,type:'최종',insp_no:'INS-2026030-040',insp_date:'2026-03-30',inspector:'박검사',wo_no:'SO-20260329',
-     vendor:'',item_code:'FG-001',item_name:'완성 어셈블리 A',spec:'조립도 B-002',
-     insp_method:'기능+외관+포장',result:'불합격',qty:25,pass_qty:24,fail_qty:1,defect_rate:4.0,note:'포장 불량 1EA'},
-    {id:22,type:'최종',insp_no:'INS-2026040-040',insp_date:'2026-04-25',inspector:'박검사',wo_no:'SO-20260424',
-     vendor:'',item_code:'FG-003',item_name:'완성 어셈블리 C',spec:'조립도 D-004',
-     insp_method:'기능+외관',result:'합격',qty:10,pass_qty:10,fail_qty:0,defect_rate:0,note:''},
-    {id:23,type:'최종',insp_no:'INS-2026050-040',insp_date:'2026-05-15',inspector:'박검사',wo_no:'SO-20260514',
-     vendor:'',item_code:'FG-002',item_name:'완성 어셈블리 B',spec:'조립도 C-003',
-     insp_method:'기능+외관',result:'합격',qty:18,pass_qty:18,fail_qty:0,defect_rate:0,note:''},
-  ],
+    inspections:[], /* [v2.29] 더미 제거 — SB에서 로드 */
+
   nc:[
     {id:1,no:'NC-20260430-001',type:'수입',item:'알루미늄 바',date:'2026-04-30',status:'처리중',desc:'치수 불량 - 직경 기준 초과',assignee:'김품질'},
     {id:2,no:'NC-20260425-001',type:'공정',item:'가공 브라켓',date:'2026-04-25',status:'접수',desc:'표면 스크래치 발생',assignee:'박생산'},
@@ -3953,11 +3879,9 @@ async _insp(type){
   /* [v2.28 복원] _sbFetchAll 전체 로드 후 로컬 필터 방식
      Phase1은 DOM 순서 문제로 무한 스피너 버그 발생 → 복원 */
   w.innerHTML='<div class="spin"></div>';
-  /* [v2.29] DB.inspections가 이미 있으면 재사용, 없으면 SB에서 로드 */
-  if(!DB.inspections||DB.inspections.length===0){
-    const allInsp=await SB.getInspections();
-    DB.inspections=Array.isArray(allInsp)?allInsp:[];
-  }
+  /* [v2.29] 항상 SB에서 최신 데이터 로드 */
+  const allInsp=await SB.getInspections();
+  DB.inspections=Array.isArray(allInsp)?allInsp:[];
   let data=DB.inspections.filter(r=>r.type===key);
   let fromV='',toV='';
 
@@ -4570,8 +4494,10 @@ _ncDetail(row){Modal.open({title:`부적합 — ${row.no}`,size:'mlg',
 });setTimeout(()=>Cmt.render('#ncCmt',`nc-${row.id}`),80)},
 
 /* ── 계측기 ── */
-equip(){
+async equip(){
   const w=document.getElementById('pw');
+  /* [v2.29] 항상 SB에서 최신 데이터 로드 */
+  if(_sb){const d=await SB.getEquip();if(d)DB.equip=d;}
   const eqByLoc={};DB.equip.forEach(e=>{eqByLoc[e.loc]=(eqByLoc[e.loc]||0)+1});
   w.innerHTML=`
     <div class="stat-dash">
