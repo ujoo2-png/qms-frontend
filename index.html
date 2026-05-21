@@ -1298,6 +1298,8 @@ const SB={
       ({error}=await _sb.from('inspections').insert(insertRow));
     }
     if(error){Toast.show('DB 저장 실패: '+error.message,'err');return {ok:false};}
+    /* [v2.29 A안] 컬럼 누락으로 일부 항목 미저장 시 토스트 안내 (팝업 제거) */
+    if(retries>0) Toast.show('일부 항목이 저장되지 않았습니다. Supabase에서 inspections 컬럼 추가 SQL을 실행하면 모든 항목이 저장됩니다.','warn',5000);
     DB.inspections.unshift({id:Date.now(),...insertRow});
     return {ok:true};
   },
@@ -2279,7 +2281,7 @@ const Tbl={
       :slice.map((row,i)=>`<tr data-id="${row.id}">
           <td class="tc"><input type="checkbox" class="rck" value="${row.id}" onchange="Tbl.onChk()"></td>
           <td class="tn">${(page-1)*ps+i+1}</td>
-          ${cols.map(col=>{const v=row[col.key];return`<td style="${col.align?`text-align:${col.align}`:''}">${col.render?col.render(v,row):H.e(v??'')}</td>`}).join('')}
+          ${cols.map(col=>{const v=row[col.key];/* [v2.29 B안] updated_at==created_at이면 수정이력 없음→빈칸 */const dv=(col.key==='updated_at'&&v&&v===row['created_at'])?'':v;return`<td style="${col.align?`text-align:${col.align}`:''}">${col.render?col.render(dv,row):H.e(dv??'')}</td>`}).join('')}
         </tr>`).join('');
 
     /* ── 페이지네이션 UX 개선 ──
@@ -2971,27 +2973,33 @@ home(){
 },
 
 /* ── 개인정보 수정 ── */
-/* ── 멘션 답장 [v2.24] ── */
-async _mentionReply(parentId, toUser){
-  const parent=DB.mentions.find(m=>m.id===parentId);
-  if(!parent){Toast.show('원본 멘션을 찾을 수 없습니다.','err');return}
-  const me=Auth._u;
-  const meUser=DB.users.find(u=>u.username===(me?.username||Auth._cur))||{name:'관리자',department:'IT팀'};
-  Modal.open({title:`↩ 답장 — @${H.e(toUser)}에게`,size:'mmd',
-    body:`<div style="padding:10px 12px;background:var(--bg);border-radius:var(--r);border-left:3px solid var(--pri);margin-bottom:12px;font-size:12px;color:var(--tm)">
-        <strong>원본:</strong> ${H.e(parent.text?.slice(0,80)||'')}${parent.text?.length>80?'...':''}
-      </div>
-      <div class="lfg"><label>받는 사람</label>
-        <select class="fc" id="rplyTo">
-          ${DB.users.filter(u=>u.active!==0).map(u=>`<option value="${H.e(u.username)}"${u.username===toUser||u.name===toUser?'selected':''}>${H.e(u.name)}</option>`).join('')}
-        </select></div>
-      <div class="lfg"><label>메시지 <span style="color:#ef4444">*</span></label>
-        <textarea class="fc" id="rplyText" rows="4" placeholder="답장 내용을 입력하세요..."></textarea></div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
-          <button class="btn bpri" onclick="Pages._mentionReplySend(${parentId})">↩ 답장 발송</button>`
-  });
-  setTimeout(()=>document.getElementById('rplyText')?.focus(),80);
-},
+/* ── 멘션 답장 [v2.24→v2.29] ── */
+  /* [v2.29 A안] _mentionReply 전체 재작성 — 문자열 연결 방식 (백틱 중첩 제거) */
+  _mentionReply(parentId, toUser){
+    const parent=DB.mentions.find(m=>Number(m.id)===Number(parentId));
+    if(!parent){Toast.show('원본 멘션을 찾을 수 없습니다.','err');return;}
+    const me=Auth._u;
+    const meUser=DB.users.find(u=>u.username===(me?.username||Auth._cur))||{name:'관리자',department:'IT팀'};
+    const originText=H.e((parent.text||parent.message||'').slice(0,80));
+    const hasMore=(parent.text||parent.message||'').length>80?'...':'';
+    const activeUsers=DB.users.filter(u=>u.active!==0);
+    const opts=activeUsers.map(u=>{
+      const sel=(u.name===toUser||u.username===toUser)?' selected':'';
+      return '<option value="'+H.e(u.username)+'"'+sel+'>'+H.e(u.name)+'</option>';
+    }).join('');
+    const bodyHtml=
+      '<div style="padding:10px 12px;background:var(--bg);border-radius:var(--r);border-left:3px solid var(--pri);margin-bottom:12px;font-size:12px;color:var(--tm)">'
+      +'<strong>원본:</strong> '+originText+hasMore+'</div>'
+      +'<div class="lfg"><label>받는 사람</label>'
+      +'<select class="fc" id="rplyTo">'+opts+'</select></div>'
+      +'<div class="lfg"><label>메시지 <span style="color:#ef4444">*</span></label>'
+      +'<textarea class="fc" id="rplyText" rows="4" placeholder="답장 내용을 입력하세요..."></textarea></div>';
+    const footHtml=
+      '<button class="btn bout" onclick="Modal.close()">취소</button>'
+      +'<button class="btn bpri" onclick="Pages._mentionReplySend('+parentId+')">↩ 답장 발송</button>';
+    Modal.open({title:'↩ 답장 — @'+H.e(toUser)+'에게', size:'mmd', body:bodyHtml, foot:footHtml});
+    setTimeout(()=>{const t=document.getElementById('rplyText');if(t)t.focus();},80);
+  },
 
 async _mentionReplySend(parentId){
   const text=(document.getElementById('rplyText')?.value||'').trim();
@@ -3126,7 +3134,42 @@ _profileEdit(){
           <button class="btn bpri" onclick="Pages._profileSave(${user.id||'null'},'${H.e(user.username)}')">저장</button>`
   });
 },
-/* [v2.23] _profileSave — userId + username 기반으로 수정
+/* [v2.29] 설정 사용자관리 상태 클릭 → 사용자 상세 팝업 */
+_uStatusPopup(userId, userName){
+  const u=DB.users.find(x=>x.id===userId);
+  if(!u){Toast.show('사용자 정보를 찾을 수 없습니다.','err');return;}
+  const statusBadge=`<span class="badge ${u.active?'bgrn':'bgry'}" style="font-size:14px;padding:4px 12px">${u.active?'활성':'비활성'}</span>`;
+  Modal.open({title:'👤 사용자 상태',size:'msm',
+    body:`<div style="text-align:center;padding:20px 0">
+      <div class="cav" style="width:56px;height:56px;font-size:22px;margin:0 auto 12px">${H.e((u.name||u.username).charAt(0))}</div>
+      <div style="font-weight:700;font-size:16px;margin-bottom:4px">${H.e(u.name||u.username)}</div>
+      <div style="color:var(--tm);font-size:12px;margin-bottom:16px">${H.e(u.username)} · ${H.e(u.department||'-')}</div>
+      <div style="margin-bottom:16px">${statusBadge}</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <div style="background:var(--bg);border-radius:var(--r);padding:8px 16px;font-size:12px"><span style="color:var(--tm)">연락처</span><br><strong>${H.e(u.tel||u.phone||'-')}</strong></div>
+        <div style="background:var(--bg);border-radius:var(--r);padding:8px 16px;font-size:12px"><span style="color:var(--tm)">이메일</span><br><strong style="color:var(--acc)">${u.email?H.e(u.email):'-'}</strong></div>
+        <div style="background:var(--bg);border-radius:var(--r);padding:8px 16px;font-size:12px"><span style="color:var(--tm)">등록일</span><br><strong>${H.e(u.created_at||'-')}</strong></div>
+      </div>
+    </div>`,
+    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>
+      <button class="btn ${u.active?'berr':'bgrn'}" onclick="Pages._uToggleActive(${userId})">
+        ${u.active?'🔒 비활성화':'✅ 활성화'}
+      </button>`
+  });
+},
+/* [v2.29] 사용자 활성/비활성 토글 */
+async _uToggleActive(userId){
+  const u=DB.users.find(x=>x.id===userId);
+  if(!u) return;
+  const newActive=u.active?0:1;
+  const res=await SB.updateUser(userId,{active:newActive});
+  if(!res.ok) return;
+  u.active=newActive;
+  Modal.close();
+  Toast.show(`${u.name||u.username} ${newActive?'활성화':'비활성화'} 완료`,'ok');
+  Pages.settings();
+},
+/* [v2.23] _profileSave —
    Auth._u 실시간 갱신 + SB 업데이트 */
 async _profileSave(userId, username){
   const g=k=>document.getElementById(k)?.value.trim()||'';
@@ -3697,7 +3740,7 @@ _uRender(data){
         const res=await SB.deleteUsers(numIds);
         if(res.ok) Toast.show(numIds.length+'건 삭제되었습니다.','ok');
         else Toast.show('삭제 오류: '+(res.msg||''),'warn',5000);
-      },onRow:row=>Pages._uForm(row)});
+      }});
 },
 _uForm(row=null){
   const e=!!row;
@@ -4982,7 +5025,7 @@ settings(){
               +'<span class="badge" style="'+ROLE_COLOR[u.role||'user']+';font-size:10px;margin-right:3px">'+ROLE_LABEL[u.role||'user']+'</span>'
               +'<select class="fsel" style="font-size:10px;padding:1px 2px" onchange="Pages._setUserRole('+u.id+',&#39;'+H.e(u.username)+'&#39;,this.value)">'+roleOpts+'</select>'
               +'</td>'
-              +'<td><span class="badge '+(u.active?'bgrn':'bgry')+'">'+(u.active?'활성':'비활성')+'</span></td>'
+              +'<td><span class="badge '+(u.active?'bgrn':'bgry')+'" style="cursor:pointer" title="클릭하여 상태 변경" onclick="Pages._uStatusPopup('+u.id+',\''+H.e(u.name||u.username)+'\')">'+(u.active?'활성':'비활성')+'</span></td>'
               +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.created_at||'-')+'</td>'
               +'<td style="font-size:11px;color:var(--tm)">'+(u.updated_at?H.e(u.updated_at):'')+'</td>'
               +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.last_login||'-')+'</td>'
@@ -7335,6 +7378,9 @@ function setupHotkeys(){
       });
       document.getElementById('loginOv').style.display='none';
       document.getElementById('app').classList.remove('hidden');
+      /* [v2.29] 설정 메뉴: 세션 복원 시에도 admin만 표시 */
+      const sm=document.getElementById('ni_settings');
+      if(sm) sm.style.display=(u.role==='admin')?'':'none';
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
       setTimeout(()=>{
         Nav.go(savedPage);
