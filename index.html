@@ -541,7 +541,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .bblu{background:#dbeafe;color:#1d4ed8}.bgrn{background:#d1fae5;color:#065f46}
 .bamb{background:#fef3c7;color:#92400e}.bred{background:#fee2e2;color:#991b1b}
-.bgry{background:#f1f5f9;color:#475569}.bpur{background:#ede9fe;color:#5b21b6}
+.bgry{background:#f1f5f9;color:#475569}.bpur{background:#ede9fe;color:#5b21b6}.btea{background:#0d9488;color:#fff}
 .btel{background:#ccfbf1;color:#134e4a}.bora{background:#fed7aa;color:#9a3412}
 
 /* ── 테이블 ── */
@@ -954,7 +954,7 @@ textarea.fc{resize:vertical;min-height:68px}
           </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.28 (2026-05-20) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.28 (2026-05-21) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -1832,6 +1832,19 @@ const H={
     if(!str) return '';
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  },
+  /* [v2.28] 검사결과 배지 HTML 생성
+     합격:초록 / 부분합격:청록 / 특채:주황 / 보류:회색 / 불합격:빨강 */
+  inspBadge(v){
+    const MAP={
+      '합격':   'bgrn',
+      '부분합격':'btea',
+      '특채':   'bamb',
+      '보류':   'bgry',
+      '불합격': 'bred',
+    };
+    const cls=MAP[v]||'bgry';
+    return `<span class="badge ${cls}">${H.e(v||'-')}</span>`;
   },
 };
 
@@ -2928,7 +2941,6 @@ async _mentionReplySend(parentId){
   const toUser=DB.users.find(u=>u.username===to);
   const reply={
     from:      meUser.name||me?.name||'관리자',
-    from_name: meUser.name||me?.name||'관리자',
     dept:      meUser.department||'',
     to:        toUser?.name||to,
     text,
@@ -2936,10 +2948,8 @@ async _mentionReplySend(parentId){
     time:      '방금 전',
     created_at:H.today(),
     read:      false,
-    reply_to:  parentId,   /* 원본 멘션 참조 */
+    reply_to:  parentId,
     ref:       DB.mentions.find(m=>m.id===parentId)?.ref||'',
-    ref_key:   `mention-${parentId}`,
-    key:       `mention-${parentId}`,
   };
   const res=await SB.addMention(reply);
   if(!res.ok) return;
@@ -3809,7 +3819,7 @@ async _insp(type){
       {key:'item_name',  label:'품목명'},
       {key:'spec',       label:'규격',        w:'100px'},
       {key:'insp_method',label:'검사방법',    w:'120px'},
-      {key:'result',     label:'검사결과',    w:'78px',  align:'center', render:v=>`<span class="badge ${v==='합격'?'bgrn':'bred'}">${H.e(v)}</span>`},
+      {key:'result',     label:'검사결과',    w:'78px',  align:'center', render:v=>H.inspBadge(v)},
       {key:'qty',        label:'검사수량',    w:'78px',  align:'right',  render:v=>H.n(v)},
       {key:'pass_qty',   label:'합격수량',    w:'78px',  align:'right',  render:v=>`<span style="color:var(--ok);font-weight:600">${H.n(v)}</span>`},
       {key:'fail_qty',   label:'불합격수량',  w:'82px',  align:'right',  render:v=>v>0?`<span style="color:var(--err);font-weight:700">${H.n(v)}</span>`:'0'},
@@ -3840,12 +3850,15 @@ async _insp(type){
     ['q1','1분기'],['q2','2분기'],['q3','3분기'],['q4','4분기'],
   ].map(([k,l])=>`<button class="btn bxs bout" onclick="DateRange.applyTo('inspFrom','inspTo','${k}');document.getElementById('inspFrom').dispatchEvent(new Event('change'))">${l}</button>`).join('');
 
-  const tot=data.length,pass=data.filter(d=>d.result==='합격').length,fail=data.filter(d=>d.result==='불합격').length;
+  const tot=data.length,pass=data.filter(d=>d.result==='합격').length,partial=data.filter(d=>d.result==='부분합격').length,special=data.filter(d=>d.result==='특채').length,hold=data.filter(d=>d.result==='보류').length,fail=data.filter(d=>d.result==='불합격').length;
   w.innerHTML=`<div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">${icon}</div><div><div class="sd-val">${tot}</div><div class="sd-lbl">전체</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">${icon}</div><div><div class="sd-val">${tot}</div><div class="sd-lbl">총 검사</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${pass}</div><div class="sd-lbl">합격</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ccfbf1;color:#0d9488">🔷</div><div><div class="sd-val">${partial}</div><div class="sd-lbl">부분합격</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⭐</div><div><div class="sd-val">${special}</div><div class="sd-lbl">특채</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#f1f5f9;color:#64748b">⏸</div><div><div class="sd-val">${hold}</div><div class="sd-lbl">보류</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">❌</div><div><div class="sd-val">${fail}</div><div class="sd-lbl">불합격</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">📊</div><div><div class="sd-val">${tot>0?(fail/tot*100).toFixed(1):0}%</div><div class="sd-lbl">불량률</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">📊</div><div><div class="sd-val">${tot>0?(pass/tot*100).toFixed(1):0}%</div><div class="sd-lbl">합격률</div></div></div>
   </div>
   <div class="ph" style="margin-top:14px">
     <div><div class="ptit">${icon} ${lbl}</div><div class="psub">${lbl} 이력 관리 — 거래처·품목 기준정보 연동</div></div>
@@ -3870,7 +3883,7 @@ async _insp(type){
   </div>
   <div class="tbar">
     <div class="sw2"><input type="text" id="inspSV" placeholder="검사번호, 품목코드, 품목명, 거래처..." oninput="Pages._inspRender_${type}()"></div>
-    <select class="fsel" id="inspRV" onchange="Pages._inspRender_${type}()"><option value="">전체 결과</option><option>합격</option><option>불합격</option></select>
+    <select class="fsel" id="inspRV" onchange="Pages._inspRender_${type}()"><option value="">전체 결과</option><option>합격</option><option>부분합격</option><option>특채</option><option>보류</option><option>불합격</option></select>
     <button class="btn bout bsm" onclick="SearchPop.open('${type}')" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>
   </div>
   <div id="inspTbl"></div>`;
@@ -3906,7 +3919,7 @@ _inspForm2(type){
       <div class="fgroup"><label class="fl req">검사방법</label><select class="fc" id="if_method">
         ${['치수검사','외관검사','치수검사+외관검사','기능시험','기능시험+외관','성분검사','전수검사','샘플링검사','기타'].map(m=>`<option>${m}</option>`).join('')}
       </select></div>
-      <div class="fgroup"><label class="fl req">검사결과</label><select class="fc" id="if_result"><option>합격</option><option>불합격</option></select></div>
+      <div class="fgroup"><label class="fl req">검사결과</label><select class="fc" id="if_result"><option>합격</option><option>부분합격</option><option>특채</option><option>보류</option><option>불합격</option></select></div>
       <div class="fgroup"><label class="fl req">검사수량</label><input class="fc" id="if_qty" type="number" value="0" oninput="Pages._inspCalc()"></div>
       <div class="fgroup"><label class="fl req">합격수량</label><input class="fc" id="if_pqty" type="number" value="0" oninput="Pages._inspCalc()"></div>
       <div class="fgroup"><label class="fl">불합격수량</label><input class="fc" id="if_fqty" type="number" value="0" readonly style="background:#f8fafc"></div>
@@ -4467,7 +4480,7 @@ cal(){
     {key:'code',label:'코드',w:'88px'},{key:'name',label:'계측기명'},
     {key:'date',label:'교정일',w:'88px'},{key:'agency',label:'교정기관',w:'112px'},
     {key:'cert',label:'성적서번호',w:'112px'},
-    {key:'result',label:'결과',w:'62px',align:'center',render:v=>`<span class="badge ${v==='합격'?'bgrn':'bred'}">${H.e(v)}</span>`},
+    {key:'result',label:'결과',w:'62px',align:'center',render:v=>H.inspBadge(v)},
     {key:'next',label:'차기교정일',w:'92px'},
   ],data:DB.cals,onDel:async(ids)=>{
         const numIds=ids.map(Number);
@@ -4844,6 +4857,8 @@ settings(){
   ];
   const ROLES=['admin','manager','user','viewer'];
   const ROLE_LABEL={admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'};
+  /* [v2.28] 권한별 배지 색상 */
+  const ROLE_COLOR={admin:'background:#7c3aed;color:#fff',manager:'background:#2563eb;color:#fff',user:'background:#16a34a;color:#fff',viewer:'background:#64748b;color:#fff'};
   /* 기본 권한: admin은 전체, manager는 대부분, user/viewer는 제한 */
   const DEFAULT_PERM={admin:true,manager:true,user:true,viewer:false};
   const App_perms=App.perms=App.perms||{};
@@ -4880,7 +4895,10 @@ settings(){
           <th style="width:28px"><input type="checkbox" id="umgmtAllChk"
             onchange="document.querySelectorAll('.umgmt-chk').forEach(c=>c.checked=this.checked)"></th>
           <th style="width:36px">No</th>
-          <th>이름</th><th>아이디</th><th>부서</th><th>권한</th><th>상태</th>
+          <th>이름</th><th>아이디</th><th>부서</th>
+          <th style="width:110px">연락처</th>
+          <th style="width:160px">E-MAIL</th>
+          <th>권한</th><th>상태</th>
           <th style="width:90px">등록일</th>
           <th style="width:90px">수정일</th>
           <th style="width:110px">최근 로그인</th>
@@ -4897,7 +4915,12 @@ settings(){
               +'<td><strong>'+H.e(u.name||u.username)+'</strong></td>'
               +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
               +'<td>'+H.e(u.department||'-')+'</td>'
-              +'<td><select class="fsel" style="font-size:11px;padding:2px 4px" onchange="Pages._setUserRole('+u.id+',&#39;'+H.e(u.username)+'&#39;,this.value)">'+roleOpts+'</select></td>'
+              +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
+              +'<td style="font-size:11px">'+(u.email?'<a href="mailto:'+H.e(u.email)+'" style="color:var(--acc)">'+H.e(u.email)+'</a>':'-')+'</td>'
+              +'<td style="white-space:nowrap">'
+              +'<span class="badge" style="'+ROLE_COLOR[u.role||'user']+';font-size:10px;margin-right:3px">'+ROLE_LABEL[u.role||'user']+'</span>'
+              +'<select class="fsel" style="font-size:10px;padding:1px 2px" onchange="Pages._setUserRole('+u.id+',&#39;'+H.e(u.username)+'&#39;,this.value)">'+roleOpts+'</select>'
+              +'</td>'
               +'<td><span class="badge '+(u.active?'bgrn':'bgry')+'">'+(u.active?'활성':'비활성')+'</span></td>'
               +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.created_at||'-')+'</td>'
               +'<td style="font-size:11px;color:var(--tm)">'+(u.updated_at?H.e(u.updated_at):'')+'</td>'
@@ -4971,8 +4994,10 @@ settings(){
         <div style="flex:1">
           <div style="font-weight:600;font-size:13px">${H.e(n.title)}</div>
           <div style="font-size:11px;color:var(--tm)">${n.date} ~ ${n.expire}</div>
+          ${n.file?`<div style="font-size:11px;margin-top:3px">📎 ${n.file.url?`<a href="${H.e(n.file.url)}" target="_blank" style="color:var(--acc)">${H.e(n.file.name||'파일')}</a>`:`<span style="color:var(--tm)">${H.e(n.file.name||'파일')}</span>`}</div>`:''}
         </div>
         <button class="btn bxs bgh" onclick="Pages._editNotice(${i})">수정</button>
+        <button class="btn bxs berr" onclick="Cfg.noticeDel(${i})">삭제</button>
       </div>`).join('')}
       <button class="btn bout bsm" onclick="Pages._addNotice()">+ 공지 추가</button>
     </div>
@@ -5030,16 +5055,73 @@ const Cfg={
         <div class="fgroup"><label class="fl req">게시 종료일</label><input class="fc" type="date" id="ne" value="${n.expire}"></div>
         <div class="fgroup"><label class="fl">등록자</label><input class="fc" id="na" value="${H.e(n.author)}"></div>
         <div class="fgroup"><label class="fl">게시 여부</label><select class="fc" id="ns"><option value="1" ${n.show?'selected':''}>게시</option><option value="0" ${!n.show?'selected':''}>게시중지</option></select></div>
+        <div class="fgroup ff"><label class="fl">파일 첨부</label>
+          <div style="display:flex;flex-direction:column;gap:6px;width:100%">
+            ${n.file?`<div id="nfPreview" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg);border-radius:var(--r);border:1px solid var(--bd)">
+              <span style="font-size:12px">📎 ${H.e(n.file.name||n.file)}</span>
+              <button class="btn bxs berr" style="font-size:10px;padding:1px 6px" onclick="Cfg._noticeRemoveFile()">삭제</button>
+            </div>`:'<div id="nfPreview"></div>'}
+            <input type="file" id="nf" class="fc" style="font-size:12px"
+              onchange="Cfg._noticePreviewFile(this)" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png,.zip">
+            <div style="font-size:11px;color:var(--tm)">지원: PDF, Word, Excel, PPT, 이미지, ZIP (최대 10MB)</div>
+          </div>
+        </div>
       </div>`,
       foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Cfg._saveNotice(${idx})">저장 <span class="kbd">F8</span></button>`
     });
+  },
+  /* [v2.28] 공지 파일 미리보기 */
+  _noticePreviewFile(inp){
+    const f=inp.files[0];
+    if(!f) return;
+    if(f.size>10*1024*1024){Toast.show('파일 크기는 10MB 이하여야 합니다.','warn');inp.value='';return;}
+    const prev=document.getElementById('nfPreview');
+    if(prev) prev.innerHTML='<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg);border-radius:var(--r);border:1px solid var(--bd)">'
+      +'<span style="font-size:12px">📎 '+H.e(f.name)+'</span>'
+      +'<button class="btn bxs berr" style="font-size:10px;padding:1px 6px" onclick="Cfg._noticeRemoveFile()">삭제</button>'
+      +'</div>';
+  },
+  /* [v2.28] 첨부파일 삭제 */
+  _noticeRemoveFile(){
+    const inp=document.getElementById('nf');
+    if(inp) inp.value='';
+    const prev=document.getElementById('nfPreview');
+    if(prev) prev.innerHTML='';
   },
   _saveNotice(idx){
     const g=id=>document.getElementById(id)?.value.trim();
     const obj={title:g('nt'),body:g('nb'),date:g('nd'),expire:g('ne'),author:g('na'),show:document.getElementById('ns')?.value==='1'};
     if(!obj.title||!obj.body){Toast.show('필수 항목을 입력하세요.','warn');return}
-    if(idx!=null)App.notices[idx]=obj;else App.notices.push(obj);
-    Modal.close();Toast.show('저장되었습니다.','ok');Pages.settings();
+    /* [v2.28] 파일 처리 */
+    const fileInp=document.getElementById('nf');
+    const existFile=idx!=null?App.notices[idx]?.file:null;
+    const doSave=async()=>{
+      if(fileInp?.files?.[0]){
+        const f=fileInp.files[0];
+        /* SB Storage 업로드 시도 */
+        if(_sb){
+          try{
+            const path='notices/'+Date.now()+'_'+f.name;
+            const {error}=await _sb.storage.from('qms-files').upload(path,f);
+            if(!error){
+              const {data:url}=_sb.storage.from('qms-files').getPublicUrl(path);
+              obj.file={name:f.name,url:url.publicUrl,path};
+            } else {
+              /* Storage 실패 시 로컬 base64 저장 */
+              obj.file={name:f.name};
+            }
+          }catch(e){obj.file={name:f.name};}
+        } else {
+          obj.file={name:f.name};
+        }
+      } else if(existFile&&!fileInp?.value===''){
+        /* 기존 파일 유지 */
+        obj.file=existFile;
+      }
+      if(idx!=null)App.notices[idx]=obj;else App.notices.push(obj);
+      Modal.close();Toast.show('저장되었습니다.','ok');Pages.settings();
+    };
+    doSave();
   },
   noticeToggle(i){App.notices[i].show=!App.notices[i].show;Toast.show('변경되었습니다.','ok');Pages.settings()},
   noticeDel(i){Modal.confirm({title:'공지 삭제',msg:'공지사항을 삭제하시겠습니까?',danger:true,onOk:()=>{App.notices.splice(i,1);Toast.show('삭제되었습니다.','ok');Pages.settings()}})}
@@ -5217,7 +5299,7 @@ insp_cert(){
     {key:'item_name',label:'품목명'},{key:'insp_type',label:'검사유형',w:'78px',render:v=>`<span class="badge bblu">${H.e(v)}</span>`},
     {key:'insp_date',label:'검사일',w:'88px'},{key:'qty',label:'수량',w:'72px',align:'right',render:v=>H.n(v)},
     {key:'inspector',label:'검사자',w:'72px'},{key:'approver',label:'승인자',w:'72px'},
-    {key:'final',label:'최종판정',w:'78px',align:'center',render:v=>`<span class="badge ${v==='합격'?'bgrn':'bred'}">${H.e(v)}</span>`},
+    {key:'final',label:'최종판정',w:'78px',align:'center',render:v=>H.inspBadge(v)},
   ],data,onRow:row=>Pages._certDetail(row)});
 },
 _certDetail(row){
@@ -5258,7 +5340,7 @@ lot_trace(){
     {key:'lot',label:'LOT번호',w:'135px'},{key:'item_name',label:'품목명'},
     {key:'vendor',label:'공급업체',w:'110px'},{key:'recv_date',label:'입고일',w:'88px'},
     {key:'recv_qty',label:'수량',w:'58px',align:'right',render:v=>H.n(v)},{key:'remain_qty',label:'잔여',w:'58px',align:'right',render:v=>H.n(v)},
-    {key:'insp_result',label:'검사결과',w:'78px',align:'center',render:v=>`<span class="badge ${v==='합격'?'bgrn':'bred'}">${H.e(v)}</span>`},
+    {key:'insp_result',label:'검사결과',w:'78px',align:'center',render:v=>H.inspBadge(v)},
     {key:'hold',label:'Hold',w:'62px',align:'center',render:v=>v?`<span class="badge bred">Hold</span>`:`<span class="badge bgrn">정상</span>`},
     {key:'used_in',label:'사용처',w:'62px',align:'center',render:v=>`<span style="font-weight:700;color:var(--pri)">${v.length}건</span>`},
   ],data,onRow:row=>Pages._lotDetail(row)});
@@ -5318,6 +5400,9 @@ reinsp(){
   w.innerHTML=`<div class="stat-dash">
     <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">🔄</div><div><div class="sd-val">${data.length}</div><div class="sd-lbl">재검사 건수</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${data.filter(d=>d.result==='합격').length}</div><div class="sd-lbl">합격</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ccfbf1;color:#0d9488">🔷</div><div><div class="sd-val">${data.filter(d=>d.result==='부분합격').length}</div><div class="sd-lbl">부분합격</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⭐</div><div><div class="sd-val">${data.filter(d=>d.result==='특채').length}</div><div class="sd-lbl">특채</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#f1f5f9;color:#64748b">⏸</div><div><div class="sd-val">${data.filter(d=>d.result==='보류').length}</div><div class="sd-lbl">보류</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">❌</div><div><div class="sd-val">${data.filter(d=>d.result==='불합격').length}</div><div class="sd-lbl">불합격</div></div></div>
   </div>
   <div class="ph" style="margin-top:14px"><div><div class="ptit">🔄 재검사 관리</div><div class="psub">불합격 후 재검사 등록 및 이력 연결</div></div>
@@ -5328,7 +5413,7 @@ reinsp(){
     {key:'item_name',label:'품목명'},{key:'orig_result',label:'최초',w:'68px',render:v=>`<span class="badge bred">${H.e(v)}</span>`},
     {key:'reinsp_date',label:'재검사일',w:'86px'},{key:'qty',label:'수량',w:'58px',align:'right',render:v=>H.n(v)},
     {key:'reject_qty',label:'불합격',w:'58px',align:'right',render:v=>`<span style="color:var(--err);font-weight:700">${v}</span>`},
-    {key:'inspector',label:'검사자',w:'70px'},{key:'result',label:'결과',w:'78px',render:v=>`<span class="badge ${v==='합격'?'bgrn':'bred'}">${H.e(v)}</span>`},
+    {key:'inspector',label:'검사자',w:'70px'},{key:'result',label:'결과',w:'78px',render:v=>H.inspBadge(v)},
   ],data,onRow:row=>Pages._reinspDetail(row)});
 },
 _reinspDetail(row){
