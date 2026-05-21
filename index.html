@@ -1658,10 +1658,33 @@ const SB={
   },
   async addEquip(row){
     if(!_sb){const id=Math.max(0,...DB.equip.map(e=>e.id))+1;DB.equip.push({id,...row});return{ok:true,id};}
-    /* .select() 미사용: RLS 오류 방지 (v2.17) */
-    const {error}=await _sb.from('equipment').insert(row);
+    /* [v2.29] 허용 컬럼만 추출 + 동적 컬럼 오류 제거 */
+    const allowed={
+      code:        row.code||'',
+      name:        row.name||'',
+      model:       row.model||'',
+      maker:       row.maker||'',
+      range:       row.range||'',
+      res:         row.res||'',
+      loc:         row.loc||'',
+      status:      row.status||'정상',
+      next:        row.next||null,
+      last:        row.last||null,
+      updated_at:  null,
+      created_at:  row.created_at||null,
+    };
+    let insertRow={...allowed};
+    let {error}=await _sb.from('equipment').insert(insertRow);
+    let retries=0;
+    while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<8){
+      retries++;
+      const m=error.message.match(/['"`](\w+)['"`]\s*column/);
+      if(m&&m[1]){delete insertRow[m[1]];console.warn('[SB] addEquip 컬럼 제거:',m[1]);}
+      else break;
+      ({error}=await _sb.from('equipment').insert(insertRow));
+    }
     if(error){Toast.show('계측기 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.equip.push({id:Date.now(),...row});return{ok:true};
+    DB.equip.push({id:Date.now(),...insertRow});return{ok:true};
   },
   async updateEquip(id,patch){
     if(!_sb){const e=DB.equip.find(e=>e.id===id);if(e)Object.assign(e,patch);return{ok:true};}
@@ -3134,7 +3157,12 @@ _profileEdit(){
           <button class="btn bpri" onclick="Pages._profileSave(${user.id||'null'},'${H.e(user.username)}')">저장</button>`
   });
 },
-/* [v2.29] 설정 사용자관리 상태 클릭 → 사용자 상세 팝업 */
+/* [v2.29] 설정 사용자관리 이름 클릭 → id로 사용자 찾아 수정 팝업 */
+_uFormById(userId){
+  const u=DB.users.find(x=>Number(x.id)===Number(userId));
+  if(u) Pages._uForm(u);
+  else Toast.show('사용자 정보를 찾을 수 없습니다.','err');
+},
 _uStatusPopup(userId, userName){
   const u=DB.users.find(x=>x.id===userId);
   if(!u){Toast.show('사용자 정보를 찾을 수 없습니다.','err');return;}
@@ -3718,13 +3746,7 @@ _uRender(data){
   Tbl.render({el:'#utbl',cols:[
     {key:'username',   label:'아이디',       w:'92px'},
     {key:'name',       label:'이름',         w:'82px',
-      render:(v,row)=>`<span
-        style="cursor:pointer;color:var(--pri);font-weight:600"
-        onmouseover="this.style.textDecoration='underline'"
-        onmouseout="this.style.textDecoration='none'"
-        onclick="event.stopPropagation();Pages._uForm(JSON.parse(this.dataset.row))"
-        data-row="${JSON.stringify(row).replace(/"/g,'&quot;')}"
-        title="클릭하여 상세 보기">${H.e(v)}</span>`},
+      render:(v,row)=>`<span style="font-weight:600;color:var(--pri)">${H.e(v||'-')}</span>`},
     {key:'department', label:'부서',         w:'88px'},
     {key:'tel',        label:'연락처',       w:'112px', render:v=>H.e(v||'-')},
     {key:'email',      label:'E-MAIL',       w:'160px', render:v=>v?`<a href="mailto:${H.e(v)}" style="color:var(--acc)">${H.e(v)}</a>`:'-'},
@@ -5016,7 +5038,7 @@ settings(){
             return '<tr>'
               +'<td><input type="checkbox" class="umgmt-chk" value="'+u.id+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+no+'</td>'
-              +'<td><strong>'+H.e(u.name||u.username)+'</strong></td>'
+              +'<td><strong style="cursor:pointer;color:var(--pri)" title="클릭하여 수정" onclick="Pages._uFormById('+u.id+')">'+H.e(u.name||u.username)+'</strong></td>'
               +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
               +'<td>'+H.e(u.department||'-')+'</td>'
               +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
@@ -6997,7 +7019,9 @@ const ExcelMgr={
               let e2;
               if(cfCol){({error:e2}=await _sb.from(tbl).upsert(fb,{onConflict:cfCol,ignoreDuplicates:false}));}
               else{({error:e2}=await _sb.from(tbl).insert(fb));}
-              if(!e2){totalSuccess+=chunk.length;ok=true;}
+              /* [v2.29] SAFE 저장 성공하면 colErrors 제거 — SQL 실행 후 팝업 억제 */
+              if(!e2){totalSuccess+=chunk.length;ok=true;delete colErrors[tbl];}
+
               else{totalFail+=chunk.length;failMsgs.push('['+tbl+'] '+e2.message);ok=true;}
             }
             else{totalFail+=chunk.length;ok=true;if(failMsgs.length<3)failMsgs.push('['+tbl+'] '+error.message);}
