@@ -1342,6 +1342,8 @@ const SB={
       ({error}=await _sb.from('mentions').insert(insertRow));
     }
     if(error){Toast.show('멘션 저장 실패: '+error.message,'err');return {ok:false};}
+    if(retries>0&&!SB._mentionColWarned){SB._mentionColWarned=true;SB._showMentionColSQL();}
+    else{SB._mentionColWarned=false;}
     return {ok:true};
   },
 
@@ -1590,6 +1592,25 @@ const SB={
         +'<button class="btn bsm bpri" style="position:absolute;top:8px;right:8px" onclick="Pages._copySql()">📋 복사</button></div>',
       foot:'<button class="btn bpri" onclick="Modal.close();SB._vendorColWarned=false">확인</button>'
     }),100);
+  },
+  /* [v2.28] mentions 테이블 누락 컬럼 SQL 안내 */
+  _showMentionColSQL(){
+    const sql='-- mentions 테이블 누락 컬럼 추가\n'
+      +'ALTER TABLE mentions ADD COLUMN IF NOT EXISTS dept TEXT DEFAULT \'\';\n'
+      +'ALTER TABLE mentions ADD COLUMN IF NOT EXISTS message TEXT DEFAULT \'\';\n'
+      +'ALTER TABLE mentions ADD COLUMN IF NOT EXISTS reply_to BIGINT DEFAULT NULL;\n'
+      +'ALTER TABLE mentions ADD COLUMN IF NOT EXISTS read BOOLEAN DEFAULT false;\n'
+      +'ALTER TABLE mentions ADD COLUMN IF NOT EXISTS ref TEXT DEFAULT \'\';';
+    setTimeout(()=>Modal.open({title:'⚠️ mentions 컬럼 추가 필요',size:'mlg',
+      body:'<div style="padding:10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--r);font-size:13px;margin-bottom:10px">'
+        +'기본 컬럼(from·to·text)으로만 저장됐습니다.<br>'
+        +'<strong>아래 SQL을 Supabase SQL Editor에서 실행 후 재시도하세요.</strong></div>'
+        +'<div style="position:relative">'
+        +'<pre id="sqlBox" style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:var(--r);font-size:11px;white-space:pre-wrap">'+H.e(sql)+'</pre>'
+        +'<button class="btn bsm bpri" style="position:absolute;top:8px;right:8px" onclick="Pages._copySql()">📋 복사</button>'
+        +'</div>',
+      foot:'<button class="btn bpri" onclick="Modal.close()">확인</button>'
+    }),200);
   },
   async updateVendor(id,patch){
     if(!_sb){const v=DB.vendors.find(v=>v.id===id);if(v)Object.assign(v,patch);return{ok:true};}
