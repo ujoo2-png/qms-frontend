@@ -4584,6 +4584,11 @@ equip(){
     {key:'status',label:'상태',w:'66px',render:v=>`<span class="badge ${v==='정상'?'bgrn':v==='교정중'?'bamb':'bred'}">${H.e(v)}</span>`},
   ],data:DB.equip,onDel:async(ids)=>{
         const numIds=ids.map(Number);
+        /* [v2.29] SB 삭제 + 로컬 동기화 */
+        if(_sb){
+          const {error}=await _sb.from('equipment').delete().in('id',numIds);
+          if(error){Toast.show('삭제 실패: '+error.message,'err');return;}
+        }
         DB.equip=DB.equip.filter(e=>!numIds.includes(Number(e.id)));
         Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
         Pages.equip();
@@ -6398,12 +6403,56 @@ const ExcelMgr={
     const reader=new FileReader();
     reader.onload=e=>{
       try{
-        const wb=XLSX.read(e.target.result,{type:'array'});
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
         const ws=wb.Sheets[wb.SheetNames[0]];
+        this._ws=ws; /* [v2.29] ws 저장 — 날짜 변환에 사용 */
         const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-        this._renderPreview(raw,page);
+        /* [v2.29] 날짜 필드 변환 — 엑셀 시리얼/Date객체 → YYYY-MM-DD */
+        const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date']);
+        const _cvDate=(v,ci,ri)=>{
+          try{
+            const addr=XLSX.utils.encode_cell({r:ri,c:ci});
+            const cell=ws[addr];
+            if(cell&&(cell.t==='d'||cell.t==='n')){
+              if(cell.w&&/\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(cell.w)){
+                const m=cell.w.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+                if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+              }
+              const n=Number(cell.v);
+              if(!isNaN(n)&&n>30000&&n<100000){
+                const d=new Date(Math.round((n-25569)*86400)*1000);
+                return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+              }
+            }
+          }catch(e){}
+          const s=String(v||'').trim();
+          if(!s) return '';
+          if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+          const n=Number(s);
+          if(!isNaN(n)&&n>30000&&n<100000){
+            const d=new Date(Math.round((n-25569)*86400)*1000);
+            return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+          }
+          return s;
+        };
+        const sc=this._schemas[page];
+        const hdrRow=raw[0]||[];
+        const lblToKey={};
+        (sc?.cols||[]).forEach(c=>{lblToKey[c.label]=c.key;});
+        const keyMap=hdrRow.map(h=>lblToKey[String(h||'').replace(/\s*\*\s*$/,'').trim()]||null);
+        /* 날짜 변환 적용 */
+        const converted=raw.map((row,ri)=>{
+          if(ri===0) return row;
+          return row.map((val,ci)=>{
+            const key=keyMap[ci];
+            if(key&&_DATE_KEYS.has(key)) return _cvDate(val,ci,ri);
+            return val;
+          });
+        });
+        this._renderPreview(converted,page);
       }catch(err){
         Toast.show('파일을 읽을 수 없습니다. 올바른 엑셀 파일인지 확인하세요.','err');
+        console.error(err);
       }
     };
     reader.readAsArrayBuffer(file);
