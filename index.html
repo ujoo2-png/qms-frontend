@@ -1298,9 +1298,19 @@ const SB={
       created_at:  row.created_at||null,
       updated_at:  null,  /* [v2.28] 등록 시 수정일 비움 */
     };
-    /* [v2.29] upsert로 교체 — insp_no 중복 시 update (insert conflict 오류 방지) */
+    /* [v2.29] upsert 시도, 실패시 insert 폴백 */
     let insertRow={...allowed};
+    /* null 날짜를 undefined로 교체 (SB date 타입 오류 방지) */
+    Object.keys(insertRow).forEach(k=>{
+      if(insertRow[k]===null&&['insp_date','created_at','updated_at'].includes(k))
+        insertRow[k]=undefined;
+    });
     let {error}=await _sb.from('inspections').upsert(insertRow,{onConflict:'insp_no',ignoreDuplicates:false});
+    /* upsert 실패 시 insert 폴백 */
+    if(error&&(error.message?.includes('unique')||error.message?.includes('conflict')||error.message?.includes('duplicate'))){
+      console.warn('[SB] upsert 실패, insert 폴백:',error.message);
+      ({error}=await _sb.from('inspections').insert(insertRow));
+    }
     let retries=0;
     while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<8){
       retries++;
@@ -1309,8 +1319,11 @@ const SB={
       else break;
       ({error}=await _sb.from('inspections').upsert(insertRow,{onConflict:'insp_no',ignoreDuplicates:false}));
     }
-    if(error){Toast.show('DB 저장 실패: '+error.message,'err');return {ok:false};}
-    /* [v2.29] 컬럼 누락으로 일부 항목 미저장 시 조용히 처리 (토스트 제거) */
+    if(error){
+      console.error('[SB] addInspection 최종 오류:',error.message,JSON.stringify(insertRow).slice(0,200));
+      Toast.show('DB 저장 실패: '+error.message,'err');
+      return {ok:false};
+    }
     DB.inspections.unshift({id:Date.now(),...insertRow});
     return {ok:true};
   },
@@ -3940,8 +3953,11 @@ async _insp(type){
   /* [v2.28 복원] _sbFetchAll 전체 로드 후 로컬 필터 방식
      Phase1은 DOM 순서 문제로 무한 스피너 버그 발생 → 복원 */
   w.innerHTML='<div class="spin"></div>';
-  const allInsp=await SB.getInspections();
-  DB.inspections=Array.isArray(allInsp)?allInsp:[];
+  /* [v2.29] DB.inspections가 이미 있으면 재사용, 없으면 SB에서 로드 */
+  if(!DB.inspections||DB.inspections.length===0){
+    const allInsp=await SB.getInspections();
+    DB.inspections=Array.isArray(allInsp)?allInsp:[];
+  }
   let data=DB.inspections.filter(r=>r.type===key);
   let fromV='',toV='';
 
@@ -7252,8 +7268,16 @@ const ExcelMgr={
     this._multiParsed=null;
     const pf2=this._pageFilter;this._pageFilter=null;
     if(totalSuccess>0){
+      /* [v2.29] SB 반영 대기 후 페이지 이동 */
+      await new Promise(r=>setTimeout(r,600));
       if(pf2==='vendors'){DB.vendors=await SB.getVendors();Nav.go('vendors');}
-      else if(pf2&&pf2.startsWith('insp')){DB.inspections=await SB.getInspections();Nav.go(pf2);}
+      else if(pf2==='equipment'){DB.equip=await SB.getEquip();Nav.go('equip');}
+      else if(pf2&&pf2.startsWith('insp')){
+        DB.inspections=await SB.getInspections();
+        /* _insp가 또 getInspections를 호출하므로 미리 로드 */
+        const pf2page=pf2;
+        Nav.go(pf2page);
+      }
       else{DB.items=await SB.getItems();Nav.go('items');}
     }
   },
