@@ -6959,7 +6959,9 @@ const ExcelMgr={
     const cfMap={items:'item_code',vendors:null,users:'username',inspections:'insp_no'};
     const SAFE_COLS={
       inspections:['type','vendor','insp_no','insp_date','inspector',
-        'item_code','item_name','result','qty','pass_qty','fail_qty','created_at','updated_at'],
+        'item_code','item_name','spec','insp_method','result',
+        'qty','pass_qty','fail_qty','defect_rate','wo_no','note',
+        'created_at','updated_at'],
     };
     const REQUIRED_SQL={
       inspections:"-- 검사 테이블 컬럼 추가\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS spec TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS insp_method TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS wo_no TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS note TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS defect_rate NUMERIC DEFAULT 0;",
@@ -7067,7 +7069,9 @@ const ExcelMgr={
     if(!this._multiParsed){Toast.show('분석된 데이터가 없습니다.','warn');return}
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
     const wb=XLSX.utils.book_new();
-    [['items','품목등록'],['vendors','거래처등록'],['users','사용자등록'],['insp_in','수입검사']].forEach(([pKey,sName])=>{
+    [['items','품목등록'],['vendors','거래처등록'],['users','사용자등록'],
+      ['insp_in','수입검사'],['insp_pr','공정검사'],['insp_pu','구매검사'],
+      ['insp_ou','외주검사'],['insp_fi','최종검사']].forEach(([pKey,sName])=>{
       const r=this._multiParsed[pKey];
       if(!r||r.skip||!r.rows?.length) return;
       const sc=this._schemas[pKey];
