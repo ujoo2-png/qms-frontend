@@ -1298,20 +1298,19 @@ const SB={
       created_at:  row.created_at||null,
       updated_at:  null,  /* [v2.28] 등록 시 수정일 비움 */
     };
-    /* 동적 컬럼 오류 제거 — SQL 미실행 컬럼 자동 감지/제거 */
+    /* [v2.29] upsert로 교체 — insp_no 중복 시 update (insert conflict 오류 방지) */
     let insertRow={...allowed};
-    let {error}=await _sb.from('inspections').insert(insertRow);
+    let {error}=await _sb.from('inspections').upsert(insertRow,{onConflict:'insp_no',ignoreDuplicates:false});
     let retries=0;
     while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<8){
       retries++;
       const m=error.message.match(/['"`](\w+)['"`]\s*column/);
       if(m&&m[1]){delete insertRow[m[1]];console.warn('[SB] addInspection 컬럼 제거:',m[1]);}
       else break;
-      ({error}=await _sb.from('inspections').insert(insertRow));
+      ({error}=await _sb.from('inspections').upsert(insertRow,{onConflict:'insp_no',ignoreDuplicates:false}));
     }
     if(error){Toast.show('DB 저장 실패: '+error.message,'err');return {ok:false};}
-    /* [v2.29 A안] 컬럼 누락으로 일부 항목 미저장 시 토스트 안내 (팝업 제거) */
-    if(retries>0) Toast.show('일부 항목이 저장되지 않았습니다. Supabase에서 inspections 컬럼 추가 SQL을 실행하면 모든 항목이 저장됩니다.','warn',5000);
+    /* [v2.29] 컬럼 누락으로 일부 항목 미저장 시 조용히 처리 (토스트 제거) */
     DB.inspections.unshift({id:Date.now(),...insertRow});
     return {ok:true};
   },
@@ -1697,15 +1696,16 @@ const SB={
       updated_at:  null,
       created_at:  row.created_at||null,
     };
+    /* [v2.29] upsert — code 중복 시 update (insert conflict 방지) */
     let insertRow={...allowed};
-    let {error}=await _sb.from('equipment').insert(insertRow);
+    let {error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false});
     let retries=0;
     while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<8){
       retries++;
       const m=error.message.match(/['"`](\w+)['"`]\s*column/);
       if(m&&m[1]){delete insertRow[m[1]];console.warn('[SB] addEquip 컬럼 제거:',m[1]);}
       else break;
-      ({error}=await _sb.from('equipment').insert(insertRow));
+      ({error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false}));
     }
     if(error){Toast.show('계측기 저장 실패: '+error.message,'err');return{ok:false};}
     DB.equip.push({id:Date.now(),...insertRow});return{ok:true};
