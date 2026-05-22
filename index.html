@@ -4547,6 +4547,7 @@ async equip(){
       <button class="btn bpri btn-f2" onclick="Pages._eqForm()">+ 계측기 등록 <span class="kbd">F2</span></button>
       <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('equip')" title="엑셀 양식 내려받기">📥 양식 내려받기</button>
       <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('equip')" title="엑셀 일괄등록">📤 자료 일괄등록</button>
+      <button class="btn btn-xl-up bpur" onclick="ExcelMgr.openUploadAll('equip')" title="통합 일괄등록">🗂️ 통합 일괄등록</button>
     </div></div>
     <div class="tbar">
       <div class="sw2"><input type="text" placeholder="코드, 계측기명 검색..."></div>
@@ -4555,7 +4556,7 @@ async equip(){
     </div>
     <div id="eqTbl"></div>`;
   Tbl.render({el:'#eqTbl',cols:[
-    {key:'code',label:'코드',w:'88px'},{key:'name',label:'계측기명'},{key:'model',label:'모델',w:'102px'},
+    {key:'code',label:'계측기코드',w:'102px'},{key:'name',label:'계측기명'},{key:'model',label:'모델',w:'102px'},
     {key:'maker',label:'제조사',w:'82px'},{key:'range',label:'측정범위',w:'112px'},{key:'loc',label:'위치',w:'72px'},
     {key:'next',label:'차기교정일',w:'92px',render:v=>{const d=Math.ceil((new Date(v)-new Date())/(864e5));return`<span ${d<0?'class="badge bred"':d<30?'class="badge bamb"':''}>${v}</span>`}},
     {key:'status',label:'상태',w:'66px',render:v=>`<span class="badge ${v==='정상'?'bgrn':v==='교정중'?'bamb':'bred'}">${H.e(v)}</span>`},
@@ -6858,6 +6859,7 @@ const ExcelMgr={
       items:'품목등록', vendors:'거래처등록', users:'사용자등록',
       insp_in:'수입검사', insp_pr:'공정검사', insp_pu:'구매검사',
       insp_ou:'외주검사', insp_fi:'최종검사',
+      equip:'계측기등록', equipment:'계측기등록',
     };
     const targetLabel=pageFilter?filterLabels[pageFilter]||pageFilter:'전체 (8개 시트)';
 
@@ -6910,7 +6912,8 @@ const ExcelMgr={
         /* 시트명 → 스키마 키 매핑 — [v2.24] 검사 4종 추가 */
         const SMAP_ALL={'품목등록':'items','거래처등록':'vendors','사용자등록':'users',
           '수입검사':'insp_in','공정검사':'insp_pr','구매검사':'insp_pu',
-          '외주검사':'insp_ou','최종검사':'insp_fi'};
+          '외주검사':'insp_ou','최종검사':'insp_fi',
+          '계측기등록':'equip'};
         /* [v2.26] pageFilter: 특정 시트만 파싱 */
         const pf=this._pageFilter;
         const SMAP=pf
@@ -6925,8 +6928,10 @@ const ExcelMgr={
             DB.items=await SB.getItems();
             DB.vendors=await SB.getVendors();
             DB.users=await SB.getUsers();
+            /* [v2.293] 계측기 중복 체크용 */
+            DB.equip=await SB.getEquip();
           }catch(e2){
-            DB.items=[]; DB.vendors=[]; DB.users=[];
+            DB.items=[]; DB.vendors=[]; DB.users=[]; DB.equip=[];
             console.warn('[멀티업로드] SB 로드 실패, 빈 캐시로 진행');
           }
         }
@@ -7127,7 +7132,7 @@ const ExcelMgr={
     const tblMap={items:'items',vendors:'vendors',users:'users',
       insp_in:'inspections',insp_pr:'inspections',
       insp_pu:'inspections',insp_ou:'inspections',insp_fi:'inspections',
-      equipment:'equipment',cal:'calibrations'};
+      equip:'equipment',equipment:'equipment',cal:'calibrations'};
     const cfMap={items:'item_code',vendors:null,users:'username',inspections:'insp_no',equipment:'code',calibrations:'cert'};
     const SAFE_COLS={
       inspections:['type','vendor','insp_no','insp_date','inspector',
@@ -7212,6 +7217,21 @@ const ExcelMgr={
           if(cnt>0&&cnt%100===0){
             document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
             Toast.show('거래처 등록 중... '+totalSuccess+'/'+rows.length+'건','info',30000);
+          }
+          await sleep(30);
+        }
+        continue;
+      }
+      /* [v2.293] 계측기: SB.addEquip 직접 호출 */
+      if((pKey==='equip'||pKey==='equipment')&&_sb){
+        let cnt=0;
+        for(const r of rows){
+          const res=await SB.addEquip(toFullRow(pKey,r));
+          if(res.ok){totalSuccess++;cnt++;}
+          else{totalFail++;failMsgs.push('[equip] '+H.e((r.code||r.name||'')));}
+          if(cnt>0&&cnt%50===0){
+            document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
+            Toast.show('계측기 등록 중... '+totalSuccess+'/'+rows.length+'건','info',30000);
           }
           await sleep(30);
         }
@@ -7307,7 +7327,9 @@ const ExcelMgr={
       /* [v2.29] SB 반영 대기 후 페이지 이동 */
       await new Promise(r=>setTimeout(r,600));
       if(pf2==='vendors'){DB.vendors=await SB.getVendors();Nav.go('vendors');}
-      else if(pf2==='equipment'){DB.equip=await SB.getEquip();Nav.go('equip');}
+      else if(pf2==='equip'||pf2==='equipment'){
+        DB.equip=await SB.getEquip();Nav.go('equip');
+      }
       else if(pf2&&pf2.startsWith('insp')){
         DB.inspections=await SB.getInspections();
         /* _insp가 또 getInspections를 호출하므로 미리 로드 */
