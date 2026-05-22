@@ -6544,21 +6544,64 @@ const ExcelMgr={
     }
 
     /* ── items 허용 컬럼 추출 함수 ── */
-    const toAllowed=row=>page==='items'?{
-      major_category:row.major_category||'',
-      category:      row.category||'',
-      item_code:     row.item_code||'',
-      item_name:     row.item_name||'',
-      spec:          row.spec||'',
-      unit:          row.unit||'EA',
-      material:      row.material||'',
-      vendor_id:     row.vendor_id||null,
-      vendor_name:   row.vendor_name||'',
-      active:        row.active,
-      remark:        row.remark||'',
-      created_at:    row.created_at||null,
-      updated_at:    row.updated_at||null,
-    }:row;
+    const toAllowed=row=>{
+      /* [v2.29] 테이블별 허용 컬럼만 추출 — SB schema 오류 방지 */
+      if(page==='items') return{
+        major_category:row.major_category||'',
+        category:      row.category||'',
+        item_code:     row.item_code||'',
+        item_name:     row.item_name||'',
+        spec:          row.spec||'',
+        unit:          row.unit||'EA',
+        material:      row.material||'',
+        vendor_id:     row.vendor_id||null,
+        vendor_name:   row.vendor_name||'',
+        active:        row.active,
+        remark:        row.remark||'',
+        created_at:    row.created_at||null,
+        updated_at:    row.updated_at||null,
+      };
+      if(page==='equipment') return{
+        code:        row.code||'',
+        name:        row.name||'',
+        model:       row.model||'',
+        maker:       row.maker||'',
+        range:       row.range||'',
+        res:         row.res||'',
+        loc:         row.loc||'',
+        status:      row.status||'정상',
+        next:        row.next||null,
+        last:        row.last||null,
+        updated_at:  null,
+        created_at:  row.created_at||null,
+      };
+      if(page==='inspections'||page?.startsWith('insp_')) return{
+        type:        row.type||'',
+        vendor:      row.vendor||'',
+        insp_no:     row.insp_no||'',
+        insp_date:   row.insp_date||null,
+        inspector:   row.inspector||'',
+        item_code:   row.item_code||'',
+        item_name:   row.item_name||'',
+        spec:        row.spec||'',
+        insp_method: row.insp_method||'',
+        result:      row.result||'합격',
+        qty:         Number(row.qty)||0,
+        pass_qty:    Number(row.pass_qty)||0,
+        fail_qty:    Number(row.fail_qty)||0,
+        defect_rate: Number(row.defect_rate)||0,
+        wo_no:       row.wo_no||'',
+        note:        row.note||'',
+        created_at:  row.created_at||null,
+        updated_at:  null,
+      };
+      /* 기타: 내부 필드(_dup, _validErr 등) 제거 후 반환 */
+      const clean={...row};
+      delete clean._dup; delete clean._keyVal;
+      delete clean._validErr; delete clean._rowNum;
+      delete clean._errors;
+      return clean;
+    };
 
     /* ── 테이블 매핑 ── */
     const tableMap={
@@ -6578,6 +6621,8 @@ const ExcelMgr={
       vendors:'biz_no',
       users:'username',
       inspections:'insp_no',
+      equipment:'code',
+      cal:'cert',
     };
     const conflictCol=conflictMap[page]||null;
 
