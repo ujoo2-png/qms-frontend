@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.290</title>
+<title>QMS - 품질경영시스템 v2.291</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.290</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.291</div>
         </div>
       </div>
     </div>
@@ -954,7 +954,7 @@ textarea.fc{resize:vertical;min-height:68px}
           </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.290 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.291 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -965,7 +965,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.290</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.291</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -2922,7 +2922,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.290</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.291</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -6659,6 +6659,34 @@ const ExcelMgr={
       cal:'cert',
     };
     const conflictCol=conflictMap[page]||null;
+
+    /* [v2.292] equip: SB.addEquip 헬퍼 직접 호출 (검사5종 방식과 동일)
+       — bulk insert 경로 우회 → toAllowed/insertOne 의존 제거
+       — addEquip 내부에서 allowed 컬럼 필터 + 동적 컬럼 오류 자동 제거 */
+    if((page==='equip'||page==='equipment')&&_sb){
+      let cnt=0;
+      for(const row of rows){
+        const res=await SB.addEquip(row);
+        if(res.ok){successCnt++;cnt++;}
+        else{failCnt++;console.error('[SB] addEquip 실패:',row.code||row.name);}
+        if(cnt>0&&cnt%50===0){
+          document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
+          Toast.show('계측기 등록 중... '+successCnt+'/'+rows.length+'건','info',30000);
+        }
+        await new Promise(r=>setTimeout(r,30));
+      }
+      const msg=failCnt>0
+        ?`✅ ${successCnt}건 등록 / ❌ ${failCnt}건 실패`
+        :`✅ ${successCnt}건 모두 등록 완료`;
+      Toast.show(msg, failCnt>0?'warn':'ok', 4000);
+      if(successCnt>0){
+        await new Promise(r=>setTimeout(r,400));
+        DB.equip=await SB.getEquip();
+        Modal.close();
+        Pages.equip();
+      }
+      return;
+    }
 
     /* ── Supabase bulk insert ──
        [v2.20 수정] 1000건 제한 해결
