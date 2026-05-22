@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.29</title>
+<title>QMS - 품질경영시스템 v2.290</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.29</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.290</div>
         </div>
       </div>
     </div>
@@ -954,7 +954,7 @@ textarea.fc{resize:vertical;min-height:68px}
           </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.29 (2026-05-21) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.290 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -965,7 +965,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.29</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.290</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1132,7 +1132,11 @@ textarea.fc{resize:vertical;min-height:68px}
       Auth.login()  -> _sb.auth.signInWithPassword({email,password})
       Auth.logout() -> _sb.auth.signOut()
    ---------------------------------------------------------- 
-  ║  v2.29 안정화 패치 (2026-05-21)                             ║
+  ║  v2.290 버전체계 변경 + 계측기 active 오류 수정 (2026-05-22)    ║
+  ║  [1] 버전체계: vX.XX → vX.XXX (중복 방지)               ║
+  ║  [2] toAllowed equipment 분기 추가 (active 컬럼 오류)    ║
+  ║  [3] _register conflictMap equipment:code 추가          ║
+  ║  ║  v2.29 안정화 패치 (2026-05-21)                             ║
   ║  [1] addInspection 허용컬럼+동적제거 (엑셀업로드 오류 수정)  ║
   ║  [2] addMention ref_key/time 제거, reply_to 유지            ║
   ║  [3] mentions 누락컬럼 SQL 팝업 자동 안내                   ║
@@ -2889,7 +2893,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.29</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.290</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -6561,7 +6565,7 @@ const ExcelMgr={
         created_at:    row.created_at||null,
         updated_at:    row.updated_at||null,
       };
-      if(page==='equipment') return{
+      if(page==='equipment'||page==='equip') return{
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||'',
@@ -6622,6 +6626,7 @@ const ExcelMgr={
       users:'username',
       inspections:'insp_no',
       equipment:'code',
+      equip:'code',
       cal:'cert',
     };
     const conflictCol=conflictMap[page]||null;
