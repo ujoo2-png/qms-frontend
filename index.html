@@ -1889,6 +1889,7 @@ const H={
       '합격':   'bgrn',
       '부분합격':'btea',
       '특채':   'bamb',
+      '무검사': 'bpur',
       '보류':   'bgry',
       '불합격': 'bred',
     };
@@ -3940,12 +3941,13 @@ async _insp(type){
     ['q1','1분기'],['q2','2분기'],['q3','3분기'],['q4','4분기'],
   ].map(([k,l])=>`<button class="btn bxs bout" onclick="DateRange.applyTo('inspFrom','inspTo','${k}');document.getElementById('inspFrom').dispatchEvent(new Event('change'))">${l}</button>`).join('');
 
-  const tot=data.length,pass=data.filter(d=>d.result==='합격').length,partial=data.filter(d=>d.result==='부분합격').length,special=data.filter(d=>d.result==='특채').length,hold=data.filter(d=>d.result==='보류').length,fail=data.filter(d=>d.result==='불합격').length;
+  const tot=data.length,pass=data.filter(d=>d.result==='합격').length,partial=data.filter(d=>d.result==='부분합격').length,special=data.filter(d=>d.result==='특채').length,none=data.filter(d=>d.result==='무검사').length,hold=data.filter(d=>d.result==='보류').length,fail=data.filter(d=>d.result==='불합격').length;
   w.innerHTML=`<div class="stat-dash">
     <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">${icon}</div><div><div class="sd-val">${tot}</div><div class="sd-lbl">총 검사</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${pass}</div><div class="sd-lbl">합격</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#ccfbf1;color:#0d9488">🔷</div><div><div class="sd-val">${partial}</div><div class="sd-lbl">부분합격</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⭐</div><div><div class="sd-val">${special}</div><div class="sd-lbl">특채</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">🔖</div><div><div class="sd-val">${none}</div><div class="sd-lbl">무검사</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#f1f5f9;color:#64748b">⏸</div><div><div class="sd-val">${hold}</div><div class="sd-lbl">보류</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">❌</div><div><div class="sd-val">${fail}</div><div class="sd-lbl">불합격</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">📊</div><div><div class="sd-val">${tot>0?(pass/tot*100).toFixed(1):0}%</div><div class="sd-lbl">합격률</div></div></div>
@@ -3973,7 +3975,7 @@ async _insp(type){
   </div>
   <div class="tbar">
     <div class="sw2"><input type="text" id="inspSV" placeholder="검사번호, 품목코드, 품목명, 거래처..." oninput="Pages._inspRender_${type}()"></div>
-    <select class="fsel" id="inspRV" onchange="Pages._inspRender_${type}()"><option value="">전체 결과</option><option>합격</option><option>부분합격</option><option>특채</option><option>보류</option><option>불합격</option></select>
+    <select class="fsel" id="inspRV" onchange="Pages._inspRender_${type}()"><option value="">전체 결과</option><option>합격</option><option>부분합격</option><option>특채</option><option>무검사</option><option>보류</option><option>불합격</option></select>
     <button class="btn bout bsm" onclick="SearchPop.open('${type}')" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>
   </div>
   <div id="inspTbl"></div>`;
@@ -4009,7 +4011,7 @@ _inspForm2(type){
       <div class="fgroup"><label class="fl req">검사방법</label><select class="fc" id="if_method">
         ${['치수검사','외관검사','치수검사+외관검사','기능시험','기능시험+외관','성분검사','전수검사','샘플링검사','기타'].map(m=>`<option>${m}</option>`).join('')}
       </select></div>
-      <div class="fgroup"><label class="fl req">검사결과</label><select class="fc" id="if_result"><option>합격</option><option>부분합격</option><option>특채</option><option>보류</option><option>불합격</option></select></div>
+      <div class="fgroup"><label class="fl req">검사결과</label><select class="fc" id="if_result"><option>합격</option><option>부분합격</option><option>특채</option><option>무검사</option><option>보류</option><option>불합격</option></select></div>
       <div class="fgroup"><label class="fl req">검사수량</label><input class="fc" id="if_qty" type="number" value="0" oninput="Pages._inspCalc()"></div>
       <div class="fgroup"><label class="fl req">합격수량</label><input class="fc" id="if_pqty" type="number" value="0" oninput="Pages._inspCalc()"></div>
       <div class="fgroup"><label class="fl">불합격수량</label><input class="fc" id="if_fqty" type="number" value="0" readonly style="background:#f8fafc"></div>
@@ -5499,6 +5501,7 @@ reinsp(){
     <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${data.filter(d=>d.result==='합격').length}</div><div class="sd-lbl">합격</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#ccfbf1;color:#0d9488">🔷</div><div><div class="sd-val">${data.filter(d=>d.result==='부분합격').length}</div><div class="sd-lbl">부분합격</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⭐</div><div><div class="sd-val">${data.filter(d=>d.result==='특채').length}</div><div class="sd-lbl">특채</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">🔖</div><div><div class="sd-val">${data.filter(d=>d.result==='무검사').length}</div><div class="sd-lbl">무검사</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#f1f5f9;color:#64748b">⏸</div><div><div class="sd-val">${data.filter(d=>d.result==='보류').length}</div><div class="sd-lbl">보류</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">❌</div><div><div class="sd-val">${data.filter(d=>d.result==='불합격').length}</div><div class="sd-lbl">불합격</div></div></div>
   </div>
@@ -6847,7 +6850,7 @@ const ExcelMgr={
           const ALLOWED={
             category:['원자재','부자재','반제품','완제품','소모품',''],
             active:['사용','미사용','1','0',''],
-            result:['합격','부분합격','특채','보류','불합격',''],
+            result:['합격','부분합격','특채','무검사','보류','불합격',''],
           };
           const parsedRows=dataRows.map((row,ri)=>{
             const obj={};
