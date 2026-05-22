@@ -1629,6 +1629,26 @@ const SB={
       foot:'<button class="btn bpri" onclick="Modal.close();SB._vendorColWarned=false">확인</button>'
     }),100);
   },
+  /* [v2.290] equipment 누락 컬럼 SQL 안내 */
+  _showEquipColSQL(){
+    const sql=
+      '-- equipment 테이블 누락 컬럼 추가\n'
+      +'ALTER TABLE equipment ADD COLUMN IF NOT EXISTS last DATE;\n'
+      +'ALTER TABLE equipment ADD COLUMN IF NOT EXISTS next DATE;\n'
+      +'ALTER TABLE equipment ADD COLUMN IF NOT EXISTS updated_at DATE;\n'
+      +'ALTER TABLE equipment ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();';
+    setTimeout(()=>Modal.open({title:'\u26a0\ufe0f equipment 컬럼 추가 필요',size:'mlg',
+      body:'<div style="padding:10px 14px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--r);font-size:13px;margin-bottom:10px">'
+        +'<strong>아래 SQL을 Supabase SQL Editor에서 실행 후 재업로드하세요.</strong><br>'
+        +'추가 컬럼: last(최근교정일), next(차기교정일), updated_at, created_at</div>'
+        +'<div style="position:relative">'
+        +'<pre id="equipSqlBox" style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:var(--r);font-size:11px;white-space:pre-wrap">'+H.e(sql)+'</pre>'
+        +'<button class="btn bsm bpri" style="position:absolute;top:8px;right:8px" onclick="navigator.clipboard.writeText(document.getElementById(\'equipSqlBox\').textContent);Toast.show(\'복사 완료\',\'ok\')">\ud83d\udccb 복사</button>'
+        +'</div>',
+      foot:'<button class="btn bpri" onclick="Modal.close()">확인</button>'
+    }),200);
+  },
+
   /* [v2.28] mentions 테이블 누락 컬럼 SQL 안내 */
   _showMentionColSQL(){
     const sql='-- mentions 테이블 누락 컬럼 추가\n'
@@ -1724,7 +1744,16 @@ const SB={
       else break;
       ({error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false}));
     }
-    if(error){Toast.show('계측기 저장 실패: '+error.message,'err');return{ok:false};}
+    if(error){
+      console.error('[SB] addEquip 최종 오류:',error.message);
+      Toast.show('계측기 저장 실패: '+error.message,'err');
+      return{ok:false};
+    }
+    /* [v2.290] 컬럼 누락으로 일부 저장 시 SQL 팝업 안내 (최초 1회) */
+    if(retries>0&&!SB._equipColWarned){
+      SB._equipColWarned=true;
+      SB._showEquipColSQL();
+    }
     DB.equip.push({id:Date.now(),...insertRow});return{ok:true};
   },
   async updateEquip(id,patch){
