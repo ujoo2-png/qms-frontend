@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.298</title>
+<title>QMS - 품질경영시스템 v2.299</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.298</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.299</div>
         </div>
       </div>
     </div>
@@ -954,7 +954,7 @@ textarea.fc{resize:vertical;min-height:68px}
           </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.298 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.299 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -965,7 +965,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.298</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.299</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1917,7 +1917,7 @@ const H={
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   },
-  /* [v2.298 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
+  /* [v2.299 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
      만료(D<0) → 교정만료  |  D-30 이내 → 교정중  |  나머지 → 정상 */
   equipStatus(next){
     if(!next) return '정상';
@@ -2933,7 +2933,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.298</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.299</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -4606,7 +4606,7 @@ _eqForm(row=null){Modal.open({title:row?'계측기 수정':'계측기 등록',si
   <div class="fgroup"><label class="fl req">계측기명</label><input class="fc" value="${H.e(row?.name||'')}"></div>
   <div class="fgroup"><label class="fl">모델번호</label><input class="fc" value="${H.e(row?.model||'')}"></div>
 _eqDetail(row){
-  /* [v2.298 C안] 교정 이력 연동 — 문자열 연결 방식 */
+  /* [v2.299 C안] 교정 이력 연동 — 문자열 연결 방식 */
   const sCls=H.equipStatus(row.next)==='교정만료'?'bred':H.equipStatus(row.next)==='교정중'?'bamb':'bgrn';
   const d=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
   const dTag=d===null?'':d<0?' <span class="badge bred">만료</span>':d<=30?' <span class="badge bamb">D-'+d+'</span>':'';
@@ -7139,7 +7139,7 @@ const ExcelMgr={
           (allOk
             ?'<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);font-size:13px;font-weight:600;color:var(--ok);margin-bottom:10px">✅ 전체 정합성 검사 통과! 등록 버튼이 활성화됩니다.</div>'
             :'<div style="padding:10px 14px;background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--r);font-size:13px;font-weight:600;color:var(--err);margin-bottom:10px">❌ '+totalErr+'건 오류 있음. 수정 후 재업로드하세요. <button class="btn bsm berr" onclick="ExcelMgr._exportResult()">📥 오류 결과 다운로드</button></div>');
-        const detailHtml=Object.entries({'items':'품목등록','vendors':'거래처등록','users':'사용자등록','insp_in':'수입검사'}).map(([pKey,sName])=>{
+        const detailHtml=Object.entries({'items':'품목등록','vendors':'거래처등록','users':'사용자등록','insp_in':'수입검사','insp_pr':'공정검사','insp_pu':'구매검사','insp_ou':'외주검사','insp_fi':'최종검사','equip':'계측기등록'}).map(([pKey,sName])=>{
           const r=results[pKey];
           if(!r) return '';
           if(r.skip) return '<div style="padding:8px 12px;background:var(--bg);border-radius:var(--r);border:1px solid var(--bd);margin-bottom:8px;font-size:12px;color:var(--tm)">📄 <strong>'+sName+'</strong> — '+(r.reason||'시트 없음 (건너뜀)')+'</div>';
@@ -7414,9 +7414,11 @@ const ExcelMgr={
     if(!this._multiParsed){Toast.show('분석된 데이터가 없습니다.','warn');return}
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
     const wb=XLSX.utils.book_new();
+    /* [v2.299] equip 시트 추가 */
     [['items','품목등록'],['vendors','거래처등록'],['users','사용자등록'],
       ['insp_in','수입검사'],['insp_pr','공정검사'],['insp_pu','구매검사'],
-      ['insp_ou','외주검사'],['insp_fi','최종검사']].forEach(([pKey,sName])=>{
+      ['insp_ou','외주검사'],['insp_fi','최종검사'],
+      ['equip','계측기등록']].forEach(([pKey,sName])=>{
       const r=this._multiParsed[pKey];
       if(!r||r.skip||!r.rows?.length) return;
       const sc=this._schemas[pKey];
@@ -7429,6 +7431,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:60}];
       XLSX.utils.book_append_sheet(wb,ws,sName);
     });
+    if(wb.SheetNames.length===0){Toast.show('내보낼 데이터가 없습니다.','warn');return}
     XLSX.writeFile(wb,'QMS_업로드결과_'+H.today()+'.xlsx');
     Toast.show('결과 파일이 다운로드되었습니다.','ok');
   },
