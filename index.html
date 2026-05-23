@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.300</title>
+<title>QMS - 품질경영시스템 v2.301</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.300</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.301</div>
         </div>
       </div>
     </div>
@@ -954,7 +954,7 @@ textarea.fc{resize:vertical;min-height:68px}
           </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.300 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.301 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -965,7 +965,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.300</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.301</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1918,7 +1918,7 @@ const H={
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   },
-  /* [v2.300 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
+  /* [v2.301 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
      만료(D<0) → 교정만료  |  D-30 이내 → 교정중  |  나머지 → 정상 */
   equipStatus(next){
     if(!next) return '정상';
@@ -2106,6 +2106,8 @@ const Auth={
       const e=document.getElementById(el);
       if(e)e.textContent=[(user.name||user.username||'?')[0],user.name||user.username,roleLabel[user.role]||'사용자',user.name||user.username][i];
     });
+    /* [v2.301] 최근 로그인 시각 SB 업데이트 */
+    if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
     /* [v2.27] 설정 메뉴: 관리자만 표시 */
     const settingsMenu=document.getElementById('ni_settings');
     if(settingsMenu) settingsMenu.style.display=(user.role==='admin')?'':'none';
@@ -2934,7 +2936,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.300</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.301</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3070,7 +3072,9 @@ async _approveUser(userId, username){
   const u=DB.users.find(u=>u.id===userId);
   if(u){u.active=1;u.pending=false;}
   Toast.show(`${username} 계정이 승인되었습니다.`,'ok');
-  Pages.settings(); // 사용자 관리 탭 새로고침
+  /* [v2.301] 승인 후 화면 유지 — usermgmt 탭 그대로 */
+  const pane=document.querySelector('.stab-pane[data-tab="usermgmt"]');
+  if(pane) pane.innerHTML=renderUserMgmt();
 },
 
 async _rejectUser(userId, username){
@@ -3705,7 +3709,9 @@ async users(){
   w.innerHTML='<div class="spin"></div>';
   const allUsers=await SB.getUsers();
   DB.users=allUsers;
-  const utotal=DB.users.length,uactive=DB.users.filter(u=>u.active).length;
+  /* [v2.301] 기준정보 사원관리 = 활성 사용자만 표시 (list 개념, pending 제외) */
+  const utotal=DB.users.filter(u=>!u.pending&&u.active!==0).length,
+        uactive=DB.users.filter(u=>u.active&&!u.pending).length;
   const uroles={};DB.users.forEach(u=>{uroles[u.role]=(uroles[u.role]||0)+1});
   const udepts=new Set(DB.users.map(u=>u.department)).size;
   w.innerHTML=`
@@ -4657,7 +4663,7 @@ async _eqSave(orig){
 },
 
 _eqDetail(row){
-  /* [v2.300 C안] 교정 이력 연동 — 문자열 연결 방식 */
+  /* [v2.301 C안] 교정 이력 연동 — 문자열 연결 방식 */
   const sCls=H.equipStatus(row.next)==='교정만료'?'bred':H.equipStatus(row.next)==='교정중'?'bamb':'bgrn';
   const d=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
   const dTag=d===null?'':d<0?' <span class="badge bred">만료</span>':d<=30?' <span class="badge bamb">D-'+d+'</span>':'';
@@ -5127,7 +5133,7 @@ settings(){
       </tr>`).join('')}</tbody></table></div></div>`:'')
     +`<div class="card" style="margin-bottom:14px">
       <div class="ch"><div class="ct">👥 사용자 목록 (${activeUsers.length}명)</div>
-        <button class="btn bpri bsm" onclick="Nav.go('users')">+ 사용자 등록</button>
+        <button class="btn bpri bsm" onclick="Pages._uForm(null)">+ 사용자 등록</button>
       </div>
       <div class="ts"><table class="dt" style="font-size:12px">
         <thead><tr>
@@ -5163,7 +5169,7 @@ settings(){
               +'<td><span class="badge '+(u.active?'bgrn':'bgry')+'" style="cursor:pointer" title="클릭하여 상태 변경" onclick="Pages._uStatusPopup('+u.id+',\''+H.e(u.name||u.username)+'\')">'+(u.active?'활성':'비활성')+'</span></td>'
               +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.created_at||'-')+'</td>'
               +'<td style="font-size:11px;color:var(--tm)">'+(u.updated_at?H.e(u.updated_at):'')+'</td>'
-              +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.last_login||'-')+'</td>'
+              +'<td style="font-size:11px;color:var(--tm)">'+(u.last_login?H.e(u.last_login):'')+'</td>'
               +'<td><button class="btn bsm bamb" onclick="Pages._uResetPw('+u.id+',&#39;'+H.e(u.username)+'&#39;)">🔑 초기화</button></td>'
               +'</tr>';
           }).join('')}
@@ -5206,7 +5212,7 @@ settings(){
     <button class="btn stab-btn ${isAdmin?'':'bout'}" data-tab="usermgmt"
       onclick="${isAdmin?"renderTab('usermgmt')":`Toast.show('관리자만 접근 가능합니다.','warn')`}"
       style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}"
-      title="${isAdmin?'사용자 관리':'관리자만 접근 가능'}">👥 사용자 관리${isAdmin?'':' 🔒'}</button>
+      title="${isAdmin?'사용자 등록':'관리자만 접근 가능'}">👥 사용자 등록${isAdmin?'':' 🔒'}</button>
   </div>
   <!-- 일반 설정 탭 -->
   <div class="stab-pane" data-tab="general" style="display:block">
