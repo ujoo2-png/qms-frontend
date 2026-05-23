@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.299</title>
+<title>QMS - 품질경영시스템 v2.300</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.299</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.300</div>
         </div>
       </div>
     </div>
@@ -892,7 +892,7 @@ textarea.fc{resize:vertical;min-height:68px}
           <span style="font-size:24px">📝</span>
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--tx)">회원가입</div>
-            <div style="font-size:11px;color:var(--tm)">가입 후 관리자 승인 시 로그인 가능합니다.</div>
+            <div style="font-size:11px;color:var(--tm)">가입 후 관리자 승인 시 로그인 가능합니다. <span style="color:#3b82f6;font-size:10px">[① 신청 → ② 승인 → ③ 로그인]</span></div>
           </div>
         </div>
         <!-- 입력 영역: 2열 그리드로 압축 -->
@@ -954,7 +954,7 @@ textarea.fc{resize:vertical;min-height:68px}
           </span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.299 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.300 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -965,7 +965,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.299</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.300</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -981,7 +981,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="ns"><div class="nst">기준정보</div>
         <div class="ni" data-p="items" onclick="Nav.go('items')"><span class="nii">📦</span><span class="nt">품목 등록</span></div>
         <div class="ni" data-p="vendors" onclick="Nav.go('vendors')"><span class="nii">🏢</span><span class="nt">거래처 등록</span></div>
-        <div class="ni" data-p="users" onclick="Nav.go('users')"><span class="nii">👥</span><span class="nt">사용자 등록</span></div>
+        <div class="ni" data-p="users" onclick="Nav.go('users')"><span class="nii">👥</span><span class="nt">사원관리</span></div>
       </div>
       <div class="ns"><div class="nst">품질관리</div>
         <div class="ni" data-p="quality_dash" onclick="Nav.go('quality_dash')"><span class="nii">📊</span><span class="nt">품질현황 대시보드</span></div>
@@ -1361,7 +1361,8 @@ const SB={
       to:         row.to||'',
       text:       row.text||row.message||'',
       message:    row.message||row.text||'',
-      ref:        row.ref||'',
+      ref:        row.ref||row.ref_key||'',
+      ref_key:    row.ref_key||row.ref||'',
       reply_to:   row.reply_to||null,
       read:       row.read||false,
       created_at: row.created_at||null,
@@ -1917,7 +1918,7 @@ const H={
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   },
-  /* [v2.299 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
+  /* [v2.300 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
      만료(D<0) → 교정만료  |  D-30 이내 → 교정중  |  나머지 → 정상 */
   equipStatus(next){
     if(!next) return '정상';
@@ -2103,7 +2104,7 @@ const Auth={
     const roleLabel={'admin':'관','manager':'장','user':'사'};
     ['uav','uname','urole','tbuser'].forEach((el,i)=>{
       const e=document.getElementById(el);
-      if(e)e.textContent=[roleLabel[user.role]||'사', user.name, user.name, user.name][i];
+      if(e)e.textContent=[(user.name||user.username||'?')[0],user.name||user.username,roleLabel[user.role]||'사용자',user.name||user.username][i];
     });
     /* [v2.27] 설정 메뉴: 관리자만 표시 */
     const settingsMenu=document.getElementById('ni_settings');
@@ -2381,7 +2382,7 @@ const Cmt={
     if(!this._d[key]){
       const all=await SB.getMentions();
       /* key 필터 */
-      this._d[key]=all.filter(m=>m.ref_key===key||m.target===key||m.key===key);
+      this._d[key]=all.filter(m=>m.ref_key===key||m.ref===key||m.target===key||m.key===key);
     }
     this._drawList(el,key);
   },
@@ -2760,7 +2761,7 @@ function _validateItem(code){
 /* ══ 상단 메뉴바 연동 (TopNav) ══ */
 const TopNav={
   _map:{
-    '기준정보':    [{label:'품목 등록',page:'items'},{label:'거래처 등록',page:'vendors'},{label:'사용자 등록',page:'users'}],
+    '기준정보':    [{label:'품목 등록',page:'items'},{label:'거래처 등록',page:'vendors'},{label:'사원관리',page:'users'}],
     '품질관리':    [{label:'품질현황 대시보드',page:'quality_dash'},{label:'수입검사',page:'insp_in'},{label:'공정검사',page:'insp_pr'},{label:'구매검사',page:'insp_pu'},{label:'외주검사',page:'insp_ou'},{label:'최종검사',page:'insp_fi'},{label:'부적합 관리',page:'nc'},{label:'8D Report',page:'nc_8d'},{label:'반품/폐기',page:'nc_dispose'},{label:'불량 트렌드',page:'nc_trend'}],
     '검사 고도화': [{label:'검사 기준서',page:'insp_std'},{label:'검사 성적서',page:'insp_cert'},{label:'LOT 추적성',page:'lot_trace'},{label:'Hold 관리',page:'hold_mgmt'},{label:'재검사 관리',page:'reinsp'}],
     '공급업체 품질':[{label:'업체 평가',page:'sqm_eval'},{label:'업체 심사',page:'sqm_audit'},{label:'SQM 대시보드',page:'sqm_dash'}],
@@ -2891,7 +2892,7 @@ home(){
 
   const cards=[
     {c:'mc-c1',icon:'📦',name:'기준정보',badge:0,
-     subs:[{icon:'📦',label:'품목 등록',page:'items'},{icon:'🏢',label:'거래처 등록',page:'vendors'},{icon:'👥',label:'사용자 등록',page:'users'}]},
+     subs:[{icon:'📦',label:'품목 등록',page:'items'},{icon:'🏢',label:'거래처 등록',page:'vendors'},{icon:'👥',label:'사원관리',page:'users'}]},
     {c:'mc-c2',icon:'🔍',name:'품질관리',badge:ncO,
      subs:[{icon:'📊',label:'품질현황 대시보드',page:'quality_dash'},{icon:'🔍',label:'수입검사',page:'insp_in'},{icon:'⚙️',label:'공정검사',page:'insp_pr'},{icon:'🛒',label:'구매검사',page:'insp_pu'},{icon:'🏭',label:'외주검사',page:'insp_ou'},{icon:'✅',label:'최종검사',page:'insp_fi'},{icon:'⚠️',label:'부적합 관리',page:'nc'},{icon:'📝',label:'8D Report',page:'nc_8d'},{icon:'♻️',label:'반품/폐기',page:'nc_dispose'},{icon:'📉',label:'불량 트렌드',page:'nc_trend'}]},
     {c:'mc-c3',icon:'📋',name:'검사 고도화',badge:0,
@@ -2933,7 +2934,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.299</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.300</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3716,7 +3717,7 @@ async users(){
       ${Object.entries(uroles).map(([r,n])=>`<div class="sd-card sd-sm"><div class="sd-lbl">${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[r]||r}</div><div class="sd-val" style="font-size:17px">${n}</div></div>`).join('')}
     </div>
     <div class="ph" style="margin-top:14px">
-      <div><div class="ptit">👥 사용자 등록</div><div class="psub">시스템 사용자 및 권한 관리</div></div>
+      <div><div class="ptit">👥 사원관리</div><div class="psub">시스템 사용자 및 권한 관리</div></div>
       <div class="pac">
         <button class="btn bpri btn-f2" onclick="Pages._uForm()">+ 사용자 등록 <span class="kbd">F2</span></button>
         <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('users')">📥 양식 내려받기</button>
@@ -4601,12 +4602,62 @@ async equip(){
         Pages.equip();
       },onRow:row=>Pages._eqDetail(row)});
 },
-_eqForm(row=null){Modal.open({title:row?'계측기 수정':'계측기 등록',size:'mlg',body:`<div class="fg2">
-  <div class="fgroup"><label class="fl req">계측기코드</label><input class="fc" value="${H.e(row?.code||'')}" placeholder="EQ-001" ${row?'readonly':''}></div>
-  <div class="fgroup"><label class="fl req">계측기명</label><input class="fc" value="${H.e(row?.name||'')}"></div>
-  <div class="fgroup"><label class="fl">모델번호</label><input class="fc" value="${H.e(row?.model||'')}"></div>
+_eqForm(row=null){
+  const isEdit=!!row;
+  const optSel=c=>c?' selected':'';
+  Modal.open({title:isEdit?'계측기 수정':'계측기 등록',size:'mlg',
+    body:'<div class="fg2">'
+      +'<div class="fgroup"><label class="fl req">계측기코드</label>'
+      +'<input id="ef_code" class="fc" value="'+H.e(row?.code||'')+'" placeholder="EQ-001" '+(isEdit?'readonly':'')+'></div>'
+      +'<div class="fgroup"><label class="fl req">계측기명</label>'
+      +'<input id="ef_name" class="fc" value="'+H.e(row?.name||'')+'" placeholder="높이게이지"></div>'
+      +'<div class="fgroup"><label class="fl">모델번호</label>'
+      +'<input id="ef_model" class="fc" value="'+H.e(row?.model||'')+'" placeholder="HG-200"></div>'
+      +'<div class="fgroup"><label class="fl">제조사</label>'
+      +'<input id="ef_maker" class="fc" value="'+H.e(row?.maker||'')+'" placeholder="미쓰토요"></div>'
+      +'<div class="fgroup"><label class="fl">측정범위</label>'
+      +'<input id="ef_range" class="fc" value="'+H.e(row?.range||'')+'" placeholder="0~200mm"></div>'
+      +'<div class="fgroup"><label class="fl">분해능</label>'
+      +'<input id="ef_res" class="fc" value="'+H.e(row?.res||'')+'" placeholder="0.01mm"></div>'
+      +'<div class="fgroup"><label class="fl">보관위치</label>'
+      +'<input id="ef_loc" class="fc" value="'+H.e(row?.loc||'')+'" placeholder="품질실"></div>'
+      +'<div class="fgroup"><label class="fl">사용자</label>'
+      +'<input id="ef_operator" class="fc" value="'+H.e(row?.operator||'')+'" placeholder="홍길동"></div>'
+      +'<div class="fgroup"><label class="fl">최근교정일</label>'
+      +'<input id="ef_last" class="fc" type="date" value="'+H.e(row?.last||'')+'">'+'</div>'
+      +'<div class="fgroup"><label class="fl">차기교정일</label>'
+      +'<input id="ef_next" class="fc" type="date" value="'+H.e(row?.next||'')+'">'+'</div>'
+      +'<div class="fgroup"><label class="fl">사용여부</label>'
+      +'<select id="ef_active" class="fc">'
+      +'<option value="1"'+optSel(!row||row.active!==0)+'>사용</option>'
+      +'<option value="0"'+optSel(!!row&&row.active===0)+'>불용</option>'
+      +'</select></div></div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
+      +'<button class="btn bpri" id="ef_ok">'+(isEdit?'💾 수정':'✅ 등록')+'</button>',
+  });
+  setTimeout(()=>{const b=document.getElementById('ef_ok');if(b)b.onclick=()=>Pages._eqSave(row||null);},50);
+},
+async _eqSave(orig){
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  const code=g('ef_code'),name=g('ef_name');
+  if(!code){Toast.show('계측기코드를 입력하세요.','warn');return}
+  if(!name){Toast.show('계측기명을 입력하세요.','warn');return}
+  const row={code,name,
+    model:g('ef_model'),maker:g('ef_maker'),range:g('ef_range'),
+    res:g('ef_res'),loc:g('ef_loc'),operator:g('ef_operator'),
+    last:g('ef_last')||null,next:g('ef_next')||null,
+    active:Number(document.getElementById('ef_active')?.value??1),
+  };
+  row.status=H.equipStatus(row.next);
+  if(orig?.id)row.id=orig.id;
+  const res=await SB.addEquip(row);
+  if(!res.ok){Toast.show('저장 실패','err');return}
+  Modal.close();Toast.show((orig?'수정':'등록')+'되었습니다.','ok');
+  DB.equip=await SB.getEquip();Pages.equip();
+},
+
 _eqDetail(row){
-  /* [v2.299 C안] 교정 이력 연동 — 문자열 연결 방식 */
+  /* [v2.300 C안] 교정 이력 연동 — 문자열 연결 방식 */
   const sCls=H.equipStatus(row.next)==='교정만료'?'bred':H.equipStatus(row.next)==='교정중'?'bamb':'bgrn';
   const d=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
   const dTag=d===null?'':d<0?' <span class="badge bred">만료</span>':d<=30?' <span class="badge bamb">D-'+d+'</span>':'';
@@ -4617,7 +4668,7 @@ _eqDetail(row){
     +'<div class="ir"><div class="il">제조사/모델</div><div class="iv">'+H.e(row.maker||'-')+' / '+H.e(row.model||'-')+'</div></div>'
     +'<div class="ir"><div class="il">측정범위/분해능</div><div class="iv">'+H.e(row.range||'-')+' / '+H.e(row.res||'-')+'</div></div>'
     +'<div class="ir"><div class="il">보관위치</div><div class="iv">'+H.e(row.loc||'-')+'</div></div>'
-    +'<div class="ir"><div class="il">사용자</div><div class="iv">'+H.e(row.user||'-')+'</div></div>'
+    +'<div class="ir"><div class="il">사용자</div><div class="iv">'+H.e(row.operator||'-')+'</div></div>'
     +'<div class="ir"><div class="il">최근교정일</div><div class="iv">'+(row.last||'-')+'</div></div>'
     +'<div class="ir"><div class="il">차기교정일</div><div class="iv">'+(row.next||'-')+dTag+'</div></div>'
     +'<div class="ir"><div class="il">상태</div><div class="iv"><span class="badge '+sCls+'">'+H.e(H.equipStatus(row.next))+'</span></div></div>'
@@ -4627,7 +4678,7 @@ _eqDetail(row){
     +'<div id="eqCmt" style="margin-top:12px"></div>';
   const footHtml=
     '<button class="btn bout" onclick="Modal.close()">닫기</button>'
-    +'<button class="btn bpri" onclick="Pages._eqForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')\' title="수정">✏️ 수정</button>';
+    +'<button class="btn bpri" onclick="Pages._eqForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')">✏️ 수정</button>';
   Modal.open({title:'계측기 상세 — '+H.e(row.name),size:'mlg',body:bodyHtml,foot:footHtml});
   setTimeout(async()=>{
     const hist=document.getElementById('eqCalHist');
@@ -4650,15 +4701,6 @@ _eqDetail(row){
     Cmt.render('#eqCmt','eq-'+row.id);
   },80);
 },
-},
-  <div class="ir"><div class="il">제조사</div><div class="iv">${H.e(row.maker)}</div></div>
-  <div class="ir"><div class="il">측정범위</div><div class="iv">${H.e(row.range)} / ${H.e(row.res)}</div></div>
-  <div class="ir"><div class="il">보관위치</div><div class="iv">${H.e(row.loc)}</div></div>
-  <div class="ir"><div class="il">교정일/차기</div><div class="iv">${row.last} → ${row.next}</div></div>
-  <div class="ir"><div class="il">상태</div><div class="iv"><span class="badge ${row.status==='정상'?'bgrn':row.status==='교정중'?'bamb':'bred'}">${H.e(row.status)}</span></div></div>
-  <div id="eqCmt"></div>`,
-  foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Pages._eqForm(${JSON.stringify(row).replace(/"/g,'&quot;')})">수정</button>`
-});setTimeout(()=>Cmt.render('#eqCmt',`eq-${row.id}`),80)},
 
 /* ── 교정 ── */
 cal(){
@@ -7139,7 +7181,7 @@ const ExcelMgr={
           (allOk
             ?'<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);font-size:13px;font-weight:600;color:var(--ok);margin-bottom:10px">✅ 전체 정합성 검사 통과! 등록 버튼이 활성화됩니다.</div>'
             :'<div style="padding:10px 14px;background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--r);font-size:13px;font-weight:600;color:var(--err);margin-bottom:10px">❌ '+totalErr+'건 오류 있음. 수정 후 재업로드하세요. <button class="btn bsm berr" onclick="ExcelMgr._exportResult()">📥 오류 결과 다운로드</button></div>');
-        const detailHtml=Object.entries({'items':'품목등록','vendors':'거래처등록','users':'사용자등록','insp_in':'수입검사','insp_pr':'공정검사','insp_pu':'구매검사','insp_ou':'외주검사','insp_fi':'최종검사','equip':'계측기등록'}).map(([pKey,sName])=>{
+        const detailHtml=Object.entries({'items':'품목등록','vendors':'거래처등록','users':'사용자등록','insp_in':'수입검사'}).map(([pKey,sName])=>{
           const r=results[pKey];
           if(!r) return '';
           if(r.skip) return '<div style="padding:8px 12px;background:var(--bg);border-radius:var(--r);border:1px solid var(--bd);margin-bottom:8px;font-size:12px;color:var(--tm)">📄 <strong>'+sName+'</strong> — '+(r.reason||'시트 없음 (건너뜀)')+'</div>';
@@ -7414,11 +7456,9 @@ const ExcelMgr={
     if(!this._multiParsed){Toast.show('분석된 데이터가 없습니다.','warn');return}
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
     const wb=XLSX.utils.book_new();
-    /* [v2.299] equip 시트 추가 */
     [['items','품목등록'],['vendors','거래처등록'],['users','사용자등록'],
       ['insp_in','수입검사'],['insp_pr','공정검사'],['insp_pu','구매검사'],
-      ['insp_ou','외주검사'],['insp_fi','최종검사'],
-      ['equip','계측기등록']].forEach(([pKey,sName])=>{
+      ['insp_ou','외주검사'],['insp_fi','최종검사']].forEach(([pKey,sName])=>{
       const r=this._multiParsed[pKey];
       if(!r||r.skip||!r.rows?.length) return;
       const sc=this._schemas[pKey];
@@ -7431,7 +7471,6 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:60}];
       XLSX.utils.book_append_sheet(wb,ws,sName);
     });
-    if(wb.SheetNames.length===0){Toast.show('내보낼 데이터가 없습니다.','warn');return}
     XLSX.writeFile(wb,'QMS_업로드결과_'+H.today()+'.xlsx');
     Toast.show('결과 파일이 다운로드되었습니다.','ok');
   },
@@ -7778,7 +7817,7 @@ function setupHotkeys(){
       const roleLabel={'admin':'관','manager':'장','user':'사'};
       ['uav','uname','urole','tbuser'].forEach((id,i)=>{
         const el=document.getElementById(id);
-        if(el)el.textContent=[roleLabel[u.role]||'사', u.name||u.username, u.name||u.username, u.name||u.username][i];
+        if(el)el.textContent=[(u.name||u.username||'?')[0],u.name||u.username,roleLabel[u.role]||'사용자',u.name||u.username][i];
       });
       document.getElementById('loginOv').style.display='none';
       document.getElementById('app').classList.remove('hidden');
