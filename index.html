@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.302</title>
+<title>QMS - 품질경영시스템 v2.303</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.302</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.303</div>
         </div>
       </div>
     </div>
@@ -885,7 +885,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-      <!-- ④ 회원가입 패널 [v2.302 컴팩트 재구성] -->
+      <!-- ④ 회원가입 패널 [v2.303 컴팩트 재구성] -->
       <div id="tabSignup" class="lo-panel">
         <div style="margin-bottom:10px">
           <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:2px">회원가입</div>
@@ -933,7 +933,7 @@ textarea.fc{resize:vertical;min-height:68px}
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.302 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.303 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -944,7 +944,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.302</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.303</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1897,7 +1897,7 @@ const H={
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   },
-  /* [v2.302 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
+  /* [v2.303 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
      만료(D<0) → 교정만료  |  D-30 이내 → 교정중  |  나머지 → 정상 */
   equipStatus(next){
     if(!next) return '정상';
@@ -2085,12 +2085,14 @@ const Auth={
       const e=document.getElementById(el);
       if(e)e.textContent=[(user.name||user.username||'?')[0],user.name||user.username,roleLabel[user.role]||'사용자',user.name||user.username][i];
     });
-    /* [v2.302] 최근 로그인 시각 SB 업데이트 */
+    /* [v2.303] 최근 로그인 시각 SB 업데이트 */
     if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
     /* [v2.27] 설정 메뉴: 관리자만 표시 */
     const settingsMenu=document.getElementById('ni_settings');
     if(settingsMenu) settingsMenu.style.display=(user.role==='admin')?'':'none';
-    const active=App.notices.filter(n=>n.show);
+    /* [v2.303] 게시기간 만료 공지 제외 */
+    const _today=H.today();
+    const active=App.notices.filter(n=>n.show&&(!n.expire||n.expire>=_today)&&(!n.date||n.date<=_today));
     if(active.length){
       const cnt=document.getElementById('npCount');if(cnt)cnt.textContent=`총 ${active.length}건`;
       const body=document.getElementById('npBody');
@@ -2915,7 +2917,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.302</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.303</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -2969,16 +2971,20 @@ home(){
           <span class="hw-panel-more" onclick="Nav.go('settings')">관리 →</span>
         </div>
         <div class="hw-panel-body">
-          ${App.notices.length===0
-            ?'<div style="padding:12px 0;text-align:center;color:#94a3b8;font-size:12px">📭 공지사항이 없습니다.</div>'
-            :App.notices.map(n=>`
-              <div class="hw-notice" onclick="Modal.open({title:'📢 공지사항',size:'mmd',body:\`<div style='font-weight:700;font-size:14px;margin-bottom:10px'>${H.e(n.title)}</div><p style='font-size:13px;line-height:1.75'>${H.e(n.body)}</p><div style='margin-top:12px;font-size:11px;color:#94a3b8'>✍ ${H.e(n.author)} &nbsp;|&nbsp; ${n.date}~${n.expire}</div>\`,foot:\`<button class='btn bout' onclick='Modal.close()'>닫기</button>\`})">
+          ${(()=>{
+            const _td=H.today();
+            const _vis=App.notices.filter(n=>n.show&&(!n.expire||n.expire>=_td)&&(!n.date||n.date<=_td));
+            return _vis.length===0
+              ?'<div style="padding:12px 0;text-align:center;color:#94a3b8;font-size:12px">📭 공지사항이 없습니다.</div>'
+              :_vis.map(n=>`
+              <div class="hw-notice" onclick="Modal.open({title:'📢 공지사항',size:'mmd',body:\`<div style='font-weight:700;font-size:14px;margin-bottom:10px'>${H.e(n.title)}</div><div style='font-size:13px;line-height:1.7'>${H.e(n.body||"")}</div>\`})">
                 <div class="hw-notice-row">
-                  ${n.show?'<span class="hw-notice-new">NEW</span>':''}
+                  <span class="hw-notice-new">NEW</span>
                   <div class="hw-notice-title">${H.e(n.title)}</div>
                 </div>
-                <div class="hw-notice-meta"><span>✍ ${H.e(n.author)}</span><span>📅 ${n.date}</span></div>
-              </div>`).join('')}
+                <div class="hw-notice-meta"><span>✍ ${H.e(n.author)}</span><span>📅 ${n.date}~${n.expire||""}</span></div>
+              </div>`).join('');
+          })()}
         </div>
       </div>
     </div>
@@ -3051,7 +3057,7 @@ async _approveUser(userId, username){
   const u=DB.users.find(u=>u.id===userId);
   if(u){u.active=1;u.pending=false;}
   Toast.show(`${username} 계정이 승인되었습니다.`,'ok');
-  /* [v2.302] 승인 후 화면 유지 — usermgmt 탭 그대로 */
+  /* [v2.303] 승인 후 화면 유지 — usermgmt 탭 그대로 */
   const pane=document.querySelector('.stab-pane[data-tab="usermgmt"]');
   if(pane) pane.innerHTML=renderUserMgmt();
 },
@@ -3688,7 +3694,7 @@ async users(){
   w.innerHTML='<div class="spin"></div>';
   const allUsers=await SB.getUsers();
   DB.users=allUsers;
-  /* [v2.302] 기준정보 사원관리 = 활성 사용자만 표시 (list 개념, pending 제외) */
+  /* [v2.303] 기준정보 사원관리 = 활성 사용자만 표시 (list 개념, pending 제외) */
   const utotal=DB.users.filter(u=>!u.pending&&u.active!==0).length,
         uactive=DB.users.filter(u=>u.active&&!u.pending).length;
   const uroles={};DB.users.forEach(u=>{uroles[u.role]=(uroles[u.role]||0)+1});
@@ -4642,7 +4648,7 @@ async _eqSave(orig){
 },
 
 _eqDetail(row){
-  /* [v2.302 C안] 교정 이력 연동 — 문자열 연결 방식 */
+  /* [v2.303 C안] 교정 이력 연동 — 문자열 연결 방식 */
   const sCls=H.equipStatus(row.next)==='교정만료'?'bred':H.equipStatus(row.next)==='교정중'?'bamb':'bgrn';
   const d=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
   const dTag=d===null?'':d<0?' <span class="badge bred">만료</span>':d<=30?' <span class="badge bamb">D-'+d+'</span>':'';
@@ -5195,44 +5201,78 @@ settings(){
   </div>
   <!-- 일반 설정 탭 -->
   <div class="stab-pane" data-tab="general" style="display:block">
-  <div class="g2" style="margin-bottom:14px">
-    <!-- 로고 관리 -->
-    <div class="card">
-      <div class="ch"><div class="ct">🖼️ 회사 로고 관리</div></div>
-      <div id="logoPreview" style="margin-bottom:13px;min-height:78px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:var(--r);border:1px dashed var(--bd2)">
-        ${App.logo?`<img src="${App.logo}" style="max-height:68px;max-width:195px;object-fit:contain">`:
-        `<div style="color:var(--tm);font-size:13px;text-align:center"><div style="font-size:28px;margin-bottom:4px">🖼️</div>로고 미등록</div>`}
-      </div>
-      <div style="display:flex;gap:8px">
-        <label class="btn bout bsm" style="cursor:pointer">📁 로고 업로드
-          <input type="file" accept="image/*" style="display:none" onchange="Pages._uploadLogo(this)">
-        </label>
-        ${App.logo?`<button class="btn berr bsm" onclick="Pages._removeLogo()">🗑️ 삭제</button>`:''}
-      </div>
+
+  <!-- ① 공지사항 관리 (메인) -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch" style="padding-bottom:10px">
+      <div class="ct">📢 공지사항 관리</div>
+      <button class="btn bpri bsm" onclick="Pages._addNotice()">+ 공지 추가</button>
     </div>
-    <!-- 공지사항 -->
-    <div class="card">
-      <div class="ch"><div class="ct">📢 공지사항 관리</div></div>
-      ${notices.map((n,i)=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;padding:8px;background:var(--bg);border-radius:var(--r)">
-        <input type="checkbox" ${n.show?'checked':''} onchange="App.notices[${i}].show=this.checked" style="margin-top:3px">
-        <div style="flex:1">
-          <div style="font-weight:600;font-size:13px">${H.e(n.title)}</div>
-          <div style="font-size:11px;color:var(--tm)">${n.date} ~ ${n.expire}</div>
-          ${n.file?`<div style="font-size:11px;margin-top:3px">📎 ${n.file.url?`<a href="${H.e(n.file.url)}" target="_blank" style="color:var(--acc)">${H.e(n.file.name||'파일')}</a>`:`<span style="color:var(--tm)">${H.e(n.file.name||'파일')}</span>`}</div>`:''}
-        </div>
-        <button class="btn bxs bgh" onclick="Pages._editNotice(${i})">수정</button>
-        <button class="btn bxs berr" onclick="Cfg.noticeDel(${i})">삭제</button>
-      </div>`).join('')}
-      <button class="btn bout bsm" onclick="Pages._addNotice()">+ 공지 추가</button>
+    <div class="ts">
+      <table class="dt" style="font-size:12px">
+        <thead><tr>
+          <th style="width:28px"><input type="checkbox" id="noticeAllChk"
+            onchange="document.querySelectorAll('.notice-chk').forEach(c=>c.checked=this.checked)"></th>
+          <th style="width:36px">No</th>
+          <th>제목</th>
+          <th style="min-width:140px">내용</th>
+          <th style="width:92px">게시 시작일</th>
+          <th style="width:92px">게시 종료일</th>
+          <th style="width:72px;text-align:center">게시 여부</th>
+          <th style="width:56px;text-align:center">파일</th>
+          <th style="width:88px;text-align:center">관리</th>
+        </tr></thead>
+        <tbody>${notices.length===0
+          ?'<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--tm)">등록된 공지사항이 없습니다.</td></tr>'
+          :notices.map((n,i)=>{
+            const today=H.today();
+            const active=n.show&&(!n.expire||n.expire>=today)&&(!n.date||n.date<=today);
+            const expiredCls=n.expire&&n.expire<today?"color:#ef4444":"";
+            return '<tr>'
+              +'<td><input type="checkbox" class="notice-chk" value="'+i+'"></td>'
+              +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
+              +'<td style="font-weight:600;cursor:pointer" onclick="Pages._editNotice('+i+')">'+H.e(n.title)+'</td>'
+              +'<td style="color:var(--tm);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+H.e(n.body||"-")+'</td>'
+              +'<td style="font-size:11px">'+(n.date||"-")+'</td>'
+              +'<td style="font-size:11px;'+expiredCls+'">'+(n.expire||"-")+'</td>'
+              +'<td style="text-align:center"><input type="checkbox" '+(n.show?"checked":"")+' onchange="App.notices['+i+'].show=this.checked;Pages.settings()"></td>'
+              +'<td style="text-align:center">'+(n.file?'<span title="'+H.e(n.file.name||"")+'">📎</span>':'<span style="color:var(--tl)">없음</span>')+'</td>'
+              +'<td style="text-align:center;white-space:nowrap">'
+              +'<button class="btn bxs bgh" onclick="Pages._editNotice('+i+')">수정</button> '
+              +'<button class="btn bxs berr" onclick="Cfg.noticeDel('+i+')">삭제</button>'
+              +'</td></tr>';
+          }).join("")}
+        </tbody>
+      </table>
     </div>
   </div>
-  <!-- 비밀번호 변경 -->
-  <div class="card" style="max-width:420px">
-    <div class="ch"><div class="ct">🔐 비밀번호 변경</div></div>
-    <div class="fgroup ff"><label class="fl req">현재 비밀번호</label><input class="fc" id="sPwCur" type="password"></div>
-    <div class="fgroup ff"><label class="fl req">새 비밀번호</label><input class="fc" id="sPwNew" type="password" placeholder="8자 이상"></div>
-    <div class="fgroup ff"><label class="fl req">비밀번호 확인</label><input class="fc" id="sPwNew2" type="password"></div>
-    <button class="btn bpri bsm" onclick="Pages._changePw()">변경</button>
+
+  <!-- ② 하단: 로고 + 비밀번호 2열 소형 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <!-- 회사 로고 -->
+    <div class="card">
+      <div class="ch" style="padding-bottom:8px"><div class="ct" style="font-size:12px">🖼️ 회사 로고</div></div>
+      <div id="logoPreview" style="height:48px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;border:1px dashed var(--bd);border-radius:6px;background:var(--bg)">
+        ${App.logo?`<img src="${App.logo}" style="max-height:44px;max-width:160px;object-fit:contain">`:
+        `<span style="color:var(--tl);font-size:11px">로고 없음</span>`}
+      </div>
+      <div style="display:flex;gap:6px">
+        <label class="btn bout bsm" style="cursor:pointer;font-size:11px">📁 업로드
+          <input type="file" accept="image/*" style="display:none" onchange="Pages._uploadLogo(this)">
+        </label>
+        ${App.logo?`<button class="btn berr bsm" style="font-size:11px" onclick="Pages._removeLogo()">🗑️ 삭제</button>`:""}
+      </div>
+    </div>
+    <!-- 비밀번호 변경 -->
+    <div class="card">
+      <div class="ch" style="padding-bottom:8px"><div class="ct" style="font-size:12px">🔐 비밀번호 변경</div></div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <input class="fc" id="sPwCur" type="password" placeholder="현재 비밀번호" style="font-size:12px;padding:5px 8px">
+        <input class="fc" id="sPwNew" type="password" placeholder="새 비밀번호 (8자 이상)" style="font-size:12px;padding:5px 8px">
+        <input class="fc" id="sPwNew2" type="password" placeholder="새 비밀번호 확인" style="font-size:12px;padding:5px 8px">
+        <button class="btn bpri bsm" onclick="Pages._changePw()" style="font-size:12px">변경</button>
+      </div>
+    </div>
   </div>
   </div>
   <!-- 사용자 관리 탭 (관리자만) -->
