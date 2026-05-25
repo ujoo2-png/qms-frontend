@@ -2,11 +2,43 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.html",
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.css",
       "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/qms-db.js",
+      "dest": "/qms-db.js"
+    },
+    {
+      "src": "/qms-core.js",
+      "dest": "/qms-core.js"
+    },
+    {
+      "src": "/qms-pages.js",
+      "dest": "/qms-pages.js"
+    },
+    {
+      "src": "/qms-excel.js",
+      "dest": "/qms-excel.js"
+    },
+    {
+      "src": "/qms-init.js",
+      "dest": "/qms-init.js"
+    },
+    {
+      "src": "/qms-style.css",
+      "dest": "/qms-style.css"
+    },
     {
       "src": "/(.*)",
       "dest": "/index.html"
