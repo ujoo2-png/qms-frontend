@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.303</title>
+<title>QMS - 품질경영시스템 v2.304</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.303</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.304</div>
         </div>
       </div>
     </div>
@@ -885,7 +885,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-      <!-- ④ 회원가입 패널 [v2.303 컴팩트 재구성] -->
+      <!-- ④ 회원가입 패널 [v2.304 컴팩트 재구성] -->
       <div id="tabSignup" class="lo-panel">
         <div style="margin-bottom:10px">
           <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:2px">회원가입</div>
@@ -933,7 +933,7 @@ textarea.fc{resize:vertical;min-height:68px}
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.303 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.304 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -944,7 +944,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.303</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.304</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1754,12 +1754,63 @@ const SB={
     return data;
   },
   async addCal(row){
-    if(!_sb){const id=Math.max(0,...DB.cals.map(c=>c.id))+1;DB.cals.push({id,...row});return{ok:true,id};}
-    /* .select() 미사용: RLS 오류 방지 (v2.17) */
-    const {error}=await _sb.from('calibrations').insert(row);
+    /* [v2.304 Phase1] allowed 컬럼 명시 */
+    const allowed={
+      equip_code: row.equip_code||row.code||'',
+      code:        row.code||row.equip_code||'',
+      cal_date:    row.cal_date||row.date||null,
+      date:        row.date||row.cal_date||null,
+      next_date:   row.next_date||row.next||null,
+      next:        row.next||row.next_date||null,
+      agency:      row.agency||'',
+      cert_no:     row.cert_no||row.cert||'',
+      cert:        row.cert||row.cert_no||'',
+      result:      row.result||'합격',
+      cost:        row.cost||null,
+      note:        row.note||'',
+      file_url:    row.file_url||'',
+      created_by:  row.created_by||Auth.cur()?.username||'system',
+    };
+    if(!_sb){const id=Math.max(0,...DB.cals.map(c=>c.id))+1;DB.cals.push({id,...allowed});return{ok:true,id};}
+    const {error}=await _sb.from('calibrations').insert(allowed);
     if(error){Toast.show('교정 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.cals.push({id:Date.now(),...row});return{ok:true};
+    DB.cals.push({id:Date.now(),...allowed});return{ok:true};
   },
+
+  /* ── [v2.304 Phase1] 교정이력 수정/삭제 ── */
+  async updateCal(id, patch){
+    if(!_sb){const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
+    patch.updated_at=H.today();
+    const{error}=await _sb.from('calibrations').update(patch).eq('id',id);
+    if(error){Toast.show('교정이력 수정 실패: '+error.message,'err');return{ok:false};}
+    const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
+  },
+  async deleteCal(id){
+    if(!_sb){DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};}
+    const{error}=await _sb.from('calibrations').delete().eq('id',id);
+    if(error){Toast.show('교정이력 삭제 실패: '+error.message,'err');return{ok:false};}
+    DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};
+  },
+
+  /* ── [v2.304 Phase1] 변경 이력 조회/저장 ── */
+  async getLogs(equip_code){
+    if(!_sb){return DB.equip_logs.filter(l=>l.equip_code===equip_code);}
+    const{data,error}=await _sb.from('equipment_logs')
+      .select('*').eq('equip_code',equip_code)
+      .order('changed_at',{ascending:false});
+    if(error){console.warn('[SB] getLogs 실패:',error.message);return[];}
+    return data||[];
+  },
+  async addLog(row){
+    /* row: {equip_code, change_type, field_name, old_value, new_value, changed_by} */
+    const entry={...row, changed_at:new Date().toISOString()};
+    DB.equip_logs.unshift({id:Date.now(),...entry});
+    if(!_sb) return{ok:true};
+    const{error}=await _sb.from('equipment_logs').insert(entry);
+    if(error){console.warn('[SB] addLog 실패:',error.message);return{ok:false};}
+    return{ok:true};
+  },
+
 
   /* ── 문서 ── */
   async getDocs(){
@@ -1860,6 +1911,8 @@ const DB={
     {id:3,code:'EQ-003',name:'다이얼게이지',date:'2025-11-15',agency:'한국계량측정',result:'합격',next:'2026-05-15',cert:'CAL-2025-015'},
     {id:4,code:'EQ-005',name:'경도계(로크웰)',date:'2025-10-01',agency:'㈜정밀측정',result:'합격',next:'2026-04-01',cert:'CAL-2025-010'},
   ],
+  /* [v2.304 Phase1] 계측기 변경이력 캐시 */
+  equip_logs:[],
   docs:[
     {id:1,no:'QP-20260110-001',type:'절차서',title:'수입검사 절차서',rev:'2.0',date:'2026-01-10',status:'유효',author:'김품질'},
     {id:2,no:'QP-20260115-001',type:'절차서',title:'부적합품 관리 절차서',rev:'1.5',date:'2026-01-15',status:'유효',author:'김품질'},
@@ -1897,7 +1950,7 @@ const H={
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   },
-  /* [v2.303 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
+  /* [v2.304 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
      만료(D<0) → 교정만료  |  D-30 이내 → 교정중  |  나머지 → 정상 */
   equipStatus(next){
     if(!next) return '정상';
@@ -2085,12 +2138,12 @@ const Auth={
       const e=document.getElementById(el);
       if(e)e.textContent=[(user.name||user.username||'?')[0],user.name||user.username,roleLabel[user.role]||'사용자',user.name||user.username][i];
     });
-    /* [v2.303] 최근 로그인 시각 SB 업데이트 */
+    /* [v2.304] 최근 로그인 시각 SB 업데이트 */
     if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
     /* [v2.27] 설정 메뉴: 관리자만 표시 */
     const settingsMenu=document.getElementById('ni_settings');
     if(settingsMenu) settingsMenu.style.display=(user.role==='admin')?'':'none';
-    /* [v2.303] 게시기간 만료 공지 제외 */
+    /* [v2.304] 게시기간 만료 공지 제외 */
     const _today=H.today();
     const active=App.notices.filter(n=>n.show&&(!n.expire||n.expire>=_today)&&(!n.date||n.date<=_today));
     if(active.length){
@@ -2917,7 +2970,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.303</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.304</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3057,7 +3110,7 @@ async _approveUser(userId, username){
   const u=DB.users.find(u=>u.id===userId);
   if(u){u.active=1;u.pending=false;}
   Toast.show(`${username} 계정이 승인되었습니다.`,'ok');
-  /* [v2.303] 승인 후 화면 유지 — usermgmt 탭 그대로 */
+  /* [v2.304] 승인 후 화면 유지 — usermgmt 탭 그대로 */
   const pane=document.querySelector('.stab-pane[data-tab="usermgmt"]');
   if(pane) pane.innerHTML=renderUserMgmt();
 },
@@ -3694,7 +3747,7 @@ async users(){
   w.innerHTML='<div class="spin"></div>';
   const allUsers=await SB.getUsers();
   DB.users=allUsers;
-  /* [v2.303] 기준정보 사원관리 = 활성 사용자만 표시 (list 개념, pending 제외) */
+  /* [v2.304] 기준정보 사원관리 = 활성 사용자만 표시 (list 개념, pending 제외) */
   const utotal=DB.users.filter(u=>!u.pending&&u.active!==0).length,
         uactive=DB.users.filter(u=>u.active&&!u.pending).length;
   const uroles={};DB.users.forEach(u=>{uroles[u.role]=(uroles[u.role]||0)+1});
@@ -4640,15 +4693,41 @@ async _eqSave(orig){
     active:Number(document.getElementById('ef_active')?.value??1),
   };
   row.status=H.equipStatus(row.next);
-  if(orig?.id)row.id=orig.id;
+  if(orig?.id) row.id=orig.id;
+
+  /* [v2.304 Phase1] 수정 시 변경 이력 자동 기록 */
+  if(orig){
+    const by=Auth.cur()?.username||'system';
+    const _LOG_FIELDS=[
+      {key:'operator', label:'사용자'},
+      {key:'loc',      label:'보관위치'},
+      {key:'active',   label:'사용여부'},
+      {key:'status',   label:'상태'},
+      {key:'next',     label:'차기교정일'},
+      {key:'last',     label:'최근교정일'},
+      {key:'maker',    label:'제조사'},
+      {key:'range',    label:'측정범위'},
+      {key:'res',      label:'분해능'},
+      {key:'name',     label:'계측기명'},
+    ];
+    for(const{key,label}of _LOG_FIELDS){
+      const oldV=String(orig[key]??''), newV=String(row[key]??'');
+      if(oldV!==newV){
+        await SB.addLog({equip_code:orig.code,change_type:'수정',field_name:label,old_value:oldV,new_value:newV,changed_by:by});
+      }
+    }
+  }
+
   const res=await SB.addEquip(row);
   if(!res.ok){Toast.show('저장 실패','err');return}
-  Modal.close();Toast.show((orig?'수정':'등록')+'되었습니다.','ok');
-  DB.equip=await SB.getEquip();Pages.equip();
+  Modal.close();
+  Toast.show((orig?'수정':'등록')+'되었습니다.','ok');
+  DB.equip=await SB.getEquip();
+  Pages.equip();
 },
 
 _eqDetail(row){
-  /* [v2.303 C안] 교정 이력 연동 — 문자열 연결 방식 */
+  /* [v2.304 C안] 교정 이력 연동 — 문자열 연결 방식 */
   const sCls=H.equipStatus(row.next)==='교정만료'?'bred':H.equipStatus(row.next)==='교정중'?'bamb':'bgrn';
   const d=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
   const dTag=d===null?'':d<0?' <span class="badge bred">만료</span>':d<=30?' <span class="badge bamb">D-'+d+'</span>':'';
