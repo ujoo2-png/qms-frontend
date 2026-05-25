@@ -1,4 +1,4 @@
-/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.309] */
+/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.310] */
 "use strict";
 
 
@@ -215,6 +215,11 @@ const Auth={
     });
     /* [v2.305] 최근 로그인 시각 SB 업데이트 */
     if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
+    /* [v2.310] 권한 설정 복원 — sessionStorage에서 로드 */
+    try{
+      const _sp=sessionStorage.getItem('qms_perms');
+      if(_sp) App.perms=JSON.parse(_sp);
+    }catch(e){}
     /* [v2.27] 설정 메뉴: 관리자만 표시 */
     const settingsMenu=document.getElementById('ni_settings');
     if(settingsMenu) settingsMenu.style.display=(user.role==='admin')?'':'none';
@@ -965,7 +970,7 @@ const TopNav={
       }
     }
   },
-  /* [v2.309] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
+  /* [v2.310] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
   selectMention(){
     /* 기존 active 탭 해제 */
     document.querySelectorAll('.tb-mod').forEach(m=>m.classList.remove('on'));
@@ -973,7 +978,7 @@ const TopNav={
     /* 사이드바 필터링 없이 바로 mentions 페이지로 이동 */
     Nav.go('mentions');
   },
-  /* [v2.309] 멘션 미읽음 배지 업데이트 */
+  /* [v2.310] 멘션 미읽음 배지 업데이트 */
   updateMentionBadge(){
     const me=Auth._cur||'admin';
     const unread=(DB.mentions||[]).filter(m=>
@@ -1001,9 +1006,25 @@ const Nav={
   go(page){
     /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
     if(Auth._u) sessionStorage.setItem('qms_page', page);
-    /* [v2.309] 멘션함 이동 시 배지 업데이트 */
+    /* [v2.310] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
+    const _np=document.getElementById('npOverlay');
+    if(_np&&!_np.classList.contains('hidden')) _np.classList.add('hidden');
+    /* [v2.310] 멘션함 이동 시 배지 업데이트 */
     if(page==='mentions') setTimeout(()=>TopNav.updateMentionBadge(),300);
 
+    /* [v2.310] 권한 기반 접근 제어 */
+    const _role=Auth._u?.role||'viewer';
+    const _roles=['admin','manager','user','viewer'];
+    const _pKey=page+'_'+_role;
+    const _adminOnly=['settings'];
+    if(_adminOnly.includes(page)&&_role!=='admin'){
+      Toast.show('관리자만 접근할 수 있습니다.','warn');return;
+    }
+    /* perms 설정 있으면 체크 */
+    if(_role!=='admin'&&App.perms&&Object.keys(App.perms).length){
+      const _perm=App.perms[_pKey];
+      if(_perm===false){Toast.show('접근 권한이 없습니다.','warn');return;}
+    }
     document.querySelectorAll('.ni').forEach(el=>el.classList.toggle('active',el.dataset.p===page));
 
     /* 홈: 사이드바 숨김 + 상단바 숨김, 전체 화면 */
