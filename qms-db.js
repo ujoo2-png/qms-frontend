@@ -627,7 +627,7 @@ const SB={
   async getCals(){
     if(!_sb) return DB.cals;
     /* [v2.25] _sbFetchAll: 1000건 제한 해제 */
-    const data=await this._sbFetchAll('calibrations','date',false);
+    const data=await this._sbFetchAll('calibrations','cal_date',false);
     if(data===null){console.warn('[SB] cals 조회 실패');return [];}
     return data;
   },
