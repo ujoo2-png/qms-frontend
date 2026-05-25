@@ -168,7 +168,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.304</title>
+<title>QMS - 품질경영시스템 v2.305</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -785,7 +785,7 @@ textarea.fc{resize:vertical;min-height:68px}
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.304</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.305</div>
         </div>
       </div>
     </div>
@@ -885,7 +885,7 @@ textarea.fc{resize:vertical;min-height:68px}
         </div>
       </div>
     </div>
-      <!-- ④ 회원가입 패널 [v2.304 컴팩트 재구성] -->
+      <!-- ④ 회원가입 패널 [v2.305 컴팩트 재구성] -->
       <div id="tabSignup" class="lo-panel">
         <div style="margin-bottom:10px">
           <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:2px">회원가입</div>
@@ -933,7 +933,7 @@ textarea.fc{resize:vertical;min-height:68px}
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.304 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; v2.305 (2026-05-22) &nbsp;|&nbsp; 관리자 문의: admin@company.com</div>
   </div>
 </div>
 
@@ -944,7 +944,7 @@ textarea.fc{resize:vertical;min-height:68px}
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.304</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.305</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -1754,7 +1754,7 @@ const SB={
     return data;
   },
   async addCal(row){
-    /* [v2.304 Phase1] allowed 컬럼 명시 */
+    /* [v2.305 Phase1] allowed 컬럼 명시 */
     const allowed={
       equip_code: row.equip_code||row.code||'',
       code:        row.code||row.equip_code||'',
@@ -1777,7 +1777,7 @@ const SB={
     DB.cals.push({id:Date.now(),...allowed});return{ok:true};
   },
 
-  /* ── [v2.304 Phase1] 교정이력 수정/삭제 ── */
+  /* ── [v2.305 Phase1] 교정이력 수정/삭제 ── */
   async updateCal(id, patch){
     if(!_sb){const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
     patch.updated_at=H.today();
@@ -1792,7 +1792,7 @@ const SB={
     DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};
   },
 
-  /* ── [v2.304 Phase1] 변경 이력 조회/저장 ── */
+  /* ── [v2.305 Phase1] 변경 이력 조회/저장 ── */
   async getLogs(equip_code){
     if(!_sb){return DB.equip_logs.filter(l=>l.equip_code===equip_code);}
     const{data,error}=await _sb.from('equipment_logs')
@@ -1911,7 +1911,7 @@ const DB={
     {id:3,code:'EQ-003',name:'다이얼게이지',date:'2025-11-15',agency:'한국계량측정',result:'합격',next:'2026-05-15',cert:'CAL-2025-015'},
     {id:4,code:'EQ-005',name:'경도계(로크웰)',date:'2025-10-01',agency:'㈜정밀측정',result:'합격',next:'2026-04-01',cert:'CAL-2025-010'},
   ],
-  /* [v2.304 Phase1] 계측기 변경이력 캐시 */
+  /* [v2.305 Phase1] 계측기 변경이력 캐시 */
   equip_logs:[],
   docs:[
     {id:1,no:'QP-20260110-001',type:'절차서',title:'수입검사 절차서',rev:'2.0',date:'2026-01-10',status:'유효',author:'김품질'},
@@ -1950,7 +1950,7 @@ const H={
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   },
-  /* [v2.304 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
+  /* [v2.305 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
      만료(D<0) → 교정만료  |  D-30 이내 → 교정중  |  나머지 → 정상 */
   equipStatus(next){
     if(!next) return '정상';
@@ -2138,12 +2138,12 @@ const Auth={
       const e=document.getElementById(el);
       if(e)e.textContent=[(user.name||user.username||'?')[0],user.name||user.username,roleLabel[user.role]||'사용자',user.name||user.username][i];
     });
-    /* [v2.304] 최근 로그인 시각 SB 업데이트 */
+    /* [v2.305] 최근 로그인 시각 SB 업데이트 */
     if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
     /* [v2.27] 설정 메뉴: 관리자만 표시 */
     const settingsMenu=document.getElementById('ni_settings');
     if(settingsMenu) settingsMenu.style.display=(user.role==='admin')?'':'none';
-    /* [v2.304] 게시기간 만료 공지 제외 */
+    /* [v2.305] 게시기간 만료 공지 제외 */
     const _today=H.today();
     const active=App.notices.filter(n=>n.show&&(!n.expire||n.expire>=_today)&&(!n.date||n.date<=_today));
     if(active.length){
@@ -2970,7 +2970,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.304</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.305</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3110,7 +3110,7 @@ async _approveUser(userId, username){
   const u=DB.users.find(u=>u.id===userId);
   if(u){u.active=1;u.pending=false;}
   Toast.show(`${username} 계정이 승인되었습니다.`,'ok');
-  /* [v2.304] 승인 후 화면 유지 — usermgmt 탭 그대로 */
+  /* [v2.305] 승인 후 화면 유지 — usermgmt 탭 그대로 */
   const pane=document.querySelector('.stab-pane[data-tab="usermgmt"]');
   if(pane) pane.innerHTML=renderUserMgmt();
 },
@@ -3747,7 +3747,7 @@ async users(){
   w.innerHTML='<div class="spin"></div>';
   const allUsers=await SB.getUsers();
   DB.users=allUsers;
-  /* [v2.304] 기준정보 사원관리 = 활성 사용자만 표시 (list 개념, pending 제외) */
+  /* [v2.305] 기준정보 사원관리 = 활성 사용자만 표시 (list 개념, pending 제외) */
   const utotal=DB.users.filter(u=>!u.pending&&u.active!==0).length,
         uactive=DB.users.filter(u=>u.active&&!u.pending).length;
   const uroles={};DB.users.forEach(u=>{uroles[u.role]=(uroles[u.role]||0)+1});
@@ -4695,7 +4695,7 @@ async _eqSave(orig){
   row.status=H.equipStatus(row.next);
   if(orig?.id) row.id=orig.id;
 
-  /* [v2.304 Phase1] 수정 시 변경 이력 자동 기록 */
+  /* [v2.305 Phase1] 수정 시 변경 이력 자동 기록 */
   if(orig){
     const by=Auth.cur()?.username||'system';
     const _LOG_FIELDS=[
@@ -4727,50 +4727,172 @@ async _eqSave(orig){
 },
 
 _eqDetail(row){
-  /* [v2.304 C안] 교정 이력 연동 — 문자열 연결 방식 */
+  /* [v2.305 Phase2] 탭 구조: 기본정보 / 교정이력 / 변경이력 */
   const sCls=H.equipStatus(row.next)==='교정만료'?'bred':H.equipStatus(row.next)==='교정중'?'bamb':'bgrn';
-  const d=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
-  const dTag=d===null?'':d<0?' <span class="badge bred">만료</span>':d<=30?' <span class="badge bamb">D-'+d+'</span>':'';
-  const bodyHtml=
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'
-    +'<div class="ir"><div class="il">계측기코드</div><div class="iv" style="font-family:monospace;font-weight:700">'+H.e(row.code)+'</div></div>'
-    +'<div class="ir"><div class="il">계측기명</div><div class="iv">'+H.e(row.name)+'</div></div>'
-    +'<div class="ir"><div class="il">제조사/모델</div><div class="iv">'+H.e(row.maker||'-')+' / '+H.e(row.model||'-')+'</div></div>'
-    +'<div class="ir"><div class="il">측정범위/분해능</div><div class="iv">'+H.e(row.range||'-')+' / '+H.e(row.res||'-')+'</div></div>'
-    +'<div class="ir"><div class="il">보관위치</div><div class="iv">'+H.e(row.loc||'-')+'</div></div>'
-    +'<div class="ir"><div class="il">사용자</div><div class="iv">'+H.e(row.operator||'-')+'</div></div>'
-    +'<div class="ir"><div class="il">최근교정일</div><div class="iv">'+(row.last||'-')+'</div></div>'
-    +'<div class="ir"><div class="il">차기교정일</div><div class="iv">'+(row.next||'-')+dTag+'</div></div>'
-    +'<div class="ir"><div class="il">상태</div><div class="iv"><span class="badge '+sCls+'">'+H.e(H.equipStatus(row.next))+'</span></div></div>'
-    +'</div>'
-    +'<div style="font-weight:700;font-size:13px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bd)">📋 교정 이력</div>'
-    +'<div id="eqCalHist"><div class="spin"></div></div>'
-    +'<div id="eqCmt" style="margin-top:12px"></div>';
-  const footHtml=
-    '<button class="btn bout" onclick="Modal.close()">닫기</button>'
-    +'<button class="btn bpri" onclick="Pages._eqForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')">✏️ 수정</button>';
-  Modal.open({title:'계측기 상세 — '+H.e(row.name),size:'mlg',body:bodyHtml,foot:footHtml});
+  const d2=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
+  const expired=d2!==null&&0>d2;
+  const near=d2!==null&&!expired&&30>=d2;
+  const dTag=d2===null?'':(expired?' <span class="badge bred">만료</span>':(near?' <span class="badge bamb">D-'+d2+'</span>':''));
+
+  /* 기본정보 HTML */
+  const infoHtml=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    '<div class="ir"><div class="il">계측기코드</div><div class="iv" style="font-family:monospace;font-weight:700">'+H.e(row.code)+'</div></div>'+
+    '<div class="ir"><div class="il">계측기명</div><div class="iv">'+H.e(row.name)+'</div></div>'+
+    '<div class="ir"><div class="il">제조사/모델</div><div class="iv">'+H.e(row.maker||'-')+' / '+H.e(row.model||'-')+'</div></div>'+
+    '<div class="ir"><div class="il">측정범위/분해능</div><div class="iv">'+H.e(row.range||'-')+' / '+H.e(row.res||'-')+'</div></div>'+
+    '<div class="ir"><div class="il">보관위치</div><div class="iv">'+H.e(row.loc||'-')+'</div></div>'+
+    '<div class="ir"><div class="il">사용자</div><div class="iv">'+H.e(row.operator||'-')+'</div></div>'+
+    '<div class="ir"><div class="il">최근교정일</div><div class="iv">'+(row.last||'-')+'</div></div>'+
+    '<div class="ir"><div class="il">차기교정일</div><div class="iv">'+(row.next||'-')+dTag+'</div></div>'+
+    '<div class="ir"><div class="il">사용여부</div><div class="iv"><span class="badge '+(row.active===0?'bred':'bgrn')+'">'+(row.active===0?'불용':'사용')+'</span></div></div>'+
+    '<div class="ir"><div class="il">상태</div><div class="iv"><span class="badge '+sCls+'">'+H.e(H.equipStatus(row.next))+'</span></div></div>'+
+    '</div>';
+
+  /* 탭 컨테이너 */
+  const body=
+    '<div style="display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--bd)">'+
+    '<button class="eq-dtab on" data-tab="info" onclick="Pages._eqDTab(this)" style="padding:6px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--pri);border-bottom:2px solid var(--pri);margin-bottom:-2px">📋 기본정보</button>'+
+    '<button class="eq-dtab" data-tab="cal" onclick="Pages._eqDTab(this)" style="padding:6px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--tm)">📐 교정이력</button>'+
+    '<button class="eq-dtab" data-tab="log" onclick="Pages._eqDTab(this)" style="padding:6px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--tm)">📝 변경이력</button>'+
+    '</div>'+
+    '<div id="eqDPane_info">'+infoHtml+'</div>'+
+    '<div id="eqDPane_cal" style="display:none"><div class="spin"></div></div>'+
+    '<div id="eqDPane_log" style="display:none"><div class="spin"></div></div>'+
+    '<div id="eqCmt" style="margin-top:12px"></div>';
+
+  const foot=
+    '<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+    '<button class="btn bgh" onclick="Pages._calForm(&quot;'+H.e(row.code)+'&quot;)">📐 교정 등록</button>'+
+    '<button class="btn bpri" onclick="Pages._eqForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')" title="수정">✏️ 수정</button>';
+
+  Modal.open({title:'계측기 상세 — '+H.e(row.name),size:'mlg',body,foot});
+
+  /* 교정이력 + 댓글 비동기 로드 */
   setTimeout(async()=>{
-    const hist=document.getElementById('eqCalHist');
-    if(!hist) return;
-    if(!DB.cals||DB.cals.length===0){const d2=await SB.getCals();if(d2)DB.cals=d2;}
-    const recs=DB.cals.filter(c=>c.code===row.code).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    if(!recs.length){hist.innerHTML='<div style="color:var(--tm);font-size:12px;padding:8px">교정 이력 없음</div>';}
-    else hist.innerHTML='<table style="width:100%;font-size:12px;border-collapse:collapse">'
-      +'<thead><tr style="background:var(--bg)">'
-      +'<th style="padding:5px 8px;text-align:left">교정일</th><th style="padding:5px 8px;text-align:left">교정기관</th>'
-      +'<th style="padding:5px 8px;text-align:left">성적서번호</th><th style="padding:5px 8px;text-align:center">결과</th>'
-      +'<th style="padding:5px 8px;text-align:left">차기교정일</th></tr></thead><tbody>'
-      +recs.map(c=>'<tr style="border-bottom:1px solid var(--bd)">'
-        +'<td style="padding:5px 8px">'+(c.date||'-')+'</td>'
-        +'<td style="padding:5px 8px">'+H.e(c.agency||'-')+'</td>'
-        +'<td style="padding:5px 8px;font-family:monospace">'+H.e(c.cert||'-')+'</td>'
-        +'<td style="padding:5px 8px;text-align:center"><span class="badge '+(c.result==='합격'?'bgrn':'bred')+'">'+H.e(c.result||'-')+'</span></td>'
-        +'<td style="padding:5px 8px">'+(c.next||'-')+'</td></tr>').join('')
-      +'</tbody></table>';
+    const calPane=document.getElementById('eqDPane_cal');
+    const logPane=document.getElementById('eqDPane_log');
+    /* 변경이력 탭에 code 전달 */
+    if(logPane) logPane._equip_code=row.code;
+    if(!calPane) return;
+    if(!DB.cals||!DB.cals.length){const ld=await SB.getCals();if(ld)DB.cals=ld;}
+    const recs=(DB.cals||[]).filter(c=>(c.code===row.code||c.equip_code===row.code))
+      .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''));
+    if(!recs.length){
+      calPane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:12px 0">교정 이력이 없습니다.</div>';
+    } else {
+      let t='<table style="width:100%;font-size:12px;border-collapse:collapse">'+
+        '<thead><tr style="background:var(--bg)">'+
+        '<th style="padding:5px 8px;text-align:left">교정일</th>'+
+        '<th style="padding:5px 8px;text-align:left">교정기관</th>'+
+        '<th style="padding:5px 8px;text-align:left">성적서번호</th>'+
+        '<th style="padding:5px 8px;text-align:center">결과</th>'+
+        '<th style="padding:5px 8px;text-align:left">차기교정일</th>'+
+        '<th style="padding:5px 8px;text-align:right">비용(원)</th>'+
+        '<th style="padding:5px 8px;text-align:center">관리</th>'+
+        '</tr></thead><tbody>';
+      recs.forEach(c=>{
+        t+='<tr style="border-bottom:1px solid var(--bd)">'+
+          '<td style="padding:5px 8px">'+(c.cal_date||c.date||'-')+'</td>'+
+          '<td style="padding:5px 8px">'+H.e(c.agency||'-')+'</td>'+
+          '<td style="padding:5px 8px;font-family:monospace">'+H.e(c.cert_no||c.cert||'-')+'</td>'+
+          '<td style="padding:5px 8px;text-align:center"><span class="badge '+(c.result==='합격'?'bgrn':c.result==='조건부합격'?'bamb':'bred')+'">'+H.e(c.result||'-')+'</span></td>'+
+          '<td style="padding:5px 8px">'+(c.next_date||c.next||'-')+'</td>'+
+          '<td style="padding:5px 8px;text-align:right">'+(c.cost?(Number(c.cost).toLocaleString()):'—')+'</td>'+
+          '<td style="padding:5px 8px;text-align:center;white-space:nowrap">'+
+          '<button class="btn bxs bgh" onclick="Pages._calForm(&quot;'+H.e(equip_code)+'&quot;,'+JSON.stringify(c).replace(/"/g,'&quot;')+')">수정</button> '+
+          '<button class="btn bxs berr" onclick="Pages._calDel('+c.id+',&quot;'+H.e(row.code)+'&quot;)">삭제</button>'+
+          '</td></tr>';
+      });
+      t+='</tbody></table>';
+      calPane.innerHTML=t;
+    }
     Cmt.render('#eqCmt','eq-'+row.id);
   },80);
 },
+
+/* [v2.305] 탭 전환 */
+_eqDTab(btn){
+  document.querySelectorAll('.eq-dtab').forEach(b=>{
+    const on=b===btn;
+    b.style.color=on?'var(--pri)':'var(--tm)';
+    b.style.borderBottom=on?'2px solid var(--pri)':'2px solid transparent';
+    b.classList.toggle('on',on);
+  });
+  const tab=btn.dataset.tab;
+  ['info','cal','log'].forEach(t=>{
+    const p=document.getElementById('eqDPane_'+t);
+    if(p) p.style.display=t===tab?'block':'none';
+  });
+  /* 변경이력 탭: 첫 진입 시 로드 */
+  if(tab==='log'){
+    const logPane=document.getElementById('eqDPane_log');
+    if(logPane&&logPane.querySelector('.spin')){
+      Pages._loadEquipLogs(logPane);
+    }
+  }
+},
+
+async _loadEquipLogs(pane){
+  /* [v2.305] 변경이력 탭 비동기 로드 */
+  const equip=pane._equip_code;
+  if(!equip){pane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:12px">코드를 식별할 수 없습니다.</div>';return;}
+  const logs=await SB.getLogs(equip);
+  if(!logs.length){
+    pane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:12px 0">변경 이력이 없습니다.</div>';
+    return;
+  }
+  let t='<table style="width:100%;font-size:12px;border-collapse:collapse">'+
+    '<thead><tr style="background:var(--bg)">'+
+    '<th style="padding:5px 8px;text-align:left">변경일시</th>'+
+    '<th style="padding:5px 8px;text-align:left">항목</th>'+
+    '<th style="padding:5px 8px;text-align:left">변경 전</th>'+
+    '<th style="padding:5px 8px;text-align:left">변경 후</th>'+
+    '<th style="padding:5px 8px;text-align:left">변경자</th>'+
+    '</tr></thead><tbody>';
+  logs.forEach(l=>{
+    const dt=(l.changed_at||'').replace('T',' ').slice(0,16);
+    t+='<tr style="border-bottom:1px solid var(--bd)">'+
+      '<td style="padding:5px 8px;font-size:11px;color:var(--tm)">'+dt+'</td>'+
+      '<td style="padding:5px 8px;font-weight:600">'+H.e(l.field_name||l.change_type||'-')+'</td>'+
+      '<td style="padding:5px 8px;color:#ef4444">'+H.e(l.old_value||'-')+'</td>'+
+      '<td style="padding:5px 8px;color:#22c55e">'+H.e(l.new_value||'-')+'</td>'+
+      '<td style="padding:5px 8px">'+H.e(l.changed_by||'-')+'</td>'+
+      '</tr>';
+  });
+  t+='</tbody></table>';
+  pane.innerHTML=t;
+},
+
+async _calDel(calId, equip_code){
+  /* [v2.305] 교정이력 삭제 */
+  Modal.confirm({title:'교정이력 삭제',msg:'이 교정 이력을 삭제하시겠습니까?',danger:true,onOk:async()=>{
+    const res=await SB.deleteCal(calId);
+    if(!res.ok) return;
+    Toast.show('삭제되었습니다.','ok');
+    DB.cals=await SB.getCals();
+    /* 상세 팝업 교정이력 탭 갱신 */
+    const pane=document.getElementById('eqDPane_cal');
+    if(pane){
+      const recs=(DB.cals||[]).filter(c=>c.code===equip_code||c.equip_code===equip_code)
+        .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''));
+      if(!recs.length){pane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:12px 0">교정 이력이 없습니다.</div>';return;}
+      pane.querySelector('tbody').innerHTML=recs.map(c=>
+        '<tr style="border-bottom:1px solid var(--bd)">'+
+        '<td style="padding:5px 8px">'+(c.cal_date||c.date||'-')+'</td>'+
+        '<td style="padding:5px 8px">'+H.e(c.agency||'-')+'</td>'+
+        '<td style="padding:5px 8px;font-family:monospace">'+H.e(c.cert_no||c.cert||'-')+'</td>'+
+        '<td style="padding:5px 8px;text-align:center"><span class="badge '+(c.result==='합격'?'bgrn':c.result==='조건부합격'?'bamb':'bred')+'">'+H.e(c.result||'-')+'</span></td>'+
+        '<td style="padding:5px 8px">'+(c.next_date||c.next||'-')+'</td>'+
+        '<td style="padding:5px 8px;text-align:right">'+(c.cost?(Number(c.cost).toLocaleString()):'—')+'</td>'+
+        '<td style="padding:5px 8px;text-align:center;white-space:nowrap">'+
+        '<button class="btn bxs bgh" onclick="Pages._calForm(&quot;'+H.e(equip_code)+'&quot;,'+JSON.stringify(c).replace(/"/g,'&quot;')+')">수정</button> '+
+        '<button class="btn bxs berr" onclick="Pages._calDel('+c.id+',&quot;'+H.e(equip_code)+'&quot;)">삭제</button>'+
+        '</td></tr>').join('');
+    }
+  }});
+},
+
 
 /* ── 교정 ── */
 cal(){
@@ -4786,11 +4908,16 @@ cal(){
     </div>
     <div id="calTbl"></div>`;
   Tbl.render({el:'#calTbl',cols:[
-    {key:'code',label:'코드',w:'88px'},{key:'name',label:'계측기명'},
-    {key:'date',label:'교정일',w:'88px'},{key:'agency',label:'교정기관',w:'112px'},
-    {key:'cert',label:'성적서번호',w:'112px'},
-    {key:'result',label:'결과',w:'62px',align:'center',render:v=>H.inspBadge(v)},
-    {key:'next',label:'차기교정일',w:'92px'},
+    {key:'code',label:'계측기코드',w:'100px'},
+    {key:'name',label:'계측기명',w:'130px'},
+    {key:'cal_date',label:'교정일',w:'88px',render:(v,row)=>v||row.date||'-'},
+    {key:'agency',label:'교정기관',w:'110px'},
+    {key:'cert_no',label:'성적서번호',w:'110px',render:(v,row)=>v||row.cert||'-'},
+    {key:'result',label:'결과',w:'72px',align:'center',
+      render:v=>`<span class="badge ${v==='합격'?'bgrn':v==='조건부합격'?'bamb':'bred'}">${H.e(v||'-')}</span>`},
+    {key:'next_date',label:'차기교정일',w:'92px',render:(v,row)=>v||row.next||'-'},
+    {key:'cost',label:'비용(원)',w:'86px',align:'right',
+      render:v=>v?Number(v).toLocaleString():'—'},
   ],data:DB.cals,onDel:async(ids)=>{
         const numIds=ids.map(Number);
         DB.cals=DB.cals.filter(r=>!numIds.includes(Number(r.id)));
@@ -4798,15 +4925,81 @@ cal(){
         Pages.cal_list?.();
       }});
 },
-_calForm(){Modal.open({title:'교정 등록',size:'mmd',body:`<div class="fg2">
-  <div class="fgroup ff"><label class="fl req">계측기</label><select class="fc"><option value="">선택</option>${DB.equip.map(e=>`<option>${H.e(e.code)}-${H.e(e.name)}</option>`).join('')}</select></div>
-  <div class="fgroup"><label class="fl req">교정일</label><input class="fc" type="date" value="${H.today()}"></div>
-  <div class="fgroup"><label class="fl req">교정기관</label><input class="fc"></div>
-  <div class="fgroup"><label class="fl req">성적서번호</label><input class="fc" placeholder="CAL-YYYY-NNN"></div>
-  <div class="fgroup"><label class="fl">교정 결과</label><select class="fc"><option>합격</option><option>불합격</option></select></div>
-  <div class="fgroup"><label class="fl req">차기교정일</label><input class="fc" type="date"></div>
-  <div class="fgroup ff"><label class="fl">비고</label><textarea class="fc" rows="2"></textarea></div>
-</div>`,foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`})},
+_calForm(equip_code, calRow){
+  /* [v2.305 Phase2] 교정 등록/수정 폼 */
+  const isEdit=!!calRow;
+  const equip=DB.equip.find(e=>e.code===equip_code)||{};
+  const equipOpts=DB.equip.map(e=>'<option value="'+H.e(e.code)+'"'+(e.code===equip_code?' selected':'')+'>' +H.e(e.code+' '+e.name)+'</option>').join('');
+  Modal.open({title:isEdit?'교정이력 수정':'교정 등록',size:'mlg',
+    body:'<div class="fg2">'
+      +'<div class="fgroup ff"><label class="fl req">계측기</label>'
+      +'<select id="cf_code" class="fc"'+(isEdit?' disabled':'')+'>'+equipOpts+'</select></div>'
+      +'<div class="fgroup"><label class="fl req">교정일</label>'
+      +'<input id="cf_date" class="fc" type="date" value="'+(calRow?.cal_date||calRow?.date||H.today())+'"></div>'
+      +'<div class="fgroup"><label class="fl req">교정기관</label>'
+      +'<input id="cf_agency" class="fc" value="'+H.e(calRow?.agency||'')+'" placeholder="예) 한국교정원"></div>'
+      +'<div class="fgroup"><label class="fl">성적서번호</label>'
+      +'<input id="cf_cert" class="fc" value="'+H.e(calRow?.cert_no||calRow?.cert||'')+'" placeholder="CAL-YYYY-NNN"></div>'
+      +'<div class="fgroup"><label class="fl">결과</label>'
+      +'<select id="cf_result" class="fc">'
+      +'<option value="합격"'+((!calRow||calRow.result==='합격')?' selected':'')+'>합격</option>'
+      +'<option value="불합격"'+(calRow?.result==='불합격'?' selected':'')+'>불합격</option>'
+      +'<option value="조건부합격"'+(calRow?.result==='조건부합격'?' selected':'')+'>조건부합격</option>'
+      +'</select></div>'
+      +'<div class="fgroup"><label class="fl req">차기교정일</label>'
+      +'<input id="cf_next" class="fc" type="date" value="'+(calRow?.next_date||calRow?.next||'')+'">'+'</div>'
+      +'<div class="fgroup"><label class="fl">교정비용 (원)</label>'
+      +'<input id="cf_cost" class="fc" type="number" value="'+(calRow?.cost||'')+'" placeholder="150000" min="0"></div>'
+      +'<div class="fgroup ff"><label class="fl">비고</label>'
+      +'<textarea id="cf_note" class="fc" rows="2" placeholder="특이사항 등">'+H.e(calRow?.note||'')+'</textarea></div>'
+      +'</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
+      +'<button class="btn bpri" id="cf_ok">'+(isEdit?'💾 수정':'✅ 등록')+'</button>',
+  });
+  setTimeout(()=>{
+    const b=document.getElementById('cf_ok');
+    if(b) b.onclick=()=>Pages._calSave(calRow||null);
+  },50);
+},
+async _calSave(orig){
+  /* [v2.305 Phase2] 교정 저장 + equipment.next 자동 갱신 */
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  const equip_code=g('cf_code'),cal_date=g('cf_date'),agency=g('cf_agency'),next_date=g('cf_next');
+  if(!equip_code){Toast.show('계측기를 선택하세요.','warn');return}
+  if(!cal_date){Toast.show('교정일을 입력하세요.','warn');return}
+  if(!agency){Toast.show('교정기관을 입력하세요.','warn');return}
+  if(!next_date){Toast.show('차기교정일을 입력하세요.','warn');return}
+  const row={
+    equip_code,code:equip_code,
+    cal_date,date:cal_date,
+    agency,
+    cert_no:g('cf_cert'),cert:g('cf_cert'),
+    result:document.getElementById('cf_result')?.value||'합격',
+    next_date,next:next_date,
+    cost:Number(g('cf_cost'))||null,
+    note:g('cf_note'),
+    created_by:Auth.cur()?.username||'system',
+  };
+  if(orig?.id) row.id=orig.id;
+  const res=orig?await SB.updateCal(orig.id,row):await SB.addCal(row);
+  if(!res.ok){Toast.show('저장 실패','err');return}
+  /* equipment.last, next 자동 갱신 */
+  const equip=DB.equip.find(e=>e.code===equip_code);
+  if(equip){
+    const patch={last:cal_date,next:next_date,status:H.equipStatus(next_date),updated_at:H.today()};
+    await SB.updateEquip(equip.id,patch);
+    Toast.show('교정이력 저장 및 계측기 교정일 자동 갱신 완료','ok');
+  } else {
+    Toast.show((orig?'수정':'등록')+'되었습니다.','ok');
+  }
+  Modal.close();
+  DB.cals=await SB.getCals();
+  DB.equip=await SB.getEquip();
+  /* 열려있는 탭 새로고침 */
+  const curPage=Nav._cur;
+  if(curPage==='cal') Pages.cal();
+  else if(curPage==='equip') Pages.equip();
+},
 
 /* ── MSA ── */
 msa(){
