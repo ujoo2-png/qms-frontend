@@ -212,15 +212,29 @@ const SB={
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
     /* [v2.28] 허용 컬럼만 추출 — SB mentions 테이블 실제 컬럼만 포함
        제거: ref_key, key, from_name, from_dept (테이블에 없음) */
+    /* [v2.308 PhaseA] 멘션 고도화 — 채널/유형/우선순위/상태/스레드 */
     const allowed={
       from:       row.from||'',
       dept:       row.dept||'',
       to:         row.to||'',
+      to_list:    row.to_list||[row.to||''],
       text:       row.text||row.message||'',
       message:    row.message||row.text||'',
       ref:        row.ref||row.ref_key||'',
       ref_key:    row.ref_key||row.ref||'',
+      channel:    row.channel||'general',
+      type:       row.type||'mention',
+      priority:   row.priority||'normal',
+      status:     row.status||'open',
+      thread_id:  row.thread_id||null,
+      link_type:  row.link_type||null,
+      link_id:    row.link_id||null,
+      due_date:   row.due_date||null,
+      pinned:     row.pinned||false,
+      reactions:  row.reactions||{},
+      thread_id:  row.thread_id||null,
       reply_to:   row.reply_to||null,
+      file_url:   row.file_url||null,
       read:       row.read||false,
       created_at: row.created_at||null,
     };
@@ -243,6 +257,7 @@ const SB={
 
   /* 멘션 수정 */
   async updateMention(id,patch){
+    /* [v2.308 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
     const {error}=await _sb.from('mentions').update(patch).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return {ok:false};}
@@ -807,7 +822,7 @@ const DB={
      Supabase 배포 시: supabase.from('mentions').select('*').order('created_at',{ascending:false})
      필드: id, from(작성자), to(수신자), dept, text, ref(참조메뉴), time, read, replies(댓글배열) */
   mentions:[
-    {id:1,from:'김품질',to:'관리자',dept:'품질팀',text:'@관리자 수입검사 결과 확인 부탁드립니다. LOT-20260501 검사 성적서 검토 요청입니다.',ref:'수입검사',time:'5분 전',read:false,replies:[]},
+    {id:1,from:'김품질',to:'관리자',to_list:['관리자'],dept:'품질팀',text:'@관리자 수입검사 결과 확인 부탁드립니다.',ref:'수입검사',channel:'quality',type:'mention',priority:'normal',status:'open',pinned:false,reactions:{},time:'5분 전',read:false,replies:[]},
     {id:2,from:'이검사',to:'관리자',dept:'품질팀',text:'@관리자 부적합 보고서 NC-20260430-001 검토 요청입니다.',ref:'부적합관리',time:'1시간 전',read:false,replies:[{id:1,from:'관리자',text:'확인하겠습니다.',time:'50분 전'}]},
     {id:3,from:'박담당',to:'관리자',dept:'생산팀',text:'@관리자 CAR-20260430-001 처리 부탁드립니다.',ref:'시정조치',time:'2시간 전',read:false,replies:[]},
     {id:4,from:'최엔지니어',to:'관리자',dept:'개발팀',text:'@관리자 EQ-003 교정 만료 확인 요청드립니다.',ref:'계측기관리',time:'1일 전',read:true,replies:[]},

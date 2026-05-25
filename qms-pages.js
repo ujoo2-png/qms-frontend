@@ -148,7 +148,44 @@ home(){
           </div>
         </div>`;
       })()}
-      <!-- 공지사항 -->
+            <!-- [v2.308 PhaseB] 미처리 멘션 D-day 패널 -->
+      ${(()=>{
+        const _me=Auth._cur||'admin';
+        const _td=new Date();
+        const _over=DB.mentions.filter(m=>{
+          if(!m.due_date||m.status==='done') return false;
+          const isMy=(m.to===_me)||(m.to_list||[]).includes(_me)||Auth._u?.role==='admin';
+          return isMy;
+        }).sort((a,b)=>a.due_date.localeCompare(b.due_date));
+        if(!_over.length) return "";
+        return `<div class="hw-panel" style="border-left:3px solid #8b5cf6">
+          <div class="hw-panel-head">
+            <div class="hw-panel-title">📋 처리 대기 멘션
+              <span class="badge" style="background:#8b5cf6;color:#fff;font-size:10px;margin-left:6px">${_over.length}</span>
+            </div>
+            <span class="hw-panel-more" onclick="Nav.go('mentions')">멘션함 →</span>
+          </div>
+          <div class="hw-panel-body">
+            ${_over.slice(0,4).map(m=>{
+              const d=Math.ceil((new Date(m.due_date)-_td)/(864e5));
+              const dTag=d<0?'<span class="badge bred" style="font-size:10px">D+'+Math.abs(d)+'초과</span>':d<=3?'<span class="badge bamb" style="font-size:10px">D-'+d+'</span>':'<span style="font-size:10px;color:var(--tm)">~'+m.due_date+'</span>';
+              const pCls=m.priority==='urgent'?'bred':m.priority==='low'?'bgh':'bpri';
+              return `<div class="hw-mention" onclick="Nav.go('mentions')" style="border-left:3px solid var(--pri);padding-left:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:12px;font-weight:600">${H.e(m.from||'?')}</span>
+                  <div style="display:flex;gap:4px;align-items:center">
+                    <span class="badge ${pCls}" style="font-size:10px">${m.priority==='urgent'?'긴급':m.priority==='low'?'낮음':'일반'}</span>
+                    ${dTag}
+                  </div>
+                </div>
+                <div style="font-size:11px;color:var(--tm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${H.e((m.text||'').slice(0,40))}</div>
+              </div>`;
+            }).join("")}
+            ${_over.length>4?`<div style="text-align:center;font-size:11px;color:var(--tm);padding:4px">외 ${_over.length-4}건</div>`:""}
+          </div>
+        </div>`;
+      })()}
+<!-- 공지사항 -->
       <div class="hw-panel">
         <div class="hw-panel-head">
           <div class="hw-panel-title">📢 공지사항</div>
@@ -205,34 +242,39 @@ home(){
   },
 
 async _mentionReplySend(parentId){
-  const text=(document.getElementById('rplyText')?.value||'').trim();
-  const to=(document.getElementById('rplyTo')?.value||'').trim();
+  /* [v2.308 PhaseB] thread_id 기반 SB 스레드 저장 */
+  const text=(document.getElementById('rtext')?.value||'').trim();
   if(!text){Toast.show('내용을 입력하세요.','warn');return}
   const me=Auth._u;
-  const meUser=DB.users.find(u=>u.username===(me?.username||Auth._cur))||{name:'관리자',department:'IT팀'};
-  const toUser=DB.users.find(u=>u.username===to);
-  const reply={
-    from:      meUser.name||me?.name||'관리자',
-    dept:      meUser.department||'',
-    to:        toUser?.name||to,
+  const meUser=DB.users.find(u=>u.username===(me?.username||Auth._cur))||{name:'관리자',dept:''};
+  const parent=DB.mentions.find(m=>m.id===parentId);
+  const row={
+    from:      meUser.name||Auth._cur||'admin',
+    dept:      meUser.dept||meUser.department||'',
+    to:        parent?.from||'',
+    to_list:   [parent?.from||''].filter(Boolean),
     text,
     message:   text,
-    created_at:H.today(),
-    read:      false,
+    channel:   parent?.channel||'general',
+    type:      'mention',
+    priority:  'normal',
+    status:    'open',
+    thread_id: parentId,
     reply_to:  parentId,
-    ref:       DB.mentions.find(m=>m.id===parentId)?.ref||'',
+    ref:       parent?.ref||'',
+    read:      false,
+    created_at:new Date().toISOString(),
   };
-  const res=await SB.addMention(reply);
+  const res=await SB.addMention(row);
   if(!res.ok) return;
-  /* 로컬 replies 배열에도 추가 */
-  const parent=DB.mentions.find(m=>m.id===parentId);
   if(parent){
     if(!parent.replies) parent.replies=[];
-    parent.replies.push({...reply,id:res.id||Date.now()});
+    parent.replies.push({...row, id:res.id||Date.now()});
   }
-  Modal.close();
-  Toast.show('답장이 발송되었습니다.','ok');
-  Pages.mentions();
+  document.getElementById('rtext').value='';
+  Toast.show('답글이 전송되었습니다.','ok');
+  /* 모달 내 스레드 목록 갱신 */
+  Pages._mentionReplyView(parentId);
 },
 async _approveUser(userId, username){
   if(Auth._u?.role!=='admin'){Toast.show('관리자만 승인 가능합니다.','err');return}
@@ -2561,178 +2603,679 @@ audit(){document.getElementById('pw').innerHTML=`<div class="ph"><div><div class
 async mentions(){
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
-  /* SB에서 멘션 목록 로드 */
-  const allMentions=await SB.getMentions();
-  /* [v2.28] null/undefined 방어 */
-  DB.mentions=Array.isArray(allMentions)?allMentions:[];
+  const allM=await SB.getMentions();
+  DB.mentions=Array.isArray(allM)?allM:[];
   const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
 
-  const render=()=>{
-    /* [v2.27] B안: 테이블형 레이아웃 — 문자열 연결 방식 (중첩 백틱 방지) */
-    const thead='<thead><tr>'
-      +'<th style="width:28px"><input type="checkbox" id="mentionAllChk" onchange="document.querySelectorAll(\'.mention-chk\').forEach(c=>c.checked=this.checked)"></th>'
-      +'<th style="min-width:70px">발신자</th>'
-      +'<th style="min-width:60px">수신자</th>'
-      +'<th style="min-width:80px">메뉴/분류</th>'
-      +'<th>내용 요약</th>'
-      +'<th style="width:80px">시간</th>'
-      +'<th style="width:34px;text-align:center">읽음</th>'
-      +'<th style="width:100px;text-align:center">작업</th>'
-      +'</tr></thead>';
-    const tbody=DB.mentions.map(m=>{
-      const isMine=(m.from===me)||(me==='admin'&&m.from==='관리자');
-      const hasReply=(m.replies||[]).length>0;
-      const canDel=isAdmin||(isMine&&!hasReply);
-      const unread=!m.read;
-      const bg=unread?'background:var(--bg2);font-weight:600':'';
-      const dot=unread?'<span style="width:6px;height:6px;background:var(--err);border-radius:50%;display:inline-block;margin-left:3px"></span>':'';
-      const readBtn=m.read
-        ?'<span style="color:var(--ok);font-size:13px">✓</span>'
-        :'<button class="btn bxs bpri" style="font-size:10px;padding:1px 5px" onclick="Pages._mentionRead('+m.id+')">읽음</button>';
-      const editBtn=isMine?'<button class="btn bxs bout" style="font-size:10px" onclick="Pages._mentionEdit('+m.id+')">수정</button>':'';
-      const delBtn=canDel?'<button class="btn bxs berr" style="font-size:10px" onclick="Pages._mentionDel('+m.id+')">삭제</button>':'';
-      const replyBtn='<button class="btn bxs" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;font-size:10px" onclick="Pages._mentionReply('+m.id+','+JSON.stringify(m.from||'')+')">↩</button>';
-      const txt=m.text||m.message||'';
-      const replySuffix=m.reply_to?'<span style="color:var(--tm);font-size:10px">↩ </span>':'';
-      return '<tr id="mention-'+m.id+'" style="'+bg+'">'
-        +'<td><input type="checkbox" class="mention-chk" value="'+m.id+'"></td>'
-        +'<td><div style="display:flex;align-items:center;gap:4px"><div class="cav" style="width:22px;height:22px;font-size:10px;flex-shrink:0">'+H.e((m.from||'?').charAt(0))+'</div>'+H.e(m.from||'-')+dot+'</div></td>'
-        +'<td><span style="color:var(--pri)">@'+H.e(m.to||'-')+'</span></td>'
-        +'<td><span class="badge bpur" style="font-size:10px">'+H.e(m.ref||'-')+'</span></td>'
-        +'<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+H.e(txt)+'">'+replySuffix+H.e(txt.slice(0,60))+(txt.length>60?'…':'')+'</td>'
-        +'<td style="color:var(--tm);font-size:11px;white-space:nowrap">'+H.e(m.time||m.created_at||'')+'</td>'
-        +'<td style="text-align:center">'+readBtn+'</td>'
-        +'<td style="text-align:center"><div style="display:flex;gap:2px;justify-content:center">'+replyBtn+editBtn+delBtn+'</div></td>'
-        +'</tr>';
-    }).join('');
-    const tableHtml=DB.mentions.length===0
-      ?'<div class="es"><div class="es-icon">💬</div><div>멘션이 없습니다.</div></div>'
-      :'<div class="ts"><table class="dt" style="font-size:12px">'+thead+'<tbody>'+tbody+'</tbody></table></div>';
-    w.innerHTML=
-      '<div class="ph"><div><div class="ptit">💬 멘션함</div></div>'
-      +'<div class="pac"><button class="btn bpri btn-f2" onclick="Pages._mentionWrite()">+ 작성하기 <span class=\"kbd\">F2</span></button></div></div>'
-      +'<div class="card" style="padding:0;overflow:hidden">'+tableHtml+'</div>';
+  /* [v2.308 PhaseA] 채널 정의 — 8대 메뉴 */
+  const CHANNELS=[
+    {key:'all',    label:'전체',     icon:'💬'},
+    {key:'reference', label:'기준정보', icon:'📦'},
+    {key:'quality',   label:'품질관리', icon:'🔍'},
+    {key:'inspection',label:'검사고도화',icon:'📋'},
+    {key:'supplier',  label:'공급업체', icon:'⭐'},
+    {key:'calibration',label:'계측기',  icon:'🔬'},
+    {key:'spc',       label:'SPC통계', icon:'📈'},
+    {key:'improvement',label:'개선활동',icon:'🔧'},
+    {key:'document',  label:'문서관리', icon:'📄'},
+  ];
+  const TYPES={mention:'💬 멘션',task:'📋 태스크',notice:'📢 공지',approval:'✅ 승인요청'};
+  const PRIORITY={urgent:{label:'긴급',cls:'bred'},normal:{label:'일반',cls:'bpri'},low:{label:'낮음',cls:'bgh'}};
+  const STATUS={open:{label:'열림',cls:'bamb'},in_progress:{label:'진행중',cls:'bpri'},done:{label:'완료',cls:'bgrn'}};
+
+  /* 필터 상태 */
+  let curCh='all', curType='', curStatus='', curQ='';
+
+  const unread=DB.mentions.filter(m=>!m.read&&(m.to===me||(m.to_list||[]).includes(me)));
+  const myTask=DB.mentions.filter(m=>m.type==='task'&&(m.to===me||(m.to_list||[]).includes(me))&&m.status!=='done');
+
+  /* 렌더 함수 */
+  const renderList=()=>{
+    let items=[...DB.mentions];
+    if(curCh!=='all') items=items.filter(m=>(m.channel||'general')===curCh);
+    if(curType)        items=items.filter(m=>(m.type||'mention')===curType);
+    if(curStatus)      items=items.filter(m=>(m.status||'open')===curStatus);
+    if(curQ){
+      const q=curQ.toLowerCase();
+      items=items.filter(m=>(m.text||'').toLowerCase().includes(q)||(m.from||'').toLowerCase().includes(q));
+    }
+    const pinned=items.filter(m=>m.pinned);
+    const normal=items.filter(m=>!m.pinned).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+
+    const cardHtml=(m)=>{
+      const isMe=(m.from===me)||(me==='admin'&&m.from==='관리자');
+      const isMy=(m.to===me)||(m.to_list||[]).includes(me)||isAdmin;
+      const pCls=PRIORITY[m.priority||'normal']?.cls||'bpri';
+      const pLbl=PRIORITY[m.priority||'normal']?.label||'일반';
+      const sCls=STATUS[m.status||'open']?.cls||'bamb';
+      const sLbl=STATUS[m.status||'open']?.label||'열림';
+      const tLbl=TYPES[m.type||'mention']||'💬 멘션';
+      const unreadDot=!m.read&&isMy?'<span style="width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0"></span>':'';
+      const due=m.due_date?(()=>{const d=Math.ceil((new Date(m.due_date)-new Date())/(864e5));return d<0?'<span class="badge bred" style="font-size:10px">D+'+Math.abs(d)+'초과</span>':d<=3?'<span class="badge bamb" style="font-size:10px">D-'+d+'</span>':'<span style="font-size:10px;color:var(--tm)">~'+m.due_date+'</span>';})():'';
+      const fileBtn=m.file_url?'<a href="'+H.e(m.file_url)+'" target="_blank" class="btn bxs" style="font-size:10px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac">📎 첨부파일</a> ':'';
+      const linkBtn=m.link_type&&m.link_id?'<button class="btn bxs" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;font-size:10px" onclick="Nav.go(\''+H.e(m.link_type)+'\')" title="'+H.e(m.link_id)+'">🔗 '+H.e(m.link_id)+'</button> ':'';
+      const replyN=(m.replies||[]).length;
+      const reactions=m.reactions||{};
+      const reactHtml=Object.entries(reactions).filter(([,v])=>v.length).map(([e,v])=>
+        '<button class="btn bxs" style="font-size:11px;padding:1px 6px;background:var(--bg2)" onclick="Pages._mentionReact('+m.id+',\''+e+'\')" title="'+v.join(', ')+'">'+e+' '+v.length+'</button>'
+      ).join(' ');
+
+      const doneBtn=m.status!=='done'&&(isMy||isAdmin)?
+        '<button class="btn bxs bgrn" style="font-size:10px" onclick="Pages._mentionStatus('+m.id+',\'done\')">✅ 완료</button> ':'';
+      const progBtn=m.status==='open'&&(isMy||isAdmin)?
+        '<button class="btn bxs bpri" style="font-size:10px" onclick="Pages._mentionStatus('+m.id+',\'in_progress\')">▶ 진행</button> ':'';
+      const readBtn=!m.read&&isMy?
+        '<button class="btn bxs" style="font-size:10px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac" onclick="Pages._mentionRead('+m.id+')">읽음</button> ':'';
+      const pinBtn=isAdmin?
+        '<button class="btn bxs" style="font-size:10px;background:'+(m.pinned?'#fef3c7':'var(--bg2)')+'" onclick="Pages._mentionPin('+m.id+','+!m.pinned+')" title="'+(m.pinned?'고정해제':'상단고정')+'">'+(m.pinned?'📌':'📍')+'</button> ':'';
+      const editBtn=isMe?'<button class="btn bxs bout" style="font-size:10px" onclick="Pages._mentionEdit('+m.id+')">수정</button> ':'';
+      const delBtn=(isAdmin||(isMe&&!replyN))?'<button class="btn bxs berr" style="font-size:10px" onclick="Pages._mentionDel('+m.id+')">삭제</button>':'';
+
+      return '<div class="card" style="margin-bottom:8px;'+(m.pinned?'border-left:3px solid #f59e0b;':'')+(!m.read&&isMy?'background:var(--bg2);':'')+'">'
+        +'<div style="display:flex;align-items:flex-start;gap:8px">'
+        +'<div style="width:32px;height:32px;border-radius:50%;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+(m.from||'?')[0]+'</div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">'
+        +unreadDot
+        +'<span style="font-size:12px;font-weight:700">'+H.e(m.from||'?')+'</span>'
+        +'<span style="font-size:11px;color:var(--tm)">→ '+H.e((m.to_list||[m.to]).join(', '))+'</span>'
+        +'<span class="badge '+pCls+'" style="font-size:10px">'+pLbl+'</span>'
+        +'<span class="badge '+sCls+'" style="font-size:10px">'+sLbl+'</span>'
+        +'<span style="font-size:10px;color:var(--tm)">'+tLbl+'</span>'
+        +(m.dept?'<span style="font-size:10px;color:var(--tm)">'+H.e(m.dept)+'</span>':'')
+        +'</div>'
+        +'<div style="font-size:13px;color:var(--tx);margin-bottom:6px;word-break:break-word">'+H.e(m.text||'')+'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+        +fileBtn+linkBtn
+        +(replyN?'<span style="font-size:11px;color:#3b82f6;cursor:pointer" onclick="Pages._mentionReplyView('+m.id+')">💬 답글 '+replyN+'개</span>':'')
+        +due
+        +reactHtml
+        +'<span style="font-size:10px;color:var(--tl);margin-left:auto">'+(m.created_at?m.created_at.replace('T',' ').slice(0,16):m.time||'')+'</span>'
+        +'</div>'
+        +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'
+        +readBtn+doneBtn+progBtn
+        +'<button class="btn bxs" style="font-size:10px;background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe" onclick="Pages._mentionReplyOpen('+m.id+')">💬 답글</button> '
+        +'<button class="btn bxs" style="font-size:10px" onclick="Pages._mentionReactPop('+m.id+')">😊 반응</button> '
+        +(m.type!=='task'?'<button class="btn bxs" style="font-size:10px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd" onclick="Pages._mentionToTask('+m.id+')">📋 태스크</button> ':'')
+        +pinBtn+editBtn+delBtn
+        +'</div>'
+        +'</div></div></div>';
+    };
+
+    const listEl=document.getElementById('mlist');
+    if(!listEl) return;
+    const pinnedHtml=pinned.length
+      ?'<div style="border-bottom:1px dashed var(--bd);margin-bottom:10px;padding-bottom:6px"><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:6px">📌 고정 메시지</div>'+pinned.map(cardHtml).join('')+'</div>':'';
+    listEl.innerHTML=pinnedHtml+(normal.length?normal.map(cardHtml).join(''):'<div style="text-align:center;padding:32px;color:var(--tm);font-size:13px">📭 멘션이 없습니다.</div>');
   };
-  render();
-  Pages._mentionRender=render;
-  // 단축키 F2
-  document.addEventListener('keydown',function _mKey(e){
-    if(e.key==='F2'){Pages._mentionWrite();e.preventDefault();}
-    if(e.key==='Escape'){document.removeEventListener('keydown',_mKey);}
-  });
+
+  /* 채널 탭 HTML */
+  const chTabs=CHANNELS.map(c=>{
+    const cnt=c.key==='all'?DB.mentions.length:DB.mentions.filter(m=>(m.channel||'general')===c.key).length;
+    return '<button class="btn bsm men-chtab" data-ch="'+c.key+'" onclick="Pages._menChTab(this)" style="'
+      +'border-radius:20px;padding:4px 12px;font-size:11px;margin:2px;'
+      +(c.key==='all'?'background:var(--pri);color:#fff;':'background:var(--bg2);color:var(--tx);')
+      +'">'+c.icon+' '+c.label+(cnt?' <span style="background:rgba(0,0,0,.15);border-radius:10px;padding:0 5px;font-size:10px">'+cnt+'</span>':'')+'</button>';
+  }).join('');
+
+  w.innerHTML='<div class="ph"><div><div class="ptit">💬 멘션함</div></div>'
+    +'<div class="pac" style="gap:6px">'
+    +'<button class="btn bsm bout" onclick="Pages._mentionStats()" title="통계">📊 통계</button>'
+    +'<button class="btn bsm" style="background:#f5f3ff;color:#7c3aed" onclick="Pages._mentionFollowUp()" title="미응답 팔로우업">🔄 팔로우업</button>'
+    +'<button class="btn bpri bsm" onclick="Pages._mentionWrite()">✉️ 새 멘션</button>'
+    +'</div></div>'
+    +'<div style="display:grid;grid-template-columns:180px 1fr;gap:12px;height:calc(100vh - 130px)">'
+    /* 좌측 사이드 */
+    +'<div style="display:flex;flex-direction:column;gap:4px;padding:4px 0">'
+    +'<div class="men-side-item active" onclick="Pages._menSideFilter(this,\'all\')" style="cursor:pointer;padding:6px 10px;border-radius:6px;background:var(--bg2);display:flex;justify-content:space-between;align-items:center"><span>💬 전체</span><span class="badge bpri" style="font-size:10px">'+DB.mentions.length+'</span></div>'
+    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'unread\')" style="cursor:pointer;padding:6px 10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center"><span>🔴 미읽음</span>'+(unread.length?'<span class="badge bred" style="font-size:10px">'+unread.length+'</span>':'')+'</div>'
+    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'mine\')" style="cursor:pointer;padding:6px 10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center"><span>📋 내 담당</span>'+(myTask.length?'<span class="badge bamb" style="font-size:10px">'+myTask.length+'</span>':'')+'</div>'
+    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'sent\')" style="cursor:pointer;padding:6px 10px;border-radius:6px">📤 보낸 것</div>'
+    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'done\')" style="cursor:pointer;padding:6px 10px;border-radius:6px">✅ 완료</div>'
+    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'pinned\')" style="cursor:pointer;padding:6px 10px;border-radius:6px">📌 고정</div>'
+    +'</div>'
+    /* 우측 메인 */
+    +'<div style="display:flex;flex-direction:column;overflow:hidden">'
+    /* 채널 탭 */
+    +'<div style="background:var(--bg2);border-radius:8px;padding:6px;margin-bottom:10px;display:flex;flex-wrap:wrap">'+chTabs+'</div>'
+    /* 필터 바 */
+    +'<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">'
+    +'<select class="fc" id="mTypeFilter" style="width:110px;font-size:12px" onchange="Pages._menFilter()">'
+    +'<option value="">전체 유형</option>'
+    +Object.entries(TYPES).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')
+    +'</select>'
+    +'<select class="fc" id="mStatFilter" style="width:100px;font-size:12px" onchange="Pages._menFilter()">'
+    +'<option value="">전체 상태</option>'
+    +Object.entries(STATUS).map(([k,v])=>'<option value="'+k+'">'+v.label+'</option>').join('')
+    +'</select>'
+    +'<div style="flex:1;position:relative">'
+    +'<input class="fc" id="mSearch" placeholder="🔍 내용/발신자/연결ID 검색..." style="font-size:12px;width:100%" oninput="Pages._menFilter()">'
+    +'</div>'
+    +'<span style="font-size:11px;color:var(--tm)" id="mCount"></span>'
+    +'</div>'
+    /* 목록 */
+    +'<div id="mlist" style="overflow-y:auto;flex:1;padding-right:4px"></div>'
+    +'</div>'
+    +'</div>';
+
+  /* 필터 함수들 */
+  w._menChTab = (btn)=>{
+    document.querySelectorAll('.men-chtab').forEach(b=>{
+      b.style.background=b===btn?'var(--pri)':'var(--bg2)';
+      b.style.color=b===btn?'#fff':'var(--tx)';
+    });
+    curCh=btn.dataset.ch;
+    renderList();
+    const cnt=document.getElementById('mlist')?.children.length||0;
+    const cntEl=document.getElementById('mCount');
+    if(cntEl) cntEl.textContent=cnt+'건';
+  };
+  Pages._menChTab=w._menChTab;
+
+  Pages._menSideFilter=(el,type)=>{
+    document.querySelectorAll('.men-side-item').forEach(i=>i.style.background='');
+    el.style.background='var(--bg2)'; el.style.fontWeight='600';
+    curType=''; curStatus=''; curCh='all';
+    if(type==='unread')      {DB.mentions=DB.mentions.filter(m=>!m.read);}
+    else if(type==='mine')   {DB.mentions=DB.mentions.filter(m=>m.to===me||(m.to_list||[]).includes(me));}
+    else if(type==='sent')   {DB.mentions=DB.mentions.filter(m=>m.from===me);}
+    else if(type==='done')   {curStatus='done';}
+    else if(type==='pinned') {DB.mentions=DB.mentions.filter(m=>m.pinned);}
+    else                     {DB.mentions=Array.isArray(allM)?allM:[];}
+    renderList();
+  };
+
+  Pages._menFilter=()=>{
+    curType  = document.getElementById('mTypeFilter')?.value||'';
+    curStatus= document.getElementById('mStatFilter')?.value||'';
+    curQ     = document.getElementById('mSearch')?.value||'';
+    const from   = document.getElementById('mFromFilter')?.value||'';
+    const dateFrom= document.getElementById('mDateFrom')?.value||'';
+    const dateTo  = document.getElementById('mDateTo')?.value||'';
+    /* 임시 필터 함수 오버라이드 */
+    const _baseFilter = (items)=>{
+      let r=[...items];
+      if(curCh!=='all') r=r.filter(m=>(m.channel||'general')===curCh);
+      if(curType)        r=r.filter(m=>(m.type||'mention')===curType);
+      if(curStatus)      r=r.filter(m=>(m.status||'open')===curStatus);
+      if(from)           r=r.filter(m=>m.from===from);
+      if(dateFrom)       r=r.filter(m=>(m.created_at||m.time||'')>=dateFrom);
+      if(dateTo)         r=r.filter(m=>(m.created_at||m.time||'').slice(0,10)<=dateTo);
+      if(curQ){
+        const q=curQ.toLowerCase();
+        r=r.filter(m=>(m.text||'').toLowerCase().includes(q)||(m.from||'').toLowerCase().includes(q)||(m.link_id||'').toLowerCase().includes(q));
+      }
+      return r;
+    };
+    const filtered=_baseFilter(DB.mentions);
+    const cntEl=document.getElementById('mCount');
+    if(cntEl) cntEl.textContent=filtered.length+'건';
+    renderList();
+  };
+  /* [v2.308 PhaseC] 필터 초기화 */
+  Pages._menFilterReset=()=>{
+    ['mTypeFilter','mStatFilter','mFromFilter','mSearch'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.value='';
+    });
+    ['mDateFrom','mDateTo'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.value='';
+    });
+    curType=''; curStatus=''; curQ='';
+    renderList();
+  };
+
+  renderList();
 },
 
-/* [v2.28] _mentionRead: 읽음 처리 */
-_mentionRead(id){
-  const m=DB.mentions.find(x=>Number(x.id)===Number(id));
-  if(!m) return;
-  m.read=true;
-  /* SB 업데이트 */
-  if(_sb) _sb.from('mentions').update({read:true}).eq('id',Number(id))
-    .then(({error})=>{ if(error) console.warn('[SB] _mentionRead 오류',error.message); });
-  Toast.show('읽음 처리되었습니다.','ok',1500);
-  if(Pages._mentionRender) Pages._mentionRender();
-  /* 홈 멘션 뱃지 업데이트 */
-  const badge=document.getElementById('mentionBadge');
-  if(badge){const unread=DB.mentions.filter(x=>!x.read).length;badge.textContent=unread;badge.style.display=unread?'':'none';}
-},
-
-
-/* 멘션 작성하기 팝업 */
+/* [v2.308 PhaseA] 멘션 작성/수정 폼 */
 _mentionWrite(editId=null){
   const me=Auth._cur||'admin';
   const meUser=DB.users.find(u=>u.username===me)||{name:'관리자'};
   const existing=editId?DB.mentions.find(m=>m.id===editId):null;
-  const refMenus=['수입검사','공정검사','구매검사','외주검사','최종검사',
-    '부적합관리','시정조치','계측기관리','문서관리','기준정보','SPC','기타'];
-  const recipients=[...new Set(DB.users.map(u=>u.name).concat(['관리자','전체']))];
 
-  Modal.open({title:editId?'✏️ 멘션 수정':'✉️ 멘션 작성하기',size:'mmd',
-    body:`<div class="fg2">
-      <div class="fgroup ff">
-        <label class="fl req">수신자</label>
-        <select class="fc" id="mto">
-          <option value="">수신자 선택</option>
-          ${recipients.map(r=>`<option ${existing?.to===r?'selected':''}>${H.e(r)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fgroup ff">
-        <label class="fl req">참조 메뉴</label>
-        <select class="fc" id="mref">
-          ${refMenus.map(r=>`<option ${(existing?.ref||'')===r?'selected':''}>${r}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fgroup ff">
-        <label class="fl req">내용</label>
-        <textarea class="fc" id="mtext" rows="4" placeholder="@수신자명 메시지를 입력하세요...">${existing?H.e(existing.text):''}</textarea>
-      </div>
-      <div style="font-size:11px;color:var(--tm);margin-top:-8px">
-        💡 @이름 형식으로 멘션을 표시할 수 있습니다.<br>
-        Supabase 배포 시: mentions 테이블에 저장, 실시간 알림(Realtime) 연동 예정
-      </div>
-    </div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
-          <button class="btn bpri btn-f8" onclick="Pages._mentionSave(${editId||'null'})">
-            ${editId?'수정':'등록'} <span class="kbd">F8</span>
-          </button>`
+  const CHANNELS_MAP={
+    general:'일반',reference:'기준정보',quality:'품질관리',
+    inspection:'검사고도화',supplier:'공급업체',
+    calibration:'계측기관리',spc:'SPC통계',
+    improvement:'개선활동',document:'문서관리'
+  };
+  const recipients=[...new Set(DB.users.filter(u=>u.active!==0&&!u.pending).map(u=>u.name||u.username).concat(['전체']))];
+
+  const chOpts=Object.entries(CHANNELS_MAP).map(([k,v])=>
+    '<option value="'+k+'"'+(existing?.channel===k?' selected':(!existing&&k==='general'?' selected':''))+'>'+v+'</option>'
+  ).join('');
+  const typeOpts=[['mention','💬 멘션'],['task','📋 태스크'],['notice','📢 공지'],['approval','✅ 승인요청']].map(([k,v])=>
+    '<option value="'+k+'"'+(existing?.type===k?' selected':'')+'>'+v+'</option>'
+  ).join('');
+  const prioOpts=[['urgent','🔴 긴급'],['normal','🟡 일반'],['low','⚪ 낮음']].map(([k,v])=>
+    '<option value="'+k+'"'+(existing?.priority===k?' selected':'')+(k==='normal'&&!existing?.priority?' selected':'')+'>'+v+'</option>'
+  ).join('');
+
+  const curTo=(existing?.to_list||[existing?.to]).filter(Boolean);
+  const toTags=curTo.map(t=>'<span class="badge bpri" style="font-size:11px;cursor:pointer" onclick="this.remove()">'+H.e(t)+' ×</span>').join('');
+
+  Modal.open({title:editId?'✏️ 멘션 수정':'✉️ 새 멘션 작성',size:'mlg',
+    body:'<div class="fg2">'
+      +'<div class="fgroup"><label class="fl">채널</label>'
+      +'<select class="fc" id="mwCh">'+chOpts+'</select></div>'
+      +'<div class="fgroup"><label class="fl">유형</label>'
+      +'<select class="fc" id="mwType">'+typeOpts+'</select></div>'
+      +'<div class="fgroup"><label class="fl">우선순위</label>'
+      +'<select class="fc" id="mwPrio">'+prioOpts+'</select></div>'
+      +'<div class="fgroup ff"><label class="fl req">수신자</label>'
+      +'<div style="display:flex;gap:6px;align-items:center">'
+      +'<select class="fc" id="mwToSel" style="flex:1">'
+      +'<option value="">-- 선택 --</option>'
+      +recipients.map(r=>'<option value="'+H.e(r)+'">'+H.e(r)+'</option>').join('')
+      +'</select>'
+      +'<button class="btn bgh bsm" onclick="Pages._menAddTo()">+ 추가</button>'
+      +'</div>'
+      +'<div id="mwToList" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'+toTags+'</div></div>'
+      +'<div class="fgroup ff"><label class="fl req">내용</label>'
+      +'<textarea class="fc" id="mwText" rows="3" placeholder="@대상자 내용을 입력하세요...">'+H.e(existing?.text||'')+'</textarea></div>'
+      +'<div class="fgroup"><label class="fl">마감일</label>'
+      +'<input class="fc" type="date" id="mwDue" value="'+(existing?.due_date||'')+'"></div>'
+      +'<div class="fgroup"><label class="fl">업무 연결</label>'
+      +'<div style="display:flex;gap:6px">'
+      +'<select class="fc" id="mwLinkType" style="width:110px">'
+      +'<option value="">없음</option><option value="nc">부적합</option>'
+      +'<option value="equip">계측기</option><option value="car">시정조치</option>'
+      +'<option value="insp_in">수입검사</option><option value="docs">문서</option>'
+      +'</select>'
+      +'<input class="fc" id="mwLinkId" placeholder="레코드 번호 (예: NC-001)" value="'+(existing?.link_id||'')+'" ></div></div>'
+      +'<div class="fgroup ff"><label class="fl">파일 첨부</label>'
+      +'<input type="file" id="mwFile" class="fc" style="font-size:11px" accept="image/*,.pdf,.xlsx,.docx,.zip">'
+      +'</div>'
+      +'</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
+      +'<button class="btn bpri" onclick="Pages._mentionSave('+(editId||'null')+')">'+( editId?'💾 수정':'📤 전송')+'</button>',
   });
-  setTimeout(()=>document.getElementById('mtext')?.focus(),80);
+  setTimeout(()=>{
+    const b=document.getElementById('mwToList');
+    if(b&&curTo.length===0){
+      const myTag=document.createElement('span');
+      myTag.className='badge bpri'; myTag.style.cssText='font-size:11px;cursor:pointer';
+      myTag.setAttribute('data-to','');
+      myTag.onclick=()=>myTag.remove();
+    }
+  },50);
 },
 
-/* 멘션 저장 (등록/수정) */
-/* 멘션 저장 (등록/수정) — SB 연동 */
+/* 수신자 추가 */
+_menAddTo(){
+  const sel=document.getElementById('mwToSel');
+  const list=document.getElementById('mwToList');
+  if(!sel||!list||!sel.value) return;
+  const existing=[...list.querySelectorAll('span')].map(s=>s.textContent.replace(' ×',''));
+  if(existing.includes(sel.value)) return;
+  const span=document.createElement('span');
+  span.className='badge bpri'; span.style.cssText='font-size:11px;cursor:pointer;margin:2px';
+  span.textContent=sel.value+' ×';
+  span.onclick=()=>span.remove();
+  list.appendChild(span);
+  sel.value='';
+},
 async _mentionSave(editId){
-  const to=(document.getElementById('mto')?.value||'').trim();
-  const ref=document.getElementById('mref')?.value||'기타';
-  const text=(document.getElementById('mtext')?.value||'').trim();
-  if(!to){Toast.show('수신자를 선택하세요.','warn');return}
+  const toList=[...document.querySelectorAll('#mwToList span')].map(s=>s.textContent.replace(' ×','').trim()).filter(Boolean);
+  const text=(document.getElementById('mwText')?.value||'').trim();
+  if(!toList.length){Toast.show('수신자를 추가하세요.','warn');return}
   if(!text){Toast.show('내용을 입력하세요.','warn');return}
   const me=Auth._cur||'admin';
   const meUser=DB.users.find(u=>u.username===me)||{name:'관리자',dept:''};
-
+  const row={
+    from:     meUser.name||me,
+    dept:     meUser.dept||'',
+    to:       toList[0],
+    to_list:  toList,
+    text,
+    channel:  document.getElementById('mwCh')?.value||'general',
+    type:     document.getElementById('mwType')?.value||'mention',
+    priority: document.getElementById('mwPrio')?.value||'normal',
+    status:   'open',
+    due_date: document.getElementById('mwDue')?.value||null,
+    link_type:document.getElementById('mwLinkType')?.value||null,
+    link_id:  document.getElementById('mwLinkId')?.value||null,
+    ref:      document.getElementById('mwCh')?.value||'general',
+    read:     false,
+    replies:  [],
+    created_at:new Date().toISOString(),
+  };
+  /* [v2.308 PhaseC] 파일 첨부 처리 */
+  const fileEl=document.getElementById('mwFile');
+  if(fileEl?.files?.length){
+    const f=fileEl.files[0];
+    const uploaded=await SB.uploadFile('mentions',f);
+    if(uploaded?.url) row.file_url=uploaded.url;
+  }
+  /* [v2.308 PhaseC] 파일 첨부 */
+  const _fEl=document.getElementById('mwFile');
+  if(_fEl?.files?.length){
+    const _fUp=await SB.uploadFile('mentions',_fEl.files[0]);
+    if(_fUp?.url) row.file_url=_fUp.url;
+  }
   if(editId){
-    const res=await SB.updateMention(editId,{text,to,ref});
-    if(!res.ok)return;
+    const res=await SB.updateMention(editId,{text:row.text,to:row.to,to_list:row.to_list,
+      channel:row.channel,type:row.type,priority:row.priority,
+      due_date:row.due_date,link_type:row.link_type,link_id:row.link_id,file_url:row.file_url});
+    if(!res.ok) return;
     Toast.show('멘션이 수정되었습니다.','ok');
   } else {
-    const row={from:meUser.name,to,dept:meUser.dept||'',text,ref,
-               time:'방금 전',read:false,replies:[],
-               created_at:new Date().toISOString()};
     const res=await SB.addMention(row);
-    if(!res.ok)return;
-    Toast.show('멘션이 등록되었습니다.','ok');
+    if(!res.ok) return;
+    Toast.show('멘션이 전송되었습니다.','ok');
   }
   Modal.close();
   Pages.mentions();
 },
 
-/* 멘션 수정 팝업 열기 */
+/* [v2.308 PhaseA] 상태 변경 (완료/진행중) */
+async _mentionStatus(id, status){
+  const m=DB.mentions.find(m=>m.id===id);
+  if(!m) return;
+  const res=await SB.updateMention(id,{status,read:true});
+  if(!res.ok) return;
+  m.status=status; m.read=true;
+  Toast.show(status==='done'?'완료 처리되었습니다.':'진행중으로 변경되었습니다.','ok');
+  Pages.mentions();
+},
+
+/* [v2.308 PhaseA] 읽음 처리 */
+async _mentionRead(id){
+  const m=DB.mentions.find(m=>m.id===id);
+  if(!m) return;
+  await SB.updateMention(id,{read:true});
+  m.read=true;
+  /* [v2.308 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
+  const _me2=Auth._cur||'admin';
+  const unread=DB.mentions.filter(m=>!m.read&&(m.to===_me2||(m.to_list||[]).includes(_me2)||Auth._u?.role==='admin')).length;
+  const nb=document.getElementById('mnb');
+  if(nb){nb.textContent=unread||'';nb.style.display=unread?'':'none';}
+  Pages.mentions();
+},
+
+/* [v2.308 PhaseA] 고정/해제 */
+async _mentionPin(id, pinned){
+  const m=DB.mentions.find(m=>m.id===id);
+  if(!m) return;
+  await SB.updateMention(id,{pinned});
+  m.pinned=pinned;
+  Toast.show(pinned?'고정되었습니다.':'고정이 해제되었습니다.','ok');
+  Pages.mentions();
+},
+
+/* [v2.308 PhaseA] 반응(Reaction) */
+async _mentionReact(id, emoji){
+  const m=DB.mentions.find(m=>m.id===id);
+  if(!m) return;
+  const me=Auth._u?.name||Auth._cur||'admin';
+  const reactions={...m.reactions||{}};
+  if(!reactions[emoji]) reactions[emoji]=[];
+  const idx=reactions[emoji].indexOf(me);
+  if(idx>=0) reactions[emoji].splice(idx,1);
+  else reactions[emoji].push(me);
+  if(!reactions[emoji].length) delete reactions[emoji];
+  await SB.updateMention(id,{reactions});
+  m.reactions=reactions;
+  Pages.mentions();
+},
+/* [v2.308 PhaseB] 업무 레코드 바로가기 링크 맵 */
+_mentionLinkGo(linkType, linkId){
+  const NAV_MAP={
+    nc:'nc', equip:'equip', cal:'cal', car:'car',
+    insp_in:'insp_in', insp_pr:'insp_pr', insp_pu:'insp_pu',
+    insp_ou:'insp_ou', insp_fi:'insp_fi',
+    docs:'docs', rec:'rec', sqm_eval:'sqm_eval',
+  };
+  const page=NAV_MAP[linkType];
+  if(!page){Toast.show('해당 메뉴로 이동할 수 없습니다.','warn');return;}
+  Modal.close();
+  Nav.go(page);
+  Toast.show('🔗 '+linkId+' — '+page+' 페이지로 이동했습니다.','info',2500);
+},
+
+/* [v2.308 PhaseB] 반응 이모지 선택 팝업 */
+_mentionReactPop(id){
+  const EMOJIS=['👍','✅','🔄','🔥','❓','⚠️','💡','👀'];
+  const m=DB.mentions.find(m=>m.id===id);
+  if(!m) return;
+  const me=Auth._u?.name||Auth._cur||'admin';
+  const reactions=m.reactions||{};
+  const body='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px">'
+    +EMOJIS.map(e=>{
+      const cnt=(reactions[e]||[]).length;
+      const mine=(reactions[e]||[]).includes(me);
+      return '<button class="btn" style="font-size:22px;padding:10px;'
+        +(mine?'background:var(--bg2);border:2px solid var(--pri)':'')
+        +'" onclick="Pages._mentionReact('+id+',&quot;'+e+'&quot;);Modal.close();Pages.mentions()">'+e
+        +(cnt?'<div style="font-size:10px;color:var(--tm)">'+cnt+'</div>':'')+'</button>';
+    }).join('')
+    +'</div>';
+  Modal.open({title:'반응 선택',size:'msm',body});
+},
+
+/* [v2.308 PhaseB] 스레드 답글 — SB 연동 */
+_mentionReplyView(id){
+  const m=DB.mentions.find(m=>m.id===id);
+  if(!m) return;
+  /* thread_id 기반 답글 목록 */
+  const threads=DB.mentions.filter(mn=>mn.thread_id===id)
+    .sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
+  const localReplies=m.replies||[];
+  const allReplies=[...threads,...localReplies.filter(r=>!threads.find(t=>t.id===r.id))];
+
+  const replyHtml=allReplies.length
+    ?allReplies.map(r=>'<div style="display:flex;gap:8px;padding:8px;border-bottom:1px solid var(--bd)">'
+      +'<div style="width:26px;height:26px;border-radius:50%;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">'+(r.from||'?')[0]+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:2px">'
+      +'<span style="font-size:11px;font-weight:700">'+H.e(r.from||'?')+'</span>'
+      +'<span style="font-size:10px;color:var(--tm)">'+(r.created_at?r.created_at.replace('T',' ').slice(0,16):r.time||'')+'</span>'
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--tx)">'+H.e(r.text||r.message||'')+'</div>'
+      +'</div></div>').join('')
+    :'<div style="text-align:center;padding:20px;color:var(--tm);font-size:12px">아직 답글이 없습니다.</div>';
+
+  const linkBtn=m.link_type&&m.link_id
+    ?'<button class="btn bgh bsm" style="font-size:11px" onclick="Pages._mentionLinkGo(&quot;'+H.e(m.link_type)+'&quot;,&quot;'+H.e(m.link_id)+'&quot;)">🔗 '+H.e(m.link_id)+' 바로가기</button>':''
+
+  const body='<div style="background:var(--bg2);border-radius:6px;padding:10px;margin-bottom:10px">'
+    +'<div style="font-size:11px;font-weight:700;margin-bottom:4px">'+H.e(m.from||'?')+'<span style="font-weight:400;color:var(--tm)"> → '+H.e((m.to_list||[m.to]).join(', '))+'</span></div>'
+    +'<div style="font-size:12px;margin-bottom:6px">'+H.e(m.text||'')+'</div>'
+    +(linkBtn?'<div>'+linkBtn+'</div>':'')
+    +'</div>'
+    +'<div style="max-height:250px;overflow-y:auto;margin-bottom:10px">'+replyHtml+'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<input class="fc" id="rtext" placeholder="답글을 입력하세요..." style="flex:1;font-size:12px" '
+    +'onkeydown="if(event.key===&quot;Enter&quot;&&!event.shiftKey){event.preventDefault();Pages._mentionReplySend('+id+')}">  '
+    +'<button class="btn bpri bsm" onclick="Pages._mentionReplySend('+id+')">전송</button>'
+    +'</div>';
+  Modal.open({title:'💬 스레드 — '+H.e(m.from||''),size:'mmd',body,foot:''});
+  setTimeout(()=>document.getElementById('rtext')?.focus(),80);
+},
+/* 멘션 수정 */
 _mentionEdit(id){
   this._mentionWrite(id);
 },
 
-/* 멘션 삭제 — SB 연동 (soft delete: deleted_at) */
-_mentionDel(id){
+/* [v2.308 PhaseA] 멘션 삭제 */
+async _mentionDel(id){
   const isAdmin=(Auth._u?.role==='admin');
   const m=DB.mentions.find(m=>m.id===id);
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return}
-  const isMine=m.from===(Auth._u?.name||'관리자');
-  const hasReply=(m.replies||[]).length>0;
-  if(!isAdmin&&hasReply){Toast.show('댓글이 있는 멘션은 삭제할 수 없습니다.','warn');return}
-  if(!isAdmin&&!isMine){Toast.show('본인이 작성한 멘션만 삭제할 수 있습니다.','warn');return}
-
-  Modal.confirm({
-    title:'멘션 삭제',
-    msg:`${isAdmin&&!isMine?'<div style="margin-bottom:8px;padding:7px 12px;background:#fef3c7;border-radius:6px;font-size:12px;color:#92400e">⚠️ 관리자 권한으로 삭제합니다.</div>':''}<p>이 멘션을 삭제하시겠습니까?</p>`,
-    danger:true,
-    onOk:async()=>{
-      const res=await SB.deleteMention(id);
-      if(!res.ok)return;
-      Toast.show('삭제되었습니다.','ok');
-      Pages.mentions();
-    }
+  const me=Auth._cur||'admin';
+  const isMine=(m.from===me)||(me==='admin'&&m.from==='관리자');
+  if(!isAdmin&&!isMine){Toast.show('삭제 권한이 없습니다.','err');return}
+  Modal.confirm({title:'멘션 삭제',msg:'이 멘션을 삭제하시겠습니까?',danger:true,onOk:async()=>{
+    const res=await SB.deleteMention(id);
+    if(!res.ok) return;
+    DB.mentions=DB.mentions.filter(m=>m.id!==id);
+    Toast.show('삭제되었습니다.','ok');
+    Pages.mentions();
+  }});
+},
+/* [v2.308 PhaseC] 멘션 → 태스크 격상 */
+async _mentionToTask(id){
+  const m=DB.mentions.find(m=>m.id===id);
+  if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
+  if(m.type==='task'){Toast.show('이미 태스크로 지정되어 있습니다.','warn');return;}
+  /* 마감일 입력 팝업 */
+  Modal.open({title:'📋 태스크로 격상',size:'msm',
+    body:'<div class="fg2">'
+      +'<div style="background:var(--bg2);border-radius:6px;padding:10px;margin-bottom:10px;font-size:12px">'+H.e((m.text||'').slice(0,80))+'</div>'
+      +'<div class="fgroup"><label class="fl">마감일 <span style="color:#ef4444">*</span></label>'
+      +'<input class="fc" type="date" id="taskDue" value="'+(m.due_date||'')+'"></div>'
+      +'<div class="fgroup"><label class="fl">우선순위</label>'
+      +'<select class="fc" id="taskPrio">'
+      +'<option value="urgent"'+(m.priority==='urgent'?' selected':'')+'>🔴 긴급</option>'
+      +'<option value="normal"'+(m.priority==='normal'||!m.priority?' selected':'')+'>🟡 일반</option>'
+      +'<option value="low"'+(m.priority==='low'?' selected':'')+'>⚪ 낮음</option>'
+      +'</select></div>'
+      +'</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
+      +'<button class="btn bpri" onclick="Pages._mentionToTaskSave('+id+')">📋 태스크로 격상</button>',
   });
+},
+async _mentionToTaskSave(id){
+  const due=document.getElementById('taskDue')?.value;
+  if(!due){Toast.show('마감일을 입력하세요.','warn');return;}
+  const prio=document.getElementById('taskPrio')?.value||'normal';
+  const res=await SB.updateMention(id,{type:'task',priority:prio,due_date:due,status:'open'});
+  if(!res.ok) return;
+  const m=DB.mentions.find(m=>m.id===id);
+  if(m){m.type='task';m.priority=prio;m.due_date=due;}
+  Modal.close();
+  Toast.show('태스크로 격상되었습니다.','ok');
+  Pages.mentions();
+},
+
+/* [v2.308 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
+_mentionFollowUp(){
+  const me=Auth._cur||'admin';
+  const isAdmin=Auth._u?.role==='admin';
+  const now=new Date();
+  /* 3일 이상 경과한 미완료 멘션 (내가 보낸 것) */
+  const followUps=DB.mentions.filter(m=>{
+    if(m.status==='done') return false;
+    if(m.from!==Auth._u?.name&&m.from!==me) return false;
+    const created=new Date(m.created_at||'');
+    const elapsed=Math.floor((now-created)/(864e5));
+    return elapsed>=3;
+  }).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
+  if(!followUps.length){
+    Toast.show('미응답 팔로우업 대상이 없습니다.','info');
+    return;
+  }
+  const body='<div style="margin-bottom:10px;font-size:12px;color:var(--tm)">'
+    +'총 '+followUps.length+'건의 미응답 멘션이 있습니다. 팔로우업 알림을 전송하시겠습니까?'
+    +'</div>'
+    +'<div style="max-height:240px;overflow-y:auto">'
+    +followUps.slice(0,8).map(m=>{
+      const days=Math.floor((now-new Date(m.created_at||''))/(864e5));
+      return '<div style="padding:6px 8px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between">'
+        +'<div style="font-size:12px">'+H.e((m.text||'').slice(0,40))+'</div>'
+        +'<span class="badge '+(days>=7?'bred':'bamb')+'" style="font-size:10px">'+days+'일 경과</span>'
+        +'</div>';
+    }).join('')
+    +(followUps.length>8?'<div style="text-align:center;font-size:11px;color:var(--tm);padding:6px">외 '+(followUps.length-8)+'건</div>':'')
+    +'</div>';
+  Modal.open({title:'🔄 팔로우업 알림',size:'mmd',body,
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
+      +'<button class="btn bpri" onclick="Pages._mentionFollowUpSend()">📤 팔로우업 전송</button>',
+  });
+  /* 대상 목록 저장 */
+  Pages._followUpList=followUps;
+},
+async _mentionFollowUpSend(){
+  const list=Pages._followUpList||[];
+  if(!list.length) return;
+  const me=Auth._u?.name||Auth._cur||'admin';
+  const meUser=DB.users.find(u=>u.username===(Auth._cur||'admin'))||{name:'관리자',dept:''};
+  let ok=0;
+  for(const m of list){
+    const fu={
+      from:      meUser.name||me,
+      dept:      meUser.dept||'',
+      to:        m.to,
+      to_list:   m.to_list||[m.to],
+      text:      '[팔로우업] '+m.text.slice(0,60)+(m.text.length>60?'...':''),
+      channel:   m.channel||'general',
+      type:      'mention',
+      priority:  'urgent',
+      status:    'open',
+      thread_id: m.id,
+      reply_to:  m.id,
+      ref:       m.ref||'',
+      read:      false,
+      created_at:new Date().toISOString(),
+    };
+    const res=await SB.addMention(fu);
+    if(res.ok) ok++;
+  }
+  Modal.close();
+  Toast.show(ok+'건 팔로우업 알림 전송 완료','ok');
+  Pages.mentions();
+},
+
+/* [v2.308 PhaseC] 멘션 통계 대시보드 */
+_mentionStats(){
+  const all=DB.mentions||[];
+  if(!all.length){Toast.show('멘션 데이터가 없습니다.','info');return;}
+  /* 채널별 집계 */
+  const byCh={};
+  all.forEach(m=>{
+    const ch=m.channel||'general';
+    if(!byCh[ch]) byCh[ch]={total:0,done:0,urgent:0};
+    byCh[ch].total++;
+    if(m.status==='done') byCh[ch].done++;
+    if(m.priority==='urgent') byCh[ch].urgent++;
+  });
+  const CH_LABEL={general:'일반',reference:'기준정보',quality:'품질관리',
+    inspection:'검사고도화',supplier:'공급업체',calibration:'계측기',
+    spc:'SPC통계',improvement:'개선활동',document:'문서관리'};
+  const maxV=Math.max(...Object.values(byCh).map(v=>v.total),1);
+  const bars=Object.entries(byCh).sort((a,b)=>b[1].total-a[1].total).map(([ch,v])=>{
+    const pct=Math.round((v.total/maxV)*100);
+    const donePct=v.total?Math.round((v.done/v.total)*100):0;
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<div style="width:72px;font-size:10px;color:var(--tm);text-align:right">'+H.e(CH_LABEL[ch]||ch)+'</div>'
+      +'<div style="flex:1;position:relative;height:22px;background:var(--bd);border-radius:4px;overflow:hidden">'
+      +'<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#6366f1,#818cf8);border-radius:4px"></div>'
+      +'<span style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:10px;color:'+(pct>50?'#fff':'var(--tx)')+'">'+v.total+'건</span>'
+      +'</div>'
+      +'<span style="font-size:10px;color:#22c55e;width:36px">'+donePct+'%</span>'
+      +(v.urgent?'<span class="badge bred" style="font-size:9px">긴급'+v.urgent+'</span>':'')
+      +'</div>';
+  }).join('');
+
+  /* 유형별 */
+  const byType={};
+  all.forEach(m=>{byType[m.type||'mention']=(byType[m.type||'mention']||0)+1;});
+  const typeHtml=Object.entries(byType).map(([t,n])=>
+    '<div style="text-align:center;padding:10px;background:var(--bg2);border-radius:8px">'
+    +'<div style="font-size:20px;margin-bottom:4px">'+(t==='task'?'📋':t==='notice'?'📢':t==='approval'?'✅':'💬')+'</div>'
+    +'<div style="font-size:14px;font-weight:700">'+n+'</div>'
+    +'<div style="font-size:10px;color:var(--tm)">'+(t==='task'?'태스크':t==='notice'?'공지':t==='approval'?'승인요청':'멘션')+'</div>'
+    +'</div>'
+  ).join('');
+
+  const done=all.filter(m=>m.status==='done').length;
+  const open=all.filter(m=>m.status==='open').length;
+  const unread=all.filter(m=>!m.read).length;
+
+  const body=
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'
+    +'<div style="text-align:center;padding:10px;background:#f0fdf4;border-radius:8px"><div style="font-size:20px;font-weight:700;color:#16a34a">'+done+'</div><div style="font-size:11px;color:var(--tm)">완료</div></div>'
+    +'<div style="text-align:center;padding:10px;background:#fef3c7;border-radius:8px"><div style="font-size:20px;font-weight:700;color:#d97706">'+open+'</div><div style="font-size:11px;color:var(--tm)">처리중</div></div>'
+    +'<div style="text-align:center;padding:10px;background:#fee2e2;border-radius:8px"><div style="font-size:20px;font-weight:700;color:#dc2626">'+unread+'</div><div style="font-size:11px;color:var(--tm)">미읽음</div></div>'
+    +'</div>'
+    +'<div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:6px">채널별 현황 (완료율)</div>'
+    +bars
+    +'<div style="font-size:11px;font-weight:600;color:var(--tm);margin:12px 0 6px">유형별</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">'+typeHtml+'</div>';
+  Modal.open({title:'📊 멘션 통계',size:'mlg',body});
 },
 
 
