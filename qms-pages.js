@@ -62,7 +62,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.305</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.309</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -148,7 +148,7 @@ home(){
           </div>
         </div>`;
       })()}
-            <!-- [v2.308 PhaseB] 미처리 멘션 D-day 패널 -->
+            <!-- [v2.309 PhaseB] 미처리 멘션 D-day 패널 -->
       ${(()=>{
         const _me=Auth._cur||'admin';
         const _td=new Date();
@@ -242,7 +242,7 @@ home(){
   },
 
 async _mentionReplySend(parentId){
-  /* [v2.308 PhaseB] thread_id 기반 SB 스레드 저장 */
+  /* [v2.309 PhaseB] thread_id 기반 SB 스레드 저장 */
   const text=(document.getElementById('rtext')?.value||'').trim();
   if(!text){Toast.show('내용을 입력하세요.','warn');return}
   const me=Auth._u;
@@ -2079,7 +2079,9 @@ _eqDetail(row){
     if(logPane) logPane._equip_code=row.code;
     if(!calPane) return;
     if(!DB.cals||!DB.cals.length){const ld=await SB.getCals();if(ld)DB.cals=ld;}
+    /* [v2.309 P2] cal_date 기준 내림차순 정렬 */
     const recs=(DB.cals||[]).filter(c=>(c.code===row.code||c.equip_code===row.code))
+      .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''));
     if(!recs.length){
       calPane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:12px 0">교정 이력이 없습니다.</div>';
@@ -2608,7 +2610,7 @@ async mentions(){
   const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
 
-  /* [v2.308 PhaseA] 채널 정의 — 8대 메뉴 */
+  /* [v2.309 PhaseA] 채널 정의 — 8대 메뉴 */
   const CHANNELS=[
     {key:'all',    label:'전체',     icon:'💬'},
     {key:'reference', label:'기준정보', icon:'📦'},
@@ -2644,70 +2646,73 @@ async mentions(){
     const normal=items.filter(m=>!m.pinned).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
 
     const cardHtml=(m)=>{
-      const isMe=(m.from===me)||(me==='admin'&&m.from==='관리자');
-      const isMy=(m.to===me)||(m.to_list||[]).includes(me)||isAdmin;
-      const pCls=PRIORITY[m.priority||'normal']?.cls||'bpri';
-      const pLbl=PRIORITY[m.priority||'normal']?.label||'일반';
-      const sCls=STATUS[m.status||'open']?.cls||'bamb';
-      const sLbl=STATUS[m.status||'open']?.label||'열림';
-      const tLbl=TYPES[m.type||'mention']||'💬 멘션';
-      const unreadDot=!m.read&&isMy?'<span style="width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0"></span>':'';
-      const due=m.due_date?(()=>{const d=Math.ceil((new Date(m.due_date)-new Date())/(864e5));return d<0?'<span class="badge bred" style="font-size:10px">D+'+Math.abs(d)+'초과</span>':d<=3?'<span class="badge bamb" style="font-size:10px">D-'+d+'</span>':'<span style="font-size:10px;color:var(--tm)">~'+m.due_date+'</span>';})():'';
-      const fileBtn=m.file_url?'<a href="'+H.e(m.file_url)+'" target="_blank" class="btn bxs" style="font-size:10px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac">📎 첨부파일</a> ':'';
-      const linkBtn=m.link_type&&m.link_id?'<button class="btn bxs" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;font-size:10px" onclick="Nav.go(\''+H.e(m.link_type)+'\')" title="'+H.e(m.link_id)+'">🔗 '+H.e(m.link_id)+'</button> ':'';
-      const replyN=(m.replies||[]).length;
-      const reactions=m.reactions||{};
-      const reactHtml=Object.entries(reactions).filter(([,v])=>v.length).map(([e,v])=>
-        '<button class="btn bxs" style="font-size:11px;padding:1px 6px;background:var(--bg2)" onclick="Pages._mentionReact('+m.id+',\''+e+'\')" title="'+v.join(', ')+'">'+e+' '+v.length+'</button>'
-      ).join(' ');
-
-      const doneBtn=m.status!=='done'&&(isMy||isAdmin)?
-        '<button class="btn bxs bgrn" style="font-size:10px" onclick="Pages._mentionStatus('+m.id+',\'done\')">✅ 완료</button> ':'';
-      const progBtn=m.status==='open'&&(isMy||isAdmin)?
-        '<button class="btn bxs bpri" style="font-size:10px" onclick="Pages._mentionStatus('+m.id+',\'in_progress\')">▶ 진행</button> ':'';
-      const readBtn=!m.read&&isMy?
-        '<button class="btn bxs" style="font-size:10px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac" onclick="Pages._mentionRead('+m.id+')">읽음</button> ':'';
-      const pinBtn=isAdmin?
-        '<button class="btn bxs" style="font-size:10px;background:'+(m.pinned?'#fef3c7':'var(--bg2)')+'" onclick="Pages._mentionPin('+m.id+','+!m.pinned+')" title="'+(m.pinned?'고정해제':'상단고정')+'">'+(m.pinned?'📌':'📍')+'</button> ':'';
-      const editBtn=isMe?'<button class="btn bxs bout" style="font-size:10px" onclick="Pages._mentionEdit('+m.id+')">수정</button> ':'';
-      const delBtn=(isAdmin||(isMe&&!replyN))?'<button class="btn bxs berr" style="font-size:10px" onclick="Pages._mentionDel('+m.id+')">삭제</button>':'';
-
-      return '<div class="card" style="margin-bottom:8px;'+(m.pinned?'border-left:3px solid #f59e0b;':'')+(!m.read&&isMy?'background:var(--bg2);':'')+'">'
-        +'<div style="display:flex;align-items:flex-start;gap:8px">'
-        +'<div style="width:32px;height:32px;border-radius:50%;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+(m.from||'?')[0]+'</div>'
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">'
-        +unreadDot
-        +'<span style="font-size:12px;font-weight:700">'+H.e(m.from||'?')+'</span>'
-        +'<span style="font-size:11px;color:var(--tm)">→ '+H.e((m.to_list||[m.to]).join(', '))+'</span>'
-        +'<span class="badge '+pCls+'" style="font-size:10px">'+pLbl+'</span>'
-        +'<span class="badge '+sCls+'" style="font-size:10px">'+sLbl+'</span>'
-        +'<span style="font-size:10px;color:var(--tm)">'+tLbl+'</span>'
-        +(m.dept?'<span style="font-size:10px;color:var(--tm)">'+H.e(m.dept)+'</span>':'')
-        +'</div>'
-        +'<div style="font-size:13px;color:var(--tx);margin-bottom:6px;word-break:break-word">'+H.e(m.text||'')+'</div>'
-        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-        +fileBtn+linkBtn
-        +(replyN?'<span style="font-size:11px;color:#3b82f6;cursor:pointer" onclick="Pages._mentionReplyView('+m.id+')">💬 답글 '+replyN+'개</span>':'')
-        +due
-        +reactHtml
-        +'<span style="font-size:10px;color:var(--tl);margin-left:auto">'+(m.created_at?m.created_at.replace('T',' ').slice(0,16):m.time||'')+'</span>'
-        +'</div>'
-        +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'
-        +readBtn+doneBtn+progBtn
-        +'<button class="btn bxs" style="font-size:10px;background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe" onclick="Pages._mentionReplyOpen('+m.id+')">💬 답글</button> '
-        +'<button class="btn bxs" style="font-size:10px" onclick="Pages._mentionReactPop('+m.id+')">😊 반응</button> '
-        +(m.type!=='task'?'<button class="btn bxs" style="font-size:10px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd" onclick="Pages._mentionToTask('+m.id+')">📋 태스크</button> ':'')
-        +pinBtn+editBtn+delBtn
-        +'</div>'
-        +'</div></div></div>';
-    };
+    /* [v2.309] 목록형 한 줄 UI */
+    const isMe=(m.from===me)||(me==='admin'&&m.from==='관리자');
+    const isMy=(m.to===me)||(m.to_list||[]).includes(me)||isAdmin;
+    const pCls=m.priority==='urgent'?'bred':m.priority==='low'?'bgh':'bpri';
+    const sCls=(m.status==='done')?'bgrn':(m.status==='in_progress')?'bpri':'bamb';
+    const tIcon={'mention':'💬','task':'📋','notice':'📢','approval':'✅'}[m.type||'mention']||'💬';
+    const unreadDot=(!m.read&&isMy)?'<span style="width:7px;height:7px;background:#ef4444;border-radius:50%;display:inline-block;flex-shrink:0"></span>':'';
+    const pinMark=m.pinned?'📌 ':'';
+    const due=m.due_date?(()=>{
+      const d=Math.ceil((new Date(m.due_date)-new Date())/(864e5));
+      return d<0?'<span class="badge bred" style="font-size:9px">D+'+Math.abs(d)+'</span>':
+             d<=3?'<span class="badge bamb" style="font-size:9px">D-'+d+'</span>':'';
+    })():'';
+    const replyN=(m.replies||[]).length+(DB.mentions||[]).filter(mn=>mn.thread_id===m.id).length;
+    const reactions=m.reactions||{};
+    const reactHtml=Object.entries(reactions).filter(([,v])=>v.length)
+      .map(([e,v])=>'<span style="font-size:10px;color:var(--tm)">'+e+v.length+'</span>').join('');
+    const dt=(m.created_at||m.time||'').replace('T',' ').slice(0,16);
+    const linkTag=m.link_id?'<span style="font-size:10px;color:#3b82f6;background:#eff6ff;border-radius:3px;padding:1px 4px;cursor:pointer" onclick="event.stopPropagation();Pages._mentionLinkGo(&quot;'+H.e(m.link_type)+'&quot;,&quot;'+H.e(m.link_id)+'&quot;)" title="바로가기">🔗'+H.e(m.link_id)+'</span>':'';
+    const fileTag=m.file_url?'<span style="font-size:10px;color:#16a34a">📎</span>':'';
+    /* 액션 버튼 — 호버 시 표시 */
+    const doneBtn=(m.status!=='done'&&(isMy||isAdmin))
+      ?'<button class="btn bxs bgrn" style="font-size:10px" onclick="event.stopPropagation();Pages._mentionStatus('+m.id+',&quot;done&quot;)">✅</button> ':'';
+    const progBtn=(m.status==='open'&&(isMy||isAdmin))
+      ?'<button class="btn bxs bpri" style="font-size:10px" onclick="event.stopPropagation();Pages._mentionStatus('+m.id+',&quot;in_progress&quot;)">▶</button> ':'';
+    const readBtn=(!m.read&&isMy)
+      ?'<button class="btn bxs" style="font-size:10px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac" onclick="event.stopPropagation();Pages._mentionRead('+m.id+')">읽음</button> ':'';
+    const pinBtn=isAdmin
+      ?'<button class="btn bxs" style="font-size:10px" onclick="event.stopPropagation();Pages._mentionPin('+m.id+','+!m.pinned+')" title="'+(m.pinned?'고정해제':'고정')+'">📍</button> ':'';
+    const editBtn=isMe?'<button class="btn bxs bout" style="font-size:10px" onclick="event.stopPropagation();Pages._mentionEdit('+m.id+')">✏️</button> ':'';
+    const delBtn=(isAdmin||(isMe&&!(m.replies||[]).length))
+      ?'<button class="btn bxs berr" style="font-size:10px" onclick="event.stopPropagation();Pages._mentionDel('+m.id+')">🗑</button>':'';
+    const reactBtn='<button class="btn bxs" style="font-size:10px" onclick="event.stopPropagation();Pages._mentionReactPop('+m.id+')">😊</button> ';
+    return '<div class="mention-row'+(m.pinned?' pinned':'')+((!m.read&&isMy)?' unread':'')+'" '
+      +'onclick="Pages._mentionReplyOpen('+m.id+')" '
+      +'style="display:grid;grid-template-columns:16px 28px 70px 70px 1fr 80px 60px 80px 100px auto;'
+      +'align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--bd);cursor:pointer;'
+      +'transition:.12s;background:'+(m.pinned?'#fefce8':(!m.read&&isMy?'var(--bg2)':'transparent'))+'" '
+      +'onmouseover="this.style.background=&quot;var(--bg2)&quot;" '
+      +'onmouseout="this.style.background=&quot;'+(m.pinned?'#fefce8':(!m.read&&isMy?'var(--bg2)':'transparent'))+'&quot;" '
+      +'<div style="display:flex;justify-content:center">'+unreadDot+'</div>'
+      +'<div style="text-align:center;font-size:14px">'+tIcon+'</div>'
+      +'<div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+H.e(m.from||'?')+'</div>'
+      +'<div style="font-size:11px;color:var(--tm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+      +'→ '+H.e((m.to_list||[m.to]).slice(0,2).join(', '))+((m.to_list||[]).length>2?'…':'')+'</div>'
+      +'<div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px">'
+      +'<span>'+pinMark+H.e((m.text||'').slice(0,60))+((m.text||'').length>60?'…':'')+'</span>'
+      +linkTag+fileTag
+      +(replyN?'<span style="font-size:10px;color:#3b82f6">💬'+replyN+'</span>':'')
+      +reactHtml
+      +'</div>'
+      +'<div style="text-align:center">'+due+'<span class="badge '+pCls+'" style="font-size:9px">'+( m.priority==='urgent'?'긴급':m.priority==='low'?'낮음':'일반')+'</span></div>'
+      +'<div style="text-align:center"><span class="badge '+sCls+'" style="font-size:9px">'+(m.status==='done'?'완료':m.status==='in_progress'?'진행중':'열림')+'</span></div>'
+      +'<div style="font-size:10px;color:var(--tm);white-space:nowrap">'+dt+'</div>'
+      +'<div style="display:flex;gap:2px;flex-wrap:nowrap;white-space:nowrap">'
+      +readBtn+doneBtn+progBtn+reactBtn+pinBtn+editBtn+delBtn
+      +'</div>'
+      +'</div>';
+  };
 
     const listEl=document.getElementById('mlist');
     if(!listEl) return;
+    /* [v2.309] 목록 헤더 */
+    const headerHtml='<div style="display:grid;grid-template-columns:16px 28px 70px 70px 1fr 80px 60px 80px 100px auto;'+'align-items:center;gap:8px;padding:5px 10px;background:var(--bg2);border-bottom:2px solid var(--bd);font-size:10px;font-weight:600;color:var(--tm)">'+'<div></div><div style="text-align:center">유형</div><div>발신자</div><div>수신자</div>'+'<div>내용</div><div style="text-align:center">우선순위</div><div style="text-align:center">상태</div>'+'<div>일시</div><div>액션</div><div></div></div>';
     const pinnedHtml=pinned.length
       ?'<div style="border-bottom:1px dashed var(--bd);margin-bottom:10px;padding-bottom:6px"><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:6px">📌 고정 메시지</div>'+pinned.map(cardHtml).join('')+'</div>':'';
-    listEl.innerHTML=pinnedHtml+(normal.length?normal.map(cardHtml).join(''):'<div style="text-align:center;padding:32px;color:var(--tm);font-size:13px">📭 멘션이 없습니다.</div>');
+    listEl.innerHTML=headerHtml+pinnedHtml+(normal.length?normal.map(cardHtml).join(''):'<div style="text-align:center;padding:32px;color:var(--tm);font-size:13px">📭 멘션이 없습니다.</div>');
   };
 
   /* 채널 탭 HTML */
@@ -2813,7 +2818,7 @@ async mentions(){
     if(cntEl) cntEl.textContent=filtered.length+'건';
     renderList();
   };
-  /* [v2.308 PhaseC] 필터 초기화 */
+  /* [v2.309 PhaseC] 필터 초기화 */
   Pages._menFilterReset=()=>{
     ['mTypeFilter','mStatFilter','mFromFilter','mSearch'].forEach(id=>{
       const el=document.getElementById(id);
@@ -2830,7 +2835,7 @@ async mentions(){
   renderList();
 },
 
-/* [v2.308 PhaseA] 멘션 작성/수정 폼 */
+/* [v2.309 PhaseA] 멘션 작성/수정 폼 */
 _mentionWrite(editId=null){
   const me=Auth._cur||'admin';
   const meUser=DB.users.find(u=>u.username===me)||{name:'관리자'};
@@ -2943,14 +2948,14 @@ async _mentionSave(editId){
     replies:  [],
     created_at:new Date().toISOString(),
   };
-  /* [v2.308 PhaseC] 파일 첨부 처리 */
+  /* [v2.309 PhaseC] 파일 첨부 처리 */
   const fileEl=document.getElementById('mwFile');
   if(fileEl?.files?.length){
     const f=fileEl.files[0];
     const uploaded=await SB.uploadFile('mentions',f);
     if(uploaded?.url) row.file_url=uploaded.url;
   }
-  /* [v2.308 PhaseC] 파일 첨부 */
+  /* [v2.309 PhaseC] 파일 첨부 */
   const _fEl=document.getElementById('mwFile');
   if(_fEl?.files?.length){
     const _fUp=await SB.uploadFile('mentions',_fEl.files[0]);
@@ -2971,7 +2976,7 @@ async _mentionSave(editId){
   Pages.mentions();
 },
 
-/* [v2.308 PhaseA] 상태 변경 (완료/진행중) */
+/* [v2.309 PhaseA] 상태 변경 (완료/진행중) */
 async _mentionStatus(id, status){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -2982,13 +2987,13 @@ async _mentionStatus(id, status){
   Pages.mentions();
 },
 
-/* [v2.308 PhaseA] 읽음 처리 */
+/* [v2.309 PhaseA] 읽음 처리 */
 async _mentionRead(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
   await SB.updateMention(id,{read:true});
   m.read=true;
-  /* [v2.308 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
+  /* [v2.309 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
   const _me2=Auth._cur||'admin';
   const unread=DB.mentions.filter(m=>!m.read&&(m.to===_me2||(m.to_list||[]).includes(_me2)||Auth._u?.role==='admin')).length;
   const nb=document.getElementById('mnb');
@@ -2996,7 +3001,7 @@ async _mentionRead(id){
   Pages.mentions();
 },
 
-/* [v2.308 PhaseA] 고정/해제 */
+/* [v2.309 PhaseA] 고정/해제 */
 async _mentionPin(id, pinned){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3006,7 +3011,7 @@ async _mentionPin(id, pinned){
   Pages.mentions();
 },
 
-/* [v2.308 PhaseA] 반응(Reaction) */
+/* [v2.309 PhaseA] 반응(Reaction) */
 async _mentionReact(id, emoji){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3021,7 +3026,7 @@ async _mentionReact(id, emoji){
   m.reactions=reactions;
   Pages.mentions();
 },
-/* [v2.308 PhaseB] 업무 레코드 바로가기 링크 맵 */
+/* [v2.309 PhaseB] 업무 레코드 바로가기 링크 맵 */
 _mentionLinkGo(linkType, linkId){
   const NAV_MAP={
     nc:'nc', equip:'equip', cal:'cal', car:'car',
@@ -3036,7 +3041,7 @@ _mentionLinkGo(linkType, linkId){
   Toast.show('🔗 '+linkId+' — '+page+' 페이지로 이동했습니다.','info',2500);
 },
 
-/* [v2.308 PhaseB] 반응 이모지 선택 팝업 */
+/* [v2.309 PhaseB] 반응 이모지 선택 팝업 */
 _mentionReactPop(id){
   const EMOJIS=['👍','✅','🔄','🔥','❓','⚠️','💡','👀'];
   const m=DB.mentions.find(m=>m.id===id);
@@ -3056,7 +3061,7 @@ _mentionReactPop(id){
   Modal.open({title:'반응 선택',size:'msm',body});
 },
 
-/* [v2.308 PhaseB] 스레드 답글 — SB 연동 */
+/* [v2.309 PhaseB] 스레드 답글 — SB 연동 */
 _mentionReplyView(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3100,7 +3105,7 @@ _mentionEdit(id){
   this._mentionWrite(id);
 },
 
-/* [v2.308 PhaseA] 멘션 삭제 */
+/* [v2.309 PhaseA] 멘션 삭제 */
 async _mentionDel(id){
   const isAdmin=(Auth._u?.role==='admin');
   const m=DB.mentions.find(m=>m.id===id);
@@ -3116,7 +3121,7 @@ async _mentionDel(id){
     Pages.mentions();
   }});
 },
-/* [v2.308 PhaseC] 멘션 → 태스크 격상 */
+/* [v2.309 PhaseC] 멘션 → 태스크 격상 */
 async _mentionToTask(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
@@ -3151,7 +3156,7 @@ async _mentionToTaskSave(id){
   Pages.mentions();
 },
 
-/* [v2.308 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
+/* [v2.309 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
 _mentionFollowUp(){
   const me=Auth._cur||'admin';
   const isAdmin=Auth._u?.role==='admin';
@@ -3219,7 +3224,7 @@ async _mentionFollowUpSend(){
   Pages.mentions();
 },
 
-/* [v2.308 PhaseC] 멘션 통계 대시보드 */
+/* [v2.309 PhaseC] 멘션 통계 대시보드 */
 _mentionStats(){
   const all=DB.mentions||[];
   if(!all.length){Toast.show('멘션 데이터가 없습니다.','info');return;}

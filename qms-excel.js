@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.307] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.309] */
 "use strict";
 
 

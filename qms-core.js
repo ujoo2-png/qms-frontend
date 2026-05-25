@@ -1,4 +1,4 @@
-/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.307] */
+/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.309] */
 "use strict";
 
 
@@ -225,7 +225,7 @@ const Auth={
       const cnt=document.getElementById('npCount');if(cnt)cnt.textContent=`총 ${active.length}건`;
       const body=document.getElementById('npBody');
       if(body)body.innerHTML=active.map(n=>`
-          <div class="npi"><div class="npi-t">${H.e(n.title)}</div>
+          <div class="npi" style="cursor:pointer" onclick="Auth.enterApp();Nav.go('mentions')" title="멘션함으로 이동"><div class="npi-t">${H.e(n.title)}</div>
           <div class="npi-b">${H.e(n.body)}</div>
           <div class="npi-m"><span>✍ ${H.e(n.author)}</span><span>📅 ${n.date} ~ ${n.expire}</span></div></div>`).join('');
       document.getElementById('npOverlay').classList.remove('hidden');
@@ -965,6 +965,29 @@ const TopNav={
       }
     }
   },
+  /* [v2.309] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
+  selectMention(){
+    /* 기존 active 탭 해제 */
+    document.querySelectorAll('.tb-mod').forEach(m=>m.classList.remove('on'));
+    document.getElementById('tbMentionBtn')?.classList.add('on');
+    /* 사이드바 필터링 없이 바로 mentions 페이지로 이동 */
+    Nav.go('mentions');
+  },
+  /* [v2.309] 멘션 미읽음 배지 업데이트 */
+  updateMentionBadge(){
+    const me=Auth._cur||'admin';
+    const unread=(DB.mentions||[]).filter(m=>
+      !m.read&&(m.to===me||(m.to_list||[]).includes(me)||Auth._u?.role==='admin')
+    ).length;
+    const badge=document.getElementById('tbMentionBadge');
+    if(badge){
+      badge.textContent=unread>9?'9+':unread||'';
+      badge.style.display=unread?'flex':'none';
+    }
+    /* 사이드바 배지도 동시 업데이트 */
+    const nb=document.getElementById('mnb');
+    if(nb){nb.textContent=unread||'';nb.style.display=unread?'':'none';}
+  },
 };
 
 /* ══════════════════════════════════════════════════════
@@ -978,6 +1001,8 @@ const Nav={
   go(page){
     /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
     if(Auth._u) sessionStorage.setItem('qms_page', page);
+    /* [v2.309] 멘션함 이동 시 배지 업데이트 */
+    if(page==='mentions') setTimeout(()=>TopNav.updateMentionBadge(),300);
 
     document.querySelectorAll('.ni').forEach(el=>el.classList.toggle('active',el.dataset.p===page));
 
