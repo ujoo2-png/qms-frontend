@@ -11,76 +11,7 @@ const App={
   files:{},
 };
 
-/* ══ DB ══ */
-const DB={
-  items:[
-    {id:1,item_code:'RAW-001',item_name:'스테인레스 플레이트',category:'원자재',spec:'SUS304 2T',material:'SUS304',unit:'EA',vendor_id:1,vendor_name:'㈜한국스틸',active:1,created_at:'2026-01-10',updated_at:'2026-03-15'},
-    {id:2,item_code:'RAW-002',item_name:'알루미늄 바',category:'원자재',spec:'A6061 Ø20',material:'AL6061',unit:'M',vendor_id:2,vendor_name:'알루미늄코리아',active:1,created_at:'2026-01-12',updated_at:'2026-04-01'},
-    {id:3,item_code:'SUB-001',item_name:'육각볼트 M8',category:'부자재',spec:'M8×25 SUS',material:'SUS',unit:'EA',vendor_id:3,vendor_name:'㈜부품나라',active:1,created_at:'2026-01-15',updated_at:'2026-01-15'},
-    {id:4,item_code:'SFG-001',item_name:'가공 브라켓',category:'반제품',spec:'자체제작',material:'SS400',unit:'EA',vendor_id:null,vendor_name:'-',active:1,created_at:'2026-02-01',updated_at:'2026-02-01'},
-    {id:5,item_code:'FG-001',item_name:'완성 어셈블리',category:'완제품',spec:'A TYPE',material:'복합',unit:'SET',vendor_id:null,vendor_name:'-',active:1,created_at:'2026-02-10',updated_at:'2026-04-20'},
-    {id:6,item_code:'CONS-001',item_name:'절삭유',category:'소모품',spec:'수용성',material:'-',unit:'L',vendor_id:4,vendor_name:'화학산업㈜',active:0,created_at:'2026-03-01',updated_at:'2026-03-01'},
-  ],
-  vendors:[
-    {id:1,vendor_name:'㈜한국스틸',   vendor_type:'원자재',biz_no:'123-45-67890',ceo_name:'김대표',tel:'02-1234-5678',fax:'02-1234-5679',email:'steel@hankook.co.kr',    manager:'이담당',manager_tel:'010-1234-5678',manager_email:'lee@hankook.co.kr',   active:1,created_at:'2026-01-05',updated_at:'2026-03-10'},
-    {id:2,vendor_name:'알루미늄코리아', vendor_type:'원자재',biz_no:'234-56-78901',ceo_name:'박사장',tel:'031-234-5678',fax:'031-234-5679',email:'info@alkorea.co.kr',      manager:'최담당',manager_tel:'010-2345-6789',manager_email:'choi@alkorea.co.kr',  active:1,created_at:'2026-01-06',updated_at:'2026-01-06'},
-    {id:3,vendor_name:'㈜부품나라',   vendor_type:'부자재',biz_no:'345-67-89012',ceo_name:'이대표',tel:'032-345-6789',fax:'032-345-6780',email:'parts@bupum.co.kr',      manager:'강담당',manager_tel:'010-3456-7890',manager_email:'kang@bupum.co.kr',   active:1,created_at:'2026-01-07',updated_at:'2026-02-15'},
-    {id:4,vendor_name:'화학산업㈜',   vendor_type:'소모품',biz_no:'456-78-90123',ceo_name:'정사장',tel:'051-456-7890',fax:'051-456-7891',email:'chem@hwahak.co.kr',       manager:'윤담당',manager_tel:'010-4567-8901',manager_email:'yoon@hwahak.co.kr',  active:1,created_at:'2026-01-08',updated_at:'2026-01-08'},
-    {id:5,vendor_name:'정밀측정기㈜', vendor_type:'외주',  biz_no:'567-89-01234',ceo_name:'한대표',tel:'02-567-8901', fax:'02-567-8902', email:'measure@jungmil.co.kr',   manager:'신담당',manager_tel:'010-5678-9012',manager_email:'shin@jungmil.co.kr', active:1,created_at:'2026-02-01',updated_at:'2026-04-20'},
-  ],
-  users:[
-    {id:1,username:'admin',  name:'시스템관리자',department:'IT팀',  tel:'010-0000-0001',email:'admin@company.com',   role:'admin',  active:1,created_at:'2026-01-01',updated_at:'2026-04-01'},
-    {id:2,username:'qm01',   name:'김품질',      department:'품질팀',tel:'010-1234-5678',email:'qm01@company.com',   role:'manager',active:1,created_at:'2026-01-02',updated_at:'2026-01-02'},
-    {id:3,username:'insp01', name:'이검사',      department:'품질팀',tel:'010-2345-6789',email:'insp01@company.com', role:'user',   active:1,created_at:'2026-01-03',updated_at:'2026-01-03'},
-    {id:4,username:'prod01', name:'박생산',      department:'생산팀',tel:'010-3456-7890',email:'prod01@company.com', role:'user',   active:1,created_at:'2026-01-04',updated_at:'2026-03-15'},
-    {id:5,username:'eng01',  name:'최엔지니어',  department:'개발팀',tel:'010-4567-8901',email:'eng01@company.com',  role:'user',   active:1,created_at:'2026-01-05',updated_at:'2026-01-05'},
-  ],
-    inspections:[], /* [v2.29] 더미 제거 — SB에서 로드 */
-
-  nc:[
-    {id:1,no:'NC-20260430-001',type:'수입',item:'알루미늄 바',date:'2026-04-30',status:'처리중',desc:'치수 불량 - 직경 기준 초과',assignee:'김품질'},
-    {id:2,no:'NC-20260425-001',type:'공정',item:'가공 브라켓',date:'2026-04-25',status:'접수',desc:'표면 스크래치 발생',assignee:'박생산'},
-    {id:3,no:'NC-20260420-001',type:'출하',item:'완성 어셈블리',date:'2026-04-20',status:'완료',desc:'포장 불량',assignee:'김품질'},
-  ],
-  equip:[
-    {id:1,code:'EQ-001',name:'버니어캘리퍼스',model:'CD-20CP',maker:'미쓰토요',range:'0~200mm',res:'0.01mm',loc:'품질실',status:'정상',next:'2026-07-01',last:'2026-01-01'},
-    {id:2,code:'EQ-002',name:'마이크로미터',model:'MDC-25MJ',maker:'미쓰토요',range:'0~25mm',res:'0.001mm',loc:'품질실',status:'정상',next:'2026-08-01',last:'2026-02-01'},
-    {id:3,code:'EQ-003',name:'다이얼게이지',model:'1044S',maker:'미쓰토요',range:'0~10mm',res:'0.01mm',loc:'생산팀',status:'교정중',next:'2026-05-15',last:'2025-11-15'},
-    {id:4,code:'EQ-004',name:'표면조도계',model:'SJ-210',maker:'미쓰토요',range:'Ra0~16μm',res:'0.001μm',loc:'품질실',status:'정상',next:'2026-09-01',last:'2026-03-01'},
-    {id:5,code:'EQ-005',name:'경도계(로크웰)',model:'HR-530L',maker:'미쓰토요',range:'20~100HRC',res:'0.5HRC',loc:'품질실',status:'교정만료',next:'2026-04-01',last:'2025-10-01'},
-  ],
-  cals:[
-    {id:1,code:'EQ-001',name:'버니어캘리퍼스',date:'2026-01-01',agency:'㈜정밀측정',result:'합격',next:'2026-07-01',cert:'CAL-2026-001'},
-    {id:2,code:'EQ-002',name:'마이크로미터',date:'2026-02-01',agency:'㈜정밀측정',result:'합격',next:'2026-08-01',cert:'CAL-2026-002'},
-    {id:3,code:'EQ-003',name:'다이얼게이지',date:'2025-11-15',agency:'한국계량측정',result:'합격',next:'2026-05-15',cert:'CAL-2025-015'},
-    {id:4,code:'EQ-005',name:'경도계(로크웰)',date:'2025-10-01',agency:'㈜정밀측정',result:'합격',next:'2026-04-01',cert:'CAL-2025-010'},
-  ],
-  /* [v2.305 Phase1] 계측기 변경이력 캐시 */
-  equip_logs:[],
-  docs:[
-    {id:1,no:'QP-20260110-001',type:'절차서',title:'수입검사 절차서',rev:'2.0',date:'2026-01-10',status:'유효',author:'김품질'},
-    {id:2,no:'QP-20260115-001',type:'절차서',title:'부적합품 관리 절차서',rev:'1.5',date:'2026-01-15',status:'유효',author:'김품질'},
-    {id:3,no:'QI-20260201-001',type:'지침서',title:'계측기 교정 관리 지침',rev:'1.0',date:'2026-02-01',status:'유효',author:'이검사'},
-    {id:4,no:'QF-20260210-001',type:'양식',title:'수입검사 성적서',rev:'3.0',date:'2026-02-10',status:'유효',author:'김품질'},
-    {id:5,no:'QP-20260301-001',type:'절차서',title:'시정조치 절차서',rev:'1.0',date:'2026-03-01',status:'초안',author:'관리자'},
-  ],
-  cars:[
-    {id:1,no:'CAR-20260430-001',src:'부적합',title:'알루미늄 바 치수불량 재발방지',status:'처리중',open:'2026-04-30',due:'2026-05-14',assignee:'박생산'},
-    {id:2,no:'CAR-20260415-001',src:'내부심사',title:'검사 기록 미비 개선',status:'완료',open:'2026-04-15',due:'2026-04-30',assignee:'이검사'},
-    {id:3,no:'CAR-20260401-001',src:'고객불만',title:'포장 개선 조치',status:'접수',open:'2026-04-01',due:'2026-05-01',assignee:'김품질'},
-  ],
-  /* ── 멘션 데이터
-     Supabase 배포 시: supabase.from('mentions').select('*').order('created_at',{ascending:false})
-     필드: id, from(작성자), to(수신자), dept, text, ref(참조메뉴), time, read, replies(댓글배열) */
-  mentions:[
-    {id:1,from:'김품질',to:'관리자',dept:'품질팀',text:'@관리자 수입검사 결과 확인 부탁드립니다. LOT-20260501 검사 성적서 검토 요청입니다.',ref:'수입검사',time:'5분 전',read:false,replies:[]},
-    {id:2,from:'이검사',to:'관리자',dept:'품질팀',text:'@관리자 부적합 보고서 NC-20260430-001 검토 요청입니다.',ref:'부적합관리',time:'1시간 전',read:false,replies:[{id:1,from:'관리자',text:'확인하겠습니다.',time:'50분 전'}]},
-    {id:3,from:'박담당',to:'관리자',dept:'생산팀',text:'@관리자 CAR-20260430-001 처리 부탁드립니다.',ref:'시정조치',time:'2시간 전',read:false,replies:[]},
-    {id:4,from:'최엔지니어',to:'관리자',dept:'개발팀',text:'@관리자 EQ-003 교정 만료 확인 요청드립니다.',ref:'계측기관리',time:'1일 전',read:true,replies:[]},
-  ],
-};
-
-/* ══ 헬퍼 ══ */
+/* ══ DB ══ *//* ══ 헬퍼 ══ */
 const H={
   e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')},
   d(d){if(!d)return'-';const dt=new Date(d);return`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`},
