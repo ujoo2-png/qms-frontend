@@ -557,3 +557,11 @@ textarea.fc{resize:vertical;min-height:68px}
 .sp-foot-info{font-size:12px;color:var(--tm)}
 .sp-empty{padding:40px 20px;text-align:center;color:var(--tm)}
 .sp-empty-icon{font-size:36px;margin-bottom:9px}
+
+/* [v2.313] 멘션함 table 스타일 */
+#mlist table { table-layout: fixed; }
+#mlist tr:hover td { background: #f8fafc !important; }
+#mlist td { vertical-align: middle; font-size: 12px; font-family: inherit; }
+#mlist th { font-size: 11px; font-weight: 600; color: var(--tm); }
+#mlist .badge { font-size: 10px; }
+

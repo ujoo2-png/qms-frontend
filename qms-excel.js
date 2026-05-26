@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.312] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.313] */
 "use strict";
 
 
@@ -1076,7 +1076,7 @@ const ExcelMgr={
     equip:{
       title:'계측기등록',
       cols:[
-        /* [v2.312] 컬럼 순서 재정의 + model 추가 + 차기교정일 날짜만 */
+        /* [v2.313] 컬럼 순서 재정의 + model 추가 + 차기교정일 날짜만 */
         {key:'code',     label:'계측기코드',  req:true,  sample:'EQ-001',    note:'필수. 중복 시 업데이트'},
         {key:'name',     label:'계측기명',    req:true,  sample:'디지털 버니어캘리퍼스', note:'필수'},
         {key:'model',    label:'모델번호',    req:false, sample:'CD-20APX'},
@@ -1296,8 +1296,24 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
+    /* [v2.313] 계측기 추가 한글 별칭 매핑 */
+    const extraMap={
+      '제조사':'maker','메이커':'maker','브랜드':'maker',
+      '측정범위':'range','범위':'range','레인지':'range',
+      '분해능':'res','해상도':'res','최소눈금':'res',
+      '보관위치':'loc','위치':'loc','장소':'loc','보관장소':'loc',
+      '사용자':'operator','담당자':'operator','사용부서':'operator',
+      '모델번호':'model','모델':'model','형번':'model',
+      '계측기코드':'code','코드':'code','관리번호':'code',
+      '계측기명':'name','명칭':'name','기기명':'name',
+      '최근교정일':'last','교정일':'last','직전교정일':'last',
+      '차기교정일':'next','다음교정일':'next','예정교정일':'next',
+      '사용여부':'active','활성여부':'active',
+    };
+    Object.assign(labelToKey, extraMap);
     // 헤더 인덱스 매핑: colMap[i] = key (없으면 null)
-    const colMap=headerRow.map(h=>labelToKey[h]||null);
+    // 헤더 앞뒤 공백 제거 + * 필수표시 제거
+    const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
     if(mappedCols===0){
@@ -1442,7 +1458,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.312] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.313] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
