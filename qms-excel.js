@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.314] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.315] */
 "use strict";
 
 
@@ -1076,7 +1076,7 @@ const ExcelMgr={
     equip:{
       title:'계측기등록',
       cols:[
-        /* [v2.314] 컬럼 순서 재정의 + model 추가 + 차기교정일 날짜만 */
+        /* [v2.315] 컬럼 순서 재정의 + model 추가 + 차기교정일 날짜만 */
         {key:'code',     label:'계측기코드',  req:true,  sample:'EQ-001',    note:'필수. 중복 시 업데이트'},
         {key:'name',     label:'계측기명',    req:true,  sample:'디지털 버니어캘리퍼스', note:'필수'},
         {key:'model',    label:'모델번호',    req:false, sample:'CD-20APX'},
@@ -1296,7 +1296,7 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.314] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.315] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
       const equipAlias={
         '제조사':'maker','메이커':'maker','브랜드':'maker','Maker':'maker',
@@ -1318,7 +1318,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.314] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.315] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1463,7 +1463,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.314] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.315] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',

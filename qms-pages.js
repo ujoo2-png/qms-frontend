@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.314] */
+/* qms-pages.js — Pages 페이지 렌더러 [v2.315] */
 "use strict";
 
 
@@ -62,7 +62,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.314</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.315</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -148,7 +148,7 @@ home(){
           </div>
         </div>`;
       })()}
-            <!-- [v2.314 PhaseB] 미처리 멘션 D-day 패널 -->
+            <!-- [v2.315 PhaseB] 미처리 멘션 D-day 패널 -->
       ${(()=>{
         const _me=Auth._cur||'admin';
         const _td=new Date();
@@ -242,7 +242,7 @@ home(){
   },
 
 async _mentionReplySend(parentId){
-  /* [v2.314 PhaseB] thread_id 기반 SB 스레드 저장 */
+  /* [v2.315 PhaseB] thread_id 기반 SB 스레드 저장 */
   const text=(document.getElementById('rtext')?.value||'').trim();
   if(!text){Toast.show('내용을 입력하세요.','warn');return}
   const me=Auth._u;
@@ -273,7 +273,10 @@ async _mentionReplySend(parentId){
   }
   document.getElementById('rtext').value='';
   Toast.show('답글이 전송되었습니다.','ok');
-  /* 모달 내 스레드 목록 갱신 */
+  /* [v2.315] 입력창 초기화 + 배지 갱신 + 팝업 재렌더 */
+  const _rtEl=document.getElementById('rtext');
+  if(_rtEl) _rtEl.value='';
+  TopNav.updateMentionBadge();
   Pages._mentionReplyView(parentId);
 },
 async _approveUser(userId, username){
@@ -311,7 +314,7 @@ async _setUserRole(userId, username, newRole){
 },
 
 /* 접근 권한 저장 (sessionStorage, v2.23) */
-/* [v2.314] perms 저장 — sessionStorage + SB users 테이블 */
+/* [v2.315] perms 저장 — sessionStorage + SB users 테이블 */
 _savePerms(){
   try{
     const permsStr=JSON.stringify(App.perms||{});
@@ -1792,13 +1795,15 @@ async equip(){
     </div>
     <div id="eqTbl"></div>`;
   Tbl.render({el:'#eqTbl',cols:[
-    {key:'code',     label:'계측기코드', w:'102px'},
-    {key:'name',     label:'계측기명',   w:'140px'},
-    {key:'maker',    label:'제조사',     w:'88px'},
-    {key:'range',    label:'측정범위',   w:'120px'},
-    {key:'res',      label:'분해능',     w:'78px'},
-    {key:'loc',      label:'보관위치',   w:'88px'},
-    {key:'operator', label:'사용자',     w:'80px'},
+    /* [v2.315] 컬럼 순서: 요청사항 기준 재정의 + model 복구 */
+    {key:'code',     label:'계측기코드', w:'96px'},
+    {key:'name',     label:'계측기명',   w:'130px'},
+    {key:'model',    label:'모델번호',   w:'100px'},
+    {key:'maker',    label:'제조사',     w:'80px'},
+    {key:'range',    label:'측정범위',   w:'100px'},
+    {key:'res',      label:'분해능',     w:'70px'},
+    {key:'loc',      label:'보관위치',   w:'80px'},
+    {key:'operator', label:'사용자',     w:'72px'},
     {key:'last',     label:'최근교정일', w:'96px'},
     {key:'next',     label:'차기교정일', w:'96px',
       render:v=>{
@@ -1906,7 +1911,7 @@ async _eqSave(orig){
   Pages.equip();
 },
 
-/* [v2.314 Phase3] 계측기 관리대장 인쇄 */
+/* [v2.315 Phase3] 계측기 관리대장 인쇄 */
 _eqPrint(){
   /* 검색 조건 팝업 → 필터 → 인쇄 */
   const statusOpts=['전체','정상','교정중','교정만료'].map(s=>`<option>${s}</option>`).join('');
@@ -2085,7 +2090,7 @@ _eqDetail(row){
     if(logPane) logPane._equip_code=row.code;
     if(!calPane) return;
     if(!DB.cals||!DB.cals.length){const ld=await SB.getCals();if(ld)DB.cals=ld;}
-    /* [v2.314 P2] cal_date 기준 내림차순 정렬 */
+    /* [v2.315 P2] cal_date 기준 내림차순 정렬 */
     const recs=(DB.cals||[]).filter(c=>(c.code===row.code||c.equip_code===row.code))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''));
@@ -2208,7 +2213,7 @@ async _calDel(calId, equip_code){
 /* ── 교정 ── */
 cal(){
   const w=document.getElementById('pw');
-  /* [v2.314 Phase3] D-30 이내 + 아직 만료 안된 계측기 */
+  /* [v2.315 Phase3] D-30 이내 + 아직 만료 안된 계측기 */
   const _now=new Date();
   const soon=DB.equip.filter(e=>{
     if(!e.next) return false;
@@ -2225,7 +2230,7 @@ cal(){
     </div>
     <div id="calTbl"></div>
     <div id="calCostChart" style="margin-top:16px"></div>`;
-  /* [v2.314 P4-3] 교정비용 통계 차트 */
+  /* [v2.315 P4-3] 교정비용 통계 차트 */
   Pages._calCostChart();
   Tbl.render({el:'#calTbl',cols:[
     {key:'code',label:'계측기코드',w:'100px'},
@@ -2330,7 +2335,7 @@ async _calSave(orig){
   else if(curPage==='equip') Pages.equip();
 },
 
-/* [v2.314 P4-1] QR코드 생성 */
+/* [v2.315 P4-1] QR코드 생성 */
 _eqQR(code, name){
   const url=location.origin+location.pathname+'?eq='+encodeURIComponent(code);
   const qrApi='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);
@@ -2359,7 +2364,7 @@ _eqQRPrint(code,name,encodedUrl){
   d.write('</body></html>');
   d.close();
 },
-/* [v2.314 P4-5] 교정 주기 기반 차기교정일 자동 계산 */
+/* [v2.315 P4-5] 교정 주기 기반 차기교정일 자동 계산 */
 _calAutoNext(){
   const dateEl=document.getElementById('cf_date');
   const nextEl=document.getElementById('cf_next');
@@ -2375,7 +2380,7 @@ _calAutoNext(){
   nextEl.value=`${y}-${m}-${dd}`;
   Toast.show(`${months}개월 주기 → ${nextEl.value} 자동설정`,'ok',2000);
 },
-/* [v2.314 P4-3] 교정비용 연도별 + 계측기별 통계 차트 */
+/* [v2.315 P4-3] 교정비용 연도별 + 계측기별 통계 차트 */
 _calCostChart(){
   const el=document.getElementById('calCostChart');
   if(!el) return;
@@ -2433,7 +2438,7 @@ _calCostChart(){
     (top5.length?'<div><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:8px">계측기별 Top5</div>'+equipBars+'</div>':'')+
     '</div></div>';
 },
-/* [v2.314 P4-6] 계측기 실시간 검색/필터 */
+/* [v2.315 P4-6] 계측기 실시간 검색/필터 */
 _eqFilter(){
   const q=(document.getElementById('eqSrch')?.value||'').toLowerCase();
   const st=document.getElementById('eqStat')?.value||'';
@@ -2443,13 +2448,15 @@ _eqFilter(){
     return mQ&&mS;
   });
   Tbl.render({el:'#eqTbl',cols:[
-    {key:'code',     label:'계측기코드', w:'102px'},
-    {key:'name',     label:'계측기명',   w:'140px'},
-    {key:'maker',    label:'제조사',     w:'88px'},
-    {key:'range',    label:'측정범위',   w:'120px'},
-    {key:'res',      label:'분해능',     w:'78px'},
-    {key:'loc',      label:'보관위치',   w:'88px'},
-    {key:'operator', label:'사용자',     w:'80px'},
+    /* [v2.315] 컬럼 순서: 요청사항 기준 재정의 + model 복구 */
+    {key:'code',     label:'계측기코드', w:'96px'},
+    {key:'name',     label:'계측기명',   w:'130px'},
+    {key:'model',    label:'모델번호',   w:'100px'},
+    {key:'maker',    label:'제조사',     w:'80px'},
+    {key:'range',    label:'측정범위',   w:'100px'},
+    {key:'res',      label:'분해능',     w:'70px'},
+    {key:'loc',      label:'보관위치',   w:'80px'},
+    {key:'operator', label:'사용자',     w:'72px'},
     {key:'last',     label:'최근교정일', w:'96px'},
     {key:'next',     label:'차기교정일', w:'108px',
       render:v=>{
@@ -2616,7 +2623,7 @@ async mentions(){
   const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
 
-  /* [v2.314 PhaseA] 채널 정의 — 8대 메뉴 */
+  /* [v2.315 PhaseA] 채널 정의 — 8대 메뉴 */
   const CHANNELS=[
     {key:'all',    label:'전체',     icon:'💬'},
     {key:'reference', label:'기준정보', icon:'📦'},
@@ -2652,7 +2659,7 @@ async mentions(){
     const normal=items.filter(m=>!m.pinned).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
 
     const cardHtml=(m)=>{
-    /* [v2.314] 멘션 1행 — dt 클래스 방식, 폰트 inherit, 클릭 완전 구현 */
+    /* [v2.315] 멘션 1행 — dt 클래스 방식, 폰트 inherit, 클릭 완전 구현 */
     const isMe=(m.from===me)||(me==='admin'&&m.from==='관리자');
     const isMy=(m.to===me)||(m.to_list||[]).includes(me)||isAdmin;
     const pCls=m.priority==='urgent'?'bred':m.priority==='low'?'bgh':'bpri';
@@ -2667,8 +2674,8 @@ async mentions(){
     const fileTag=m.file_url?'<span style="font-size:10px;color:#16a34a;margin-left:4px">📎</span>':'';
     const replyTag=replyN?'<span style="font-size:10px;color:#6366f1;background:#f5f3ff;border-radius:3px;padding:0 4px;margin-left:4px">💬'+replyN+'</span>':'';
     return (
-      '<tr style="cursor:pointer;'+(unread?'font-weight:600;':'')+(m.pinned?'background:#fefce8;':'')+'"'
-      +' onclick="Pages._mentionReplyOpen('+m.id+')">'
+      '<tr style="cursor:pointer;font-size:13px;'+(unread?'font-weight:700;':'background:transparent;')+(m.pinned?'background:#fefce8;':'')+'"'
+      +' onclick="Pages._mentionReplyView('+m.id+')">'
       /* 미읽음 점 */
       +'<td style="width:18px;text-align:center">'+(unread?'<span style="display:inline-block;width:7px;height:7px;background:#ef4444;border-radius:50%"></span>':'')+'</td>'
       /* 유형 아이콘 */
@@ -2691,7 +2698,7 @@ async mentions(){
       +'<td style="white-space:nowrap;text-align:center" onclick="event.stopPropagation()">'
         +(m.status!=='done'&&(isMy||isAdmin)?'<button class="btn bxs bgrn" style="font-size:10px" onclick="Pages._mentionStatus('+m.id+',&quot;done&quot;)" title="완료">✅</button> ':'')
         +(!m.read&&isMy?'<button class="btn bxs" style="font-size:10px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac" onclick="Pages._mentionRead('+m.id+')" title="읽음">읽음</button> ':'')
-        +'<button class="btn bxs" style="font-size:10px;background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe" onclick="Pages._mentionReplyOpen('+m.id+')" title="답글">💬</button>'
+        +'<button class="btn bxs" style="font-size:10px;background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe" onclick="Pages._mentionReplyView('+m.id+')" title="답글">💬</button>'
         +(isMe?'<button class="btn bxs bout" style="font-size:10px" onclick="Pages._mentionEdit('+m.id+')" title="수정">✏️</button>':'')
         +((isAdmin||(isMe&&!(m.replies||[]).length))?'<button class="btn bxs berr" style="font-size:10px" onclick="Pages._mentionDel('+m.id+')" title="삭제">🗑</button>':'')
       +'</td>'
@@ -2701,8 +2708,8 @@ async mentions(){
 
     const listEl=document.getElementById('mlist');
     if(!listEl) return;
-    /* [v2.314] 목록 헤더 */
-    /* [v2.314] 멘션 table: width 100%, font inherit(기존 메뉴와 동일) */
+    /* [v2.315] 목록 헤더 */
+    /* [v2.315] 멘션 table: width 100%, font inherit(기존 메뉴와 동일) */
     const headerHtml=
       '<table class="dt" style="width:100%;table-layout:auto">'
 
@@ -2788,7 +2795,7 @@ async mentions(){
     if(cntEl) cntEl.textContent=cnt+'건';
   };
   Pages._menChTab=w._menChTab;
-  /* [v2.314] 채널 탭 전환 배지 갱신 래퍼 */
+  /* [v2.315] 채널 탭 전환 배지 갱신 래퍼 */
   const _origChTab=Pages._menChTab;
   Pages._menChTab=(btn)=>{ _origChTab(btn); TopNav.updateMentionBadge(); };
 
@@ -2832,7 +2839,7 @@ async mentions(){
     if(cntEl) cntEl.textContent=filtered.length+'건';
     renderList();
   };
-  /* [v2.314 PhaseC] 필터 초기화 */
+  /* [v2.315 PhaseC] 필터 초기화 */
   Pages._menFilterReset=()=>{
     ['mTypeFilter','mStatFilter','mFromFilter','mSearch'].forEach(id=>{
       const el=document.getElementById(id);
@@ -2849,7 +2856,7 @@ async mentions(){
   renderList();
 },
 
-/* [v2.314 PhaseA] 멘션 작성/수정 폼 */
+/* [v2.315 PhaseA] 멘션 작성/수정 폼 */
 _mentionWrite(editId=null){
   const me=Auth._cur||'admin';
   const meUser=DB.users.find(u=>u.username===me)||{name:'관리자'};
@@ -2962,14 +2969,14 @@ async _mentionSave(editId){
     replies:  [],
     created_at:new Date().toISOString(),
   };
-  /* [v2.314 PhaseC] 파일 첨부 처리 */
+  /* [v2.315 PhaseC] 파일 첨부 처리 */
   const fileEl=document.getElementById('mwFile');
   if(fileEl?.files?.length){
     const f=fileEl.files[0];
     const uploaded=await SB.uploadFile('mentions',f);
     if(uploaded?.url) row.file_url=uploaded.url;
   }
-  /* [v2.314 PhaseC] 파일 첨부 */
+  /* [v2.315 PhaseC] 파일 첨부 */
   const _fEl=document.getElementById('mwFile');
   if(_fEl?.files?.length){
     const _fUp=await SB.uploadFile('mentions',_fEl.files[0]);
@@ -2987,12 +2994,12 @@ async _mentionSave(editId){
     Toast.show('멘션이 전송되었습니다.','ok');
   }
   Modal.close();
-  /* [v2.314] 전송 후 배지 갱신 */
+  /* [v2.315] 전송 후 배지 갱신 */
   setTimeout(()=>TopNav.updateMentionBadge(),300);
   Pages.mentions();
 },
 
-/* [v2.314 PhaseA] 상태 변경 (완료/진행중) */
+/* [v2.315 PhaseA] 상태 변경 (완료/진행중) */
 async _mentionStatus(id, status){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3004,13 +3011,13 @@ async _mentionStatus(id, status){
   Pages.mentions();
 },
 
-/* [v2.314 PhaseA] 읽음 처리 */
+/* [v2.315 PhaseA] 읽음 처리 */
 async _mentionRead(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
   await SB.updateMention(id,{read:true});
   m.read=true;
-  /* [v2.314 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
+  /* [v2.315 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
   const _me2=Auth._cur||'admin';
   const unread=DB.mentions.filter(m=>!m.read&&(m.to===_me2||(m.to_list||[]).includes(_me2)||Auth._u?.role==='admin')).length;
   const nb=document.getElementById('mnb');
@@ -3019,7 +3026,7 @@ async _mentionRead(id){
   TopNav.updateMentionBadge();
 },
 
-/* [v2.314 PhaseA] 고정/해제 */
+/* [v2.315 PhaseA] 고정/해제 */
 async _mentionPin(id, pinned){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3029,7 +3036,7 @@ async _mentionPin(id, pinned){
   Pages.mentions();
 },
 
-/* [v2.314 PhaseA] 반응(Reaction) */
+/* [v2.315 PhaseA] 반응(Reaction) */
 async _mentionReact(id, emoji){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3044,7 +3051,7 @@ async _mentionReact(id, emoji){
   m.reactions=reactions;
   Pages.mentions();
 },
-/* [v2.314 PhaseB] 업무 레코드 바로가기 링크 맵 */
+/* [v2.315 PhaseB] 업무 레코드 바로가기 링크 맵 */
 _mentionLinkGo(linkType, linkId){
   const NAV_MAP={
     nc:'nc', equip:'equip', cal:'cal', car:'car',
@@ -3059,7 +3066,7 @@ _mentionLinkGo(linkType, linkId){
   Toast.show('🔗 '+linkId+' — '+page+' 페이지로 이동했습니다.','info',2500);
 },
 
-/* [v2.314 PhaseB] 반응 이모지 선택 팝업 */
+/* [v2.315 PhaseB] 반응 이모지 선택 팝업 */
 _mentionReactPop(id){
   const EMOJIS=['👍','✅','🔄','🔥','❓','⚠️','💡','👀'];
   const m=DB.mentions.find(m=>m.id===id);
@@ -3079,51 +3086,93 @@ _mentionReactPop(id){
   Modal.open({title:'반응 선택',size:'msm',body});
 },
 
-/* [v2.314 PhaseB] 스레드 답글 — SB 연동 */
+/* [v2.315 PhaseB] 스레드 답글 — SB 연동 */
 _mentionReplyView(id){
+  /* [v2.315] 멘션 상세팝업 — 원본+답글+재멘션 완성 */
   const m=DB.mentions.find(m=>m.id===id);
-  if(!m) return;
-  /* thread_id 기반 답글 목록 */
-  const threads=DB.mentions.filter(mn=>mn.thread_id===id)
-    .sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
-  const localReplies=m.replies||[];
-  const allReplies=[...threads,...localReplies.filter(r=>!threads.find(t=>t.id===r.id))];
-
-  const replyHtml=allReplies.length
-    ?allReplies.map(r=>'<div style="display:flex;gap:8px;padding:8px;border-bottom:1px solid var(--bd)">'
-      +'<div style="width:26px;height:26px;border-radius:50%;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">'+(r.from||'?')[0]+'</div>'
-      +'<div style="flex:1">'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:2px">'
-      +'<span style="font-size:11px;font-weight:700">'+H.e(r.from||'?')+'</span>'
-      +'<span style="font-size:10px;color:var(--tm)">'+(r.created_at?r.created_at.replace('T',' ').slice(0,16):r.time||'')+'</span>'
+  if(!m){Toast.show('멘션을 찾을 수 없습니다.','warn');return;}
+  /* 자동 읽음 처리 */
+  const me=Auth._cur||'admin';
+  if(!m.read&&(m.to===me||(m.to_list||[]).includes(me)||Auth._u?.role==='admin')){
+    SB.updateMention(id,{read:true}).then(()=>{m.read=true;TopNav.updateMentionBadge();});
+  }
+  /* 렌더 함수 — 팝업 내용 갱신용 */
+  const renderBody=()=>{
+    const threads=DB.mentions.filter(mn=>mn.thread_id===id)
+      .sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
+    const localReplies=m.replies||[];
+    const allReplies=[...threads,...localReplies.filter(r=>!threads.find(t=>t.id===r.id))];
+    const PRIO_LABEL={urgent:'🔴 긴급',normal:'🟡 일반',low:'⚪ 낮음'};
+    const STAT_LABEL={open:'열림',in_progress:'진행중',done:'완료'};
+    const TYPE_LABEL={mention:'💬 멘션',task:'📋 태스크',notice:'📢 공지',approval:'✅ 승인요청'};
+    const replyHtml=allReplies.length
+      ?allReplies.map(r=>{
+        const dt=(r.created_at||r.time||'').replace('T',' ').slice(0,16);
+        const isMe=r.from===me||r.from==='관리자'&&me==='admin';
+        return '<div style="display:flex;gap:8px;padding:8px 4px;border-bottom:1px solid var(--bd)">'
+          +'<div style="width:28px;height:28px;border-radius:50%;background:'+(isMe?'var(--pri)':'var(--bd)')+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+(isMe?'#fff':'var(--tm)')+';flex-shrink:0">'+(r.from||'?')[0]+'</div>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+          +'<span style="font-size:12px;font-weight:700">'+H.e(r.from||'?')+'</span>'
+          +'<span style="font-size:10px;color:var(--tm)">'+dt+'</span>'
+          +'</div>'
+          +'<div style="font-size:13px;line-height:1.5;word-break:break-all">'+H.e(r.text||r.message||'')+'</div>'
+          +'</div></div>';
+      }).join('')
+      :'<div style="text-align:center;padding:24px;color:var(--tm);font-size:12px">💬 아직 답글이 없습니다.<br>첫 번째 답글을 달아보세요!</div>';
+    const linkBtn=m.link_type&&m.link_id
+      ?'<button class="btn bgh bsm" style="font-size:11px" onclick="Pages._mentionLinkGo(&quot;'+H.e(m.link_type)+'&quot;,&quot;'+H.e(m.link_id)+'&quot;)">🔗 '+H.e(m.link_id)+' 바로가기</button>':'';
+    const statusBtns=(m.status!=='done')
+      ?'<button class="btn bgrn bsm" style="font-size:11px" onclick="Pages._mentionStatus('+id+',&quot;done&quot;);Pages._mentionReplyView('+id+')">✅ 완료 처리</button> '
+      +'<button class="btn bout bsm" style="font-size:11px" onclick="Pages._mentionStatus('+id+',&quot;open&quot;);Pages._mentionReplyView('+id+')">↩ 재열기</button>':'';
+    return '<div style="background:var(--bg2);border-radius:8px;padding:12px;margin-bottom:12px">'
+      /* 원본 메타 정보 */
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+      +'<span style="font-size:11px;color:var(--tm)">'+(TYPE_LABEL[m.type||'mention']||'💬')+'</span>'
+      +'<span class="badge '+(m.priority==='urgent'?'bred':m.priority==='low'?'bgh':'bamb')+'" style="font-size:10px">'+(PRIO_LABEL[m.priority||'normal'])+'</span>'
+      +'<span class="badge '+(m.status==='done'?'bgrn':m.status==='in_progress'?'bpri':'bamb')+'" style="font-size:10px">'+(STAT_LABEL[m.status||'open'])+'</span>'
+      +(m.channel?'<span style="font-size:10px;background:#f1f5f9;color:#475569;border-radius:3px;padding:1px 6px">#'+H.e(m.channel)+'</span>':'')
       +'</div>'
-      +'<div style="font-size:12px;color:var(--tx)">'+H.e(r.text||r.message||'')+'</div>'
-      +'</div></div>').join('')
-    :'<div style="text-align:center;padding:20px;color:var(--tm);font-size:12px">아직 답글이 없습니다.</div>';
-
-  const linkBtn=m.link_type&&m.link_id
-    ?'<button class="btn bgh bsm" style="font-size:11px" onclick="Pages._mentionLinkGo(&quot;'+H.e(m.link_type)+'&quot;,&quot;'+H.e(m.link_id)+'&quot;)">🔗 '+H.e(m.link_id)+' 바로가기</button>':''
-
-  const body='<div style="background:var(--bg2);border-radius:6px;padding:10px;margin-bottom:10px">'
-    +'<div style="font-size:11px;font-weight:700;margin-bottom:4px">'+H.e(m.from||'?')+'<span style="font-weight:400;color:var(--tm)"> → '+H.e((m.to_list||[m.to]).join(', '))+'</span></div>'
-    +'<div style="font-size:12px;margin-bottom:6px">'+H.e(m.text||'')+'</div>'
-    +(linkBtn?'<div>'+linkBtn+'</div>':'')
-    +'</div>'
-    +'<div style="max-height:250px;overflow-y:auto;margin-bottom:10px">'+replyHtml+'</div>'
-    +'<div style="display:flex;gap:8px">'
-    +'<input class="fc" id="rtext" placeholder="답글을 입력하세요..." style="flex:1;font-size:12px" '
-    +'onkeydown="if(event.key===&quot;Enter&quot;&&!event.shiftKey){event.preventDefault();Pages._mentionReplySend('+id+')}">  '
-    +'<button class="btn bpri bsm" onclick="Pages._mentionReplySend('+id+')">전송</button>'
-    +'</div>';
-  Modal.open({title:'💬 스레드 — '+H.e(m.from||''),size:'mmd',body,foot:''});
-  setTimeout(()=>document.getElementById('rtext')?.focus(),80);
+      /* 발신→수신 */
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:6px">'
+      +H.e(m.from||'?')
+      +'<span style="font-weight:400;color:var(--tm)"> → '+H.e((m.to_list||[m.to]).join(', '))+'</span>'
+      +(m.due_date?'<span style="float:right;font-size:11px;color:var(--tm)">📅 '+m.due_date+'</span>':'')
+      +'</div>'
+      /* 원본 내용 */
+      +'<div style="font-size:13px;line-height:1.6;word-break:break-all;white-space:pre-wrap">'+H.e(m.text||'')+'</div>'
+      +(linkBtn?'<div style="margin-top:8px">'+linkBtn+'</div>':'')
+      +(m.file_url?'<div style="margin-top:6px"><a href="'+H.e(m.file_url)+'" target="_blank" class="btn bxs" style="font-size:11px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac">📎 첨부파일</a></div>':'')
+      +'</div>'
+      /* 상태 변경 버튼 */
+      +(statusBtns?'<div style="margin-bottom:10px;display:flex;gap:6px">'+statusBtns+'</div>':'')
+      /* 답글 목록 */
+      +'<div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:6px">답글 '+allReplies.length+'개</div>'
+      +'<div id="replyList" style="max-height:220px;overflow-y:auto;margin-bottom:12px;border:1px solid var(--bd);border-radius:6px">'+replyHtml+'</div>'
+      /* 답글 입력 */
+      +'<div style="display:flex;gap:8px;align-items:flex-end">'
+      +'<textarea class="fc" id="rtext" rows="2" placeholder="답글을 입력하세요... (Enter:전송, Shift+Enter:줄바꿈)" '
+      +'style="flex:1;font-size:13px;resize:none;line-height:1.5" '
+      +'onkeydown="if(event.key===&quot;Enter&quot;&&!event.shiftKey){event.preventDefault();Pages._mentionReplySend('+id+');}"'
+      +'</textarea>'
+      +'<div style="display:flex;flex-direction:column;gap:4px">'
+      +'<button class="btn bpri bsm" onclick="Pages._mentionReplySend('+id+')" style="white-space:nowrap">📤 전송</button>'
+      +'<button class="btn bout bsm" onclick="Modal.close()" style="white-space:nowrap">닫기</button>'
+      +'</div></div>';
+  };
+  Modal.open({title:'💬 '+H.e(m.from||'')+'의 멘션',size:'mmd',body:renderBody(),foot:''});
+  setTimeout(()=>{
+    document.getElementById('rtext')?.focus();
+    const rl=document.getElementById('replyList');
+    if(rl) rl.scrollTop=rl.scrollHeight;
+  },80);
 },
 /* 멘션 수정 */
 _mentionEdit(id){
   this._mentionWrite(id);
 },
 
-/* [v2.314 PhaseA] 멘션 삭제 */
+/* [v2.315 PhaseA] 멘션 삭제 */
 async _mentionDel(id){
   const isAdmin=(Auth._u?.role==='admin');
   const m=DB.mentions.find(m=>m.id===id);
@@ -3139,7 +3188,7 @@ async _mentionDel(id){
     Pages.mentions();
   }});
 },
-/* [v2.314 PhaseC] 멘션 → 태스크 격상 */
+/* [v2.315 PhaseC] 멘션 → 태스크 격상 */
 async _mentionToTask(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
@@ -3174,7 +3223,7 @@ async _mentionToTaskSave(id){
   Pages.mentions();
 },
 
-/* [v2.314 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
+/* [v2.315 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
 _mentionFollowUp(){
   const me=Auth._cur||'admin';
   const isAdmin=Auth._u?.role==='admin';
@@ -3242,7 +3291,7 @@ async _mentionFollowUpSend(){
   Pages.mentions();
 },
 
-/* [v2.314 PhaseC] 멘션 통계 대시보드 */
+/* [v2.315 PhaseC] 멘션 통계 대시보드 */
 _mentionStats(){
   const all=DB.mentions||[];
   if(!all.length){Toast.show('멘션 데이터가 없습니다.','info');return;}
@@ -3416,7 +3465,7 @@ settings(){
           }).join('')}
         </tbody>
       </table>
-    <!-- [v2.314] 권한 정의 각주 -->`;
+    <!-- [v2.315] 권한 정의 각주 -->`;
   };
 
   /* 접근 권한 테이블 렌더 */
@@ -3443,7 +3492,7 @@ settings(){
           </tr>`).join('')}`).join('')}
         </tbody>
       </table>
-    <!-- [v2.314] 권한 정의 각주 -->
+    <!-- [v2.315] 권한 정의 각주 -->
     <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--bd);border-radius:6px;font-size:11px">
       <div style="font-weight:700;color:var(--tm);margin-bottom:6px">📌 권한 정의</div>
       <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;line-height:1.6">
@@ -3469,9 +3518,6 @@ settings(){
       onclick="${isAdmin?"renderTab('usermgmt')":`Toast.show('관리자만 접근 가능합니다.','warn')`}"
       style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}"
       title="${isAdmin?'사용자 등록':'관리자만 접근 가능'}">👥 사용자 등록${isAdmin?'':' 🔒'}</button>
-    <button class="btn stab-btn bout" data-tab="sbdash"
-      onclick="renderTab('sbdash');setTimeout(()=>Pages._renderSbDash(),80)"
-      style="border-radius:8px">🔌 SB 대시보드</button>
   </div>
   <!-- 일반 설정 탭 -->
   <div class="stab-pane" data-tab="general" style="display:block">
@@ -3548,6 +3594,14 @@ settings(){
       </div>
     </div>
   </div>
+  <!-- [v2.315] SB 대시보드 — 일반설정 탭 내 소분류 -->
+  <div class="card" style="margin-top:14px">
+    <div class="ch">
+      <div class="ct">🔌 Supabase 대시보드</div>
+      <button class="btn bsm bout" onclick="Pages._renderSbDash()">🔄 새로고침</button>
+    </div>
+    <div id="sbDashContainer"><div style="text-align:center;padding:32px;color:var(--tm);font-size:12px">위 새로고침 버튼을 클릭하세요.</div></div>
+  </div>
   </div>
   <!-- 사용자 관리 탭 (관리자만) -->
   <div class="stab-pane" data-tab="usermgmt" style="display:none">
@@ -3559,17 +3613,13 @@ settings(){
           <div style="color:var(--tm);font-size:13px">이 메뉴는 관리자만 접근할 수 있습니다.</div>
         </div>`}
   </div>
-  <!-- [v2.314] SB 대시보드 패널 -->
-  <div class="stab-pane" data-tab="sbdash" style="display:none">
-    <div id="sbDashContainer"><div style="text-align:center;padding:40px;color:var(--tm)">🔄 로딩 중...</div></div>
-  </div>
   </div>
 `;
 
   /* renderTab을 전역으로 등록 */
   window.renderTab=renderTab;
 },
-/* [v2.314] 시스템 → 사용자 등록 — 개인정보 및 권한 관리 */
+/* [v2.315] 시스템 → 사용자 등록 — 개인정보 및 권한 관리 */
 async sysusers(){
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
@@ -3595,7 +3645,7 @@ async sysusers(){
 },
 
 _renderSysUsers(){
-  /* [v2.314] 사용자 등록/권한 관리 독립 렌더 */
+  /* [v2.315] 사용자 등록/권한 관리 독립 렌더 */
   const el=document.getElementById('sysUserBody');
   if(!el) return;
   const ROLE_LABEL={admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'};
@@ -3662,9 +3712,9 @@ _renderSysUsers(){
     +'</div>';
 },
 
-/* [v2.314] SB 대시보드 — 사용량 + 비활성 방지 */
+/* [v2.315] SB 대시보드 — 사용량 + 비활성 방지 */
 async _renderSbDash(){
-  /* [v2.314] SB 대시보드 — 파이차트 + 테이블 + keepalive */
+  /* [v2.315] SB 대시보드 — 파이차트 + 테이블 + keepalive */
   const el=document.getElementById('sbDashContainer');
   if(!el) return;
   el.innerHTML='<div style="text-align:center;padding:20px;color:var(--tm)">🔄 SB 정보 조회 중...</div>';
@@ -3801,7 +3851,7 @@ async _renderSbDash(){
 },
 
 async _sbKeepAlive(){
-  /* [v2.314] Supabase keepalive — 7일 비활성 방지 */
+  /* [v2.315] Supabase keepalive — 7일 비활성 방지 */
   try{
     if(!_sb) throw new Error('SB 미연결');
     await _sb.from('users').select('id').limit(1);
@@ -6305,7 +6355,7 @@ const SearchPop={
     hd.addEventListener('mousedown',onDown);
   },
 _deactivateUser(id){
-  /* [v2.314] 사용자 비활성화 */
+  /* [v2.315] 사용자 비활성화 */
   Modal.confirm({title:'사용자 비활성화',msg:'해당 사용자를 비활성화하시겠습니까?',danger:true,onOk:async()=>{
     await SB.updateUser(id,{active:0});
     const u=DB.users.find(u=>u.id===id);if(u) u.active=0;
@@ -6339,7 +6389,7 @@ function setupHotkeys(){
       else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
     }
     else if(ev.key==='F5'){
-      /* [v2.314] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
+      /* [v2.315] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
       ev.preventDefault();
       if(Auth._u){
         const page=document.querySelector('.ni.active')?.dataset?.p||'home';
@@ -6393,7 +6443,7 @@ function setupHotkeys(){
       const sm=document.getElementById('ni_settings');
       if(sm) sm.style.display=(u.role==='admin')?'':'none';
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
-      /* [v2.314] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
+      /* [v2.315] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
       (async()=>{
         try{
           if(_sb){

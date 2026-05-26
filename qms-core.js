@@ -1,4 +1,4 @@
-/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.314] */
+/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.315] */
 "use strict";
 
 
@@ -215,7 +215,7 @@ const Auth={
     });
     /* [v2.305] 최근 로그인 시각 SB 업데이트 */
     if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
-    /* [v2.314] 권한 설정 복원 — sessionStorage에서 로드 */
+    /* [v2.315] 권한 설정 복원 — sessionStorage에서 로드 */
     try{
       const _sp=sessionStorage.getItem('qms_perms');
       if(_sp) App.perms=JSON.parse(_sp);
@@ -264,10 +264,10 @@ const Auth={
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
       Toast.show('로그인되었습니다.','ok');
-      /* [v2.314] 로그인 시 keepalive 자동 실행 */
+      /* [v2.315] 로그인 시 keepalive 자동 실행 */
       setTimeout(async()=>{
         try{if(_sb){await _sb.from('users').select('id').limit(1);localStorage.setItem('qms_keepalive',new Date().toISOString().slice(0,16).replace('T',' '));}}catch(e){}},2000);
-      /* [v2.314] 로그인 직후 멘션 배지 갱신 */
+      /* [v2.315] 로그인 직후 멘션 배지 갱신 */
       setTimeout(()=>TopNav.updateMentionBadge(),500);
     })();
   },
@@ -438,7 +438,7 @@ const UI={
     const isHidden=pop.classList.contains('hidden');
     pop.classList.toggle('hidden');
     if(isHidden){
-      /* [v2.314] 팝업 열 때 실시간 멘션 렌더 */
+      /* [v2.315] 팝업 열 때 실시간 멘션 렌더 */
       UI.renderMpop();
     }
     document.getElementById('bdot').style.display='none';
@@ -484,7 +484,7 @@ const UI={
     }).join('');
   },
   markAllRead(){
-    /* [v2.314] 모두 읽음 처리 */
+    /* [v2.315] 모두 읽음 처리 */
     const me=Auth._cur||'admin';
     const isAdmin=Auth._u?.role==='admin';
     const unread=(DB.mentions||[]).filter(m=>
@@ -501,24 +501,43 @@ const UI={
 
 /* ══ 테이블 ══ */
 const Tbl={
+  /* [v2.315] 정렬 상태 저장 */
+  _sortKey:null, _sortDir:1,
+
   render({el,cols,data,onDel,onRow,ps=20,page=1}={}){
     const c=typeof el==='string'?document.querySelector(el):el;
     if(!c)return;
-    const total=data.length,pages=Math.max(1,Math.ceil(total/ps));
+    /* 정렬 적용 */
+    let sorted=[...data];
+    if(Tbl._sortKey){
+      sorted.sort((a,b)=>{
+        const va=a[Tbl._sortKey]??'', vb=b[Tbl._sortKey]??'';
+        const na=parseFloat(va), nb=parseFloat(vb);
+        const cmp=(!isNaN(na)&&!isNaN(nb))?(na-nb):String(va).localeCompare(String(vb));
+        return cmp*Tbl._sortDir;
+      });
+    }
+    const total=sorted.length, pages=Math.max(1,Math.ceil(total/ps));
     page=Math.min(Math.max(1,page),pages);
-    const slice=data.slice((page-1)*ps,page*ps);
+    const slice=sorted.slice((page-1)*ps,page*ps);
     const from=(page-1)*ps+1, to=Math.min(page*ps,total);
-    const ths=`<th class="tc"><input type="checkbox" onchange="Tbl.chkAll(this)"></th><th class="tn">No</th>${cols.map(col=>`<th style="${col.w?`width:${col.w}`:''}${col.align?`;text-align:${col.align}`:''}">${col.label}</th>`).join('')}`;
+    /* 정렬 화살표 */
+    const sortArrow=(key)=>{
+      if(Tbl._sortKey!==key) return '<span style="opacity:.25;font-size:9px;margin-left:3px">↕</span>';
+      return Tbl._sortDir===1
+        ?'<span style="color:var(--pri);font-size:10px;margin-left:3px">↑</span>'
+        :'<span style="color:var(--pri);font-size:10px;margin-left:3px">↓</span>';
+    };
+    /* 헤더 — 클릭 정렬 */
+    const ths=`<th class="tc"><input type="checkbox" onchange="Tbl.chkAll(this)"></th><th class="tn">No</th>${cols.map(col=>`<th style="${col.w?`width:${col.w}`:''}${col.align?`;text-align:${col.align}`:''}${col.key?';cursor:pointer;user-select:none':''}" onclick="${col.key?`Tbl._sort('${col.key}')`:''}">` +col.label+`${col.key?sortArrow(col.key):''}</th>`).join('')}`;
     const trs=slice.length===0
       ?`<tr><td colspan="${cols.length+2}" style="text-align:center;padding:36px;color:var(--tm)">데이터가 없습니다.</td></tr>`
       :slice.map((row,i)=>`<tr data-id="${row.id}">
           <td class="tc"><input type="checkbox" class="rck" value="${row.id}" onchange="Tbl.onChk()"></td>
           <td class="tn">${(page-1)*ps+i+1}</td>
-          ${cols.map(col=>{const v=row[col.key];/* [v2.29 B안] updated_at==created_at이면 수정이력 없음→빈칸 */const dv=(col.key==='updated_at'&&v&&v===row['created_at'])?'':v;return`<td style="${col.align?`text-align:${col.align}`:''}">${col.render?col.render(dv,row):H.e(dv??'')}</td>`}).join('')}
+          ${cols.map(col=>{const v=row[col.key];const dv=(col.key==='updated_at'&&v&&v===row['created_at'])?'':v;return`<td style="${col.align?`text-align:${col.align}`:''}${onRow?';cursor:pointer':''}" onclick="${onRow?`Tbl._onRow(${row.id})`:''}">` +`${col.render?col.render(dv,row):H.e(dv??'')}</td>`;}).join('')}
         </tr>`).join('');
-
-    /* ── 페이지네이션 UX 개선 ──
-       건수선택 / 위치표시(N-M/전체K건) / «‹ 번호 ›» 버튼 */
+    /* 페이지네이션 */
     let pg='';
     if(pages>0){
       const s=Math.max(1,page-2), e2=Math.min(pages,s+4);
@@ -530,26 +549,47 @@ const Tbl={
       if(e2<pages) bs.push(`<button class="pb" style="pointer-events:none;opacity:.4">…</button>`);
       bs.push(`<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${page+1})" title="다음">›</button>`);
       bs.push(`<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${pages})" title="마지막">»</button>`);
-      pg=`<div class="pg">
-        <select class="fsel" style="height:28px;font-size:12px;padding:0 4px;margin-right:6px;border-radius:6px"
-          onchange="Tbl._psChange(this.value)" title="페이지당 표시 건수">
+      pg=`<div class="pager">
+        <div class="pi">${from}–${to}/${total}건</div>
+        <div class="pb-wrap">${bs.join('')}</div>
+        <select class="psel" onchange="Tbl._ps(this.value)">
           ${[10,20,50,100].map(n=>`<option value="${n}"${ps===n?' selected':''}>${n}건</option>`).join('')}
         </select>
-        ${bs.join('')}
       </div>`;
     }
+    c.innerHTML=`<div class="ts"><table class="dt"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>${pg}`;
+    /* onRow 이벤트 저장 */
+    Tbl._onRowFn=onRow||null;
+    Tbl._onDelFn=onDel||null;
+    Tbl._curEl=el;
+    Tbl._curCols=cols;
+    Tbl._curData=data;
+    Tbl._curPs=ps;
+    Tbl._curPage=page;
+  },
 
-    c.innerHTML=`<div class="tw"><div class="ts"><table class="dt"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>
-      <div class="tfoot">
-        <div class="tfi">
-          ${total>0?`<strong style="color:var(--pri)">${H.n(from)}</strong>–<strong style="color:var(--pri)">${H.n(to)}</strong> / 전체 <strong>${H.n(total)}</strong>건`:'전체 <strong>0</strong>건'}
-        </div>
-        <div class="tfa">${onDel?`<button class="btn bsm berr" id="btnDel" style="display:none" onclick="Tbl.delSel()">🗑️ 선택삭제</button>`:''}</div>
-        ${pg}
-      </div></div>`;
-    if(onRow)c.querySelectorAll('tbody tr').forEach(tr=>tr.addEventListener('click',ev=>{if(ev.target.type==='checkbox')return;const r=data.find(x=>String(x.id)===tr.dataset.id);if(r)onRow(r)}));
-    Tbl._onDel=onDel;
-    Tbl._cur={el,cols,data,onDel,onRow,ps,page};
+  /* [v2.315] 정렬 처리 */
+  _sort(key){
+    if(Tbl._sortKey===key){
+      Tbl._sortDir*=-1;
+    } else {
+      Tbl._sortKey=key;
+      Tbl._sortDir=1;
+    }
+    Tbl.render({el:Tbl._curEl,cols:Tbl._curCols,data:Tbl._curData,
+      onRow:Tbl._onRowFn,onDel:Tbl._onDelFn,ps:Tbl._curPs,page:1});
+  },
+  /* [v2.315] onRow 이벤트 핸들러 */
+  _onRow(id){
+    if(Tbl._onRowFn) Tbl._onRowFn(id);
+  },
+  _pg(p){
+    Tbl.render({el:Tbl._curEl,cols:Tbl._curCols,data:Tbl._curData,
+      onRow:Tbl._onRowFn,onDel:Tbl._onDelFn,ps:Tbl._curPs,page:p});
+  },
+  _ps(ps){
+    Tbl.render({el:Tbl._curEl,cols:Tbl._curCols,data:Tbl._curData,
+      onRow:Tbl._onRowFn,onDel:Tbl._onDelFn,ps:+ps,page:1});
   },
   chkAll(chk){document.querySelectorAll('.rck').forEach(c=>c.checked=chk.checked);this.onChk()},
   onChk(){
@@ -562,9 +602,6 @@ const Tbl={
      버그수정: ids.includes(i.id) 에서 '1'.includes(1)=false 문제 */
   getSel(){return Array.from(document.querySelectorAll('.rck:checked')).map(c=>Number(c.value))},
   delSel(){const ids=this.getSel();if(!ids.length)return;Modal.confirm({title:'선택 삭제',msg:`선택한 ${ids.length}건을 삭제하시겠습니까?`,danger:true,onOk:()=>{if(this._onDel)this._onDel(ids)}})},
-  _pg(p){if(this._cur)Tbl.render({...this._cur,page:p})},
-  _psChange(ps){if(this._cur)Tbl.render({...this._cur,ps:Number(ps),page:1})},
-  _cur:null,
 };
 
 /* ══ 댓글 ══ */
@@ -963,7 +1000,7 @@ function _validateItem(code){
 const TopNav={
   _map:{
     '기준정보':    [{label:'품목 등록',page:'items'},{label:'거래처 등록',page:'vendors'}],
-    /* [v2.314] 시스템 탭 — 설정/사용자등록 분리 */
+    /* [v2.315] 시스템 탭 — 설정/사용자등록 분리 */
     '시스템':      [{label:'설정',page:'settings'},{label:'사용자 등록',page:'sysusers'}],
     '품질관리':    [{label:'품질현황 대시보드',page:'quality_dash'},{label:'수입검사',page:'insp_in'},{label:'공정검사',page:'insp_pr'},{label:'구매검사',page:'insp_pu'},{label:'외주검사',page:'insp_ou'},{label:'최종검사',page:'insp_fi'},{label:'부적합 관리',page:'nc'},{label:'8D Report',page:'nc_8d'},{label:'반품/폐기',page:'nc_dispose'},{label:'불량 트렌드',page:'nc_trend'}],
     '검사 고도화': [{label:'검사 기준서',page:'insp_std'},{label:'검사 성적서',page:'insp_cert'},{label:'LOT 추적성',page:'lot_trace'},{label:'Hold 관리',page:'hold_mgmt'},{label:'재검사 관리',page:'reinsp'}],
@@ -1036,7 +1073,7 @@ const TopNav={
       }
     }
   },
-  /* [v2.314] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
+  /* [v2.315] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
   selectMention(){
     /* 기존 active 탭 해제 */
     document.querySelectorAll('.tb-mod').forEach(m=>m.classList.remove('on'));
@@ -1044,7 +1081,7 @@ const TopNav={
     /* 사이드바 필터링 없이 바로 mentions 페이지로 이동 */
     Nav.go('mentions');
   },
-  /* [v2.314] 멘션 미읽음 배지 업데이트 */
+  /* [v2.315] 멘션 미읽음 배지 업데이트 */
   updateMentionBadge(){
     const me=Auth._cur||'admin';
     const unread=(DB.mentions||[]).filter(m=>
@@ -1072,13 +1109,13 @@ const Nav={
   go(page){
     /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
     if(Auth._u) sessionStorage.setItem('qms_page', page);
-    /* [v2.314] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
+    /* [v2.315] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
     const _np=document.getElementById('npOverlay');
     if(_np&&!_np.classList.contains('hidden')) _np.classList.add('hidden');
-    /* [v2.314] 멘션함 이동 시 배지 업데이트 */
+    /* [v2.315] 멘션함 이동 시 배지 업데이트 */
     if(page==='mentions') setTimeout(()=>TopNav.updateMentionBadge(),300);
 
-    /* [v2.314] 권한 기반 접근 제어 */
+    /* [v2.315] 권한 기반 접근 제어 */
     const _role=Auth._u?.role||'viewer';
     const _roles=['admin','manager','user','viewer'];
     const _pKey=page+'_'+_role;
