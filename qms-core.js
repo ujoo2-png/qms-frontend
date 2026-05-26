@@ -1,4 +1,4 @@
-/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.311] */
+/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.312] */
 "use strict";
 
 
@@ -215,7 +215,7 @@ const Auth={
     });
     /* [v2.305] 최근 로그인 시각 SB 업데이트 */
     if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
-    /* [v2.311] 권한 설정 복원 — sessionStorage에서 로드 */
+    /* [v2.312] 권한 설정 복원 — sessionStorage에서 로드 */
     try{
       const _sp=sessionStorage.getItem('qms_perms');
       if(_sp) App.perms=JSON.parse(_sp);
@@ -264,7 +264,7 @@ const Auth={
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
       Toast.show('로그인되었습니다.','ok');
-      /* [v2.311] 로그인 직후 멘션 배지 갱신 */
+      /* [v2.312] 로그인 직후 멘션 배지 갱신 */
       setTimeout(()=>TopNav.updateMentionBadge(),500);
     })();
   },
@@ -431,9 +431,67 @@ const UI={
     this._col=!this._col;sb.classList.toggle('col',this._col);
   },
   toggleMpop(){
-    document.getElementById('mpop').classList.toggle('hidden');
+    const pop=document.getElementById('mpop');
+    const isHidden=pop.classList.contains('hidden');
+    pop.classList.toggle('hidden');
+    if(isHidden){
+      /* [v2.312] 팝업 열 때 실시간 멘션 렌더 */
+      UI.renderMpop();
+    }
     document.getElementById('bdot').style.display='none';
-    document.getElementById('mnb').style.display='none';
+  },
+  renderMpop(){
+    const list=document.getElementById('mpopList');
+    if(!list) return;
+    const me=Auth._cur||'admin';
+    const isAdmin=Auth._u?.role==='admin';
+    /* 미읽음 + 내 멘션 최신 10개 */
+    const myMentions=(DB.mentions||[])
+      .filter(m=>(m.to===me||(m.to_list||[]).includes(me)||isAdmin))
+      .sort((a,b)=>(b.created_at||b.time||'').localeCompare(a.created_at||a.time||''))
+      .slice(0,10);
+    const unreadCnt=myMentions.filter(m=>!m.read).length;
+    /* 헤더 배지 업데이트 */
+    const mph=document.querySelector('.mph span');
+    if(mph) mph.innerHTML='🔔 멘션 알림'+(unreadCnt?` <span style="background:var(--err);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">${unreadCnt}</span>`:'');
+    if(!myMentions.length){
+      list.innerHTML='<div style="text-align:center;padding:20px;color:var(--tm);font-size:12px">📭 멘션이 없습니다.</div>';
+      return;
+    }
+    const PRIO_COLOR={urgent:'#ef4444',normal:'#3b82f6',low:'#94a3b8'};
+    const TYPE_ICON={mention:'💬',task:'📋',notice:'📢',approval:'✅'};
+    list.innerHTML=myMentions.map(m=>{
+      const unread=!m.read;
+      const dt=(m.created_at||m.time||'').replace('T',' ').slice(0,16);
+      const pColor=PRIO_COLOR[m.priority||'normal'];
+      const tIcon=TYPE_ICON[m.type||'mention']||'💬';
+      return `<div class="mpi${unread?' mpi-unread':''}" style="cursor:pointer;background:${unread?'var(--bg2)':'transparent'}"
+        onclick="document.getElementById('mpop').classList.add('hidden');Pages._mentionReplyOpen(${m.id})">
+        <div class="mpf" style="display:flex;align-items:center;gap:6px">
+          ${unread?'<span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;flex-shrink:0"></span>':''}
+          <span style="font-size:10px">${tIcon}</span>
+          <span style="font-weight:600">${H.e(m.from||'?')}</span>
+          <span style="color:var(--tm);font-size:10px">→ ${H.e((m.to_list||[m.to]).slice(0,1).join(','))}</span>
+          <span style="margin-left:auto;font-size:9px;color:${pColor}">${m.priority==='urgent'?'🔴긴급':''}</span>
+        </div>
+        <div class="mpt">${H.e((m.text||'').slice(0,50))}${(m.text||'').length>50?'…':''}</div>
+        <div class="mpd">${dt}</div>
+      </div>`;
+    }).join('');
+  },
+  markAllRead(){
+    /* [v2.312] 모두 읽음 처리 */
+    const me=Auth._cur||'admin';
+    const isAdmin=Auth._u?.role==='admin';
+    const unread=(DB.mentions||[]).filter(m=>
+      !m.read&&(m.to===me||(m.to_list||[]).includes(me)||isAdmin)
+    );
+    Promise.all(unread.map(m=>SB.updateMention(m.id,{read:true}))).then(()=>{
+      unread.forEach(m=>m.read=true);
+      TopNav.updateMentionBadge();
+      UI.renderMpop();
+      Toast.show('모두 읽음 처리했습니다.','ok');
+    });
   }
 };
 
@@ -972,7 +1030,7 @@ const TopNav={
       }
     }
   },
-  /* [v2.311] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
+  /* [v2.312] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
   selectMention(){
     /* 기존 active 탭 해제 */
     document.querySelectorAll('.tb-mod').forEach(m=>m.classList.remove('on'));
@@ -980,7 +1038,7 @@ const TopNav={
     /* 사이드바 필터링 없이 바로 mentions 페이지로 이동 */
     Nav.go('mentions');
   },
-  /* [v2.311] 멘션 미읽음 배지 업데이트 */
+  /* [v2.312] 멘션 미읽음 배지 업데이트 */
   updateMentionBadge(){
     const me=Auth._cur||'admin';
     const unread=(DB.mentions||[]).filter(m=>
@@ -1008,13 +1066,13 @@ const Nav={
   go(page){
     /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
     if(Auth._u) sessionStorage.setItem('qms_page', page);
-    /* [v2.311] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
+    /* [v2.312] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
     const _np=document.getElementById('npOverlay');
     if(_np&&!_np.classList.contains('hidden')) _np.classList.add('hidden');
-    /* [v2.311] 멘션함 이동 시 배지 업데이트 */
+    /* [v2.312] 멘션함 이동 시 배지 업데이트 */
     if(page==='mentions') setTimeout(()=>TopNav.updateMentionBadge(),300);
 
-    /* [v2.311] 권한 기반 접근 제어 */
+    /* [v2.312] 권한 기반 접근 제어 */
     const _role=Auth._u?.role||'viewer';
     const _roles=['admin','manager','user','viewer'];
     const _pKey=page+'_'+_role;

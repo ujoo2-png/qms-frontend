@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.311] */
+/* qms-pages.js — Pages 페이지 렌더러 [v2.312] */
 "use strict";
 
 
@@ -62,7 +62,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.311</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.312</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -148,7 +148,7 @@ home(){
           </div>
         </div>`;
       })()}
-            <!-- [v2.311 PhaseB] 미처리 멘션 D-day 패널 -->
+            <!-- [v2.312 PhaseB] 미처리 멘션 D-day 패널 -->
       ${(()=>{
         const _me=Auth._cur||'admin';
         const _td=new Date();
@@ -242,7 +242,7 @@ home(){
   },
 
 async _mentionReplySend(parentId){
-  /* [v2.311 PhaseB] thread_id 기반 SB 스레드 저장 */
+  /* [v2.312 PhaseB] thread_id 기반 SB 스레드 저장 */
   const text=(document.getElementById('rtext')?.value||'').trim();
   if(!text){Toast.show('내용을 입력하세요.','warn');return}
   const me=Auth._u;
@@ -311,7 +311,7 @@ async _setUserRole(userId, username, newRole){
 },
 
 /* 접근 권한 저장 (sessionStorage, v2.23) */
-/* [v2.311] perms 저장 — sessionStorage + SB users 테이블 */
+/* [v2.312] perms 저장 — sessionStorage + SB users 테이블 */
 _savePerms(){
   try{
     const permsStr=JSON.stringify(App.perms||{});
@@ -1660,22 +1660,7 @@ quality_dash(){
         </tr>
         </tbody>
       </table>
-    <!-- [v2.311] 권한 정의 각주 -->
-    <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--bd);border-radius:6px;font-size:11px">
-      <div style="font-weight:700;color:var(--tm);margin-bottom:6px">📌 권한 정의</div>
-      <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;line-height:1.6">
-        <span style="font-weight:600;color:#7c3aed">🟣 관리자</span>
-        <span>모든 메뉴 접근 및 수정 가능. 사용자 등록·승인·권한 관리. 시스템 설정 전체 관리.</span>
-        <span style="font-weight:600;color:#2563eb">🔵 매니저</span>
-        <span>담당 메뉴 조회·입력·수정 가능. 삭제 및 사용자 관리 제한. 주요 업무 담당자.</span>
-        <span style="font-weight:600;color:#059669">🟢 사용자</span>
-        <span>허용된 메뉴 조회·입력 가능. 수정·삭제 제한. 일반 업무 참여자.</span>
-        <span style="font-weight:600;color:#64748b">⚪ 뷰어</span>
-        <span>허용된 메뉴 조회만 가능. 입력·수정·삭제 불가. 열람 전용.</span>
-      </div>
-      <div style="margin-top:6px;color:var(--tl);font-size:10px">※ 권한 변경은 즉시 반영되며, 재로그인 시 확정됩니다. 체크박스 설정 후 반드시 [저장] 버튼을 클릭하세요.</div>
-    </div>
-    </div>`;
+`;
   };
 
   Pages._qdashState=state;
@@ -1921,7 +1906,7 @@ async _eqSave(orig){
   Pages.equip();
 },
 
-/* [v2.311 Phase3] 계측기 관리대장 인쇄 */
+/* [v2.312 Phase3] 계측기 관리대장 인쇄 */
 _eqPrint(){
   /* 검색 조건 팝업 → 필터 → 인쇄 */
   const statusOpts=['전체','정상','교정중','교정만료'].map(s=>`<option>${s}</option>`).join('');
@@ -2100,7 +2085,7 @@ _eqDetail(row){
     if(logPane) logPane._equip_code=row.code;
     if(!calPane) return;
     if(!DB.cals||!DB.cals.length){const ld=await SB.getCals();if(ld)DB.cals=ld;}
-    /* [v2.311 P2] cal_date 기준 내림차순 정렬 */
+    /* [v2.312 P2] cal_date 기준 내림차순 정렬 */
     const recs=(DB.cals||[]).filter(c=>(c.code===row.code||c.equip_code===row.code))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''));
@@ -2223,7 +2208,7 @@ async _calDel(calId, equip_code){
 /* ── 교정 ── */
 cal(){
   const w=document.getElementById('pw');
-  /* [v2.311 Phase3] D-30 이내 + 아직 만료 안된 계측기 */
+  /* [v2.312 Phase3] D-30 이내 + 아직 만료 안된 계측기 */
   const _now=new Date();
   const soon=DB.equip.filter(e=>{
     if(!e.next) return false;
@@ -2240,7 +2225,7 @@ cal(){
     </div>
     <div id="calTbl"></div>
     <div id="calCostChart" style="margin-top:16px"></div>`;
-  /* [v2.311 P4-3] 교정비용 통계 차트 */
+  /* [v2.312 P4-3] 교정비용 통계 차트 */
   Pages._calCostChart();
   Tbl.render({el:'#calTbl',cols:[
     {key:'code',label:'계측기코드',w:'100px'},
@@ -2345,7 +2330,7 @@ async _calSave(orig){
   else if(curPage==='equip') Pages.equip();
 },
 
-/* [v2.311 P4-1] QR코드 생성 */
+/* [v2.312 P4-1] QR코드 생성 */
 _eqQR(code, name){
   const url=location.origin+location.pathname+'?eq='+encodeURIComponent(code);
   const qrApi='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);
@@ -2374,7 +2359,7 @@ _eqQRPrint(code,name,encodedUrl){
   d.write('</body></html>');
   d.close();
 },
-/* [v2.311 P4-5] 교정 주기 기반 차기교정일 자동 계산 */
+/* [v2.312 P4-5] 교정 주기 기반 차기교정일 자동 계산 */
 _calAutoNext(){
   const dateEl=document.getElementById('cf_date');
   const nextEl=document.getElementById('cf_next');
@@ -2390,7 +2375,7 @@ _calAutoNext(){
   nextEl.value=`${y}-${m}-${dd}`;
   Toast.show(`${months}개월 주기 → ${nextEl.value} 자동설정`,'ok',2000);
 },
-/* [v2.311 P4-3] 교정비용 연도별 + 계측기별 통계 차트 */
+/* [v2.312 P4-3] 교정비용 연도별 + 계측기별 통계 차트 */
 _calCostChart(){
   const el=document.getElementById('calCostChart');
   if(!el) return;
@@ -2448,7 +2433,7 @@ _calCostChart(){
     (top5.length?'<div><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:8px">계측기별 Top5</div>'+equipBars+'</div>':'')+
     '</div></div>';
 },
-/* [v2.311 P4-6] 계측기 실시간 검색/필터 */
+/* [v2.312 P4-6] 계측기 실시간 검색/필터 */
 _eqFilter(){
   const q=(document.getElementById('eqSrch')?.value||'').toLowerCase();
   const st=document.getElementById('eqStat')?.value||'';
@@ -2631,7 +2616,7 @@ async mentions(){
   const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
 
-  /* [v2.311 PhaseA] 채널 정의 — 8대 메뉴 */
+  /* [v2.312 PhaseA] 채널 정의 — 8대 메뉴 */
   const CHANNELS=[
     {key:'all',    label:'전체',     icon:'💬'},
     {key:'reference', label:'기준정보', icon:'📦'},
@@ -2667,84 +2652,88 @@ async mentions(){
     const normal=items.filter(m=>!m.pinned).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
 
     const cardHtml=(m)=>{
-    /* [v2.311 개선] 진짜 1행 — flex 레이아웃, 핵심정보만 표시 */
+    /* [v2.312] 엑셀 표처럼 1행 — table-layout 방식, 폰트 통일 */
     const isMe=(m.from===me)||(me==='admin'&&m.from==='관리자');
     const isMy=(m.to===me)||(m.to_list||[]).includes(me)||isAdmin;
-    const pBg=m.priority==='urgent'?'#fee2e2;color:#dc2626':m.priority==='low'?'#f1f5f9;color:#64748b':'#dbeafe;color:#1d4ed8';
+    const pStyle=m.priority==='urgent'?'color:#dc2626;font-weight:700':m.priority==='low'?'color:#94a3b8':'color:#2563eb';
     const sCls=(m.status==='done')?'bgrn':(m.status==='in_progress')?'bpri':'bamb';
     const tIcon={'mention':'💬','task':'📋','notice':'📢','approval':'✅'}[m.type||'mention']||'💬';
     const unread=(!m.read&&isMy);
     const replyN=(m.replies||[]).length+(DB.mentions||[]).filter(mn=>mn.thread_id===m.id).length;
     const dt=(m.created_at||m.time||'').replace('T',' ').slice(0,16);
-    const chLabel={'general':'일반','reference':'기준정보','quality':'품질관리',
-      'inspection':'검사','supplier':'공급업체','calibration':'계측기',
-      'spc':'SPC','improvement':'개선','document':'문서'}[m.channel||'general']||'일반';
-    const due=m.due_date?(()=>{
-      const d=Math.ceil((new Date(m.due_date)-new Date())/(864e5));
-      return d<0?' <span style="background:#ef4444;color:#fff;border-radius:3px;padding:0 4px;font-size:9px">D+'+Math.abs(d)+'초과</span>'
-           : d<=3?' <span style="background:#f59e0b;color:#fff;border-radius:3px;padding:0 4px;font-size:9px">D-'+d+'</span>':'';
-    })():'';
-    /* 핵심: 한 행 flex + 각 섹션 overflow:hidden */
+    const due=m.due_date?(()=>{const d=Math.ceil((new Date(m.due_date)-new Date())/(864e5));return d<0?'<span style="color:#ef4444;font-size:10px">D+'+Math.abs(d)+'</span>':d<=3?'<span style="color:#f59e0b;font-size:10px">D-'+d+'</span>':''})():'';
     return (
-      '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;'
-        +'border-bottom:1px solid var(--bd);cursor:pointer;min-height:38px;'
-        +'background:'+(m.pinned?'#fefce8':unread?'var(--bg2)':'transparent')
-        +'" onclick="Pages._mentionReplyOpen('+m.id+')"'
-        +' onmouseover="this.style.opacity=&quot;0.85&quot;" onmouseout="this.style.opacity=&quot;1&quot;"'
-      /* 1. 미읽음 점 */
-      +'<div style="width:6px;flex-shrink:0">'
-        +(unread?'<span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block"></span>':'')
-      +'</div>'
-      /* 2. 유형 아이콘 */
-      +'<div style="width:20px;text-align:center;font-size:13px;flex-shrink:0">'+tIcon+'</div>'
-      /* 3. 고정 핀 */
-      +(m.pinned?'<span style="font-size:11px;flex-shrink:0">📌</span>':'')
-      /* 4. 채널 배지 */
-      +'<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:#f1f5f9;color:#475569;flex-shrink:0;white-space:nowrap">'+chLabel+'</span>'
-      /* 5. 발신 → 수신 */
-      +'<div style="width:110px;flex-shrink:0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
-        +'<span style="font-weight:600">'+H.e(m.from||'?')+'</span>'
-        +'<span style="color:var(--tm)"> → '+H.e((m.to_list||[m.to]).slice(0,1).join(','))
-        +((m.to_list||[]).length>1?'+'+((m.to_list||[]).length-1):'')
-        +'</span>'
-      +'</div>'
-      /* 6. 내용 (flex:1 나머지 공간) */
-      +'<div style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)">'
+      '<tr style="background:'+(m.pinned?'#fefce8':unread?'#f0f9ff':'transparent')+';cursor:pointer;font-size:12px"'
+      +' onclick="Pages._mentionReplyOpen('+m.id+')"'
+      +' onmouseover="this.style.background=&quot;#f8fafc&quot;" onmouseout="this.style.background=&quot;'+(m.pinned?'#fefce8':unread?'#f0f9ff':'transparent')+'&quot;"'
+      /* 1.미읽음 */
+      +'<td style="width:18px;padding:6px 4px;text-align:center">'
+        +(unread?'<span style="width:7px;height:7px;background:#ef4444;border-radius:50%;display:inline-block"></span>':'')
+      +'</td>'
+      /* 2.유형 */
+      +'<td style="width:24px;padding:6px 2px;text-align:center;font-size:13px">'+tIcon+'</td>'
+      /* 3.고정 */
+      +'<td style="width:18px;padding:6px 2px;text-align:center;font-size:11px">'+(m.pinned?'📌':'')+'</td>'
+      /* 4.발신자 */
+      +'<td style="width:70px;padding:6px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">'+H.e(m.from||'?')+'</td>'
+      /* 5.수신자 */
+      +'<td style="width:70px;padding:6px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tm)">'+H.e((m.to_list||[m.to]).slice(0,2).join(','))+((m.to_list||[]).length>2?'…':'')+'</td>'
+      /* 6.내용(flex 1) */
+      +'<td style="padding:6px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">'
         +H.e((m.text||'').slice(0,80))+((m.text||'').length>80?'…':'')
-        +(m.link_id?'<span style="margin-left:6px;font-size:10px;color:#3b82f6;background:#eff6ff;border-radius:3px;padding:0 4px">🔗'+H.e(m.link_id)+'</span>':'')
+        +(m.link_id?'<span style="margin-left:6px;font-size:10px;color:#3b82f6;background:#eff6ff;border-radius:3px;padding:0 4px" onclick="event.stopPropagation();Pages._mentionLinkGo(&quot;'+H.e(m.link_type)+'&quot;,&quot;'+H.e(m.link_id)+'&quot;)">🔗'+H.e(m.link_id)+'</span>':'')
         +(m.file_url?'<span style="margin-left:4px;font-size:10px;color:#16a34a">📎</span>':'')
-        +(replyN?'<span style="margin-left:6px;font-size:10px;color:#6366f1">💬'+replyN+'</span>':'')
+        +(replyN?'<span style="margin-left:6px;font-size:10px;color:#6366f1;background:#f5f3ff;border-radius:3px;padding:0 4px">💬'+replyN+'</span>':'')
         +due
-      +'</div>'
-      /* 7. 우선순위 배지 */
-      +'<span style="font-size:9px;padding:1px 5px;border-radius:3px;flex-shrink:0;white-space:nowrap;background:'+pBg+'">'
+      +'</td>'
+      /* 7.우선순위 */
+      +'<td style="width:36px;padding:6px 4px;text-align:center;font-size:10px;white-space:nowrap;'+pStyle+'">'
         +(m.priority==='urgent'?'긴급':m.priority==='low'?'낮음':'일반')
-      +'</span>'
-      /* 8. 상태 배지 */
-      +'<span class="badge '+sCls+'" style="font-size:9px;flex-shrink:0;white-space:nowrap">'
-        +(m.status==='done'?'완료':m.status==='in_progress'?'진행중':'열림')
-      +'</span>'
-      /* 9. 날짜 */
-      +'<div style="width:88px;font-size:10px;color:var(--tm);flex-shrink:0;text-align:right;white-space:nowrap">'+dt+'</div>'
-      /* 10. 액션버튼 (클릭 중지 전파) */
-      +'<div style="display:flex;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">'
-        +(m.status!=='done'&&(isMy||isAdmin)?'<button class="btn bxs bgrn" style="font-size:10px;padding:2px 5px" onclick="Pages._mentionStatus('+m.id+',&quot;done&quot;)" title="완료">✅</button>':'')
-        +(!m.read&&isMy?'<button class="btn bxs" style="font-size:10px;padding:2px 5px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac" onclick="Pages._mentionRead('+m.id+')" title="읽음">읽음</button>':'')
-        +'<button class="btn bxs" style="font-size:10px;padding:2px 5px;background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe" onclick="Pages._mentionReplyOpen('+m.id+')" title="답글">💬</button>'
-        +(isMe?'<button class="btn bxs bout" style="font-size:10px;padding:2px 5px" onclick="Pages._mentionEdit('+m.id+')" title="수정">✏️</button>':'')
-        +((isAdmin||(isMe&&!(m.replies||[]).length))?'<button class="btn bxs berr" style="font-size:10px;padding:2px 5px" onclick="Pages._mentionDel('+m.id+')" title="삭제">🗑</button>':'')
-      +'</div>'
-      +'</div>'
+      +'</td>'
+      /* 8.상태 */
+      +'<td style="width:50px;padding:6px 4px;text-align:center">'
+        +'<span class="badge '+sCls+'" style="font-size:10px">'+(m.status==='done'?'완료':m.status==='in_progress'?'진행중':'열림')+'</span>'
+      +'</td>'
+      /* 9.일시 */
+      +'<td style="width:100px;padding:6px 6px;font-size:10px;color:var(--tm);white-space:nowrap;text-align:right">'+dt+'</td>'
+      /* 10.액션 */
+      +'<td style="width:90px;padding:6px 4px;white-space:nowrap" onclick="event.stopPropagation()">'
+        +(m.status!=='done'&&(isMy||isAdmin)?'<button class="btn bxs bgrn" style="font-size:10px;padding:1px 4px" onclick="Pages._mentionStatus('+m.id+',&quot;done&quot;)" title="완료">✅</button> ':'')
+        +(!m.read&&isMy?'<button class="btn bxs" style="font-size:10px;padding:1px 4px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac" onclick="Pages._mentionRead('+m.id+')" title="읽음">읽음</button> ':'')
+        +'<button class="btn bxs" style="font-size:10px;padding:1px 4px;background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe" onclick="Pages._mentionReplyOpen('+m.id+')" title="답글">💬</button>'
+      +'</td>'
+      +'</tr>'
     );
-  };
+  };;
 
     const listEl=document.getElementById('mlist');
     if(!listEl) return;
-    /* [v2.311] 목록 헤더 */
-    const headerHtml='<div style="display:flex;align-items:center;gap:6px;padding:4px 10px;'+'background:var(--bg2);border-bottom:2px solid var(--bd);font-size:10px;font-weight:600;color:var(--tm)">'+'<div style="width:6px"></div>'+'<div style="width:20px;text-align:center">유형</div>'+'<div style="width:30px"></div>'+'<div style="width:110px">발신자 → 수신자</div>'+'<div style="flex:1">내용</div>'+'<div style="width:42px;text-align:center">우선순위</div>'+'<div style="width:42px;text-align:center">상태</div>'+'<div style="width:88px;text-align:right">일시</div>'+'<div>액션</div>'+'</div>';
+    /* [v2.312] 목록 헤더 */
+    const headerHtml=
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<colgroup>'
+      +'<col style="width:18px"><col style="width:24px"><col style="width:18px">'
+      +'<col style="width:70px"><col style="width:70px"><col>'
+      +'<col style="width:36px"><col style="width:50px"><col style="width:100px"><col style="width:90px">'
+      +'</colgroup>'
+      +'<thead><tr style="background:var(--bg2);border-bottom:2px solid var(--bd);font-size:11px;font-weight:600;color:var(--tm)">'
+      +'<th style="padding:5px 4px"></th>'
+      +'<th style="padding:5px 2px;text-align:center">유형</th>'
+      +'<th style="padding:5px 2px"></th>'
+      +'<th style="padding:5px 6px;text-align:left">발신자</th>'
+      +'<th style="padding:5px 4px;text-align:left">수신자</th>'
+      +'<th style="padding:5px 6px;text-align:left">내용</th>'
+      +'<th style="padding:5px 4px;text-align:center">우선순위</th>'
+      +'<th style="padding:5px 4px;text-align:center">상태</th>'
+      +'<th style="padding:5px 6px;text-align:right">일시</th>'
+      +'<th style="padding:5px 4px;text-align:center">액션</th>'
+      +'</tr></thead>';
     const pinnedHtml=pinned.length
       ?'<div style="border-bottom:1px dashed var(--bd);margin-bottom:10px;padding-bottom:6px"><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:6px">📌 고정 메시지</div>'+pinned.map(cardHtml).join('')+'</div>':'';
-    listEl.innerHTML=headerHtml+pinnedHtml+(normal.length?normal.map(cardHtml).join(''):'<div style="text-align:center;padding:32px;color:var(--tm);font-size:13px">📭 멘션이 없습니다.</div>');
+    listEl.innerHTML=headerHtml
+      +'<tbody>'
+      +(pinned.length?pinned.map(cardHtml).join(''):'')
+      +(normal.length?normal.map(cardHtml).join(''):'<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--tm);font-size:12px">📭 멘션이 없습니다.</td></tr>')+'</tbody></table>';
   };
 
   /* 채널 탭 HTML */
@@ -2809,7 +2798,7 @@ async mentions(){
     if(cntEl) cntEl.textContent=cnt+'건';
   };
   Pages._menChTab=w._menChTab;
-  /* [v2.311] 채널 탭 전환 배지 갱신 래퍼 */
+  /* [v2.312] 채널 탭 전환 배지 갱신 래퍼 */
   const _origChTab=Pages._menChTab;
   Pages._menChTab=(btn)=>{ _origChTab(btn); TopNav.updateMentionBadge(); };
 
@@ -2853,7 +2842,7 @@ async mentions(){
     if(cntEl) cntEl.textContent=filtered.length+'건';
     renderList();
   };
-  /* [v2.311 PhaseC] 필터 초기화 */
+  /* [v2.312 PhaseC] 필터 초기화 */
   Pages._menFilterReset=()=>{
     ['mTypeFilter','mStatFilter','mFromFilter','mSearch'].forEach(id=>{
       const el=document.getElementById(id);
@@ -2870,7 +2859,7 @@ async mentions(){
   renderList();
 },
 
-/* [v2.311 PhaseA] 멘션 작성/수정 폼 */
+/* [v2.312 PhaseA] 멘션 작성/수정 폼 */
 _mentionWrite(editId=null){
   const me=Auth._cur||'admin';
   const meUser=DB.users.find(u=>u.username===me)||{name:'관리자'};
@@ -2983,14 +2972,14 @@ async _mentionSave(editId){
     replies:  [],
     created_at:new Date().toISOString(),
   };
-  /* [v2.311 PhaseC] 파일 첨부 처리 */
+  /* [v2.312 PhaseC] 파일 첨부 처리 */
   const fileEl=document.getElementById('mwFile');
   if(fileEl?.files?.length){
     const f=fileEl.files[0];
     const uploaded=await SB.uploadFile('mentions',f);
     if(uploaded?.url) row.file_url=uploaded.url;
   }
-  /* [v2.311 PhaseC] 파일 첨부 */
+  /* [v2.312 PhaseC] 파일 첨부 */
   const _fEl=document.getElementById('mwFile');
   if(_fEl?.files?.length){
     const _fUp=await SB.uploadFile('mentions',_fEl.files[0]);
@@ -3008,12 +2997,12 @@ async _mentionSave(editId){
     Toast.show('멘션이 전송되었습니다.','ok');
   }
   Modal.close();
-  /* [v2.311] 전송 후 배지 갱신 */
+  /* [v2.312] 전송 후 배지 갱신 */
   setTimeout(()=>TopNav.updateMentionBadge(),300);
   Pages.mentions();
 },
 
-/* [v2.311 PhaseA] 상태 변경 (완료/진행중) */
+/* [v2.312 PhaseA] 상태 변경 (완료/진행중) */
 async _mentionStatus(id, status){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3025,13 +3014,13 @@ async _mentionStatus(id, status){
   Pages.mentions();
 },
 
-/* [v2.311 PhaseA] 읽음 처리 */
+/* [v2.312 PhaseA] 읽음 처리 */
 async _mentionRead(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
   await SB.updateMention(id,{read:true});
   m.read=true;
-  /* [v2.311 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
+  /* [v2.312 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
   const _me2=Auth._cur||'admin';
   const unread=DB.mentions.filter(m=>!m.read&&(m.to===_me2||(m.to_list||[]).includes(_me2)||Auth._u?.role==='admin')).length;
   const nb=document.getElementById('mnb');
@@ -3040,7 +3029,7 @@ async _mentionRead(id){
   TopNav.updateMentionBadge();
 },
 
-/* [v2.311 PhaseA] 고정/해제 */
+/* [v2.312 PhaseA] 고정/해제 */
 async _mentionPin(id, pinned){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3050,7 +3039,7 @@ async _mentionPin(id, pinned){
   Pages.mentions();
 },
 
-/* [v2.311 PhaseA] 반응(Reaction) */
+/* [v2.312 PhaseA] 반응(Reaction) */
 async _mentionReact(id, emoji){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3065,7 +3054,7 @@ async _mentionReact(id, emoji){
   m.reactions=reactions;
   Pages.mentions();
 },
-/* [v2.311 PhaseB] 업무 레코드 바로가기 링크 맵 */
+/* [v2.312 PhaseB] 업무 레코드 바로가기 링크 맵 */
 _mentionLinkGo(linkType, linkId){
   const NAV_MAP={
     nc:'nc', equip:'equip', cal:'cal', car:'car',
@@ -3080,7 +3069,7 @@ _mentionLinkGo(linkType, linkId){
   Toast.show('🔗 '+linkId+' — '+page+' 페이지로 이동했습니다.','info',2500);
 },
 
-/* [v2.311 PhaseB] 반응 이모지 선택 팝업 */
+/* [v2.312 PhaseB] 반응 이모지 선택 팝업 */
 _mentionReactPop(id){
   const EMOJIS=['👍','✅','🔄','🔥','❓','⚠️','💡','👀'];
   const m=DB.mentions.find(m=>m.id===id);
@@ -3100,7 +3089,7 @@ _mentionReactPop(id){
   Modal.open({title:'반응 선택',size:'msm',body});
 },
 
-/* [v2.311 PhaseB] 스레드 답글 — SB 연동 */
+/* [v2.312 PhaseB] 스레드 답글 — SB 연동 */
 _mentionReplyView(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3144,7 +3133,7 @@ _mentionEdit(id){
   this._mentionWrite(id);
 },
 
-/* [v2.311 PhaseA] 멘션 삭제 */
+/* [v2.312 PhaseA] 멘션 삭제 */
 async _mentionDel(id){
   const isAdmin=(Auth._u?.role==='admin');
   const m=DB.mentions.find(m=>m.id===id);
@@ -3160,7 +3149,7 @@ async _mentionDel(id){
     Pages.mentions();
   }});
 },
-/* [v2.311 PhaseC] 멘션 → 태스크 격상 */
+/* [v2.312 PhaseC] 멘션 → 태스크 격상 */
 async _mentionToTask(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
@@ -3195,7 +3184,7 @@ async _mentionToTaskSave(id){
   Pages.mentions();
 },
 
-/* [v2.311 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
+/* [v2.312 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
 _mentionFollowUp(){
   const me=Auth._cur||'admin';
   const isAdmin=Auth._u?.role==='admin';
@@ -3263,7 +3252,7 @@ async _mentionFollowUpSend(){
   Pages.mentions();
 },
 
-/* [v2.311 PhaseC] 멘션 통계 대시보드 */
+/* [v2.312 PhaseC] 멘션 통계 대시보드 */
 _mentionStats(){
   const all=DB.mentions||[];
   if(!all.length){Toast.show('멘션 데이터가 없습니다.','info');return;}
@@ -3437,22 +3426,7 @@ settings(){
           }).join('')}
         </tbody>
       </table>
-    <!-- [v2.311] 권한 정의 각주 -->
-    <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--bd);border-radius:6px;font-size:11px">
-      <div style="font-weight:700;color:var(--tm);margin-bottom:6px">📌 권한 정의</div>
-      <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;line-height:1.6">
-        <span style="font-weight:600;color:#7c3aed">🟣 관리자</span>
-        <span>모든 메뉴 접근 및 수정 가능. 사용자 등록·승인·권한 관리. 시스템 설정 전체 관리.</span>
-        <span style="font-weight:600;color:#2563eb">🔵 매니저</span>
-        <span>담당 메뉴 조회·입력·수정 가능. 삭제 및 사용자 관리 제한. 주요 업무 담당자.</span>
-        <span style="font-weight:600;color:#059669">🟢 사용자</span>
-        <span>허용된 메뉴 조회·입력 가능. 수정·삭제 제한. 일반 업무 참여자.</span>
-        <span style="font-weight:600;color:#64748b">⚪ 뷰어</span>
-        <span>허용된 메뉴 조회만 가능. 입력·수정·삭제 불가. 열람 전용.</span>
-      </div>
-      <div style="margin-top:6px;color:var(--tl);font-size:10px">※ 권한 변경은 즉시 반영되며, 재로그인 시 확정됩니다. 체크박스 설정 후 반드시 [저장] 버튼을 클릭하세요.</div>
-    </div>
-    </div>`;
+    <!-- [v2.312] 권한 정의 각주 -->`;
   };
 
   /* 접근 권한 테이블 렌더 */
@@ -3479,7 +3453,7 @@ settings(){
           </tr>`).join('')}`).join('')}
         </tbody>
       </table>
-    <!-- [v2.311] 권한 정의 각주 -->
+    <!-- [v2.312] 권한 정의 각주 -->
     <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--bd);border-radius:6px;font-size:11px">
       <div style="font-weight:700;color:var(--tm);margin-bottom:6px">📌 권한 정의</div>
       <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;line-height:1.6">
@@ -6112,7 +6086,7 @@ function setupHotkeys(){
       else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
     }
     else if(ev.key==='F5'){
-      /* [v2.311] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
+      /* [v2.312] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
       ev.preventDefault();
       if(Auth._u){
         const page=document.querySelector('.ni.active')?.dataset?.p||'home';
@@ -6166,7 +6140,7 @@ function setupHotkeys(){
       const sm=document.getElementById('ni_settings');
       if(sm) sm.style.display=(u.role==='admin')?'':'none';
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
-      /* [v2.311] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
+      /* [v2.312] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
       (async()=>{
         try{
           if(_sb){

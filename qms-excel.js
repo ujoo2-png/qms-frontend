@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.311] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.312] */
 "use strict";
 
 
@@ -1076,15 +1076,17 @@ const ExcelMgr={
     equip:{
       title:'계측기등록',
       cols:[
-        {key:'code',     label:'계측기코드',  req:true,  sample:'EQ-006',    note:'필수'},
-        {key:'name',     label:'계측기명',    req:false, sample:'높이게이지'},
+        /* [v2.312] 컬럼 순서 재정의 + model 추가 + 차기교정일 날짜만 */
+        {key:'code',     label:'계측기코드',  req:true,  sample:'EQ-001',    note:'필수. 중복 시 업데이트'},
+        {key:'name',     label:'계측기명',    req:true,  sample:'디지털 버니어캘리퍼스', note:'필수'},
+        {key:'model',    label:'모델번호',    req:false, sample:'CD-20APX'},
         {key:'maker',    label:'제조사',      req:false, sample:'미쓰토요'},
         {key:'range',    label:'측정범위',    req:false, sample:'0~200mm'},
         {key:'res',      label:'분해능',      req:false, sample:'0.01mm'},
         {key:'loc',      label:'보관위치',    req:false, sample:'품질실'},
         {key:'operator', label:'사용자',      req:false, sample:'홍길동'},
         {key:'last',     label:'최근교정일',  req:false, sample:'2026-01-01', note:'YYYY-MM-DD'},
-        {key:'next',     label:'차기교정일',  req:false, sample:'2026-07-01', note:'YYYY-MM-DD'},
+        {key:'next',     label:'차기교정일',  req:false, sample:'2026-07-01', note:'날짜만 입력(상태는 자동계산)'},
         {key:'active',   label:'사용여부',    req:false, sample:'사용',       note:'사용/불용'},
       ],
       dupKey:'code', dupLabel:'계측기코드', getData:()=>DB.equip,
@@ -1440,18 +1442,20 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
+        /* [v2.312] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
-        model:       row.model||'',
-        maker:       row.maker||'',
-        range:       row.range||'',
-        res:         row.res||'',
-        loc:         row.loc||'',
-        operator:    row.operator||'',
+        model:       row.model||row['모델번호']||'',
+        maker:       row.maker||row['제조사']||'',
+        range:       row.range||row['측정범위']||'',
+        res:         row.res||row['분해능']||'',
+        loc:         row.loc||row['보관위치']||'',
+        operator:    row.operator||row['사용자']||'',
         active:      (row.active==='불용'||row.active===0||row.active==='0')?0:1,
-        status:      H.equipStatus(row.next),
-        next:        row.next||null,
-        last:        row.last||null,
+        /* 차기교정일은 날짜 그대로, 상태는 자동계산 */
+        next:        row.next||row['차기교정일']||null,
+        last:        row.last||row['최근교정일']||null,
+        status:      H.equipStatus(row.next||row['차기교정일']||null),
         updated_at:  null,
         created_at:  row.created_at||null,
       };
