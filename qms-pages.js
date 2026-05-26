@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.307] */
+/* qms-pages.js — Pages 페이지 렌더러 [v2.311] */
 "use strict";
 
 
@@ -62,7 +62,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.310</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.311</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -148,7 +148,7 @@ home(){
           </div>
         </div>`;
       })()}
-            <!-- [v2.310 PhaseB] 미처리 멘션 D-day 패널 -->
+            <!-- [v2.311 PhaseB] 미처리 멘션 D-day 패널 -->
       ${(()=>{
         const _me=Auth._cur||'admin';
         const _td=new Date();
@@ -242,7 +242,7 @@ home(){
   },
 
 async _mentionReplySend(parentId){
-  /* [v2.310 PhaseB] thread_id 기반 SB 스레드 저장 */
+  /* [v2.311 PhaseB] thread_id 기반 SB 스레드 저장 */
   const text=(document.getElementById('rtext')?.value||'').trim();
   if(!text){Toast.show('내용을 입력하세요.','warn');return}
   const me=Auth._u;
@@ -311,11 +311,17 @@ async _setUserRole(userId, username, newRole){
 },
 
 /* 접근 권한 저장 (sessionStorage, v2.23) */
+/* [v2.311] perms 저장 — sessionStorage + SB users 테이블 */
 _savePerms(){
   try{
-    sessionStorage.setItem('qms_perms',JSON.stringify(App.perms||{}));
+    const permsStr=JSON.stringify(App.perms||{});
+    sessionStorage.setItem('qms_perms',permsStr);
+    /* SB users 테이블에도 저장 (perms 컬럼) */
+    if(typeof _sb!=='undefined'&&_sb&&Auth._u?.id){
+      _sb.from('users').update({perms:permsStr}).eq('id','system').then(()=>{});
+    }
     Toast.show('권한 설정이 저장되었습니다.','ok');
-  }catch(e){Toast.show('저장 실패','err');}
+  }catch(e){Toast.show('저장 실패: '+e.message,'err');}
 },
 
 /* 비밀번호 변경 (설정 탭, v2.23) */
@@ -1654,7 +1660,7 @@ quality_dash(){
         </tr>
         </tbody>
       </table>
-    <!-- [v2.310] 권한 정의 각주 -->
+    <!-- [v2.311] 권한 정의 각주 -->
     <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--bd);border-radius:6px;font-size:11px">
       <div style="font-weight:700;color:var(--tm);margin-bottom:6px">📌 권한 정의</div>
       <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;line-height:1.6">
@@ -1915,7 +1921,7 @@ async _eqSave(orig){
   Pages.equip();
 },
 
-/* [v2.307 Phase3] 계측기 관리대장 인쇄 */
+/* [v2.311 Phase3] 계측기 관리대장 인쇄 */
 _eqPrint(){
   /* 검색 조건 팝업 → 필터 → 인쇄 */
   const statusOpts=['전체','정상','교정중','교정만료'].map(s=>`<option>${s}</option>`).join('');
@@ -2094,7 +2100,7 @@ _eqDetail(row){
     if(logPane) logPane._equip_code=row.code;
     if(!calPane) return;
     if(!DB.cals||!DB.cals.length){const ld=await SB.getCals();if(ld)DB.cals=ld;}
-    /* [v2.310 P2] cal_date 기준 내림차순 정렬 */
+    /* [v2.311 P2] cal_date 기준 내림차순 정렬 */
     const recs=(DB.cals||[]).filter(c=>(c.code===row.code||c.equip_code===row.code))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''));
@@ -2217,7 +2223,7 @@ async _calDel(calId, equip_code){
 /* ── 교정 ── */
 cal(){
   const w=document.getElementById('pw');
-  /* [v2.307 Phase3] D-30 이내 + 아직 만료 안된 계측기 */
+  /* [v2.311 Phase3] D-30 이내 + 아직 만료 안된 계측기 */
   const _now=new Date();
   const soon=DB.equip.filter(e=>{
     if(!e.next) return false;
@@ -2234,7 +2240,7 @@ cal(){
     </div>
     <div id="calTbl"></div>
     <div id="calCostChart" style="margin-top:16px"></div>`;
-  /* [v2.307 P4-3] 교정비용 통계 차트 */
+  /* [v2.311 P4-3] 교정비용 통계 차트 */
   Pages._calCostChart();
   Tbl.render({el:'#calTbl',cols:[
     {key:'code',label:'계측기코드',w:'100px'},
@@ -2339,7 +2345,7 @@ async _calSave(orig){
   else if(curPage==='equip') Pages.equip();
 },
 
-/* [v2.307 P4-1] QR코드 생성 */
+/* [v2.311 P4-1] QR코드 생성 */
 _eqQR(code, name){
   const url=location.origin+location.pathname+'?eq='+encodeURIComponent(code);
   const qrApi='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);
@@ -2368,7 +2374,7 @@ _eqQRPrint(code,name,encodedUrl){
   d.write('</body></html>');
   d.close();
 },
-/* [v2.307 P4-5] 교정 주기 기반 차기교정일 자동 계산 */
+/* [v2.311 P4-5] 교정 주기 기반 차기교정일 자동 계산 */
 _calAutoNext(){
   const dateEl=document.getElementById('cf_date');
   const nextEl=document.getElementById('cf_next');
@@ -2384,7 +2390,7 @@ _calAutoNext(){
   nextEl.value=`${y}-${m}-${dd}`;
   Toast.show(`${months}개월 주기 → ${nextEl.value} 자동설정`,'ok',2000);
 },
-/* [v2.307 P4-3] 교정비용 연도별 + 계측기별 통계 차트 */
+/* [v2.311 P4-3] 교정비용 연도별 + 계측기별 통계 차트 */
 _calCostChart(){
   const el=document.getElementById('calCostChart');
   if(!el) return;
@@ -2442,7 +2448,7 @@ _calCostChart(){
     (top5.length?'<div><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:8px">계측기별 Top5</div>'+equipBars+'</div>':'')+
     '</div></div>';
 },
-/* [v2.307 P4-6] 계측기 실시간 검색/필터 */
+/* [v2.311 P4-6] 계측기 실시간 검색/필터 */
 _eqFilter(){
   const q=(document.getElementById('eqSrch')?.value||'').toLowerCase();
   const st=document.getElementById('eqStat')?.value||'';
@@ -2625,7 +2631,7 @@ async mentions(){
   const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
 
-  /* [v2.310 PhaseA] 채널 정의 — 8대 메뉴 */
+  /* [v2.311 PhaseA] 채널 정의 — 8대 메뉴 */
   const CHANNELS=[
     {key:'all',    label:'전체',     icon:'💬'},
     {key:'reference', label:'기준정보', icon:'📦'},
@@ -2661,7 +2667,7 @@ async mentions(){
     const normal=items.filter(m=>!m.pinned).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
 
     const cardHtml=(m)=>{
-    /* [v2.310 개선] 진짜 1행 — flex 레이아웃, 핵심정보만 표시 */
+    /* [v2.311 개선] 진짜 1행 — flex 레이아웃, 핵심정보만 표시 */
     const isMe=(m.from===me)||(me==='admin'&&m.from==='관리자');
     const isMy=(m.to===me)||(m.to_list||[]).includes(me)||isAdmin;
     const pBg=m.priority==='urgent'?'#fee2e2;color:#dc2626':m.priority==='low'?'#f1f5f9;color:#64748b':'#dbeafe;color:#1d4ed8';
@@ -2734,7 +2740,7 @@ async mentions(){
 
     const listEl=document.getElementById('mlist');
     if(!listEl) return;
-    /* [v2.310] 목록 헤더 */
+    /* [v2.311] 목록 헤더 */
     const headerHtml='<div style="display:flex;align-items:center;gap:6px;padding:4px 10px;'+'background:var(--bg2);border-bottom:2px solid var(--bd);font-size:10px;font-weight:600;color:var(--tm)">'+'<div style="width:6px"></div>'+'<div style="width:20px;text-align:center">유형</div>'+'<div style="width:30px"></div>'+'<div style="width:110px">발신자 → 수신자</div>'+'<div style="flex:1">내용</div>'+'<div style="width:42px;text-align:center">우선순위</div>'+'<div style="width:42px;text-align:center">상태</div>'+'<div style="width:88px;text-align:right">일시</div>'+'<div>액션</div>'+'</div>';
     const pinnedHtml=pinned.length
       ?'<div style="border-bottom:1px dashed var(--bd);margin-bottom:10px;padding-bottom:6px"><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:6px">📌 고정 메시지</div>'+pinned.map(cardHtml).join('')+'</div>':'';
@@ -2803,6 +2809,9 @@ async mentions(){
     if(cntEl) cntEl.textContent=cnt+'건';
   };
   Pages._menChTab=w._menChTab;
+  /* [v2.311] 채널 탭 전환 배지 갱신 래퍼 */
+  const _origChTab=Pages._menChTab;
+  Pages._menChTab=(btn)=>{ _origChTab(btn); TopNav.updateMentionBadge(); };
 
   Pages._menSideFilter=(el,type)=>{
     document.querySelectorAll('.men-side-item').forEach(i=>i.style.background='');
@@ -2844,7 +2853,7 @@ async mentions(){
     if(cntEl) cntEl.textContent=filtered.length+'건';
     renderList();
   };
-  /* [v2.310 PhaseC] 필터 초기화 */
+  /* [v2.311 PhaseC] 필터 초기화 */
   Pages._menFilterReset=()=>{
     ['mTypeFilter','mStatFilter','mFromFilter','mSearch'].forEach(id=>{
       const el=document.getElementById(id);
@@ -2861,7 +2870,7 @@ async mentions(){
   renderList();
 },
 
-/* [v2.310 PhaseA] 멘션 작성/수정 폼 */
+/* [v2.311 PhaseA] 멘션 작성/수정 폼 */
 _mentionWrite(editId=null){
   const me=Auth._cur||'admin';
   const meUser=DB.users.find(u=>u.username===me)||{name:'관리자'};
@@ -2974,14 +2983,14 @@ async _mentionSave(editId){
     replies:  [],
     created_at:new Date().toISOString(),
   };
-  /* [v2.310 PhaseC] 파일 첨부 처리 */
+  /* [v2.311 PhaseC] 파일 첨부 처리 */
   const fileEl=document.getElementById('mwFile');
   if(fileEl?.files?.length){
     const f=fileEl.files[0];
     const uploaded=await SB.uploadFile('mentions',f);
     if(uploaded?.url) row.file_url=uploaded.url;
   }
-  /* [v2.310 PhaseC] 파일 첨부 */
+  /* [v2.311 PhaseC] 파일 첨부 */
   const _fEl=document.getElementById('mwFile');
   if(_fEl?.files?.length){
     const _fUp=await SB.uploadFile('mentions',_fEl.files[0]);
@@ -2999,10 +3008,12 @@ async _mentionSave(editId){
     Toast.show('멘션이 전송되었습니다.','ok');
   }
   Modal.close();
+  /* [v2.311] 전송 후 배지 갱신 */
+  setTimeout(()=>TopNav.updateMentionBadge(),300);
   Pages.mentions();
 },
 
-/* [v2.310 PhaseA] 상태 변경 (완료/진행중) */
+/* [v2.311 PhaseA] 상태 변경 (완료/진행중) */
 async _mentionStatus(id, status){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3010,24 +3021,26 @@ async _mentionStatus(id, status){
   if(!res.ok) return;
   m.status=status; m.read=true;
   Toast.show(status==='done'?'완료 처리되었습니다.':'진행중으로 변경되었습니다.','ok');
+  TopNav.updateMentionBadge();
   Pages.mentions();
 },
 
-/* [v2.310 PhaseA] 읽음 처리 */
+/* [v2.311 PhaseA] 읽음 처리 */
 async _mentionRead(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
   await SB.updateMention(id,{read:true});
   m.read=true;
-  /* [v2.310 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
+  /* [v2.311 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
   const _me2=Auth._cur||'admin';
   const unread=DB.mentions.filter(m=>!m.read&&(m.to===_me2||(m.to_list||[]).includes(_me2)||Auth._u?.role==='admin')).length;
   const nb=document.getElementById('mnb');
   if(nb){nb.textContent=unread||'';nb.style.display=unread?'':'none';}
   Pages.mentions();
+  TopNav.updateMentionBadge();
 },
 
-/* [v2.310 PhaseA] 고정/해제 */
+/* [v2.311 PhaseA] 고정/해제 */
 async _mentionPin(id, pinned){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3037,7 +3050,7 @@ async _mentionPin(id, pinned){
   Pages.mentions();
 },
 
-/* [v2.310 PhaseA] 반응(Reaction) */
+/* [v2.311 PhaseA] 반응(Reaction) */
 async _mentionReact(id, emoji){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3052,7 +3065,7 @@ async _mentionReact(id, emoji){
   m.reactions=reactions;
   Pages.mentions();
 },
-/* [v2.310 PhaseB] 업무 레코드 바로가기 링크 맵 */
+/* [v2.311 PhaseB] 업무 레코드 바로가기 링크 맵 */
 _mentionLinkGo(linkType, linkId){
   const NAV_MAP={
     nc:'nc', equip:'equip', cal:'cal', car:'car',
@@ -3067,7 +3080,7 @@ _mentionLinkGo(linkType, linkId){
   Toast.show('🔗 '+linkId+' — '+page+' 페이지로 이동했습니다.','info',2500);
 },
 
-/* [v2.310 PhaseB] 반응 이모지 선택 팝업 */
+/* [v2.311 PhaseB] 반응 이모지 선택 팝업 */
 _mentionReactPop(id){
   const EMOJIS=['👍','✅','🔄','🔥','❓','⚠️','💡','👀'];
   const m=DB.mentions.find(m=>m.id===id);
@@ -3087,7 +3100,7 @@ _mentionReactPop(id){
   Modal.open({title:'반응 선택',size:'msm',body});
 },
 
-/* [v2.310 PhaseB] 스레드 답글 — SB 연동 */
+/* [v2.311 PhaseB] 스레드 답글 — SB 연동 */
 _mentionReplyView(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -3131,7 +3144,7 @@ _mentionEdit(id){
   this._mentionWrite(id);
 },
 
-/* [v2.310 PhaseA] 멘션 삭제 */
+/* [v2.311 PhaseA] 멘션 삭제 */
 async _mentionDel(id){
   const isAdmin=(Auth._u?.role==='admin');
   const m=DB.mentions.find(m=>m.id===id);
@@ -3147,7 +3160,7 @@ async _mentionDel(id){
     Pages.mentions();
   }});
 },
-/* [v2.310 PhaseC] 멘션 → 태스크 격상 */
+/* [v2.311 PhaseC] 멘션 → 태스크 격상 */
 async _mentionToTask(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
@@ -3182,7 +3195,7 @@ async _mentionToTaskSave(id){
   Pages.mentions();
 },
 
-/* [v2.310 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
+/* [v2.311 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
 _mentionFollowUp(){
   const me=Auth._cur||'admin';
   const isAdmin=Auth._u?.role==='admin';
@@ -3250,7 +3263,7 @@ async _mentionFollowUpSend(){
   Pages.mentions();
 },
 
-/* [v2.310 PhaseC] 멘션 통계 대시보드 */
+/* [v2.311 PhaseC] 멘션 통계 대시보드 */
 _mentionStats(){
   const all=DB.mentions||[];
   if(!all.length){Toast.show('멘션 데이터가 없습니다.','info');return;}
@@ -3424,7 +3437,7 @@ settings(){
           }).join('')}
         </tbody>
       </table>
-    <!-- [v2.310] 권한 정의 각주 -->
+    <!-- [v2.311] 권한 정의 각주 -->
     <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--bd);border-radius:6px;font-size:11px">
       <div style="font-weight:700;color:var(--tm);margin-bottom:6px">📌 권한 정의</div>
       <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;line-height:1.6">
@@ -3466,7 +3479,7 @@ settings(){
           </tr>`).join('')}`).join('')}
         </tbody>
       </table>
-    <!-- [v2.310] 권한 정의 각주 -->
+    <!-- [v2.311] 권한 정의 각주 -->
     <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--bd);border-radius:6px;font-size:11px">
       <div style="font-weight:700;color:var(--tm);margin-bottom:6px">📌 권한 정의</div>
       <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;line-height:1.6">
@@ -6099,7 +6112,7 @@ function setupHotkeys(){
       else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
     }
     else if(ev.key==='F5'){
-      /* [v2.306] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
+      /* [v2.311] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
       ev.preventDefault();
       if(Auth._u){
         const page=document.querySelector('.ni.active')?.dataset?.p||'home';
@@ -6153,7 +6166,7 @@ function setupHotkeys(){
       const sm=document.getElementById('ni_settings');
       if(sm) sm.style.display=(u.role==='admin')?'':'none';
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
-      /* [v2.306] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
+      /* [v2.311] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
       (async()=>{
         try{
           if(_sb){
