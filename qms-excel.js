@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.320] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.321] */
 "use strict";
 
 
@@ -1073,23 +1073,23 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
+    /* [v2.321] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
-      title:'계측기등록',
+      title:'계측기_업로드양식',
       cols:[
-        /* [v2.320] 컬럼 순서 재정의 + model 추가 + 차기교정일 날짜만 */
-        {key:'code',     label:'계측기코드',  req:true,  sample:'EQ-001',    note:'필수. 중복 시 업데이트'},
-        {key:'name',     label:'계측기명',    req:true,  sample:'디지털 버니어캘리퍼스', note:'필수'},
-        {key:'model',    label:'모델번호',    req:false, sample:'CD-20APX'},
-        {key:'maker',    label:'제조사',      req:false, sample:'미쓰토요'},
-        {key:'range',    label:'측정범위',    req:false, sample:'0~200mm'},
-        {key:'res',      label:'분해능',      req:false, sample:'0.01mm'},
-        {key:'loc',      label:'보관위치',    req:false, sample:'품질실'},
-        {key:'operator', label:'사용자',      req:false, sample:'홍길동'},
-        {key:'last',     label:'최근교정일',  req:false, sample:'2026-01-01', note:'YYYY-MM-DD'},
-        {key:'next',     label:'차기교정일',  req:false, sample:'2026-07-01', note:'날짜만 입력(상태는 자동계산)'},
-        {key:'active',   label:'사용여부',    req:false, sample:'사용',       note:'사용/불용'},
+        {key:'code',     label:'A_계측기코드',  req:true,  sample:'EQ-001',              note:'필수'},
+        {key:'name',     label:'B_계측기명',    req:true,  sample:'디지털버니어캘리퍼스',  note:'필수'},
+        {key:'model',    label:'C_모델번호',    req:false, sample:'CD-20APX'},
+        {key:'maker',    label:'D_제조사',      req:false, sample:'미쓰토요'},
+        {key:'range',    label:'E_측정범위',    req:false, sample:'0~200mm'},
+        {key:'res',      label:'F_분해능',      req:false, sample:'0.01mm'},
+        {key:'loc',      label:'G_보관위치',    req:false, sample:'품질실'},
+        {key:'operator', label:'H_사용자',      req:false, sample:'홍길동'},
+        {key:'last',     label:'I_최근교정일',  req:false, sample:'2026-01-01',           note:'YYYY-MM-DD'},
+        {key:'next',     label:'J_차기교정일',  req:false, sample:'2026-07-01',           note:'날짜만입력'},
+        {key:'active',   label:'K_사용여부',    req:false, sample:'사용',                 note:'사용/불용'},
       ],
-      dupKey:'code', dupLabel:'계측기코드', getData:()=>DB.equip,
+      dupKey:'code', dupLabel:'A_계측기코드', getData:()=>DB.equip,
     },
     cal:{
       title:'교정관리',
@@ -1296,20 +1296,21 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.320] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.321] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
+      /* [v2.321] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
-        '제조사':'maker','메이커':'maker','브랜드':'maker','Maker':'maker',
-        '측정범위':'range','범위':'range','레인지':'range','Range':'range',
-        '분해능':'res','해상도':'res','최소눈금':'res','Res':'res',
-        '보관위치':'loc','위치':'loc','장소':'loc','보관장소':'loc','Location':'loc',
-        '사용자':'operator','담당자':'operator','사용부서':'operator',
-        '모델번호':'model','모델':'model','형번':'model','Model':'model',
-        '계측기코드':'code','코드':'code','관리번호':'code',
-        '계측기명':'name','명칭':'name','기기명':'name',
-        '최근교정일':'last','교정일':'last','직전교정일':'last',
-        '차기교정일':'next','다음교정일':'next','예정교정일':'next',
-        '사용여부':'active','활성여부':'active',
+        'A_계측기코드':'code','계측기코드':'code','코드':'code',
+        'B_계측기명':'name','계측기명':'name','기기명':'name',
+        'C_모델번호':'model','모델번호':'model','모델':'model','형번':'model',
+        'D_제조사':'maker','제조사':'maker','메이커':'maker',
+        'E_측정범위':'range','측정범위':'range','범위':'range',
+        'F_분해능':'res','분해능':'res','해상도':'res',
+        'G_보관위치':'loc','보관위치':'loc','위치':'loc',
+        'H_사용자':'operator','사용자':'operator','담당자':'operator',
+        'I_최근교정일':'last','최근교정일':'last','교정일':'last',
+        'J_차기교정일':'next','차기교정일':'next','다음교정일':'next',
+        'K_사용여부':'active','사용여부':'active',
       };
       Object.assign(labelToKey, equipAlias);
     }
@@ -1318,7 +1319,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.320] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.321] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1463,7 +1464,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.320] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.321] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
