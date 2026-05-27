@@ -2991,22 +2991,12 @@ async mentions(){
     +'<button class="btn bsm" style="background:#f5f3ff;color:#7c3aed" onclick="Pages._mentionFollowUp()" title="미응답 팔로우업">🔄 팔로우업</button>'
     +'<button class="btn bpri bsm" onclick="Pages._mentionWrite()">✉️ 새 멘션</button>'
     +'</div></div>'
-    +'<div style="display:grid;grid-template-columns:180px 1fr;gap:12px;height:calc(100vh - 130px)">'
-    /* 좌측 사이드 */
-    +'<div style="display:flex;flex-direction:column;gap:4px;padding:4px 0">'
-    +'<div class="men-side-item active" onclick="Pages._menSideFilter(this,\'all\')" style="cursor:pointer;padding:6px 10px;border-radius:6px;background:var(--bg2);display:flex;justify-content:space-between;align-items:center"><span>💬 전체</span><span class="badge bpri" style="font-size:10px">'+DB.mentions.length+'</span></div>'
-    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'unread\')" style="cursor:pointer;padding:6px 10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center"><span>🔴 미읽음</span>'+(unread.length?'<span class="badge bred" style="font-size:10px">'+unread.length+'</span>':'')+'</div>'
-    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'mine\')" style="cursor:pointer;padding:6px 10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center"><span>📋 내 담당</span>'+(myTask.length?'<span class="badge bamb" style="font-size:10px">'+myTask.length+'</span>':'')+'</div>'
-    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'sent\')" style="cursor:pointer;padding:6px 10px;border-radius:6px">📤 보낸 것</div>'
-    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'done\')" style="cursor:pointer;padding:6px 10px;border-radius:6px">✅ 완료</div>'
-    +'<div class="men-side-item" onclick="Pages._menSideFilter(this,\'pinned\')" style="cursor:pointer;padding:6px 10px;border-radius:6px">📌 고정</div>'
-    +'</div>'
-    /* 우측 메인 */
-    +'<div style="display:flex;flex-direction:column;overflow:hidden">'
-    /* [v2.328] 상단 칸반 탭 */
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap;padding:0 0 10px 0;border-bottom:2px solid var(--bd);margin-bottom:10px">'
+    +'<div style="display:flex;flex-direction:column;gap:0">'
+    /* [v2.328] 상단 칸반 탭 (좌측 사이드 제거) */
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 0 10px 0;border-bottom:2px solid var(--bd);margin-bottom:12px">'
     +_sideTabHtml
     +'</div>'
+    +'<div style="display:flex;flex-direction:column;overflow:hidden">'
     /* 채널 탭 */
     +'<div style="background:var(--bg2);border-radius:8px;padding:6px;margin-bottom:10px;display:flex;flex-wrap:wrap">'+chTabs+'</div>'
     /* 필터 바 */
