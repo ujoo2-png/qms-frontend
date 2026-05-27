@@ -1,4 +1,4 @@
-/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.334] */
+/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.335] */
 "use strict";
 
 
@@ -9,7 +9,7 @@ const App={
     {id:2,title:'계측기 정기교정 일정 공지',body:'EQ-003, EQ-005 계측기 교정이 5월 15일 예정되어 있습니다. 해당 계측기 사용 부서 준비 바랍니다.',author:'품질팀',date:'2026-05-02',expire:'2026-05-16',show:true},
   ],
   files:{},
-  /* [v2.334] 메뉴별 권한 저장소 */
+  /* [v2.335] 메뉴별 권한 저장소 */
   perms:{},
 };
 
@@ -217,7 +217,7 @@ const Auth={
     });
     /* [v2.305] 최근 로그인 시각 SB 업데이트 */
     if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
-    /* [v2.334] 권한 설정 복원 — sessionStorage에서 로드 */
+    /* [v2.335] 권한 설정 복원 — sessionStorage에서 로드 */
     try{
       const _sp=sessionStorage.getItem('qms_perms');
       if(_sp) App.perms=JSON.parse(_sp);
@@ -266,10 +266,10 @@ const Auth={
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
       Toast.show('로그인되었습니다.','ok');
-      /* [v2.334] 로그인 시 keepalive 자동 실행 */
+      /* [v2.335] 로그인 시 keepalive 자동 실행 */
       setTimeout(async()=>{
         try{if(_sb){await _sb.from('users').select('id').limit(1);localStorage.setItem('qms_keepalive',new Date().toISOString().slice(0,16).replace('T',' '));}}catch(e){}},2000);
-      /* [v2.334] 로그인 직후 멘션 배지 갱신 */
+      /* [v2.335] 로그인 직후 멘션 배지 갱신 */
       setTimeout(()=>TopNav.updateMentionBadge(),500);
     })();
   },
@@ -440,7 +440,7 @@ const UI={
     const isHidden=pop.classList.contains('hidden');
     pop.classList.toggle('hidden');
     if(isHidden){
-      /* [v2.334] 팝업 열 때 실시간 멘션 렌더 */
+      /* [v2.335] 팝업 열 때 실시간 멘션 렌더 */
       UI.renderMpop();
     }
     document.getElementById('bdot').style.display='none';
@@ -486,7 +486,7 @@ const UI={
     }).join('');
   },
   markAllRead(){
-    /* [v2.334] 모두 읽음 처리 */
+    /* [v2.335] 모두 읽음 처리 */
     const me=Auth._cur||'admin';
     const isAdmin=Auth._u?.role==='admin';
     const unread=(DB.mentions||[]).filter(m=>
@@ -503,7 +503,7 @@ const UI={
 
 /* ══ 테이블 ══ */
 const Tbl={
-  /* [v2.334] 정렬 상태 저장 */
+  /* [v2.335] 정렬 상태 저장 */
   _sortKey:null, _sortDir:1,
 
   render({el,cols,data,onDel,onRow,ps=20,page=1}={}){
@@ -551,7 +551,7 @@ const Tbl={
       if(e2<pages) bs.push(`<button class="pb" style="pointer-events:none;opacity:.4">…</button>`);
       bs.push(`<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${page+1})" title="다음">›</button>`);
       bs.push(`<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${pages})" title="마지막">»</button>`);
-      /* [v2.334] 페이지네이션: 정가운데 1줄 — 건수선택 | « ‹ 1 2 3 › » | N-M/전체 */
+      /* [v2.335] 페이지네이션: 정가운데 1줄 — 건수선택 | « ‹ 1 2 3 › » | N-M/전체 */
       pg=`<div class="pager" style="display:flex;justify-content:center;align-items:center;gap:8px;padding:8px 0;flex-wrap:nowrap">
         <select class="psel" onchange="Tbl._ps(this.value)" style="flex-shrink:0">
           ${[10,20,50,100].map(n=>`<option value="${n}"${ps===n?' selected':''}>${n}건</option>`).join('')}
@@ -560,7 +560,7 @@ const Tbl={
         <div class="pi" style="flex-shrink:0;font-size:11px;color:var(--tm)">${from}–${to}/${total}건</div>
       </div>`;
     }
-    /* [v2.334] 건수는 pager 안에 포함, 삭제버튼은 하단 별도 */
+    /* [v2.335] 건수는 pager 안에 포함, 삭제버튼은 하단 별도 */
     const delBar=onDel
       ?`<div id="tbarDel" style="display:none;justify-content:center;margin-top:8px">
           <button class="btn berr bsm" onclick="Tbl.delSel()">🗑 선택 삭제</button>
@@ -577,7 +577,7 @@ const Tbl={
     Tbl._curPage=page;
   },
 
-  /* [v2.334] 정렬 처리 */
+  /* [v2.335] 정렬 처리 */
   _sort(key){
     if(Tbl._sortKey===key){
       Tbl._sortDir*=-1;
@@ -588,7 +588,7 @@ const Tbl={
     Tbl.render({el:Tbl._curEl,cols:Tbl._curCols,data:Tbl._curData,
       onRow:Tbl._onRowFn,onDel:Tbl._onDelFn,ps:Tbl._curPs,page:1});
   },
-  /* [v2.334] onRow 이벤트 핸들러 */
+  /* [v2.335] onRow 이벤트 핸들러 */
   _onRow(id){
     if(Tbl._onRowFn) Tbl._onRowFn(id);
   },
@@ -1009,7 +1009,7 @@ function _validateItem(code){
 const TopNav={
   _map:{
     '기준정보':    [{label:'품목 등록',page:'items'},{label:'거래처 등록',page:'vendors'}],
-    /* [v2.334] 시스템 탭 — 설정/사용자등록 분리 */
+    /* [v2.335] 시스템 탭 — 설정/사용자등록 분리 */
     '시스템':      [{label:'설정',page:'settings'},{label:'사용자 등록',page:'sysusers'}],
     '품질관리':    [{label:'품질현황 대시보드',page:'quality_dash'},{label:'수입검사',page:'insp_in'},{label:'공정검사',page:'insp_pr'},{label:'구매검사',page:'insp_pu'},{label:'외주검사',page:'insp_ou'},{label:'최종검사',page:'insp_fi'},{label:'부적합 관리',page:'nc'},{label:'8D Report',page:'nc_8d'},{label:'반품/폐기',page:'nc_dispose'},{label:'불량 트렌드',page:'nc_trend'}],
     '검사 고도화': [{label:'검사 기준서',page:'insp_std'},{label:'검사 성적서',page:'insp_cert'},{label:'LOT 추적성',page:'lot_trace'},{label:'Hold 관리',page:'hold_mgmt'},{label:'재검사 관리',page:'reinsp'}],
@@ -1082,7 +1082,7 @@ const TopNav={
       }
     }
   },
-  /* [v2.334] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
+  /* [v2.335] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
   selectMention(){
     /* 기존 active 탭 해제 */
     document.querySelectorAll('.tb-mod').forEach(m=>m.classList.remove('on'));
@@ -1090,7 +1090,7 @@ const TopNav={
     /* 사이드바 필터링 없이 바로 mentions 페이지로 이동 */
     Nav.go('mentions');
   },
-  /* [v2.334] 멘션 미읽음 배지 업데이트 */
+  /* [v2.335] 멘션 미읽음 배지 업데이트 */
   updateMentionBadge(){
     const me=Auth._cur||'admin';
     const unread=(DB.mentions||[]).filter(m=>
@@ -1118,13 +1118,13 @@ const Nav={
   go(page){
     /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
     if(Auth._u) sessionStorage.setItem('qms_page', page);
-    /* [v2.334] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
+    /* [v2.335] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
     const _np=document.getElementById('npOverlay');
     if(_np&&!_np.classList.contains('hidden')) _np.classList.add('hidden');
-    /* [v2.334] 멘션함 이동 시 배지 업데이트 */
+    /* [v2.335] 멘션함 이동 시 배지 업데이트 */
     if(page==='mentions') setTimeout(()=>TopNav.updateMentionBadge(),300);
 
-    /* [v2.334] 권한 기반 접근 제어 */
+    /* [v2.335] 권한 기반 접근 제어 */
     const _role=Auth._u?.role||'viewer';
     const _roles=['admin','manager','user','viewer'];
     const _pKey=page+'_'+_role;
