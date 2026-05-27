@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.323] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.324] */
 "use strict";
 
 
@@ -1073,7 +1073,7 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.323] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.324] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1133,6 +1133,17 @@ const ExcelMgr={
   },
 
   /* ── 양식 내려받기 ── */
+  /* [v2.324] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  _fileName(title,suffix=''){
+    const n=new Date();
+    const ts=n.getFullYear()+'-'
+      +String(n.getMonth()+1).padStart(2,'0')+'-'
+      +String(n.getDate()).padStart(2,'0')+'_'
+      +String(n.getHours()).padStart(2,'0')
+      +String(n.getMinutes()).padStart(2,'0');
+    return `qms_${title}${suffix?'_'+suffix:''}_${ts}.xlsx`;
+  },
+
   download(page){
     const sc=this._schemas[page];
     if(!sc){Toast.show('엑셀 양식을 지원하지 않는 메뉴입니다.','warn');return}
@@ -1181,12 +1192,7 @@ const ExcelMgr={
     ws['!merges']=[{s:{r:2,c:0},e:{r:2,c:sc.cols.length-1}}];
 
     XLSX.utils.book_append_sheet(wb,ws,sc.title);
-    /* [v2.323] 캐시 우회 — 파일명에 날짜+시각 포함 */
-    const _now=new Date();
-    const _ts=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-'+String(_now.getDate()).padStart(2,'0')
-      +'_'+String(_now.getHours()).padStart(2,'0')+String(_now.getMinutes()).padStart(2,'0');
-    /* [v2.323] 소문자 qms_ 통일 */
-    XLSX.writeFile(wb,`qms_${sc.title}_${_ts}.xlsx`);
+    XLSX.writeFile(wb,this._fileName(sc.title));
     Toast.show(`${sc.title} 양식이 다운로드되었습니다.`,'ok');
   },
 
@@ -1301,9 +1307,9 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.323] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.324] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.323] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.324] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1324,7 +1330,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.323] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.324] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1469,7 +1475,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.323] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.324] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1716,16 +1722,10 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.323] 파일명: qms_계측기_업로드양식_YYYY-MM-DD_HHMM.xlsx */
-    const _fnow=new Date();
-    const _fts=_fnow.getFullYear()+'-'
-      +String(_fnow.getMonth()+1).padStart(2,'0')+'-'
-      +String(_fnow.getDate()).padStart(2,'0')+'_'
-      +String(_fnow.getHours()).padStart(2,'0')
-      +String(_fnow.getMinutes()).padStart(2,'0');
+    /* [v2.324] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
-      ?`qms_${this._schemas[pageFilter].title}_${_fts}.xlsx`
-      :`qms_통합업로드양식_${_fts}.xlsx`;
+      ?this._fileName(this._schemas[pageFilter].title)
+      :this._fileName('통합업로드양식');
     XLSX.writeFile(wb,fname);
     Toast.show(`양식이 다운로드되었습니다. (${keys.length}개 시트)`,'ok');
   },
