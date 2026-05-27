@@ -1,47 +1,38 @@
 {
   "version": 2,
-  "builds": [
+  "headers": [
     {
-      "src": "*.html",
-      "use": "@vercel/static"
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
+      ]
     },
     {
-      "src": "*.js",
-      "use": "@vercel/static"
+      "source": "/(.*)\\.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
+      ]
     },
     {
-      "src": "*.css",
-      "use": "@vercel/static"
+      "source": "/(.*)\\.css",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
+      ]
     }
   ],
   "routes": [
-    {
-      "src": "/qms-db.js",
-      "dest": "/qms-db.js"
-    },
-    {
-      "src": "/qms-core.js",
-      "dest": "/qms-core.js"
-    },
-    {
-      "src": "/qms-pages.js",
-      "dest": "/qms-pages.js"
-    },
-    {
-      "src": "/qms-excel.js",
-      "dest": "/qms-excel.js"
-    },
-    {
-      "src": "/qms-init.js",
-      "dest": "/qms-init.js"
-    },
-    {
-      "src": "/qms-style.css",
-      "dest": "/qms-style.css"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/qms-db.js",    "dest": "/qms-db.js" },
+    { "src": "/qms-core.js",  "dest": "/qms-core.js" },
+    { "src": "/qms-pages.js", "dest": "/qms-pages.js" },
+    { "src": "/qms-excel.js", "dest": "/qms-excel.js" },
+    { "src": "/qms-init.js",  "dest": "/qms-init.js" },
+    { "src": "/qms-style.css","dest": "/qms-style.css" },
+    { "src": "/(.*)",          "dest": "/index.html" }
   ]
 }
