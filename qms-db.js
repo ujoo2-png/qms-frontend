@@ -212,7 +212,7 @@ const SB={
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
     /* [v2.28] 허용 컬럼만 추출 — SB mentions 테이블 실제 컬럼만 포함
        제거: ref_key, key, from_name, from_dept (테이블에 없음) */
-    /* [v2.328 PhaseA] 멘션 고도화 — 채널/유형/우선순위/상태/스레드 */
+    /* [v2.330 PhaseA] 멘션 고도화 — 채널/유형/우선순위/상태/스레드 */
     const allowed={
       from:       row.from||'',
       dept:       row.dept||'',
@@ -257,7 +257,7 @@ const SB={
 
   /* 멘션 수정 */
   async updateMention(id,patch){
-    /* [v2.328 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
+    /* [v2.330 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
     const {error}=await _sb.from('mentions').update(patch).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return {ok:false};}

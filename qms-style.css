@@ -40,7 +40,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .lo-panel{display:none}.lo-panel.on{display:block}
 /* 폼 요소 */
 .lfg{margin-bottom:14px}
-.lfg label{display:block;font-size:12px;font-weight:600;color:var(--tm);margin-bottom:5px}
+.lfg label{display:block;font-size:14px;font-weight:700;color:var(--tm);margin-bottom:5px}
 .lfg .lo-input-wrap{position:relative}
 .lfg input{width:100%;padding:11px 14px;border:1.5px solid var(--bd);border-radius:var(--r);
   font-size:14px;transition:var(--t);background:#fafbfc;color:var(--tx)}
