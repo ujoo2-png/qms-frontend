@@ -1,4 +1,4 @@
-/* qms-init.js — hotkeys + 초기화 [v2.338] */
+/* qms-init.js — hotkeys + 초기화 [v2.340] */
 "use strict";
 
 
@@ -18,7 +18,7 @@ function setupHotkeys(){
       else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
     }
     else if(ev.key==='F5'){
-      /* [v2.338] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
+      /* [v2.340] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
       ev.preventDefault();
       if(Auth._u){
         const page=document.querySelector('.ni.active')?.dataset?.p||'home';
@@ -42,7 +42,7 @@ function setupHotkeys(){
 
 /* ══ 초기화 ══ */
 (function init(){
-  /* [v2.338] 날짜형식: 2026년 5월 25일(월) */
+  /* [v2.340] 날짜형식: 2026년 5월 25일(월) */
   const DAYS=['일','월','화','수','목','금','토'];
   const dateFmt=()=>{
     const d=new Date();
@@ -78,7 +78,7 @@ function setupHotkeys(){
       const sm=document.getElementById('ni_settings');
       if(sm) sm.style.display=(u.role==='admin')?'':'none';
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
-      /* [v2.338] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
+      /* [v2.340] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
       (async()=>{
         try{
           if(_sb){

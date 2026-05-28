@@ -565,3 +565,11 @@ textarea.fc{resize:vertical;min-height:68px}
 #mlist th { font-size: 11px; font-weight: 600; color: var(--tm); }
 #mlist .badge { font-size: 10px; }
 
+
+/* [v2.340] settings 탭 버튼 */
+.stab-btn{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:500;
+  cursor:pointer;border:1.5px solid var(--bd);background:var(--bg2);
+  color:var(--tm);transition:var(--t)}
+.stab-btn:hover{background:var(--bg3);color:var(--tx)}
+.stab-btn.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.stab-btn.bout{background:transparent;border:1.5px solid var(--bd);color:var(--tx)}
