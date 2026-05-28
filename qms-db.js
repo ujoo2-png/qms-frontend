@@ -212,7 +212,7 @@ const SB={
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
     /* [v2.28] 허용 컬럼만 추출 — SB mentions 테이블 실제 컬럼만 포함
        제거: ref_key, key, from_name, from_dept (테이블에 없음) */
-    /* [v2.341 PhaseA] 멘션 고도화 — 채널/유형/우선순위/상태/스레드 */
+    /* [v2.342 PhaseA] 멘션 고도화 — 채널/유형/우선순위/상태/스레드 */
     const allowed={
       from:       row.from||'',
       dept:       row.dept||'',
@@ -257,7 +257,7 @@ const SB={
 
   /* 멘션 수정 */
   async updateMention(id,patch){
-    /* [v2.341 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
+    /* [v2.342 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
     const {error}=await _sb.from('mentions').update(patch).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return {ok:false};}
@@ -611,23 +611,15 @@ const SB={
     /* [v2.29] upsert — code 중복 시 update (insert conflict 방지) */
     let insertRow={...allowed};
     let {error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false});
-    let retries=0;
-    while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<8){
-      retries++;
-      const m=error.message.match(/['"`](\w+)['"`]\s*column/);
-      if(m&&m[1]){delete insertRow[m[1]];console.warn('[SB] addEquip 컬럼 제거:',m[1]);}
-      else break;
-      ({error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false}));
-    }
+    /* [v2.342] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
     if(error){
-      console.error('[SB] addEquip 최종 오류:',error.message);
-      Toast.show('계측기 저장 실패: '+error.message,'err');
+      console.error('[SB] addEquip 오류:',error.message);
+      if(error.message?.includes('column')||error.message?.includes('schema')){
+        Toast.show('SB 컬럼 오류. Supabase SQL에서 equipment 컬럼을 추가해주세요.','err',5000);
+      } else {
+        Toast.show('계측기 저장 실패: '+error.message,'err');
+      }
       return{ok:false};
-    }
-    /* [v2.290] 컬럼 누락으로 일부 저장 시 SQL 팝업 안내 (최초 1회) */
-    if(retries>0&&!SB._equipColWarned){
-      SB._equipColWarned=true;
-      SB._showEquipColSQL();
     }
     DB.equip.push({id:Date.now(),...insertRow});return{ok:true};
   },
