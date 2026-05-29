@@ -201,7 +201,7 @@ const SB={
   /* 멘션 목록 조회 */
   async getMentions(){
     if(!_sb) return DB.mentions||[];
-    /* [v2.361] deleted_at IS NULL 필터 — 소프트 삭제된 항목 제외 */
+    /* [v2.362] deleted_at IS NULL 필터 — 소프트 삭제된 항목 제외 */
     try{
       const {data,error}=await _sb.from('mentions')
         .select('*')
@@ -221,44 +221,25 @@ const SB={
   /* 멘션 등록 */
   async addMention(row){
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
-    /* [v2.28] 허용 컬럼만 추출 — SB mentions 테이블 실제 컬럼만 포함
-       제거: ref_key, key, from_name, from_dept (테이블에 없음) */
-    /* [v2.361 PhaseA] 멘션 고도화 — 채널/유형/우선순위/상태/스레드 */
-    const allowed={
-      from:       row.from||'',
-      dept:       row.dept||'',
-      to:         row.to||'',
-      to_list:    row.to_list||[row.to||''],
-      text:       row.text||row.message||'',
-      message:    row.message||row.text||'',
-      ref:        row.ref||row.ref_key||'',
-      ref_key:    row.ref_key||row.ref||'',
-      channel:    row.channel||'general',
-      type:       row.type||'mention',
-      priority:   row.priority||'normal',
-      status:     row.status||'open',
-      thread_id:  row.thread_id||null,
-      link_type:  row.link_type||null,
-      link_id:    row.link_id||null,
-      due_date:   row.due_date||null,
-      pinned:     row.pinned||false,
-      reactions:  row.reactions||{},
-      thread_id:  row.thread_id||null,
-      reply_to:   row.reply_to||null,
-      file_url:   row.file_url||null,
-      read:       row.read||false,
-      created_at: row.created_at||null,
+    /* [v2.362] SB mentions 테이블 실제 컬럼만 전송
+       기본 컬럼: from, to, to_list, text, dept, message, ref, reply_to, read
+       ※ channel/type/priority/status/thread_id 등 미생성 컬럼 제외 */
+    const insertRow={
+      from:      row.from||'',
+      to:        row.to||'',
+      to_list:   Array.isArray(row.to_list)?row.to_list:[row.to||''],
+      text:      row.text||row.message||'',
+      dept:      row.dept||'',
+      message:   row.message||row.text||'',
+      ref:       row.ref||row.ref_key||'',
+      reply_to:  row.reply_to||null,
+      read:      row.read||false,
     };
-    /* [v2.361] while 루프 제거 — 컬럼 자동삭제 방지
-       오류 시 SQL 안내만 표시 (기본 컬럼만 저장되는 버그 수정) */
-    const insertRow={...allowed};
+    /* created_at 있으면 포함 */
+    if(row.created_at) insertRow.created_at=row.created_at;
     const {error}=await _sb.from('mentions').insert(insertRow);
     if(error){
       console.error('[SB] addMention 오류:', error.message);
-      if(error.message?.includes('column')||error.message?.includes('schema')){
-        SB._showMentionColSQL();
-        return {ok:false};
-      }
       Toast.show('멘션 저장 실패: '+error.message,'err');
       return {ok:false};
     }
@@ -267,7 +248,7 @@ const SB={
 
   /* 멘션 수정 */
   async updateMention(id,patch){
-    /* [v2.361 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
+    /* [v2.362 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
     const {error}=await _sb.from('mentions').update(patch).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return {ok:false};}
@@ -277,7 +258,7 @@ const SB={
   /* 멘션 삭제 (soft delete: deleted_at 기록) */
   async deleteMention(id){
     if(!_sb){DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};}
-    /* [v2.361] 소프트삭제 → 하드삭제로 변경 (화면에 계속 보이는 버그 수정) */
+    /* [v2.362] 소프트삭제 → 하드삭제로 변경 (화면에 계속 보이는 버그 수정) */
     const {error}=await _sb.from('mentions').delete().eq('id',id);
     if(error){Toast.show('삭제 실패: '+error.message,'err');return {ok:false};}
     DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};
@@ -622,7 +603,7 @@ const SB={
     /* [v2.29] upsert — code 중복 시 update (insert conflict 방지) */
     let insertRow={...allowed};
     let {error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false});
-    /* [v2.361] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
+    /* [v2.362] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
     if(error){
       console.error('[SB] addEquip 오류:',error.message);
       if(error.message?.includes('column')||error.message?.includes('schema')){
@@ -770,7 +751,7 @@ const DB={
     {id:4,vendor_name:'화학산업㈜',   vendor_type:'소모품',biz_no:'456-78-90123',ceo_name:'정사장',tel:'051-456-7890',fax:'051-456-7891',email:'chem@hwahak.co.kr',       manager:'윤담당',manager_tel:'010-4567-8901',manager_email:'yoon@hwahak.co.kr',  active:1,created_at:'2026-01-08',updated_at:'2026-01-08'},
     {id:5,vendor_name:'정밀측정기㈜', vendor_type:'외주',  biz_no:'567-89-01234',ceo_name:'한대표',tel:'02-567-8901', fax:'02-567-8902', email:'measure@jungmil.co.kr',   manager:'신담당',manager_tel:'010-5678-9012',manager_email:'shin@jungmil.co.kr', active:1,created_at:'2026-02-01',updated_at:'2026-04-20'},
   ],
-  users:[], /* [v2.361] 더미 삭제 — SB에서 로드 */
+  users:[], /* [v2.362] 더미 삭제 — SB에서 로드 */
     inspections:[], /* [v2.29] 더미 제거 — SB에서 로드 */
 
   nc:[
