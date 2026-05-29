@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.365] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.366] */
 "use strict";
 
 
@@ -1062,7 +1062,7 @@ const ExcelMgr={
     },
     nc:{
       title:'부적합관리',
-      /* [v2.365] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
+      /* [v2.366] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
       cols:[
         {key:'no',        label:'부적합번호', req:true,  sample:'NC-20260601-001'},
         {key:'in_out',    label:'사내외',     req:true,  sample:'사내'},
@@ -1080,7 +1080,7 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.365] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.366] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1138,7 +1138,7 @@ const ExcelMgr={
       dupKey:'no', dupLabel:'CAR번호', getData:()=>DB.cars,
     },
   
-    /* [v2.365] 검사 기준서 스키마 */
+    /* [v2.366] 검사 기준서 스키마 */
     insp_std:{
       title:'검사기준서',
       cols:[
@@ -1162,9 +1162,9 @@ const ExcelMgr={
   },
 
   /* ── 양식 내려받기 ── */
-  /* [v2.365] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  /* [v2.366] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
-    /* [v2.365] 파일명: qms_제목_YYYY-MM-DD.xlsx */
+    /* [v2.366] 파일명: qms_제목_YYYY-MM-DD.xlsx */
     const n=new Date();
     const ts=n.getFullYear()+'-'
       +String(n.getMonth()+1).padStart(2,'0')+'-'
@@ -1338,9 +1338,9 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.365] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.366] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.365] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.366] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1361,7 +1361,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.365] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.366] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1506,7 +1506,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.365] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.366] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1753,7 +1753,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.365] 공통 _fileName 사용 */
+    /* [v2.366] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
       ?this._fileName(this._schemas[pageFilter].title)
       :this._fileName('통합업로드양식');
@@ -2489,6 +2489,41 @@ const SearchPop={
     cal:{title:'교정 검색',fields:[{id:'sc_code',label:'계측기코드',type:'text',ph:'EQ-001'},{id:'sc_name',label:'계측기명',type:'text',ph:'계측기명'},{id:'sc_agency',label:'교정기관',type:'text',ph:'교정기관'},{id:'sc_from',label:'교정일(시작)',type:'date'},{id:'sc_to',label:'교정일(종료)',type:'date'},{id:'sc_result',label:'결과',type:'select',opts:['','합격','부분합격','특채','보류','불합격']}],cols:['계측기코드','계측기명','교정일','교정기관','성적서번호','결과','차기교정일'],get:(f)=>DB.cals.filter(r=>{if(f.sc_code&&!r.code.includes(f.sc_code))return false;if(f.sc_name&&!r.name.includes(f.sc_name))return false;if(f.sc_agency&&!r.agency.includes(f.sc_agency))return false;if(f.sc_from&&r.date<f.sc_from)return false;if(f.sc_to&&r.date>f.sc_to)return false;if(f.sc_result&&r.result!==f.sc_result)return false;return true;}),row:(r)=>[H.e(r.code),H.e(r.name),H.e(r.date),H.e(r.agency),H.e(r.cert),`<span class="badge ${r.result==='합격'?'bgrn':'bred'}">${H.e(r.result)}</span>`,H.e(r.next)]},
     docs:{title:'문서 검색',fields:[{id:'sd_type',label:'유형',type:'select',opts:['','절차서','지침서','양식','매뉴얼','규정']},{id:'sd_no',label:'문서번호',type:'text',ph:'QP-...'},{id:'sd_title',label:'제목',type:'text',ph:'문서 제목'},{id:'sd_author',label:'작성자',type:'text',ph:'작성자'},{id:'sd_status',label:'상태',type:'select',opts:['','초안','유효','폐기']}],cols:['문서번호','유형','제목','개정번호','발행일','작성자','상태'],get:(f)=>DB.docs.filter(r=>{if(f.sd_type&&r.type!==f.sd_type)return false;if(f.sd_no&&!r.no.includes(f.sd_no))return false;if(f.sd_title&&!r.title.includes(f.sd_title))return false;if(f.sd_author&&!r.author.includes(f.sd_author))return false;if(f.sd_status&&r.status!==f.sd_status)return false;return true;}),row:(r)=>[H.e(r.no),`<span class="badge bblu">${H.e(r.type)}</span>`,H.e(r.title),`Rev.${H.e(r.rev)}`,H.e(r.date),H.e(r.author),`<span class="badge ${r.status==='유효'?'bgrn':r.status==='초안'?'bamb':'bgry'}">${H.e(r.status)}</span>`]},
     car:{title:'시정조치 검색',fields:[{id:'sc2_src',label:'발생원',type:'select',opts:['','부적합','내부심사','고객불만','외부심사','기타']},{id:'sc2_no',label:'CAR번호',type:'text',ph:'CAR번호'},{id:'sc2_title',label:'제목',type:'text',ph:'제목 검색'},{id:'sc2_assignee',label:'담당자',type:'text',ph:'담당자'},{id:'sc2_status',label:'상태',type:'select',opts:['','접수','처리중','완료']},{id:'sc2_from',label:'개시일(시작)',type:'date'},{id:'sc2_to',label:'개시일(종료)',type:'date'}],cols:['CAR번호','발생원','제목','개시일','완료기한','담당자','상태'],get:(f)=>DB.cars.filter(r=>{if(f.sc2_src&&r.src!==f.sc2_src)return false;if(f.sc2_no&&!r.no.includes(f.sc2_no))return false;if(f.sc2_title&&!r.title.includes(f.sc2_title))return false;if(f.sc2_assignee&&!r.assignee.includes(f.sc2_assignee))return false;if(f.sc2_status&&r.status!==f.sc2_status)return false;if(f.sc2_from&&r.open<f.sc2_from)return false;if(f.sc2_to&&r.open>f.sc2_to)return false;return true;}),row:(r)=>[H.e(r.no),`<span class="badge bpur">${H.e(r.src)}</span>`,H.e(r.title),H.e(r.open),H.e(r.due),H.e(r.assignee),`<span class="badge ${r.status==='완료'?'bgrn':r.status==='처리중'?'bamb':'bgry'}">${H.e(r.status)}</span>`]},
+    insp_std:{title:'검사 기준서 검색',
+      fields:[
+        {id:'sis_code', label:'품목코드', type:'text', ph:'품목코드'},
+        {id:'sis_name', label:'품목명',   type:'text', ph:'품목명'},
+        {id:'sis_type', label:'검사유형', type:'select', opts:['','수입','공정','구매','외주','최종']},
+      ],
+      cols:['품목코드','품목명','검사유형','검사항목','AQL','적용일'],
+      get:(f)=>(DB.insp_std||[]).filter(r=>{
+        if(f.sis_code&&!(r.item_code||'').includes(f.sis_code))return false;
+        if(f.sis_name&&!(r.item_name||'').includes(f.sis_name))return false;
+        if(f.sis_type&&r.insp_type!==f.sis_type)return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.item_code||'-'),H.e(r.item_name||'-'),H.e(r.insp_type||'-'),H.e(r.insp_items||'-'),H.e(r.aql||'-'),H.e(r.effective_date||'-')],
+    },
+    lot_trace:{title:'LOT 추적 검색',
+      fields:[
+        {id:'slt_lot', label:'LOT번호',  type:'text', ph:'LOT-20260601-001'},
+        {id:'slt_code',label:'품목코드', type:'text', ph:'품목코드'},
+        {id:'slt_item',label:'품목명',   type:'text', ph:'품목명'},
+      ],
+      cols:['유형','번호/LOT','품목코드','품목명','날짜','결과/상태'],
+      get:(f)=>{
+        const q=f.slt_lot||f.slt_code||f.slt_item||'';
+        if(!q) return [];
+        const insp=(DB.inspections||[]).filter(r=>
+          (r.lot_no||'').includes(q)||(r.item_code||'').includes(q)||(r.item_name||'').includes(q)
+        ).map(r=>({_type:'검사',no:r.insp_no||'-',code:r.item_code||'-',name:r.item_name||'-',date:r.insp_date||'-',status:r.result||'-'}));
+        const ncs=(DB.nc||[]).filter(r=>
+          (r.lot_no||r.no||'').includes(q)||(r.item_code||'').includes(q)||(r.item||'').includes(q)
+        ).map(r=>({_type:'부적합',no:r.no||'-',code:r.item_code||'-',name:r.item||'-',date:r.date||'-',status:r.status||'-'}));
+        return [...insp,...ncs];
+      },
+      row:(r)=>[H.e(r._type||'-'),H.e(r.no||'-'),H.e(r.code||'-'),H.e(r.name||'-'),H.e(r.date||'-'),H.e(r.status||'-')],
+    },
   },
 
   open(page){
@@ -2501,87 +2536,5 @@ const SearchPop={
     const spBox=document.querySelector('.sp-box');
     if(spBox){spBox.style.transform='';spBox.style.left='';spBox.style.top='';spBox.style.position='';}
     this._initDrag();
-
-    /* 날짜 퀵버튼 */
-    const qbtnsHtml=cfg.quickDate?`<div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--bd)">
-      <span style="font-size:11px;color:var(--tm);font-weight:600;margin-right:4px">기간:</span>
-      ${[['week','이번주'],['month','이번달'],['last_month','지난달'],['h1','상반기'],['h2','하반기'],['q1','1분기'],['q2','2분기'],['q3','3분기'],['q4','4분기']].map(([k,l])=>`<button class="btn bxs bout" onclick="(function(){const [f,t]=DateRange.get('${k}');const fe=document.getElementById('si_from'),te=document.getElementById('si_to');if(fe)fe.value=f;if(te)te.value=t;SearchPop.search();})()">${l}</button>`).join('')}
-    </div>`:'';
-
-    cond.innerHTML=qbtnsHtml+`<div class="sp-cond-row" style="flex-wrap:wrap;gap:8px">${cfg.fields.map(f=>`
-      <div style="display:flex;align-items:center;gap:5px">
-        <label class="sp-cond-label">${H.e(f.label)}</label>
-        ${f.type==='select'
-          ?`<select class="sp-cond-inp fsel" id="${f.id}" style="min-width:110px"><option value="">${f.label} 전체</option>${(f.opts||[]).filter(o=>o!=='').map(o=>`<option>${H.e(o)}</option>`).join('')}</select>`
-          :f.type==='date'
-          ?`<input type="date" class="sp-cond-inp" id="${f.id}" style="min-width:130px">`
-          :`<input type="text" class="sp-cond-inp" id="${f.id}" placeholder="${H.e(f.ph||f.label)}" style="min-width:110px">`}
-      </div>`).join('')}
-    </div>`;
-    document.getElementById('spResult').innerHTML=`<div class="sp-empty"><div class="sp-empty-icon">🔍</div><div>검색 조건을 입력 후 Search를 클릭하세요.</div></div>`;
-    document.getElementById('spInfo').textContent='';
-    document.getElementById('spOverlay').classList.remove('hidden');
-    setTimeout(()=>cond.querySelector('input,select')?.focus(),80);
   },
-
-  search(){
-    const cfg=this._cfg[this._page];if(!cfg)return;
-    const f={};
-    cfg.fields.forEach(fd=>{const el=document.getElementById(fd.id);if(el)f[fd.id]=(el.value||'').trim()});
-    const data=cfg.get(f);
-    const result=document.getElementById('spResult');
-    document.getElementById('spInfo').textContent=`검색 결과: 총 ${data.length.toLocaleString()}건`;
-    if(!data.length){result.innerHTML=`<div class="sp-empty"><div class="sp-empty-icon">📭</div><div style="font-weight:600;margin-bottom:4px">검색 결과가 없습니다.</div><div style="font-size:12px">조건을 변경해 보세요.</div></div>`;return}
-    result.innerHTML=`<table><thead><tr>${cfg.cols.map(c=>`<th>${H.e(c)}</th>`).join('')}</tr></thead><tbody>${data.map(r=>`<tr onclick="SearchPop.close()">${cfg.row(r).map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  },
-
-  reset(){
-    const cfg=this._cfg[this._page];if(!cfg)return;
-    cfg.fields.forEach(f=>{const el=document.getElementById(f.id);if(el)el.value=''});
-    document.getElementById('spResult').innerHTML=`<div class="sp-empty"><div class="sp-empty-icon">🔍</div><div>검색 조건을 입력 후 Search를 클릭하세요.</div></div>`;
-    document.getElementById('spInfo').textContent='';
-    setTimeout(()=>document.querySelector('#spCond input,#spCond select')?.focus(),60);
-  },
-
-  /* SearchPop 드래그 이동 — .sp-head 헤더 잡고 이동 */
-  _initDrag(){
-    const box=document.querySelector('.sp-box');
-    const hd=document.querySelector('.sp-head');
-    if(!box||!hd||hd._spDragBound) return;
-    hd._spDragBound=true;
-    let ox=0,oy=0;
-    const onDown=e=>{
-      if(e.target.closest('button')) return;
-      const r=box.getBoundingClientRect();
-      ox=e.clientX-r.left; oy=e.clientY-r.top;
-      box.style.position='fixed';
-      box.style.left=r.left+'px'; box.style.top=r.top+'px';
-      box.style.margin='0'; box.style.transform='none';
-      const ov=document.getElementById('spOverlay');
-      ov.style.alignItems='flex-start'; ov.style.justifyContent='flex-start';
-      document.addEventListener('mousemove',onMove);
-      document.addEventListener('mouseup',onUp);
-    };
-    const onMove=e=>{
-      const nx=e.clientX-ox, ny=e.clientY-oy;
-      const maxX=window.innerWidth-box.offsetWidth;
-      const maxY=window.innerHeight-box.offsetHeight;
-      box.style.left=Math.max(0,Math.min(nx,maxX))+'px';
-      box.style.top=Math.max(0,Math.min(ny,maxY))+'px';
-    };
-    const onUp=()=>{
-      document.removeEventListener('mousemove',onMove);
-      document.removeEventListener('mouseup',onUp);
-    };
-    hd.addEventListener('mousedown',onDown);
-  },
-
-  close(){
-    document.getElementById('spOverlay').classList.add('hidden');
-    // 위치 초기화
-    const ov=document.getElementById('spOverlay');
-    ov.style.alignItems=''; ov.style.justifyContent='';
-  }
 };
-
-/* ══ 전역 단축키 ══ */
