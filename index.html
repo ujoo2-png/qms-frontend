@@ -168,10 +168,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.358</title>
+<title>QMS - 품질경영시스템 v2.359</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="qms-style.css?v=2.358">
+<link rel="stylesheet" href="qms-style.css?v=2.359">
 <!-- Supabase JS SDK CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -210,7 +210,7 @@
     </div>
     <div class="np-body" id="npBody"></div>
     <div class="np-foot">
-      <!-- [v2.358] 멘션함 바로가기 -->
+      <!-- [v2.359] 멘션함 바로가기 -->
       <button class="btn bpri bsm" onclick="Auth.enterApp();Nav.go('mentions')" style="min-width:90px">💬 멘션함</button>
       <button class="btn bout bsm" onclick="Auth.enterApp()" style="min-width:90px">다음에 보기</button>
       <button class="btn bpri bsm" onclick="Auth.enterApp()" style="min-width:100px">✓ 확인 후 입장</button>
@@ -228,7 +228,7 @@
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.358</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.359</div>
         </div>
       </div>
     </div>
@@ -264,7 +264,7 @@
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tm);cursor:pointer">
             <input type="checkbox" id="rememberMe" style="width:14px;height:14px"> 로그인 상태 유지
           </label>
-          <!-- [v2.358] Caps Lock 경고 -->
+          <!-- [v2.359] Caps Lock 경고 -->
           <span id="capsWarn" style="display:none;font-size:11px;font-weight:600;color:#dc2626;margin-left:auto">🔒 Caps Lock 켜짐</span>
         </div>
         <button class="lo-btn" onclick="Auth.login()">로그인</button>
@@ -330,7 +330,7 @@
         </div>
       </div>
     </div>
-      <!-- ④ 회원가입 패널 [v2.358 컴팩트 재구성] -->
+      <!-- ④ 회원가입 패널 [v2.359 컴팩트 재구성] -->
       <div id="tabSignup" class="lo-panel">
         <div style="margin-bottom:10px">
           <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:2px">회원가입</div>
@@ -378,7 +378,7 @@
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.358</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.359</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
   </div>
 </div>
 
@@ -389,7 +389,7 @@
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.358</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.359</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -474,8 +474,8 @@
         <div class="tb-mod" data-mod="SPC 통계관리" onclick="TopNav.select(this,'SPC 통계관리')">SPC 통계관리</div>
         <div class="tb-mod" data-mod="개선활동" onclick="TopNav.select(this,'개선활동')">개선활동</div>
         <div class="tb-mod" data-mod="문서관리" onclick="TopNav.select(this,'문서관리')">문서관리</div>
-        <!-- [v2.358] 멘션함 상단 메뉴 추가 -->
-        <!-- [v2.358] 시스템 탭 추가 -->
+        <!-- [v2.359] 멘션함 상단 메뉴 추가 -->
+        <!-- [v2.359] 시스템 탭 추가 -->
         <div class="tb-mod" data-mod="시스템" onclick="TopNav.select(this,'시스템')">시스템</div>
         <div class="tb-mod tb-mod-mention" data-mod="멘션함" onclick="TopNav.selectMention()" id="tbMentionBtn" style="position:relative">💬 멘션함<span id="tbMentionBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;display:flex;align-items:center;justify-content:center"></span></div>
       </div>
@@ -503,7 +503,7 @@
 
 <!-- 멘션 팝업 -->
 <div id="mpop" class="mpop hidden">
-  <!-- [v2.358] 동적 멘션 팝업 — 실제 DB.mentions 렌더 -->
+  <!-- [v2.359] 동적 멘션 팝업 — 실제 DB.mentions 렌더 -->
   <div class="mph">
     <span>🔔 멘션 알림</span>
     <button onclick="document.getElementById('mpop').classList.add('hidden')" style="color:var(--tm);font-size:15px">✕</button>
@@ -527,11 +527,11 @@
 
 
 <!-- QMS 분리 파일 로드 순서: db → core → pages → excel → init -->
-<script src="qms-db.js?v=2.358"></script>
-<script src="qms-core.js?v=2.358"></script>
-<script src="qms-pages.js?v=2.358"></script>
-<script src="qms-excel.js?v=2.358"></script>
-<script src="qms-init.js?v=2.358"></script>
+<script src="qms-db.js?v=2.359"></script>
+<script src="qms-core.js?v=2.359"></script>
+<script src="qms-pages.js?v=2.359"></script>
+<script src="qms-excel.js?v=2.359"></script>
+<script src="qms-init.js?v=2.359"></script>
 
 </body>
 </html>
