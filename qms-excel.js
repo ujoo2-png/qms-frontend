@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.364] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.365] */
 "use strict";
 
 
@@ -1062,7 +1062,7 @@ const ExcelMgr={
     },
     nc:{
       title:'부적합관리',
-      /* [v2.364] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
+      /* [v2.365] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
       cols:[
         {key:'no',        label:'부적합번호', req:true,  sample:'NC-20260601-001'},
         {key:'in_out',    label:'사내외',     req:true,  sample:'사내'},
@@ -1080,7 +1080,7 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.364] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.365] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1137,12 +1137,34 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'CAR번호', getData:()=>DB.cars,
     },
+  
+    /* [v2.365] 검사 기준서 스키마 */
+    insp_std:{
+      title:'검사기준서',
+      cols:[
+        {key:'item_code',       label:'품목코드',   req:true,  sample:'ITM-001'},
+        {key:'item_name',       label:'품목명',     req:true,  sample:'알루미늄 바'},
+        {key:'insp_type',       label:'검사유형',   req:true,  sample:'수입'},
+        {key:'insp_items',      label:'검사항목',   req:true,  sample:'외관,치수,압력'},
+        {key:'spec_upper',      label:'규격상한',   req:false, sample:'10.05'},
+        {key:'spec_lower',      label:'규격하한',   req:false, sample:'9.95'},
+        {key:'spec_unit',       label:'단위',       req:false, sample:'mm'},
+        {key:'sampling_method', label:'샘플링방법', req:true,  sample:'전수'},
+        {key:'aql',             label:'AQL',        req:false, sample:'1.0'},
+        {key:'sample_size',     label:'시료수',     req:false, sample:'5'},
+        {key:'criteria',        label:'합부기준',   req:false, sample:'치수 ±0.05mm 이내'},
+        {key:'rev',             label:'개정차수',   req:false, sample:'A'},
+        {key:'rev_date',        label:'개정일',     req:false, sample:'2026-06-01'},
+        {key:'note',            label:'비고',       req:false, sample:''},
+      ],
+      dupKey:'item_code', dupLabel:'품목코드', getData:()=>DB.insp_std||[],
+    },
   },
 
   /* ── 양식 내려받기 ── */
-  /* [v2.364] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  /* [v2.365] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
-    /* [v2.364] 파일명: qms_제목_YYYY-MM-DD.xlsx */
+    /* [v2.365] 파일명: qms_제목_YYYY-MM-DD.xlsx */
     const n=new Date();
     const ts=n.getFullYear()+'-'
       +String(n.getMonth()+1).padStart(2,'0')+'-'
@@ -1316,9 +1338,9 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.364] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.365] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.364] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.365] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1339,7 +1361,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.364] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.365] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1484,7 +1506,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.364] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.365] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1731,7 +1753,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.364] 공통 _fileName 사용 */
+    /* [v2.365] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
       ?this._fileName(this._schemas[pageFilter].title)
       :this._fileName('통합업로드양식');
