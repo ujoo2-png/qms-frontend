@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.354] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.355] */
 "use strict";
 
 
@@ -1062,18 +1062,25 @@ const ExcelMgr={
     },
     nc:{
       title:'부적합관리',
+      /* [v2.355] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
       cols:[
-        {key:'no',       label:'부적합번호', req:true,  sample:'NC-20260601-001'},
-        {key:'type',     label:'유형',       req:true,  sample:'수입'},
-        {key:'item',     label:'품목명',     req:true,  sample:'알루미늄 바'},
-        {key:'date',     label:'발생일',     req:true,  sample:'2026-06-01'},
-        {key:'desc',     label:'부적합내용', req:false, sample:'치수 불량'},
-        {key:'assignee', label:'담당자',     req:false, sample:'김품질'},
-        {key:'status',   label:'상태',       req:false, sample:'접수'},
+        {key:'no',        label:'부적합번호', req:true,  sample:'NC-20260601-001'},
+        {key:'in_out',    label:'사내외',     req:true,  sample:'사내'},
+        {key:'type',      label:'유형',       req:true,  sample:'수입'},
+        {key:'item_code', label:'품목코드',   req:false, sample:'ITM-001'},
+        {key:'item',      label:'품목명',     req:true,  sample:'알루미늄 바'},
+        {key:'qty',       label:'수량',       req:false, sample:'10'},
+        {key:'date',      label:'발생일',     req:true,  sample:'2026-06-01'},
+        {key:'desc',      label:'부적합내용', req:false, sample:'치수 불량'},
+        {key:'cause',     label:'원인분석',   req:false, sample:'금형 마모'},
+        {key:'action',    label:'조치내용',   req:false, sample:'전량 반품'},
+        {key:'assignee',  label:'담당자',     req:false, sample:'김품질'},
+        {key:'due_date',  label:'처리기한',   req:false, sample:'2026-06-15'},
+        {key:'status',    label:'상태',       req:false, sample:'접수'},
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.354] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.355] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1133,9 +1140,9 @@ const ExcelMgr={
   },
 
   /* ── 양식 내려받기 ── */
-  /* [v2.354] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  /* [v2.355] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
-    /* [v2.354] 파일명: qms_제목_YYYY-MM-DD.xlsx (시각 제거) */
+    /* [v2.355] 파일명: qms_제목_YYYY-MM-DD.xlsx (시각 제거) */
     const n=new Date();
     const ts=n.getFullYear()+'-'
       +String(n.getMonth()+1).padStart(2,'0')+'-'
@@ -1306,9 +1313,9 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.354] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.355] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.354] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.355] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1329,7 +1336,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.354] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.355] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1474,7 +1481,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.354] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.355] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1721,7 +1728,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.354] 공통 _fileName 사용 */
+    /* [v2.355] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
       ?this._fileName(this._schemas[pageFilter].title)
       :this._fileName('통합업로드양식');
@@ -2409,15 +2416,30 @@ const SearchPop={
         return true;
       }),
       row:(r)=>[`<span class="badge bblu">${H.e(r.type)}검사</span>`,H.e(r.vendor||'-'),H.e(r.insp_no),H.e(r.insp_date),H.e(r.inspector),`<span style="font-family:'JetBrains Mono',monospace;font-size:11px">${H.e(r.item_code)}</span>`,H.e(r.item_name),H.e(r.spec||'-'),H.e(r.insp_method),`<span class="badge ${r.result==='합격'?'bgrn':'bred'}">${H.e(r.result)}</span>`,H.n(r.qty),H.n(r.pass_qty),`<span style="${r.fail_qty>0?'color:var(--err);font-weight:700':''}">${H.n(r.fail_qty)}</span>`,`${r.defect_rate?.toFixed(1)||0}%`,H.e(r.wo_no||'-'),H.e(r.note||'-')]},
-    nc:{title:'부적합 검색',fields:[{id:'sn_type',label:'유형',type:'select',opts:['','수입','공정','출하','기타']},{id:'sn_no',label:'부적합번호',type:'text',ph:'NC번호'},{id:'sn_item',label:'품목명',type:'text',ph:'품목명'},{id:'sn_status',label:'상태',type:'select',opts:['','접수','처리중','완료']},{id:'sn_from',label:'발생일(시작)',type:'date'},{id:'sn_to',label:'발생일(종료)',type:'date'}],cols:['부적합번호','유형','품목명','발생일','담당자','상태'],get:(f)=>DB.nc.filter(r=>{if(f.sn_type&&r.type!==f.sn_type)return false;if(f.sn_no&&!r.no.includes(f.sn_no))return false;if(f.sn_item&&!r.item.includes(f.sn_item))return false;if(f.sn_status&&r.status!==f.sn_status)return false;if(f.sn_from&&r.date<f.sn_from)return false;if(f.sn_to&&r.date>f.sn_to)return false;return true;}),row:(r)=>[H.e(r.no),`<span class="badge bblu">${H.e(r.type)}</span>`,H.e(r.item),H.e(r.date),H.e(r.assignee),`<span class="badge ${r.status==='완료'?'bgrn':r.status==='처리중'?'bamb':'bgry'}">${H.e(r.status)}</span>`]},
-    equip:{title:'계측기 검색',
+    nc:{title:'부적합 검색',
       fields:[
-        {id:'se_code',  label:'계측기코드', type:'text',   ph:'EQ-001'},
-        {id:'se_name',  label:'계측기명',   type:'text',   ph:'계측기명'},
-        {id:'se_maker', label:'제조사',     type:'text',   ph:'제조사'},
-        {id:'se_loc',   label:'보관위치',   type:'text',   ph:'보관위치'},
-        {id:'se_status',label:'상태',       type:'select', opts:['','정상','교정중','교정만료']},
+        {id:'sn_inout', label:'사내외',  type:'select',opts:['','사내','사외']},
+        {id:'sn_type',  label:'유형',    type:'select',opts:['','수입','공정','구매','외주','최종','고객']},
+        {id:'sn_no',    label:'부적합번호',type:'text', ph:'NC번호'},
+        {id:'sn_code',  label:'품목코드',type:'text',  ph:'품목코드'},
+        {id:'sn_item',  label:'품목명',  type:'text',  ph:'품목명'},
+        {id:'sn_status',label:'상태',    type:'select',opts:['','접수','처리중','완료']},
+        {id:'sn_from',  label:'발생일(시작)',type:'date'},
+        {id:'sn_to',    label:'발생일(종료)',type:'date'},
       ],
+      cols:['부적합번호','사내외','유형','품목코드','품목명','발생일','담당자','상태'],
+      get:(f)=>DB.nc.filter(r=>{
+        if(f.sn_inout&&r.in_out!==f.sn_inout)return false;
+        if(f.sn_type&&r.type!==f.sn_type)return false;
+        if(f.sn_no&&!(r.no||'').includes(f.sn_no))return false;
+        if(f.sn_code&&!(r.item_code||'').includes(f.sn_code))return false;
+        if(f.sn_item&&!(r.item||'').includes(f.sn_item))return false;
+        if(f.sn_status&&r.status!==f.sn_status)return false;
+        if(f.sn_from&&(r.date||'')<f.sn_from)return false;
+        if(f.sn_to&&(r.date||'')>f.sn_to)return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.no),H.e(r.in_out||'-'),`<span class="badge bblu">${H.e(r.type)}</span>`,H.e(r.item_code||'-'),H.e(r.item||'-'),H.e(r.date||'-'),H.e(r.assignee||'-'),H.e(r.status||'-')],
       cols:['계측기코드','계측기명','제조사','측정범위','분해능','보관위치','사용자','최근교정일','차기교정일','사용여부'],
       get:(f)=>DB.equip.filter(r=>{
         if(f.se_code  &&!r.code.includes(f.se_code))   return false;
