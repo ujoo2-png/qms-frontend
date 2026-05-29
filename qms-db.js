@@ -212,7 +212,7 @@ const SB={
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
     /* [v2.28] 허용 컬럼만 추출 — SB mentions 테이블 실제 컬럼만 포함
        제거: ref_key, key, from_name, from_dept (테이블에 없음) */
-    /* [v2.359 PhaseA] 멘션 고도화 — 채널/유형/우선순위/상태/스레드 */
+    /* [v2.360 PhaseA] 멘션 고도화 — 채널/유형/우선순위/상태/스레드 */
     const allowed={
       from:       row.from||'',
       dept:       row.dept||'',
@@ -238,26 +238,25 @@ const SB={
       read:       row.read||false,
       created_at: row.created_at||null,
     };
-    /* 동적 컬럼 오류 제거 — 혹시 테이블 구조 다를 경우 자동 대응 */
-    let insertRow={...allowed};
-    let {error}=await _sb.from('mentions').insert(insertRow);
-    let retries=0;
-    while(error&&(error.message?.includes('column')||error.message?.includes('schema cache'))&&retries<5){
-      retries++;
-      const m=error.message.match(/['"`](\w+)['"`]\s*column/);
-      if(m&&m[1]){delete insertRow[m[1]];console.warn('[SB] addMention 컬럼 제거:',m[1]);}
-      else break;
-      ({error}=await _sb.from('mentions').insert(insertRow));
+    /* [v2.360] while 루프 제거 — 컬럼 자동삭제 방지
+       오류 시 SQL 안내만 표시 (기본 컬럼만 저장되는 버그 수정) */
+    const insertRow={...allowed};
+    const {error}=await _sb.from('mentions').insert(insertRow);
+    if(error){
+      console.error('[SB] addMention 오류:', error.message);
+      if(error.message?.includes('column')||error.message?.includes('schema')){
+        SB._showMentionColSQL();
+        return {ok:false};
+      }
+      Toast.show('멘션 저장 실패: '+error.message,'err');
+      return {ok:false};
     }
-    if(error){Toast.show('멘션 저장 실패: '+error.message,'err');return {ok:false};}
-    if(retries>0&&!SB._mentionColWarned){SB._mentionColWarned=true;SB._showMentionColSQL();}
-    else{SB._mentionColWarned=false;}
     return {ok:true};
   },
 
   /* 멘션 수정 */
   async updateMention(id,patch){
-    /* [v2.359 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
+    /* [v2.360 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
     const {error}=await _sb.from('mentions').update(patch).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return {ok:false};}
@@ -611,7 +610,7 @@ const SB={
     /* [v2.29] upsert — code 중복 시 update (insert conflict 방지) */
     let insertRow={...allowed};
     let {error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false});
-    /* [v2.359] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
+    /* [v2.360] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
     if(error){
       console.error('[SB] addEquip 오류:',error.message);
       if(error.message?.includes('column')||error.message?.includes('schema')){
@@ -759,7 +758,7 @@ const DB={
     {id:4,vendor_name:'화학산업㈜',   vendor_type:'소모품',biz_no:'456-78-90123',ceo_name:'정사장',tel:'051-456-7890',fax:'051-456-7891',email:'chem@hwahak.co.kr',       manager:'윤담당',manager_tel:'010-4567-8901',manager_email:'yoon@hwahak.co.kr',  active:1,created_at:'2026-01-08',updated_at:'2026-01-08'},
     {id:5,vendor_name:'정밀측정기㈜', vendor_type:'외주',  biz_no:'567-89-01234',ceo_name:'한대표',tel:'02-567-8901', fax:'02-567-8902', email:'measure@jungmil.co.kr',   manager:'신담당',manager_tel:'010-5678-9012',manager_email:'shin@jungmil.co.kr', active:1,created_at:'2026-02-01',updated_at:'2026-04-20'},
   ],
-  users:[], /* [v2.359] 더미 삭제 — SB에서 로드 */
+  users:[], /* [v2.360] 더미 삭제 — SB에서 로드 */
     inspections:[], /* [v2.29] 더미 제거 — SB에서 로드 */
 
   nc:[
