@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.369] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.370] */
 "use strict";
 
 
@@ -1062,7 +1062,7 @@ const ExcelMgr={
     },
     nc:{
       title:'부적합관리',
-      /* [v2.369] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
+      /* [v2.370] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
       cols:[
         {key:'no',        label:'부적합번호', req:true,  sample:'NC-20260601-001'},
         {key:'in_out',    label:'사내외',     req:true,  sample:'사내'},
@@ -1080,7 +1080,7 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.369] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.370] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1138,7 +1138,7 @@ const ExcelMgr={
       dupKey:'no', dupLabel:'CAR번호', getData:()=>DB.cars,
     },
   
-    /* [v2.369] 검사 기준서 스키마 */
+    /* [v2.370] 검사 기준서 스키마 */
     insp_std:{
       title:'검사기준서',
       cols:[
@@ -1159,7 +1159,7 @@ const ExcelMgr={
       ],
       dupKey:'item_code', dupLabel:'품목코드', getData:()=>DB.insp_std||[],
     },
-    /* [v2.369] 검사 성적서 스키마 */
+    /* [v2.370] 검사 성적서 스키마 */
     insp_cert:{
       title:'검사성적서',
       cols:[
@@ -1185,7 +1185,7 @@ const ExcelMgr={
         const fresh=await SB.getInspections();if(fresh) DB.inspections=fresh;
       }
     },
-    /* [v2.369] Hold 관리 스키마 */
+    /* [v2.370] Hold 관리 스키마 */
     insp_hold:{
       title:'Hold관리',
       cols:[
@@ -1210,7 +1210,7 @@ const ExcelMgr={
         const fresh=await SB.getHolds();if(fresh) DB.holds=fresh;
       }
     },
-    /* [v2.369] 재검사 관리 스키마 */
+    /* [v2.370] 재검사 관리 스키마 */
     insp_reinsp:{
       title:'재검사관리',
       cols:[
@@ -1237,12 +1237,60 @@ const ExcelMgr={
         const fresh=await SB.getReinspections();if(fresh) DB.reinspections=fresh;
       }
     },
+    /* [v2.370] sqm 엑셀 업로드 스키마 */
+    sqm_eval:{
+      title:'업체평가',
+      cols:[
+        {key:'vendor_name', label:'거래처명',  req:true,  sample:'한국스틸㈜'},
+        {key:'period',      label:'평가기간',  req:true,  sample:'2026-Q2'},
+        {key:'eval_date',   label:'평가일',    req:true,  sample:'2026-06-30'},
+        {key:'quality',     label:'품질점수',  req:true,  sample:'90'},
+        {key:'delivery',    label:'납기점수',  req:true,  sample:'88'},
+        {key:'price',       label:'가격점수',  req:false, sample:'85'},
+        {key:'response',    label:'대응점수',  req:false, sample:'90'},
+        {key:'total',       label:'종합점수',  req:false, sample:'89.5'},
+        {key:'grade',       label:'등급',      req:false, sample:'A'},
+        {key:'ppm',         label:'PPM',       req:false, sample:'250'},
+        {key:'complaint',   label:'클레임건수', req:false, sample:'0'},
+        {key:'evaluator',   label:'평가자',    req:false, sample:'김품질'},
+        {key:'note',        label:'비고',      req:false, sample:''},
+      ],
+      dupKey:'period', dupLabel:'평가기간', getData:()=>DB.vendor_evals||[],
+      save:async(rows)=>{
+        for(const row of rows){
+          await SB.addVendorEval(row);
+        }
+        const fresh=await SB.getVendorEvals();if(fresh)DB.vendor_evals=fresh;
+      }
+    },
+    sqm_audit:{
+      title:'업체심사',
+      cols:[
+        {key:'vendor_name',   label:'거래처명',    req:true,  sample:'한국스틸㈜'},
+        {key:'audit_type',    label:'심사유형',    req:true,  sample:'정기'},
+        {key:'plan_date',     label:'계획일',      req:true,  sample:'2026-06-15'},
+        {key:'actual_date',   label:'실시일',      req:false, sample:'2026-06-15'},
+        {key:'auditor',       label:'심사자',      req:false, sample:'이품질'},
+        {key:'score',         label:'점수',        req:false, sample:'85'},
+        {key:'findings',      label:'지적사항',    req:false, sample:''},
+        {key:'corrective_req',label:'시정조치요청', req:false, sample:''},
+        {key:'status',        label:'상태',        req:false, sample:'계획'},
+        {key:'next_date',     label:'차기심사일',  req:false, sample:'2026-12-15'},
+      ],
+      dupKey:'plan_date', dupLabel:'계획일', getData:()=>DB.vendor_audits||[],
+      save:async(rows)=>{
+        for(const row of rows){
+          await SB.addVendorAudit(row);
+        }
+        const fresh=await SB.getVendorAudits();if(fresh)DB.vendor_audits=fresh;
+      }
+    },
   },
 
   /* ── 양식 내려받기 ── */
-  /* [v2.369] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  /* [v2.370] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
-    /* [v2.369] 파일명: qms_제목_YYYY-MM-DD.xlsx */
+    /* [v2.370] 파일명: qms_제목_YYYY-MM-DD.xlsx */
     const n=new Date();
     const ts=n.getFullYear()+'-'
       +String(n.getMonth()+1).padStart(2,'0')+'-'
@@ -1416,9 +1464,9 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.369] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.370] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.369] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.370] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1439,7 +1487,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.369] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.370] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1584,7 +1632,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.369] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.370] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1831,7 +1879,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.369] 공통 _fileName 사용 */
+    /* [v2.370] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
       ?this._fileName(this._schemas[pageFilter].title)
       :this._fileName('통합업로드양식');
