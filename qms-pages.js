@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.371] */
+/* qms-pages.js — Pages 페이지 렌더러 [v2.372] */
 "use strict";
 
 
@@ -7,7 +7,7 @@ const Pages={
 /* ── 홈 (메인화면) ──
    레이아웃: hw(flex row) = hw-main(카드그리드) + hw-side(멘션/공지)
    카드 클릭: mc-card-sub onclick → Nav.go(page) 직접 이동
-   v2.10: C안 우측 패널 고정, 카드 높이 5배, stopPropagation 제거 */
+   v2.372: C안 우측 패널 고정, 카드 높이 5배, stopPropagation 제거 */
 home(){
   const w=document.getElementById('pw');
   w.classList.add('home-mode');
@@ -62,7 +62,7 @@ home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.371</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.372</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -109,7 +109,7 @@ home(){
         </div>
       </div>
 
-      <!-- [v2.307 Phase3] 교정 D-30 알림 패널 -->
+      <!-- [v2.372 Phase3] 교정 D-30 알림 패널 -->
       ${(()=>{
         const _n=new Date();
         const _warn=DB.equip.filter(e=>{
@@ -148,7 +148,7 @@ home(){
           </div>
         </div>`;
       })()}
-            <!-- [v2.371 PhaseB] 미처리 멘션 D-day 패널 -->
+            <!-- [v2.372 PhaseB] 미처리 멘션 D-day 패널 -->
       ${(()=>{
         const _me=Auth._cur||'admin';
         const _td=new Date();
@@ -213,8 +213,8 @@ home(){
 },
 
 /* ── 개인정보 수정 ── */
-/* ── 멘션 답장 [v2.24→v2.29] ── */
-  /* [v2.29 A안] _mentionReply 전체 재작성 — 문자열 연결 방식 (백틱 중첩 제거) */
+/* ── 멘션 답장 [v2.372→v2.372] ── */
+  /* [v2.372 A안] _mentionReply 전체 재작성 — 문자열 연결 방식 (백틱 중첩 제거) */
   _mentionReply(parentId, toUser){
     const parent=DB.mentions.find(m=>Number(m.id)===Number(parentId));
     if(!parent){Toast.show('원본 멘션을 찾을 수 없습니다.','err');return;}
@@ -242,7 +242,7 @@ home(){
   },
 
 async _mentionReplySend(parentId){
-  /* [v2.371 PhaseB] thread_id 기반 SB 스레드 저장 */
+  /* [v2.372 PhaseB] thread_id 기반 SB 스레드 저장 */
   const text=(document.getElementById('rtext')?.value||'').trim();
   if(!text){Toast.show('내용을 입력하세요.','warn');return}
   const me=Auth._u;
@@ -273,7 +273,7 @@ async _mentionReplySend(parentId){
   }
   document.getElementById('rtext').value='';
   Toast.show('답글이 전송되었습니다.','ok');
-  /* [v2.371] 입력창 초기화 + 배지 갱신 + 팝업 재렌더 */
+  /* [v2.372] 입력창 초기화 + 배지 갱신 + 팝업 재렌더 */
   const _rtEl=document.getElementById('rtext');
   if(_rtEl) _rtEl.value='';
   TopNav.updateMentionBadge();
@@ -286,7 +286,7 @@ async _approveUser(userId, username){
   const u=DB.users.find(u=>u.id===userId);
   if(u){u.active=1;u.pending=false;}
   Toast.show(`${username} 계정이 승인되었습니다.`,'ok');
-  /* [v2.305] 승인 후 화면 유지 — usermgmt 탭 그대로 */
+  /* [v2.372] 승인 후 화면 유지 — usermgmt 탭 그대로 */
   const pane=document.querySelector('.stab-pane[data-tab="usermgmt"]');
   if(pane) pane.innerHTML=renderUserMgmt();
 },
@@ -303,7 +303,7 @@ async _rejectUser(userId, username){
   });
 },
 
-/* ── 사용자 권한 변경 (설정 > 사용자 관리, v2.23) ── */
+/* ── 사용자 권한 변경 (설정 > 사용자 관리, v2.372) ── */
 async _setUserRole(userId, newRole){
   if(Auth._u?.role!=='admin'){Toast.show('관리자만 권한을 변경할 수 있습니다.','err');return}
   const res=await SB.updateUser(userId,{role:newRole,updated_at:H.today()});
@@ -313,8 +313,8 @@ async _setUserRole(userId, newRole){
   Toast.show(`${username} 권한이 ${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[newRole]||newRole}으로 변경되었습니다.`,'ok');
 },
 
-/* 접근 권한 저장 (sessionStorage, v2.23) */
-/* [v2.371] perms 저장 — sessionStorage + SB users 테이블 */
+/* 접근 권한 저장 (sessionStorage, v2.372) */
+/* [v2.372] perms 저장 — sessionStorage + SB users 테이블 */
 _savePerms(){
   try{
     const permsStr=JSON.stringify(App.perms||{});
@@ -327,7 +327,7 @@ _savePerms(){
   }catch(e){Toast.show('저장 실패: '+e.message,'err');}
 },
 
-/* 비밀번호 변경 (설정 탭, v2.23) */
+/* 비밀번호 변경 (설정 탭, v2.372) */
 async _changePw(){
   const g=k=>document.getElementById(k)?.value.trim()||'';
   const cur=g('sPwCur'),nw=g('sPwNew'),nw2=g('sPwNew2');
@@ -336,7 +336,7 @@ async _changePw(){
   if(nw!==nw2){Toast.show('새 비밀번호가 일치하지 않습니다.','warn');return}
   const user=Auth._u;
   if(!user){Toast.show('로그인 정보를 찾을 수 없습니다.','err');return}
-  /* [v2.371] admin 비밀번호 변경 — sessionStorage 저장 */
+  /* [v2.372] admin 비밀번호 변경 — sessionStorage 저장 */
   if(user.username==='admin'){
     const savedAdmin=JSON.parse(sessionStorage.getItem('qms_admin')||'null');
     const curHash=await H.sha256(cur);
@@ -364,7 +364,7 @@ async _changePw(){
   Toast.show('비밀번호가 변경되었습니다.','ok');
 },
 /* ── 개인정보 팝업 ──
-   [v2.23] 2-B: 로그인 사용자 실제 정보 표시
+   [v2.372] 2-B: 로그인 사용자 실제 정보 표시
    Auth._u에서 직접 읽어 항상 최신 정보 반영 */
 _profileEdit(){
   /* Auth._u가 없으면 sessionStorage에서 복원 */
@@ -400,14 +400,14 @@ _profileEdit(){
           <button class="btn bpri" onclick="Pages._profileSave(${user.id||'null'},'${H.e(user.username)}')">저장</button>`
   });
 },
-/* [v2.29] 설정 사용자관리 이름 클릭 → id로 사용자 찾아 수정 팝업 */
+/* [v2.372] 설정 사용자관리 이름 클릭 → id로 사용자 찾아 수정 팝업 */
 _uFormById(userId){
   const u=DB.users.find(x=>Number(x.id)===Number(userId));
   if(u) Pages._uForm(u);
   else Toast.show('사용자 정보를 찾을 수 없습니다.','err');
 },
 
-/* ── 사용자 삭제 (목록 버튼) [v2.371] ── */
+/* ── 사용자 삭제 (목록 버튼) [v2.372] ── */
 async _uDelete(userId){
   const u=DB.users.find(x=>Number(x.id)===Number(userId));
   if(!u){Toast.show('사용자 정보를 찾을 수 없습니다.','err');return;}
@@ -432,7 +432,7 @@ async _uDelete(userId){
   window._uDeleteTargetId=userId;
 },
 
-/* ── 사용자 삭제 확인 실행 [v2.371] ── */
+/* ── 사용자 삭제 확인 실행 [v2.372] ── */
 async _uDeleteConfirm(userId){
   const reason=document.getElementById('uDelReason')?.value.trim();
   if(!reason){Toast.show('삭제 사유를 입력하세요.','warn');return;}
@@ -475,7 +475,7 @@ _uStatusPopup(userId, userName){
       </button>`
   });
 },
-/* [v2.29] 사용자 활성/비활성 토글 */
+/* [v2.372] 사용자 활성/비활성 토글 */
 async _uToggleActive(userId){
   const u=DB.users.find(x=>x.id===userId);
   if(!u) return;
@@ -487,7 +487,7 @@ async _uToggleActive(userId){
   Toast.show(`${u.name||u.username} ${newActive?'활성화':'비활성화'} 완료`,'ok');
   Pages.settings();
 },
-/* [v2.23] _profileSave —
+/* [v2.372] _profileSave —
    Auth._u 실시간 갱신 + SB 업데이트 */
 async _profileSave(userId, username){
   const g=k=>document.getElementById(k)?.value.trim()||'';
@@ -554,12 +554,12 @@ dash(){
 /* ── 품목 등록 (컬럼 재설계) ── */
 async items(){
   /* ── 품목 등록 페이지
-     [v2.19 수정] 통계 카드 실시간 재계산:
+     [v2.372 수정] 통계 카드 실시간 재계산:
      render() 호출 시마다 data 기준으로 통계 재계산
      삭제/등록 후 즉시 숫자 반영 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
-  /* [v2.28 수정] _sbFetchAll 전체 로드 복원
+  /* [v2.372 수정] _sbFetchAll 전체 로드 복원
      Phase1 _sbPage는 count 오류로 데이터 사라짐 버그 발생
      → _sbFetchAll로 안전하게 전체 로드 후 로컬 필터 방식 유지
      대용량 시: 향후 올바른 페이지네이션 방식으로 단계적 전환 */
@@ -616,11 +616,11 @@ async items(){
     const tc=w.querySelector('#itbl');
     if(tc) Tbl.render({el:'#itbl',cols:COLS,data:d,
       onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 품목 */
+      /* [v2.372] 삭제 경고 팝업 — 품목 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
-        /* [v2.25] 즉시 로컬 제거 → 화면 먼저 갱신 */
+        /* [v2.372] 즉시 로컬 제거 → 화면 먼저 갱신 */
         DB.items=DB.items.filter(i=>!numIds.includes(Number(i.id)));
         data=data.filter(i=>!numIds.includes(Number(i.id)));
         render();
@@ -688,7 +688,7 @@ async items(){
 
 /* ── 거래처 ── */
 async vendors(){
-  /* [v2.19] SB 연동 + 통계 실시간 갱신 */
+  /* [v2.372] SB 연동 + 통계 실시간 갱신 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   const allVendors=await SB.getVendors();
@@ -751,7 +751,7 @@ _vFilter(){
   Pages._vRender(d);
 },
 _vRender(data){
-  /* [v2.19] 통계 카드 실시간 갱신 */
+  /* [v2.372] 통계 카드 실시간 갱신 */
   data=data||DB.vendors;
   /* 통계 업데이트 */
   const total=data.length, active=data.filter(v=>v.active).length;
@@ -788,7 +788,7 @@ _vRender(data){
     {key:'updated_at', label:'수정일',    w:'88px',  render:v=>v?H.e(v):''},
     {key:'id',         label:'파일',      w:'70px',  align:'center',render:(v)=>FM.btn(`vendor-${v}`)},
   ],data,onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 거래처 */
+      /* [v2.372] 삭제 경고 팝업 — 거래처 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
@@ -808,7 +808,7 @@ _vRender(data){
     },onRow:row=>Pages._vendorDetail(row)});
 },
 /* ── 품목 상세/등록/수정 팝업 ──
-   [v2.19] 행 클릭 또는 품목코드 클릭 시 상세 팝업 열림 */
+   [v2.372] 행 클릭 또는 품목코드 클릭 시 상세 팝업 열림 */
 _iForm(row=null){
   const e=!!row;
   const MAJOR=['수지가공','금속가공','VALVE','FITTING','PUMP','유량계','소재판매'];
@@ -960,9 +960,9 @@ _vForm(row=null){
   if(e)setTimeout(()=>Cmt.render('#vcmt',`vendor-${row.id}`),80);
 }
 
-/* ── 거래처 상세 팝업 [v2.371] ── */
+/* ── 거래처 상세 팝업 [v2.372] ── */
 ,
-/* ── 거래처 상세 팝업 [v2.371] ── */
+/* ── 거래처 상세 팝업 [v2.372] ── */
 _vendorDetail(row){
   /* 납품 실적 + 평가점수 + 부적합 이력 통합 */
   const evals=(DB.vendor_evals||[]).filter(e=>e.vendor_name===row.vendor_name);
@@ -1043,7 +1043,7 @@ _vendorDetail(row){
     `,
   });
 },
-/* [v2.20 수정] async로 전환 + SB.addVendor/updateVendor 연동
+/* [v2.372 수정] async로 전환 + SB.addVendor/updateVendor 연동
    기존: DB.vendors.push(더미) → vendors() 재로드 시 SB 결과로 덮어씌워져 사라짐
    수정: SB.addVendor/updateVendor 호출 → Supabase에 실제 저장 */
 async _vSave(id){
@@ -1090,7 +1090,7 @@ _vRefreshFile(id){
 
 /* ── 사용자 ── */
 async users(){
-  /* [v2.371] 사원관리 — 인사 목록 (권한관리 없음, 활성사용자만) */
+  /* [v2.372] 사원관리 — 인사 목록 (권한관리 없음, 활성사용자만) */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   const allUsers=await SB.getUsers();
@@ -1224,7 +1224,7 @@ _uRender(data){
     {key:'created_at', label:'등록일',       w:'88px'},
     {key:'updated_at', label:'수정일',       w:'88px',  render:v=>v?H.e(v):''},
   ],data,onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 사원 */
+      /* [v2.372] 삭제 경고 팝업 — 사원 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
@@ -1266,7 +1266,7 @@ _uForm(row=null){
       <!-- 4열: E-MAIL, 권한 -->
       <div class="fgroup"><label class="fl">E-MAIL</label>
         <input class="fc" id="uf_email" type="email" value="${H.e(row?.email||'')}" placeholder="user@company.com"></div>
-      <!-- [v2.23] 권한 설정은 설정 > 사용자 관리로 이동 -->
+      <!-- [v2.372] 권한 설정은 설정 > 사용자 관리로 이동 -->
       <div class="fgroup"><label class="fl">권한</label>
         <div class="fc" style="background:#f8fafc;display:flex;align-items:center;gap:8px;color:var(--tm);font-size:12px">
           <span class="badge ${row?.role==='admin'?'berr':row?.role==='manager'?'bamb':'bblu'}">${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[row?.role||'user']||'사용자'}</span>
@@ -1285,7 +1285,7 @@ _uForm(row=null){
           <button class="btn bpri btn-f8" onclick="Pages._uSave(${row?.id||'null'})">${e?'저장':'등록'} <span class="kbd">F8</span></button>`
   });
 },
-/* [v2.22] A2: SHA-256 해시 저장 + password 컬럼 포함
+/* [v2.372] A2: SHA-256 해시 저장 + password 컬럼 포함
    기존: password 필드 row에 없음 → 로그인 불가
    수정: pw를 SHA-256 해시 후 password 컬럼으로 저장 */
 async _uSave(id){
@@ -1309,7 +1309,7 @@ async _uSave(id){
   const row={
     username:uid, name,
     department:g('uf_dept'), tel:g('uf_tel'), email,
-    /* [v2.23] role은 설정 > 사용자 관리에서 변경
+    /* [v2.372] role은 설정 > 사용자 관리에서 변경
        신규 등록 시 기본값 'user', 수정 시 기존 role 유지 */
     role: id ? (DB.users.find(u=>u.id===id)?.role||'user') : 'user',
     active:Number(document.getElementById('uf_active')?.value||1),
@@ -1323,7 +1323,7 @@ async _uSave(id){
     const idx=DB.users.findIndex(u=>u.id===id);
     if(idx>=0) DB.users[idx]={...DB.users[idx],...row,updated_at:today};
     Toast.show('사용자가 수정되었습니다.','ok');
-    /* [v2.371] admin 계정 이메일 수정 시 로그인창 footer 반영 */
+    /* [v2.372] admin 계정 이메일 수정 시 로그인창 footer 반영 */
     if(Auth._u&&Auth._u.role==='admin'&&Auth._u.id===id){
       Auth._u={...Auth._u,...row};
       sessionStorage.setItem('qms_auth',JSON.stringify({cur:Auth._cur||'user',u:Auth._u}));
@@ -1335,9 +1335,9 @@ async _uSave(id){
     if(!res.ok) return;
     Toast.show('사용자가 등록되었습니다.','ok');
   }
-  /* [v2.371] 저장 후 사원관리 이동 제거 — 사용자관리 탭 유지 */
+  /* [v2.372] 저장 후 사원관리 이동 제거 — 사용자관리 탭 유지 */
   Modal.close();
-  /* [v2.371] settings 사용자관리 탭 내 목록 갱신 — window.renderUserMgmt 사용 */
+  /* [v2.372] settings 사용자관리 탭 내 목록 갱신 — window.renderUserMgmt 사용 */
   const settingsPw=document.getElementById('pw');
   if(settingsPw){
     const uPane=settingsPw.querySelector('.stab-pane[data-tab="usermgmt"]');
@@ -1360,7 +1360,7 @@ async _uSave(id){
 },
 
 /* ── 임시비밀번호 발급 (관리자 전용, B2안) ──
-   [v2.22] 관리자가 사용자 비밀번호를 임시값으로 초기화
+   [v2.372] 관리자가 사용자 비밀번호를 임시값으로 초기화
    임시 비밀번호: 8자리 랜덤 → SHA-256 해시 → DB 저장
    화면에 표시 후 관리자가 사용자에게 직접 전달 */
 async _uResetPw(userId, username){
@@ -1401,7 +1401,7 @@ async _uResetPw(userId, username){
              작업지시번호→특이사항
    - 거래처/품목: 기준정보 연동 (_validateVendor, _validateItem)
    - 날짜 퀵버튼: DateRange.applyTo() 사용
-   - v2.10: 구매검사(insp_pu), 외주검사(insp_ou) 추가
+   - v2.372: 구매검사(insp_pu), 외주검사(insp_ou) 추가
             출하검사(insp_fi) → 최종검사로 명칭 변경
    ══════════════════════════════════════════════════════ */
 /* ── 검사 5종 공통 렌더 ── */
@@ -1421,17 +1421,17 @@ async _insp(type){
     insp_fi:{lbl:'최종검사', icon:'✅', key:'최종'},
   };
   const {lbl,icon,key}=TYPES[type];
-  /* [v2.28 복원] _sbFetchAll 전체 로드 후 로컬 필터 방식
+  /* [v2.372 복원] _sbFetchAll 전체 로드 후 로컬 필터 방식
      Phase1은 DOM 순서 문제로 무한 스피너 버그 발생 → 복원 */
   w.innerHTML='<div class="spin"></div>';
-  /* [v2.29] 항상 SB에서 최신 데이터 로드 */
+  /* [v2.372] 항상 SB에서 최신 데이터 로드 */
   const allInsp=await SB.getInspections();
   DB.inspections=Array.isArray(allInsp)?allInsp:[];
   let data=DB.inspections.filter(r=>r.type===key);
   let fromV='',toV='';
 
   const render=()=>{
-    /* [v2.28 복원] 로컬 필터 방식 */
+    /* [v2.372 복원] 로컬 필터 방식 */
     const sv=(document.getElementById('inspSV')?.value||'').trim();
     const rv=document.getElementById('inspRV')?.value||'';
     fromV=document.getElementById('inspFrom')?.value||'';
@@ -1465,12 +1465,12 @@ async _insp(type){
       {key:'id',         label:'파일',        w:'80px',  align:'center', render:(_v,row)=>FM.btn(`insp-${row.id}`)},
     ],data:fd,
     onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 검사 */
+      /* [v2.372] 삭제 경고 팝업 — 검사 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
         if(!numIds.length) return;
-        /* [v2.26] 즉시 로컬 제거 → 화면 먼저 갱신 */
+        /* [v2.372] 즉시 로컬 제거 → 화면 먼저 갱신 */
         DB.inspections=DB.inspections.filter(i=>!numIds.includes(Number(i.id)));
         render();
         /* SB 일괄 삭제 */
@@ -1663,10 +1663,10 @@ _inspDetail2(row){
 
 /* ── 품질현황 대시보드 (C안 — Modern SaaS Style)
    구성: 검색조건(검사종류 토글+날짜기간) → 미니차트 5개 → 누적 대형차트 → KPI 요약
-   v2.16: 신규 추가
+   v2.372: 신규 추가
    ─────────────────────────────────────────────────────────── */
 async quality_dash(){
-  /* [v2.371] SB 최신 검사 데이터 로드 */
+  /* [v2.372] SB 최신 검사 데이터 로드 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   try{
@@ -1711,7 +1711,7 @@ async quality_dash(){
     });
     const total=filtered.reduce((a,b)=>a+b.qty,0);
     const totalFail=filtered.reduce((a,b)=>a+b.fail_qty,0);
-    /* [v2.371] NC/교정만료 KPI */
+    /* [v2.372] NC/교정만료 KPI */
     const ncOpen=DB.nc.filter(n=>n.status!=='완료').length;
     const ncTotal=DB.nc.length;
     const ncDone=DB.nc.filter(n=>n.status==='완료').length;
@@ -1832,11 +1832,11 @@ async quality_dash(){
     const TYPES=['수입','공정','구매','외주','최종'];
     const COLORS={수입:'#3b82f6',공정:'#10b981',구매:'#f59e0b',외주:'#8b5cf6',최종:'#ef4444'};
 
-    /* [v2.371] NC + 교정만료 KPI 카드 상단 추가 */
+    /* [v2.372] NC + 교정만료 KPI 카드 상단 추가 */
     const ncOpenCls=data.ncOpen>0?'#ef4444':'#059669';
     const calCls=data.calExpired>0?'#ef4444':data.calDue7>0?'#f59e0b':'#059669';
     w.innerHTML=`
-    <!-- [v2.371] KPI 상단 요약 — 바로가기 ↗ 마크 추가 -->
+    <!-- [v2.372] KPI 상단 요약 — 바로가기 ↗ 마크 추가 -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">
       <!-- 전체 검사건수 (읽기전용) -->
       <div class="card" style="padding:14px 16px;text-align:center;position:relative">
@@ -2076,7 +2076,7 @@ _qdashExcel(){Toast.show('엑셀 내보내기 — Supabase 연동 후 지원됩�
 
 /* ── 부적합 ── */
 async nc(){
-  /* [v2.371] 부적합 관리 — SB 연동 + 필터 + F2 등록 */
+  /* [v2.372] 부적합 관리 — SB 연동 + 필터 + F2 등록 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
 
@@ -2087,7 +2087,7 @@ async nc(){
   Pages._ncRender();
 },
 
-/* ── 부적합 목록 렌더 [v2.371] ── */
+/* ── 부적합 목록 렌더 [v2.372] ── */
 _ncRender(){
   const w=document.getElementById('pw');
   if(!w) return;
@@ -2123,7 +2123,7 @@ _ncRender(){
   Pages._ncNextNo=nextNo;
 
   w.innerHTML=`
-    <!-- [v2.371] 부적합 관리 상단 KPI -->
+    <!-- [v2.372] 부적합 관리 상단 KPI -->
     <div class="stat-dash">
       <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⚠️</div>
         <div><div class="sd-val">${total}</div><div class="sd-lbl">전체</div></div></div>
@@ -2207,7 +2207,7 @@ _ncRender(){
       if(!confirm(`${ids.length}건을 삭제하시겠습니까?`)) return;
       const numIds=ids.map(Number);
       if(typeof _sb!=='undefined'&&_sb){
-        /* [v2.371] 소프트 삭제 */
+        /* [v2.372] 소프트 삭제 */
         const res=await SB._softDelete('nonconformances',numIds);
         if(!res.ok) return;
       }
@@ -2218,7 +2218,7 @@ _ncRender(){
   });
 },
 _ncForm(row=null){
-  /* [v2.371] 부적합 등록/수정 폼 — 사내외/품목코드/고객 유형 추가 */
+  /* [v2.372] 부적합 등록/수정 폼 — 사내외/품목코드/고객 유형 추가 */
   const isEdit=!!row;
   const nextNo=Pages._ncNextNo?Pages._ncNextNo():'NC-'+H.today().replace(/-/g,'')+'-001';
   /* 품목 목록 — 기준정보 items 연동 */
@@ -2318,7 +2318,7 @@ _ncForm(row=null){
   window._ncEditId=row?.id||null;
 },
 
-/* ── 부적합 저장 [v2.371] ── */
+/* ── 부적합 저장 [v2.372] ── */
 async _ncSave(){
   const g=id=>document.getElementById(id)?.value.trim()||'';
   const no=g('ncNo'), type=g('ncType'), date=g('ncDate'), item=g('ncItem');
@@ -2333,7 +2333,7 @@ async _ncSave(){
   if(!desc){Toast.show('부적합 내용을 입력하세요.','warn');return;}
 
   const editId=window._ncEditId;
-  /* [v2.371] in_out + item_code 추가 */
+  /* [v2.372] in_out + item_code 추가 */
   const in_out=document.getElementById('ncInOut')?.value||'';
   const item_code=document.getElementById('ncItemCode')?.value||'';
   const row={no,type,in_out,item_code,item,desc,cause,action,assignee,
@@ -2359,7 +2359,7 @@ async _ncSave(){
   Pages._ncRender();
 },
 
-/* ── 부적합 상세 팝업 [v2.371] ── */
+/* ── 부적합 상세 팝업 [v2.372] ── */
 _ncDetail(row){
   if(!row||typeof row!=='object'){Toast.show('데이터를 불러올 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
@@ -2419,7 +2419,7 @@ _ncDetail(row){
   },80);
 },
 
-/* ── 부적합 상태 변경 [v2.371] ── */
+/* ── 부적합 상태 변경 [v2.372] ── */
 async _ncStatusChange(id){
   const nc=DB.nc.find(n=>n.id===id);
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
@@ -2451,7 +2451,7 @@ _ncDetail(row){Modal.open({title:`부적합 — ${row.no}`,size:'mlg',
 
 /* ── 계측기 ── */
 /* ══════════════════════════════════════════════════════
-   [v2.371] 계측기 전용 업로드 — 재설계 (단순 3단계)
+   [v2.372] 계측기 전용 업로드 — 재설계 (단순 3단계)
    1. _equipUploadOpen(): 팝업 + 양식 다운로드
    2. _equipParseFile(): 파일 읽기 → 미리보기
    3. _equipDoUpload(): DB 저장
@@ -2474,7 +2474,7 @@ _EQUIP_COLS:[
 
 /* 1단계: 팝업 열기 */
 _equipUploadOpen(){
-  /* [v2.371] 계측기 업로드 팝업 */
+  /* [v2.372] 계측기 업로드 팝업 */
   const cols=Pages._EQUIP_COLS;
   Modal.open({title:'📤 계측기 엑셀 일괄등록',size:'mxl',foot:'',body:`
     <div style="padding:12px">
@@ -2504,7 +2504,7 @@ _equipUploadOpen(){
 
 /* 양식 다운로드 */
 _equipDownload(){
-  /* [v2.371] 단순 양식 생성 — _EQUIP_COLS 직접 사용 */
+  /* [v2.372] 단순 양식 생성 — _EQUIP_COLS 직접 사용 */
   if(typeof XLSX==='undefined'){Toast.show('XLSX 라이브러리 로딩 중입니다.','warn');return;}
   const cols=Pages._EQUIP_COLS;
   const wb=XLSX.utils.book_new();
@@ -2536,7 +2536,7 @@ _equipDownload(){
 
 /* 2단계: 파일 파싱 → 미리보기 */
 _equipParseFile(inp){
-  /* [v2.371] 파일 선택 시 즉시 파싱 */
+  /* [v2.372] 파일 선택 시 즉시 파싱 */
   if(!inp.files||!inp.files[0]) return;
   if(typeof XLSX==='undefined'){Toast.show('XLSX 라이브러리 로딩 중입니다.','warn');return;}
   const reader=new FileReader();
@@ -2552,7 +2552,7 @@ _equipParseFile(inp){
 
 /* 미리보기 렌더 */
 _equipRenderPreview(raw){
-  /* [v2.371] 파싱된 raw 데이터를 미리보기로 표시 */
+  /* [v2.372] 파싱된 raw 데이터를 미리보기로 표시 */
   const cols=Pages._EQUIP_COLS;
   const el=document.getElementById('equipUploadPreview');
   if(!el) return;
@@ -2563,7 +2563,7 @@ _equipRenderPreview(raw){
   const h2k={};
   cols.forEach(c=>{h2k[c.label]=c.key;});
   /* 추가 별칭 */
-  /* [v2.371] 한글 + A_/B_/C_ 접두사 모두 지원 */
+  /* [v2.372] 한글 + A_/B_/C_ 접두사 모두 지원 */
   const alias={
     '계측기코드':'code','코드':'code','관리번호':'code',
     'A_계측기코드':'code',
@@ -2650,7 +2650,7 @@ _equipRenderPreview(raw){
 
 /* 3단계: DB 저장 */
 async _equipDoUpload(){
-  /* [v2.371] parsed 데이터를 SB.addEquip으로 저장 */
+  /* [v2.372] parsed 데이터를 SB.addEquip으로 저장 */
   const parsed=Pages._equipParsed;
   if(!parsed||!parsed.length){Toast.show('업로드할 데이터가 없습니다.','warn');return;}
   const targets=parsed.filter(r=>!r._err);
@@ -2676,10 +2676,10 @@ async _equipDoUpload(){
 
 async equip(){
   const w=document.getElementById('pw');
-  /* [v2.29] 항상 SB에서 최신 데이터 로드 */
+  /* [v2.372] 항상 SB에서 최신 데이터 로드 */
   if(_sb){const d=await SB.getEquip();if(d)DB.equip=d;}
-  /* [v2.371] status null인 데이터 실시간 재계산 */
-  /* [v2.371] status 항상 재계산 — DB 저장값 무시하고 next 날짜 기준으로 */
+  /* [v2.372] status null인 데이터 실시간 재계산 */
+  /* [v2.372] status 항상 재계산 — DB 저장값 무시하고 next 날짜 기준으로 */
   DB.equip.forEach(e=>{
     e.status=H.equipStatus(e.next||null);
   });
@@ -2705,7 +2705,7 @@ async equip(){
     </div>
     <div id="eqTbl"></div>`;
   Tbl.render({el:'#eqTbl',cols:[
-    /* [v2.371] 컬럼 순서: 요청사항 기준 재정의 + model 복구 */
+    /* [v2.372] 컬럼 순서: 요청사항 기준 재정의 + model 복구 */
     {key:'code',     label:'계측기코드', req:true, w:'96px'},
     {key:'name',     label:'계측기명', req:true,   w:'130px'},
     {key:'model',    label:'모델번호',   w:'100px'},
@@ -2734,13 +2734,13 @@ async equip(){
     {key:'id',       label:'파일',       w:'64px', align:'center',
       render:(v,row)=>FM.btn('equip-'+v)},
   ],data:DB.equip,onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 계측기 */
+      /* [v2.372] 삭제 경고 팝업 — 계측기 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
-        /* [v2.29] SB 삭제 + 로컬 동기화 */
+        /* [v2.372] SB 삭제 + 로컬 동기화 */
         if(_sb){
-          /* [v2.371] 소프트 삭제 */
+          /* [v2.372] 소프트 삭제 */
           const res=await SB._softDelete('equipment',numIds);
           if(!res.ok) return;
         }
@@ -2756,7 +2756,7 @@ async equip(){
       });
     },onRow:row=>Pages._eqDetail(row)});
 },
-/* [v2.371] 계측기 상세 팝업 — row 데이터 연결 */
+/* [v2.372] 계측기 상세 팝업 — row 데이터 연결 */
 _eqDetail(row){
   if(!row) return;
   const d=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
@@ -2834,7 +2834,7 @@ async _eqSave(orig){
   row.status=H.equipStatus(row.next);
   if(orig?.id) row.id=orig.id;
 
-  /* [v2.305 Phase1] 수정 시 변경 이력 자동 기록 */
+  /* [v2.372 Phase1] 수정 시 변경 이력 자동 기록 */
   if(orig){
     const by=Auth.cur()?.username||'system';
     const _LOG_FIELDS=[
@@ -2865,7 +2865,7 @@ async _eqSave(orig){
   Pages.equip();
 },
 
-/* [v2.371 Phase3] 계측기 관리대장 인쇄 */
+/* [v2.372 Phase3] 계측기 관리대장 인쇄 */
 _eqPrint(){
   /* 검색 조건 팝업 → 필터 → 인쇄 */
   const statusOpts=['전체','정상','교정중','교정만료'].map(s=>`<option>${s}</option>`).join('');
@@ -2994,7 +2994,7 @@ _eqPrintExec(){
 },
 
 _eqDetail(row){
-  /* [v2.305 Phase2] 탭 구조: 기본정보 / 교정이력 / 변경이력 */
+  /* [v2.372 Phase2] 탭 구조: 기본정보 / 교정이력 / 변경이력 */
   const sCls=H.equipStatus(row.next)==='교정만료'?'bred':H.equipStatus(row.next)==='교정중'?'bamb':'bgrn';
   const d2=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
   const expired=d2!==null&&0>d2;
@@ -3044,7 +3044,7 @@ _eqDetail(row){
     if(logPane) logPane._equip_code=row.code;
     if(!calPane) return;
     if(!DB.cals||!DB.cals.length){const ld=await SB.getCals();if(ld)DB.cals=ld;}
-    /* [v2.371 P2] cal_date 기준 내림차순 정렬 */
+    /* [v2.372 P2] cal_date 기준 내림차순 정렬 */
     const recs=(DB.cals||[]).filter(c=>(c.code===row.code||c.equip_code===row.code))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''))
       .sort((a,b)=>(b.cal_date||b.date||'').localeCompare(a.cal_date||a.date||''));
@@ -3081,7 +3081,7 @@ _eqDetail(row){
   },80);
 },
 
-/* [v2.305] 탭 전환 */
+/* [v2.372] 탭 전환 */
 _eqDTab(btn){
   document.querySelectorAll('.eq-dtab').forEach(b=>{
     const on=b===btn;
@@ -3104,7 +3104,7 @@ _eqDTab(btn){
 },
 
 async _loadEquipLogs(pane){
-  /* [v2.305] 변경이력 탭 비동기 로드 */
+  /* [v2.372] 변경이력 탭 비동기 로드 */
   const equip=pane._equip_code;
   if(!equip){pane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:12px">코드를 식별할 수 없습니다.</div>';return;}
   const logs=await SB.getLogs(equip);
@@ -3135,7 +3135,7 @@ async _loadEquipLogs(pane){
 },
 
 async _calDel(calId, equip_code){
-  /* [v2.305] 교정이력 삭제 */
+  /* [v2.372] 교정이력 삭제 */
   Modal.confirm({title:'교정이력 삭제',msg:'이 교정 이력을 삭제하시겠습니까?',danger:true,onOk:async()=>{
     const res=await SB.deleteCal(calId);
     if(!res.ok) return;
@@ -3167,7 +3167,7 @@ async _calDel(calId, equip_code){
 /* ── 교정 ── */
 cal(){
   const w=document.getElementById('pw');
-  /* [v2.371 Phase3] D-30 이내 + 아직 만료 안된 계측기 */
+  /* [v2.372 Phase3] D-30 이내 + 아직 만료 안된 계측기 */
   const _now=new Date();
   const soon=DB.equip.filter(e=>{
     if(!e.next) return false;
@@ -3184,7 +3184,7 @@ cal(){
     </div>
     <div id="calTbl"></div>
     <div id="calCostChart" style="margin-top:16px"></div>`;
-  /* [v2.371 P4-3] 교정비용 통계 차트 */
+  /* [v2.372 P4-3] 교정비용 통계 차트 */
   Pages._calCostChart();
   Tbl.render({el:'#calTbl',cols:[
     {key:'code',label:'계측기코드', req:true,w:'100px'},
@@ -3198,7 +3198,7 @@ cal(){
     {key:'cost',label:'비용(원)',w:'86px',align:'right',
       render:v=>v?Number(v).toLocaleString():'—'},
   ],data:DB.cals,onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 교정관리 */
+      /* [v2.372] 삭제 경고 팝업 — 교정관리 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
@@ -3215,7 +3215,7 @@ cal(){
     }});
 },
 _calForm(equip_code, calRow){
-  /* [v2.305 Phase2] 교정 등록/수정 폼 */
+  /* [v2.372 Phase2] 교정 등록/수정 폼 */
   const isEdit=!!calRow;
   const equip=DB.equip.find(e=>e.code===equip_code)||{};
   const equipOpts=DB.equip.map(e=>'<option value="'+H.e(e.code)+'"'+(e.code===equip_code?' selected':'')+'>' +H.e(e.code+' '+e.name)+'</option>').join('');
@@ -3260,7 +3260,7 @@ _calForm(equip_code, calRow){
   },50);
 },
 async _calSave(orig){
-  /* [v2.305 Phase2] 교정 저장 + equipment.next 자동 갱신 */
+  /* [v2.372 Phase2] 교정 저장 + equipment.next 자동 갱신 */
   const g=id=>(document.getElementById(id)?.value||'').trim();
   const equip_code=g('cf_code'),cal_date=g('cf_date'),agency=g('cf_agency'),next_date=g('cf_next');
   if(!equip_code){Toast.show('계측기를 선택하세요.','warn');return}
@@ -3299,7 +3299,7 @@ async _calSave(orig){
   else if(curPage==='equip') Pages.equip();
 },
 
-/* [v2.371 P4-1] QR코드 생성 */
+/* [v2.372 P4-1] QR코드 생성 */
 _eqQR(code, name){
   const url=location.origin+location.pathname+'?eq='+encodeURIComponent(code);
   const qrApi='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);
@@ -3328,7 +3328,7 @@ _eqQRPrint(code,name,encodedUrl){
   d.write('</body></html>');
   d.close();
 },
-/* [v2.371 P4-5] 교정 주기 기반 차기교정일 자동 계산 */
+/* [v2.372 P4-5] 교정 주기 기반 차기교정일 자동 계산 */
 _calAutoNext(){
   const dateEl=document.getElementById('cf_date');
   const nextEl=document.getElementById('cf_next');
@@ -3344,7 +3344,7 @@ _calAutoNext(){
   nextEl.value=`${y}-${m}-${dd}`;
   Toast.show(`${months}개월 주기 → ${nextEl.value} 자동설정`,'ok',2000);
 },
-/* [v2.371 P4-3] 교정비용 연도별 + 계측기별 통계 차트 */
+/* [v2.372 P4-3] 교정비용 연도별 + 계측기별 통계 차트 */
 _calCostChart(){
   const el=document.getElementById('calCostChart');
   if(!el) return;
@@ -3402,21 +3402,21 @@ _calCostChart(){
     (top5.length?'<div><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:8px">계측기별 Top5</div>'+equipBars+'</div>':'')+
     '</div></div>';
 },
-/* [v2.371 P4-6] 계측기 실시간 검색/필터 */
+/* [v2.372 P4-6] 계측기 실시간 검색/필터 */
 _eqFilter(){
   const q=(document.getElementById('eqSrch')?.value||'').toLowerCase();
   const st=document.getElementById('eqStat')?.value||'';
-  /* [v2.371] status null 방어 — 실시간 재계산 */
+  /* [v2.372] status null 방어 — 실시간 재계산 */
   const filtered=DB.equip.filter(e=>{
     const mQ=!q||(e.code||'').toLowerCase().includes(q)||(e.name||'').toLowerCase().includes(q)
            ||(e.maker||'').toLowerCase().includes(q)||(e.model||'').toLowerCase().includes(q);
-    /* [v2.371] next 기준 실시간 재계산 */
+    /* [v2.372] next 기준 실시간 재계산 */
     const realStatus=H.equipStatus(e.next||null);
     const mS=!st||realStatus===st;
     return mQ&&mS;
   });
   Tbl.render({el:'#eqTbl',cols:[
-    /* [v2.371] 컬럼 순서: 요청사항 기준 재정의 + model 복구 */
+    /* [v2.372] 컬럼 순서: 요청사항 기준 재정의 + model 복구 */
     {key:'code',     label:'계측기코드', req:true, w:'96px'},
     {key:'name',     label:'계측기명', req:true,   w:'130px'},
     {key:'model',    label:'모델번호',   w:'100px'},
@@ -3445,9 +3445,9 @@ _eqFilter(){
     {key:'id',       label:'파일',       w:'64px', align:'center',
       render:(v,row)=>FM.btn('equip-'+v)},
   ],data:filtered,
-  /* [v2.371] onDel 복구 */
+  /* [v2.372] onDel 복구 */
   onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 계측기 */
+      /* [v2.372] 삭제 경고 팝업 — 계측기 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
@@ -3522,7 +3522,7 @@ docs(){
     {key:'date',label:'발행일',w:'86px'},{key:'author',label:'작성자',w:'72px'},
     {key:'status',label:'상태',w:'62px',render:v=>`<span class="badge ${v==='유효'?'bgrn':v==='초안'?'bamb':'bgry'}">${H.e(v)}</span>`},
   ],data:DB.docs,onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 문서관리 */
+      /* [v2.372] 삭제 경고 팝업 — 문서관리 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
@@ -3581,7 +3581,7 @@ car(){
     {key:'assignee',label:'담당자',w:'72px'},
     {key:'status',label:'상태',w:'66px',render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='처리중'?'bamb':'bgry'}">${H.e(v)}</span>`},
   ],data:DB.cars,onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 시정조치 */
+      /* [v2.372] 삭제 경고 팝업 — 시정조치 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
@@ -3628,9 +3628,9 @@ audit(){document.getElementById('pw').innerHTML=`<div class="ph"><div><div class
    - 수정: supabase.from('mentions').update({text}).eq('id',id)
    - 삭제: supabase.from('mentions').delete().eq('id',id)
    - 히스토리: deleted_at 필드로 soft delete 관리 (백엔드) */
-/* [v2.22] C1: SB.getMentions 연동 */
+/* [v2.372] C1: SB.getMentions 연동 */
 async mentions(){
-  /* [v2.371] 멘션함 고도화
+  /* [v2.372] 멘션함 고도화
      - 받은함 / 보낸함 / 칸반 탭
      - 새 멘션 작성 폼
      - 읽음 처리 + TopNav 배지 연동
@@ -3666,7 +3666,7 @@ async mentions(){
   Pages._mentionBuildLayout(w,me,isAdmin);
 },
 
-/* ── 레이아웃 최초 생성 [v2.371] ── */
+/* ── 레이아웃 최초 생성 [v2.372] ── */
 _mentionBuildLayout(w,me,isAdmin){
   const users=(DB.users||[]).filter(u=>u.active!==0&&!u.pending);
   const userOpts=users.map(u=>`<option value="${H.e(u.username)}">${H.e(u.name||u.username)} (${H.e(u.department||'')})</option>`).join('');
@@ -3716,14 +3716,14 @@ _mentionBuildLayout(w,me,isAdmin){
   Pages._mentionRefresh();
 },
 
-/* ── 탭 전환 [v2.371] ── */
+/* ── 탭 전환 [v2.372] ── */
 _mentionTab(tab, btn){
   document.querySelectorAll('.stab-btn').forEach(b=>b.classList.toggle('on',b===btn));
   window._mentionTab=tab;
   Pages._mentionRefresh();
 },
 
-/* ── 목록 갱신 [v2.371] ── */
+/* ── 목록 갱신 [v2.372] ── */
 _mentionRefresh(){
   const me=Auth._cur||'admin';
   const isAdmin=(Auth._u?.role==='admin');
@@ -3811,7 +3811,7 @@ _mentionRefresh(){
   listEl.innerHTML=h;
 },
 
-/* ── 멘션 상세 팝업 [v2.371] ── */
+/* ── 멘션 상세 팝업 [v2.372] ── */
 async _mentionDetail(id){
   const m=(DB.mentions||[]).find(m=>Number(m.id)===Number(id));
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
@@ -3842,7 +3842,7 @@ async _mentionDetail(id){
   });
 },
 
-/* ── 새 멘션 작성 폼 [v2.371] ── */
+/* ── 새 멘션 작성 폼 [v2.372] ── */
 _mentionForm(){
   const users=(DB.users||[]).filter(u=>u.active!==0&&!u.pending);
   const me=Auth._u;
@@ -3876,7 +3876,7 @@ _mentionForm(){
   });
 },
 
-/* ── 멘션 전송 [v2.371] ── */
+/* ── 멘션 전송 [v2.372] ── */
 async _mentionSend(){
   const toSel=document.getElementById('mnTo');
   const toList=toSel?Array.from(toSel.selectedOptions).map(o=>o.value):[];
@@ -3912,7 +3912,7 @@ async _mentionSend(){
   }
 },
 
-/* ── 읽음 처리 [v2.371] ── */
+/* ── 읽음 처리 [v2.372] ── */
 async _mentionMarkRead(id){
   await SB.updateMention(id,{read:true});
   const m=(DB.mentions||[]).find(m=>m.id===id);
@@ -3921,7 +3921,7 @@ async _mentionMarkRead(id){
   Pages._mentionRefresh();
 },
 
-/* ── 전체 읽음 [v2.371] ── */
+/* ── 전체 읽음 [v2.372] ── */
 async _mentionMarkAllRead(){
   const me=Auth._cur||'admin';
   const unread=(DB.mentions||[]).filter(m=>
@@ -3936,7 +3936,7 @@ async _mentionMarkAllRead(){
   Toast.show('전체 읽음 처리했습니다.','ok');
 },
 
-/* ── TopNav 배지 갱신 [v2.371] ── */
+/* ── TopNav 배지 갱신 [v2.372] ── */
 _updateMentionBadge(){
   const me=Auth._cur||'admin';
   const unread=(DB.mentions||[]).filter(m=>
@@ -3952,7 +3952,7 @@ _updateMentionBadge(){
   if(sideEl){sideEl.textContent=unread;sideEl.style.display=unread>0?'':'none';}
 },
 
-/* [v2.371 PhaseA] 멘션 작성/수정 폼 */
+/* [v2.372 PhaseA] 멘션 작성/수정 폼 */
 _mentionWrite(editId=null){
   const me=Auth._cur||'admin';
   const meUser=DB.users.find(u=>u.username===me)||{name:'관리자'};
@@ -4065,14 +4065,14 @@ async _mentionSave(editId){
     replies:  [],
     created_at:new Date().toISOString(),
   };
-  /* [v2.371 PhaseC] 파일 첨부 처리 */
+  /* [v2.372 PhaseC] 파일 첨부 처리 */
   const fileEl=document.getElementById('mwFile');
   if(fileEl?.files?.length){
     const f=fileEl.files[0];
     const uploaded=await SB.uploadFile('mentions',f);
     if(uploaded?.url) row.file_url=uploaded.url;
   }
-  /* [v2.371 PhaseC] 파일 첨부 */
+  /* [v2.372 PhaseC] 파일 첨부 */
   const _fEl=document.getElementById('mwFile');
   if(_fEl?.files?.length){
     const _fUp=await SB.uploadFile('mentions',_fEl.files[0]);
@@ -4090,12 +4090,12 @@ async _mentionSave(editId){
     Toast.show('멘션이 전송되었습니다.','ok');
   }
   Modal.close();
-  /* [v2.371] 전송 후 배지 갱신 */
+  /* [v2.372] 전송 후 배지 갱신 */
   setTimeout(()=>TopNav.updateMentionBadge(),300);
   Pages.mentions();
 },
 
-/* [v2.371 PhaseA] 상태 변경 (완료/진행중) */
+/* [v2.372 PhaseA] 상태 변경 (완료/진행중) */
 async _mentionStatus(id, status){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -4107,13 +4107,13 @@ async _mentionStatus(id, status){
   Pages.mentions();
 },
 
-/* [v2.371 PhaseA] 읽음 처리 */
+/* [v2.372 PhaseA] 읽음 처리 */
 async _mentionRead(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
   await SB.updateMention(id,{read:true});
   m.read=true;
-  /* [v2.371 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
+  /* [v2.372 PhaseB] 배지 업데이트 — 내 미읽음 기준 */
   const _me2=Auth._cur||'admin';
   const unread=DB.mentions.filter(m=>!m.read&&(m.to===_me2||(m.to_list||[]).includes(_me2)||Auth._u?.role==='admin')).length;
   const nb=document.getElementById('mnb');
@@ -4122,7 +4122,7 @@ async _mentionRead(id){
   TopNav.updateMentionBadge();
 },
 
-/* [v2.371 PhaseA] 고정/해제 */
+/* [v2.372 PhaseA] 고정/해제 */
 async _mentionPin(id, pinned){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -4132,7 +4132,7 @@ async _mentionPin(id, pinned){
   Pages.mentions();
 },
 
-/* [v2.371 PhaseA] 반응(Reaction) */
+/* [v2.372 PhaseA] 반응(Reaction) */
 async _mentionReact(id, emoji){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m) return;
@@ -4147,7 +4147,7 @@ async _mentionReact(id, emoji){
   m.reactions=reactions;
   Pages.mentions();
 },
-/* [v2.371 PhaseB] 업무 레코드 바로가기 링크 맵 */
+/* [v2.372 PhaseB] 업무 레코드 바로가기 링크 맵 */
 _mentionLinkGo(linkType, linkId){
   const NAV_MAP={
     nc:'nc', equip:'equip', cal:'cal', car:'car',
@@ -4162,7 +4162,7 @@ _mentionLinkGo(linkType, linkId){
   Toast.show('🔗 '+linkId+' — '+page+' 페이지로 이동했습니다.','info',2500);
 },
 
-/* [v2.371 PhaseB] 반응 이모지 선택 팝업 */
+/* [v2.372 PhaseB] 반응 이모지 선택 팝업 */
 _mentionReactPop(id){
   const EMOJIS=['👍','✅','🔄','🔥','❓','⚠️','💡','👀'];
   const m=DB.mentions.find(m=>m.id===id);
@@ -4182,9 +4182,9 @@ _mentionReactPop(id){
   Modal.open({title:'반응 선택',size:'msm',body});
 },
 
-/* [v2.371 PhaseB] 스레드 답글 — SB 연동 */
+/* [v2.372 PhaseB] 스레드 답글 — SB 연동 */
 _mentionReplyView(id){
-  /* [v2.371] 멘션 상세팝업 — renderBody 제거, 단순 문자열 직접 구성 */
+  /* [v2.372] 멘션 상세팝업 — renderBody 제거, 단순 문자열 직접 구성 */
   const m=DB.mentions.find(mn=>mn.id===id);
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','warn');return;}
   /* 자동 읽음 */
@@ -4278,7 +4278,7 @@ _mentionEdit(id){
   this._mentionWrite(id);
 },
 
-/* [v2.371 PhaseA] 멘션 삭제 */
+/* [v2.372 PhaseA] 멘션 삭제 */
 async _mentionDel(id){
   const isAdmin=(Auth._u?.role==='admin');
   const m=DB.mentions.find(m=>m.id===id);
@@ -4294,7 +4294,7 @@ async _mentionDel(id){
     Pages.mentions();
   }});
 },
-/* [v2.371 PhaseC] 멘션 → 태스크 격상 */
+/* [v2.372 PhaseC] 멘션 → 태스크 격상 */
 async _mentionToTask(id){
   const m=DB.mentions.find(m=>m.id===id);
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
@@ -4329,7 +4329,7 @@ async _mentionToTaskSave(id){
   Pages.mentions();
 },
 
-/* [v2.371 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
+/* [v2.372 PhaseC] 미응답 팔로우업 — 3일 경과 미처리 알림 */
 _mentionFollowUp(){
   const me=Auth._cur||'admin';
   const isAdmin=Auth._u?.role==='admin';
@@ -4397,7 +4397,7 @@ async _mentionFollowUpSend(){
   Pages.mentions();
 },
 
-/* [v2.371 PhaseC] 멘션 통계 대시보드 */
+/* [v2.372 PhaseC] 멘션 통계 대시보드 */
 _mentionStats(){
   const all=DB.mentions||[];
   if(!all.length){Toast.show('멘션 데이터가 없습니다.','info');return;}
@@ -4460,7 +4460,7 @@ _mentionStats(){
 
 /* ── 설정 ── */
 async settings(){
-  /* [v2.371] settings 완전 재작성 — 3탭: 일반설정/사용자관리/SB대시보드 */
+  /* [v2.372] settings 완전 재작성 — 3탭: 일반설정/사용자관리/SB대시보드 */
   const w=document.getElementById('pw');
   if(!Auth._u){await new Promise(r=>setTimeout(r,150));}
   /* DB.users 로드 보장 */
@@ -4472,7 +4472,7 @@ async settings(){
   const notices=App.notices;
 
   /* ── renderTab ── */
-  /* [v2.371] renderTab — settings 내부만, 각 패널 명시적 제어 */
+  /* [v2.372] renderTab — settings 내부만, 각 패널 명시적 제어 */
   const renderTab=(tab)=>{
     const pw=document.getElementById('pw');
     if(!pw) return;
@@ -4524,7 +4524,7 @@ async settings(){
 
   /* ── renderUserMgmt ── */
   const renderUserMgmt=(sortKey='name',sortDir=1)=>{
-    /* [v2.371] 사용자 관리 — 정렬 기능 + 12px + 30px 행높이 */
+    /* [v2.372] 사용자 관리 — 정렬 기능 + 12px + 30px 행높이 */
     const us=DB.users||[];
     const pnd=us.filter(u=>u.pending);
     const act=us.filter(u=>!u.pending&&u.active!==0);
@@ -4789,14 +4789,14 @@ async settings(){
   </div>
 `;
 
-  /* [v2.371] renderUserMgmt, renderPermTable을 window에 노출 → _uSave에서 접근 가능 */
+  /* [v2.372] renderUserMgmt, renderPermTable을 window에 노출 → _uSave에서 접근 가능 */
   window.renderTab=renderTab;
   window.renderUserMgmt=renderUserMgmt;
   window.renderPermTable=renderPermTable;
 },
-/* [v2.371] 시스템 → 사용자 등록 — 개인정보 및 권한 관리 */
+/* [v2.372] 시스템 → 사용자 등록 — 개인정보 및 권한 관리 */
 async sysusers(){
-  /* [v2.371] 사용자 등록 → settings() 로드 후 usermgmt 탭 즉시 활성화 */
+  /* [v2.372] 사용자 등록 → settings() 로드 후 usermgmt 탭 즉시 활성화 */
   await Pages.settings();
   /* settings() 렌더 완료 후 usermgmt 탭 강제 전환 */
   const pw=document.getElementById('pw');
@@ -4814,8 +4814,8 @@ async sysusers(){
 },
 
 _renderSysUsers(w=null){
-  /* [v2.371] 사용자 등록/권한 관리 독립 렌더 */
-  /* [v2.371] w가 있으면 레이아웃 생성 */
+  /* [v2.372] 사용자 등록/권한 관리 독립 렌더 */
+  /* [v2.372] w가 있으면 레이아웃 생성 */
   if(w){
     w.innerHTML='<div class="ph"><div><div class="ptit">👤 사용자 등록 / 권한 관리</div></div><div class="pac"><button class="btn bpri btn-f2" onclick="Pages._addUser()">+ 사용자 등록</button></div></div><div id="sysUserBody"></div>';
   }
@@ -4887,9 +4887,9 @@ _renderSysUsers(w=null){
     +'</div>';
 },
 
-/* [v2.371] SB 대시보드 — 사용량 + 비활성 방지 */
+/* [v2.372] SB 대시보드 — 사용량 + 비활성 방지 */
 async _renderSbDash(){
-  /* [v2.371] SB 대시보드 — 완전 재작성 */
+  /* [v2.372] SB 대시보드 — 완전 재작성 */
   const _pw=document.getElementById('pw');
   if(_pw){
     ['general','usermgmt','sbdash'].forEach(t=>{
@@ -5023,7 +5023,7 @@ async _renderSbDash(){
     +'<button class="btn bpri bsm" onclick="Pages._sbKeepAlive()">🔄 keepalive 전송</button>'
     +'</div>';
 
-  /* ── 휴지통 섹션 [v2.371] ── */
+  /* ── 휴지통 섹션 [v2.372] ── */
   html+='<div class="card" style="margin-top:12px">';
   html+='<div class="ch"><div class="ct">🗑️ 휴지통 (삭제된 데이터 복구)</div>';
   html+='<button class="btn bsm bout" onclick="Pages._renderTrash()">🔄 목록 보기</button>';
@@ -5036,7 +5036,7 @@ async _renderSbDash(){
   el.innerHTML=html;
 },
 
-/* ── 휴지통 — 삭제된 데이터 목록 + 복구 [v2.371] ── */
+/* ── 휴지통 — 삭제된 데이터 목록 + 복구 [v2.372] ── */
 async _renderTrash(){
   const el=document.getElementById('trashContainer');
   if(!el){Toast.show('SB 대시보드를 먼저 열어주세요.','warn');return;}
@@ -5092,7 +5092,7 @@ async _renderTrash(){
   el.innerHTML=h;
 },
 
-/* ── 데이터 복구 [v2.371] ── */
+/* ── 데이터 복구 [v2.372] ── */
 async _restoreItem(table, id){
   Modal.confirm({
     title:'↩ 데이터 복구',
@@ -5107,7 +5107,7 @@ async _restoreItem(table, id){
 },
 
 async _sbKeepAlive(){
-  /* [v2.371] Supabase keepalive — 7일 비활성 방지 */
+  /* [v2.372] Supabase keepalive — 7일 비활성 방지 */
   try{
     if(!_sb) throw new Error('SB 미연결');
     await _sb.from('users').select('id').limit(1);
@@ -5123,10 +5123,10 @@ async _sbKeepAlive(){
 
 
 /* ════════════════════════════════════════
-   검사 고도화 — 검사 성적서 [v2.371]
+   검사 고도화 — 검사 성적서 [v2.372]
    ════════════════════════════════════════ */
 async insp_cert(){
-  /* [v2.371] spin → 레이아웃 없을 때만, 있으면 데이터만 갱신 */
+  /* [v2.372] spin → 레이아웃 없을 때만, 있으면 데이터만 갱신 */
   const w=document.getElementById('pw');
   if(!w.querySelector('#certTbl')){
     w.innerHTML='<div class="spin"></div>';
@@ -5229,10 +5229,10 @@ _certRefreshTable(){
 },
 
 /* ════════════════════════════════════════
-   검사 고도화 — Hold 관리 [v2.371]
+   검사 고도화 — Hold 관리 [v2.372]
    ════════════════════════════════════════ */
 async insp_hold(){
-  /* [v2.371] SB holds 로드 — spin 최초1회 hasLayout */
+  /* [v2.372] SB holds 로드 — spin 최초1회 hasLayout */
   const w=document.getElementById('pw');
   const hasLayout=!!w.querySelector('#holdTbl');
   if(!hasLayout) w.innerHTML='<div class="spin"></div>';
@@ -5293,7 +5293,7 @@ _holdRefreshTable(){
     onRow:row=>Pages._holdDetail(row),
     onDel:async(ids)=>{
       const _doDelete=async()=>{
-        /* [v2.371] SB 소프트 삭제 */
+        /* [v2.372] SB 소프트 삭제 */
         const numIds=ids.map(Number);
         if(numIds.length===1){
           await SB.deleteHold(numIds[0]);
@@ -5352,7 +5352,7 @@ _holdForm(row=null){
 },
 
 async _holdSave(){
-  /* [v2.371] SB 연동 저장 */
+  /* [v2.372] SB 연동 저장 */
   const g=id=>document.getElementById(id)?.value.trim()||'';
   const no=g('hdNo'),lot=g('hdLot'),date=g('hdDate'),reason=g('hdReason'),code=g('hdCode');
   if(!no){Toast.show('Hold번호를 입력하세요.','warn');return;}
@@ -5375,10 +5375,10 @@ async _holdSave(){
 },
 
 /* ════════════════════════════════════════
-   검사 고도화 — 재검사 관리 [v2.371]
+   검사 고도화 — 재검사 관리 [v2.372]
    ════════════════════════════════════════ */
 async insp_reinsp(){
-  /* [v2.371] SB reinspections 로드 — spin 최초1회 */
+  /* [v2.372] SB reinspections 로드 — spin 최초1회 */
   const w=document.getElementById('pw');
   if(!w.querySelector('#reinspTbl')){
     w.innerHTML='<div class="spin"></div>';
@@ -5457,7 +5457,7 @@ _reinspRefreshTable(){
     },
     onDel:async(ids)=>{
       const _doDelete=async()=>{
-        /* [v2.371] SB 소프트 삭제 */
+        /* [v2.372] SB 소프트 삭제 */
         const numIds=ids.map(Number);
         if(numIds.length===1){
           await SB.deleteReinsp(numIds[0]);
@@ -5495,7 +5495,7 @@ _reinspForm(row=null){
 },
 
 async _reinspSave(){
-  /* [v2.371] SB 연동 저장 */
+  /* [v2.372] SB 연동 저장 */
   const g=id=>document.getElementById(id)?.value.trim()||'';
   const no=g('riNo'),lot=g('riLot'),date=g('riDate'),orig=g('riOrig');
   if(!no){Toast.show('재검사번호를 입력하세요.','warn');return;}
@@ -5523,7 +5523,7 @@ Pages._copySql=function(){
   var e=document.getElementById('sqlBox');
   if(e) navigator.clipboard.writeText(e.textContent).then(function(){Toast.show('복사됨!','ok');});
 };
-/* [v2.27] settings 공지/로고 — Cfg에 실제 구현, Pages에서 위임 */
+/* [v2.372] settings 공지/로고 — Cfg에 실제 구현, Pages에서 위임 */
 Pages._addNotice  =function(){Cfg.noticeForm();};
 Pages._editNotice =function(i){Cfg.noticeForm(i);};
 Pages._uploadLogo =function(inp){Cfg.uploadLogo(inp);};
@@ -5562,7 +5562,7 @@ const Cfg={
       foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Cfg._saveNotice(${idx})">저장 <span class="kbd">F8</span></button>`
     });
   },
-  /* [v2.28] 공지 파일 미리보기 */
+  /* [v2.372] 공지 파일 미리보기 */
   _noticePreviewFile(inp){
     const f=inp.files[0];
     if(!f) return;
@@ -5573,7 +5573,7 @@ const Cfg={
       +'<button class="btn bxs berr" style="font-size:10px;padding:1px 6px" onclick="Cfg._noticeRemoveFile()">삭제</button>'
       +'</div>';
   },
-  /* [v2.28] 첨부파일 삭제 */
+  /* [v2.372] 첨부파일 삭제 */
   _noticeRemoveFile(){
     const inp=document.getElementById('nf');
     if(inp) inp.value='';
@@ -5584,7 +5584,7 @@ const Cfg={
     const g=id=>document.getElementById(id)?.value.trim();
     const obj={title:g('nt'),body:g('nb'),date:g('nd'),expire:g('ne'),author:g('na'),show:document.getElementById('ns')?.value==='1'};
     if(!obj.title||!obj.body){Toast.show('필수 항목을 입력하세요.','warn');return}
-    /* [v2.28] 파일 처리 */
+    /* [v2.372] 파일 처리 */
     const fileInp=document.getElementById('nf');
     const existFile=idx!=null?App.notices[idx]?.file:null;
     const doSave=async()=>{
@@ -5718,7 +5718,7 @@ const DB2={
 /* ══ B: 검사 고도화 ══ */
 Object.assign(Pages,{
 async insp_std(){
-  /* [v2.371] 검사 기준서 — SB 연동 강화, 오류 방어 */
+  /* [v2.372] 검사 기준서 — SB 연동 강화, 오류 방어 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   try{
@@ -5734,9 +5734,9 @@ async insp_std(){
   Pages._inspStdRender();
 },
 
-/* ── 검사 기준서 렌더 [v2.371] ── */
+/* ── 검사 기준서 렌더 [v2.372] ── */
 _inspStdRender(){
-  /* [v2.371] 무한루프 수정 — w.innerHTML 최초1회, 테이블만 갱신 */
+  /* [v2.372] 무한루프 수정 — w.innerHTML 최초1회, 테이블만 갱신 */
   const w=document.getElementById('pw');
   if(!w) return;
 
@@ -5784,7 +5784,7 @@ _inspStdRender(){
   Pages._inspStdRefreshTable();
 },
 
-/* ── 검사 기준서 테이블만 갱신 [v2.371] ── */
+/* ── 검사 기준서 테이블만 갱신 [v2.372] ── */
 _inspStdRefreshTable(){
   const q=(document.getElementById('stdSearch')?.value||'').toLowerCase();
   const tp=document.getElementById('stdTypeF')?.value||'';
@@ -5813,7 +5813,7 @@ _inspStdRefreshTable(){
     onRow:row=>Pages._inspStdDetail(row),
     onDel:async(ids)=>{
       const numIds=ids.map(Number);
-      /* [v2.371] 삭제 경고 */
+      /* [v2.372] 삭제 경고 */
       const _doDelete=async()=>{
         if(typeof _sb!=='undefined'&&_sb){
           const res=await SB._softDelete('insp_std',numIds);
@@ -5834,7 +5834,7 @@ _inspStdRefreshTable(){
   });
 },
 
-/* ── 검사 기준서 등록/수정 폼 [v2.371] ── */
+/* ── 검사 기준서 등록/수정 폼 [v2.372] ── */
 _inspStdForm(row=null){
   const isEdit=!!row;
   /* 품목 select — items DB 연동 */
@@ -5935,7 +5935,7 @@ _inspStdForm(row=null){
   window._stdEditId=row?.id||null;
 },
 
-/* ── 검사 기준서 저장 [v2.371] ── */
+/* ── 검사 기준서 저장 [v2.372] ── */
 async _inspStdSave(){
   const g=id=>document.getElementById(id)?.value.trim()||'';
   const item_code=document.getElementById('stdItemCode')?.value||g('stdItemCode');
@@ -5977,7 +5977,7 @@ async _inspStdSave(){
   Pages._inspStdRender();
 },
 
-/* ── 검사 기준서 상세 팝업 [v2.371] ── */
+/* ── 검사 기준서 상세 팝업 [v2.372] ── */
 _inspStdDetail(row){
   if(!row||typeof row!=='object'){Toast.show('데이터를 불러올 수 없습니다.','err');return;}
   Modal.open({
@@ -6005,13 +6005,13 @@ _inspStdDetail(row){
 },
 
 /* ════════════════════════════════════════════
-   6번: LOT 추적성 [v2.371]
+   6번: LOT 추적성 [v2.372]
    - LOT번호 입력 → 전방/후방 추적
    - 사용 검사이력 타임라인
    - 부적합 연결
    ════════════════════════════════════════════ */
 async lot_trace(){
-  /* [v2.371] SB 최신 데이터 로드 + try-catch */
+  /* [v2.372] SB 최신 데이터 로드 + try-catch */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   try{
@@ -6024,7 +6024,7 @@ async lot_trace(){
     if(Array.isArray(calData)) DB.cals=calData;
   }catch(e){console.warn('[lot_trace] SB 로드 실패',e);}
   w.innerHTML=`
-    <!-- [v2.371] LOT 추적성 -->
+    <!-- [v2.372] LOT 추적성 -->
     <div class="ph">
       <div><div class="ptit">🔍 LOT 추적성</div>
         <div class="psub">LOT번호 → 검사이력 · 부적합 · 계측기 사용 타임라인</div></div>
@@ -6049,7 +6049,7 @@ async lot_trace(){
     </div>`;
 },
 
-/* ── LOT 추적 조회 [v2.371] ── */
+/* ── LOT 추적 조회 [v2.372] ── */
 async _lotSearch(){
   const q=(document.getElementById('lotInput')?.value||'').trim();
   if(!q){Toast.show('LOT번호 또는 품목코드를 입력하세요.','warn');return;}
@@ -6307,7 +6307,7 @@ hold_mgmt(){
     {key:'reason',label:'Hold 사유'},{key:'hold_date',label:'Hold일',w:'86px'},{key:'assignee',label:'담당자',w:'70px'},
     {key:'status',label:'상태',w:'76px',render:v=>`<span class="badge ${v==='Hold중'?'bred':'bgrn'}">${H.e(v)}</span>`},
   ],data,onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 데이터 */
+      /* [v2.372] 삭제 경고 팝업 — 데이터 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
@@ -6387,7 +6387,7 @@ _reinspForm(){Modal.open({title:'🔄 재검사 등록',size:'mlg',body:`<div cl
 /* ══ E: SQM ══ */
 Object.assign(Pages,{
 async sqm_eval(){
-  /* [v2.371] 업체 평가 — SB 연동 + 자동 집계 + F3 */
+  /* [v2.372] 업체 평가 — SB 연동 + 자동 집계 + F3 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   try{
@@ -6510,7 +6510,7 @@ _sqmEvalDetail(row){
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Toast.show('평가서 인쇄(더미)','info')">🖨️ 인쇄</button>`});
 },
 _sqmEvalForm(row=null){
-  /* [v2.371] 업체 평가 등록/수정 폼 */
+  /* [v2.372] 업체 평가 등록/수정 폼 */
   const isEdit=!!row;
   const vendorOpts=(DB.vendors||[]).map(v=>
     `<option value="${H.e(v.id||v.vendor_name)}" data-name="${H.e(v.vendor_name)}"
@@ -6583,7 +6583,7 @@ _sqmEvalForm(row=null){
   if(isEdit) setTimeout(()=>Pages._sqmCalcTotal(),80);
 },
 
-/* 종합점수 자동 계산 [v2.371] */
+/* 종합점수 자동 계산 [v2.372] */
 _sqmCalcTotal(){
   const g=id=>Number(document.getElementById(id)?.value||0);
   const total=+(g('evQuality')*0.4+g('evDelivery')*0.3+g('evPrice')*0.2+g('evResponse')*0.1).toFixed(1);
@@ -6594,7 +6594,7 @@ _sqmCalcTotal(){
   if(gEl){gEl.value=grade;gEl.style.color=total>=90?'#059669':total>=80?'#2563eb':total>=70?'#d97706':'#dc2626';}
 },
 
-/* 업체 평가 저장 [v2.371] */
+/* 업체 평가 저장 [v2.372] */
 async _sqmEvalSave(){
   const g=id=>document.getElementById(id)?.value||'';
   const vName=g('evVName')||g('evVendor');
@@ -6625,7 +6625,7 @@ async _sqmEvalSave(){
   Pages._sqmEvalRefresh();
 },
 async sqm_audit(){
-  /* [v2.371] 업체 심사 — SB 연동 + 계획/진도/칸반 탭 */
+  /* [v2.372] 업체 심사 — SB 연동 + 계획/진도/칸반 탭 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   try{
@@ -6725,7 +6725,7 @@ _auditRefresh(){
   });
 },
 
-/* 칸반 보드 [v2.371] */
+/* 칸반 보드 [v2.372] */
 _auditKanban(){
   const el=document.getElementById('auditKanban');
   if(!el) return;
@@ -6757,7 +6757,7 @@ _auditKanban(){
   el.innerHTML=h;
 },
 
-/* 심사 상태 다음단계로 변경 [v2.371] */
+/* 심사 상태 다음단계로 변경 [v2.372] */
 async _auditStatusChange(id){
   const a=(DB.vendor_audits||[]).find(r=>r.id===id);
   if(!a) return;
@@ -6773,7 +6773,7 @@ async _auditStatusChange(id){
   Pages._auditRefresh();
 },
 
-/* 심사 상세 팝업 [v2.371] */
+/* 심사 상세 팝업 [v2.372] */
 _sqmAuditDetail(row){
   if(!row||typeof row==='number'){
     row=(DB.vendor_audits||[]).find(r=>r.id===row)||{};
@@ -6800,7 +6800,7 @@ _sqmAuditDetail(row){
   });
 },
 
-/* 심사 등록/수정 폼 [v2.371] */
+/* 심사 등록/수정 폼 [v2.372] */
 _sqmAuditForm(row=null){
   const isEdit=!!row;
   const vOpts=(DB.vendors||[]).map(v=>
@@ -6844,7 +6844,7 @@ _sqmAuditForm(row=null){
   window._sqmAuditEditRow=row;
 },
 
-/* 심사 저장 [v2.371] */
+/* 심사 저장 [v2.372] */
 async _sqmAuditSave(){
   const g=id=>document.getElementById(id)?.value||'';
   const vendor=g('auVendor').trim();
@@ -6871,7 +6871,7 @@ async _sqmAuditSave(){
   Pages._auditKanban();
 },
 
-/* 심사 결과 메일 발송 [v2.371] — Gmail MCP 연동 */
+/* 심사 결과 메일 발송 [v2.372] — Gmail MCP 연동 */
 async _auditSendMail(id){
   const a=(DB.vendor_audits||[]).find(r=>r.id===id);
   if(!a){Toast.show('심사 데이터를 찾을 수 없습니다.','err');return;}
@@ -6946,7 +6946,7 @@ async _auditMailSend(){
   }
 },
 
-/* SQM 대시보드 [v2.371] */
+/* SQM 대시보드 [v2.372] */
 async sqm_dash(){
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
@@ -7056,7 +7056,7 @@ async sqm_dash(){
     </div>`;
 },
 
-/* 심사 계획 관리 [v2.371] */
+/* 심사 계획 관리 [v2.372] */
 async sqm_plan(){
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
@@ -7131,9 +7131,9 @@ async sqm_plan(){
   }
 },
 
-/* 납품 이력 [v2.371] */
+/* 납품 이력 [v2.372] */
 async sqm_delivery(){
-  /* [v2.371] spin 최초1회만 */
+  /* [v2.372] spin 최초1회만 */
   const w=document.getElementById('pw');
   const hasLayout=!!w.querySelector('#delivTbl');
   if(!hasLayout) w.innerHTML='<div class="spin"></div>';
@@ -7450,7 +7450,7 @@ nc_dispose(){
     {key:'cost',label:'비용(원)',w:'88px',align:'right',render:v=>`<strong>${H.n(v)}</strong>`},
     {key:'action_date',label:'처리일',w:'88px'},{key:'status',label:'상태',w:'68px',render:v=>`<span class="badge ${v==='완료'?'bgrn':'bamb'}">${H.e(v)}</span>`},
   ],data,onDel:async(ids)=>{
-      /* [v2.371] 삭제 경고 팝업 — 데이터 */
+      /* [v2.372] 삭제 경고 팝업 — 데이터 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       const _doDelete=async()=>{
         const numIds=ids.map(Number);
@@ -7555,7 +7555,7 @@ const ExcelMgr={
         {key:'active',    label:'사용여부',  req:false, sample:'사용'},
         {key:'remark',    label:'비고',       req:false, sample:''},
       ],
-      /* [v2.24] 품목코드만 중복 확인, 필수값 외 빈칸 허용 */
+      /* [v2.372] 품목코드만 중복 확인, 필수값 외 빈칸 허용 */
       dupKey:'item_code',
       dupLabel:'품목코드',
       dupOnly:true,        // 중복 확인만, 빈칸은 무시
@@ -7575,7 +7575,7 @@ const ExcelMgr={
         {key:'manager_tel',   label:'담당자 연락처',req:false, sample:'010-0000-0000'},
         {key:'manager_email', label:'담당자 E-MAIL',req:false, sample:'manager@company.co.kr'},
       ],
-      /* [v2.24] 거래처명만 중복 확인, 필수값 외 빈칸 허용 */
+      /* [v2.372] 거래처명만 중복 확인, 필수값 외 빈칸 허용 */
       dupKey:'vendor_name',
       dupLabel:'거래처명',
       dupOnly:true,
@@ -7615,7 +7615,7 @@ const ExcelMgr={
         {key:'wo_no',       label:'작업지시번호',req:false, sample:''},
         {key:'note',        label:'특이사항',    req:false, sample:''},
       ],
-      /* [v2.24] 품목코드+거래처명 없으면 등록 안 됨, 동일시트 중복 허용 */
+      /* [v2.372] 품목코드+거래처명 없으면 등록 안 됨, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='수입'),
@@ -7647,7 +7647,7 @@ const ExcelMgr={
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
-      /* [v2.24] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      /* [v2.372] 품목코드+거래처명 필수, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='공정'),
@@ -7680,7 +7680,7 @@ const ExcelMgr={
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
-      /* [v2.24] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      /* [v2.372] 품목코드+거래처명 필수, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='구매'),
@@ -7715,7 +7715,7 @@ const ExcelMgr={
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
-      /* [v2.24] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      /* [v2.372] 품목코드+거래처명 필수, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='외주'),
@@ -7750,7 +7750,7 @@ const ExcelMgr={
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
-      /* [v2.24] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      /* [v2.372] 품목코드+거래처명 필수, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='최종'),
@@ -7762,7 +7762,7 @@ const ExcelMgr={
       },
     },
     nc:{
-      /* [v2.371] 부적합 스키마 — 사내외/품목코드/수량/원인/조치/기한 추가 */
+      /* [v2.372] 부적합 스키마 — 사내외/품목코드/수량/원인/조치/기한 추가 */
       title:'부적합관리',
       cols:[
         {key:'no',        label:'부적합번호', req:true, req:true,  sample:'NC-20260601-001'},
@@ -7936,9 +7936,9 @@ const ExcelMgr={
       try{
         const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
         const ws=wb.Sheets[wb.SheetNames[0]];
-        this._ws=ws; /* [v2.29] ws 저장 — 날짜 변환에 사용 */
+        this._ws=ws; /* [v2.372] ws 저장 — 날짜 변환에 사용 */
         const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-        /* [v2.29] 날짜 필드 변환 — 엑셀 시리얼/Date객체 → YYYY-MM-DD */
+        /* [v2.372] 날짜 필드 변환 — 엑셀 시리얼/Date객체 → YYYY-MM-DD */
         const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date']);
         const _cvDate=(v,ci,ri)=>{
           try{
@@ -7995,7 +7995,7 @@ const ExcelMgr={
     if(!raw||raw.length<2){Toast.show('데이터가 없습니다. 2행부터 데이터를 입력하세요.','warn');return}
 
     /* ── 헤더행(0행) 처리 ──
-       [v2.20 버그수정] 인덱스 기반 → 헤더 레이블 기반 파싱
+       [v2.372 버그수정] 인덱스 기반 → 헤더 레이블 기반 파싱
        이전: sc.cols[i] 순서에 맞춰 i번째 셀 매핑 → 엑셀 열 순서가 다르면 오매핑
        수정: 엑셀 헤더 레이블로 key 찾아 매핑 → 열 순서 무관 */
     const headerRow = raw[0].map(h=>String(h||'').replace(/\s*\*\s*$/,'').trim()); // 필수(*) 표시 제거
@@ -8085,7 +8085,7 @@ const ExcelMgr={
   },
 
   /* ── 일괄등록 실행 ──
-     [v2.17 수정]
+     [v2.372 수정]
      - 버그: active '사용'→1 변환 누락 수정 (Number('사용')=NaN→0 문제)
      - 버그: failCnt 이중 계산 수정
      - 버그: 500건 청크 → Supabase payload 초과로 실패
@@ -8131,7 +8131,7 @@ const ExcelMgr={
 
     /* ── items 허용 컬럼 추출 함수 ── */
     const toAllowed=row=>{
-      /* [v2.29] 테이블별 허용 컬럼만 추출 — SB schema 오류 방지 */
+      /* [v2.372] 테이블별 허용 컬럼만 추출 — SB schema 오류 방지 */
       if(page==='items') return{
         major_category:row.major_category||'',
         category:      row.category||'',
@@ -8215,7 +8215,7 @@ const ExcelMgr={
     };
     const conflictCol=conflictMap[page]||null;
 
-    /* [v2.293] equip: SB.addEquip 헬퍼 직접 호출 (검사5종 방식과 동일)
+    /* [v2.372] equip: SB.addEquip 헬퍼 직접 호출 (검사5종 방식과 동일)
        — bulk insert 경로 우회 → toAllowed/insertOne 의존 제거
        — addEquip 내부에서 allowed 컬럼 필터 + 동적 컬럼 오류 자동 제거 */
     if((page==='equip'||page==='equipment')&&_sb){
@@ -8244,7 +8244,7 @@ const ExcelMgr={
     }
 
     /* ── Supabase bulk insert ──
-       [v2.20 수정] 1000건 제한 해결
+       [v2.372 수정] 1000건 제한 해결
        원인: 50ms 딜레이가 너무 짧아 Supabase rate limit 도달
        해결:
          1. 청크간 딜레이 200ms (rate limit 회피)
@@ -8371,14 +8371,14 @@ const ExcelMgr={
   },
 
   /* ════════════════════════════════════════════════════
-     A+C안: 멀티시트 통합 업로드 [v2.23 신규]
+     A+C안: 멀티시트 통합 업로드 [v2.372 신규]
      A: 하나의 파일에 품목/거래처/사용자/수입검사 시트 포함
      C: 전체 정합성 검사 통과 시에만 등록 버튼 활성화
         오류 행에 결과 열 자동 추가, 결과 엑셀 내보내기
      ════════════════════════════════════════════════════ */
 
   /* 멀티시트 양식 다운로드
-     [v2.26] pageFilter: 특정 시트만 포함 (null=전체) */
+     [v2.372] pageFilter: 특정 시트만 포함 (null=전체) */
   downloadAll(pageFilter=''){
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
     const wb=XLSX.utils.book_new();
@@ -8401,7 +8401,7 @@ const ExcelMgr={
   },
 
   /* 멀티시트 업로드 모달
-     [v2.26] pageFilter: 특정 시트만 표시 (예: 'vendors', 'insp_in' 등)
+     [v2.372] pageFilter: 특정 시트만 표시 (예: 'vendors', 'insp_in' 등)
              null이면 전체 8개 시트 표시 */
   openUploadAll(pageFilter=null){
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
@@ -8463,26 +8463,26 @@ const ExcelMgr={
     reader.onload=async(ev)=>{
       try{
         const wb=XLSX.read(ev.target.result,{type:'array'});
-        /* 시트명 → 스키마 키 매핑 — [v2.24] 검사 4종 추가 */
+        /* 시트명 → 스키마 키 매핑 — [v2.372] 검사 4종 추가 */
         const SMAP_ALL={'품목등록':'items','거래처등록':'vendors','사용자등록':'users',
           '수입검사':'insp_in','공정검사':'insp_pr','구매검사':'insp_pu',
           '외주검사':'insp_ou','최종검사':'insp_fi',
           '계측기등록':'equip'};
-        /* [v2.26] pageFilter: 특정 시트만 파싱 */
+        /* [v2.372] pageFilter: 특정 시트만 파싱 */
         const pf=this._pageFilter;
         const SMAP=pf
           ?Object.fromEntries(Object.entries(SMAP_ALL).filter(([,v])=>v===pf))
           :SMAP_ALL;
         const results={};
         let totalOk=0,totalErr=0,totalDup=0;
-        /* [v2.25 버그수정] SB 최신 데이터 강제 로드
+        /* [v2.372 버그수정] SB 최신 데이터 강제 로드
            실패 시 빈 배열로 초기화 → 구 캐시로 인한 중복 오판 방지 */
         if(_sb){
           try{
             DB.items=await SB.getItems();
             DB.vendors=await SB.getVendors();
             DB.users=await SB.getUsers();
-            /* [v2.293] 계측기 중복 체크용 */
+            /* [v2.372] 계측기 중복 체크용 */
             DB.equip=await SB.getEquip();
           }catch(e2){
             DB.items=[]; DB.vendors=[]; DB.users=[]; DB.equip=[];
@@ -8493,7 +8493,7 @@ const ExcelMgr={
           const ws=wb.Sheets[sName];
           if(!ws){results[pKey]={skip:true,sheetName:sName};continue;}
           const sc=this._schemas[pKey];
-          /* [v2.29] raw:true 유지 — 셀 직접 접근으로 날짜 변환 처리 */
+          /* [v2.372] raw:true 유지 — 셀 직접 접근으로 날짜 변환 처리 */
           const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
           if(!raw||raw.length<2){results[pKey]={skip:true,sheetName:sName,reason:'데이터 없음'};continue;}
           /* 헤더 기반 매핑 */
@@ -8520,7 +8520,7 @@ const ExcelMgr={
           };
           const parsedRows=dataRows.map((row,ri)=>{
             const obj={};
-            /* [v2.29] 날짜 변환 헬퍼
+            /* [v2.372] 날짜 변환 헬퍼
              우선순위: ① ws 셀의 .w(포맷문자열) ② 시리얼숫자 변환 ③ 원본값
              엑셀 날짜 시리얼(46027 등)을 YYYY-MM-DD로 변환 */
           const _cellToDateStr=(colIdx,rowIdx,rawVal)=>{
@@ -8697,7 +8697,7 @@ const ExcelMgr={
     const REQUIRED_SQL={
       inspections:"-- 검사 테이블 컬럼 추가\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS spec TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS insp_method TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS wo_no TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS note TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS defect_rate NUMERIC DEFAULT 0;",
     };
-    /* [v2.29] 엑셀 날짜 → YYYY-MM-DD (Date객체/시리얼/문자열 모두 처리) */
+    /* [v2.372] 엑셀 날짜 → YYYY-MM-DD (Date객체/시리얼/문자열 모두 처리) */
     const _toDate=(v)=>{
       if(!v&&v!==0) return null;
       /* JS Date 객체 */
@@ -8728,7 +8728,7 @@ const ExcelMgr={
     };
     const toFullRow=(pKey,r)=>{
       if(pKey==='items') return{major_category:r.major_category||'',category:r.category||'',item_code:r.item_code||'',item_name:r.item_name||'',spec:r.spec||'',unit:r.unit||'EA',material:r.material||'',vendor_name:r.vendor_name||'',vendor_id:null,active:typeof r.active==='number'?r.active:1,remark:r.remark||'',created_at:r.created_at||null,updated_at:r.updated_at||null};
-      /* [v2.29] 검사5종 — SB.addInspection allowed와 동일 컬럼 */
+      /* [v2.372] 검사5종 — SB.addInspection allowed와 동일 컬럼 */
       if(['insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].includes(pKey)){
         const typeMap={insp_in:'수입',insp_pr:'공정',insp_pu:'구매',insp_ou:'외주',insp_fi:'최종'};
         return{type:r.type||typeMap[pKey]||'',vendor:r.vendor||'',insp_no:r.insp_no||'',
@@ -8738,7 +8738,7 @@ const ExcelMgr={
           fail_qty:Number(r.fail_qty)||0,defect_rate:Number(r.defect_rate)||0,
           wo_no:r.wo_no||'',note:r.note||'',created_at:_toDate(r.created_at),updated_at:null};
       }
-      /* [v2.29] 계측기 — SB.addEquip allowed와 동일 컬럼 */
+      /* [v2.372] 계측기 — SB.addEquip allowed와 동일 컬럼 */
       if(pKey==='equipment') return{code:r.code||'',name:r.name||'',model:r.model||'',
         maker:r.maker||'',range:r.range||'',res:r.res||'',loc:r.loc||'',
         operator:r.operator||'',
@@ -8778,7 +8778,7 @@ const ExcelMgr={
         }
         continue;
       }
-      /* [v2.293] 계측기: SB.addEquip 직접 호출 */
+      /* [v2.372] 계측기: SB.addEquip 직접 호출 */
       if((pKey==='equip'||pKey==='equipment')&&_sb){
         let cnt=0;
         for(const r of rows){
@@ -8793,7 +8793,7 @@ const ExcelMgr={
         }
         continue;
       }
-      /* [v2.29] 검사5종: SB.addInspection 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
+      /* [v2.372] 검사5종: SB.addInspection 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
       if(['insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].includes(pKey)&&_sb){
         let cnt=0;
         for(const r of rows){
@@ -8808,7 +8808,7 @@ const ExcelMgr={
         }
         continue;
       }
-      /* [v2.29] 계측기: SB.addEquip 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
+      /* [v2.372] 계측기: SB.addEquip 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
       if(pKey==='equipment'&&_sb){
         let cnt=0;
         for(const r of rows){
@@ -8843,7 +8843,7 @@ const ExcelMgr={
               let e2;
               if(cfCol){({error:e2}=await _sb.from(tbl).upsert(fb,{onConflict:cfCol,ignoreDuplicates:false}));}
               else{({error:e2}=await _sb.from(tbl).insert(fb));}
-              /* [v2.29] SAFE 저장 성공하면 colErrors 제거 — SQL 실행 후 팝업 억제 */
+              /* [v2.372] SAFE 저장 성공하면 colErrors 제거 — SQL 실행 후 팝업 억제 */
               if(!e2){totalSuccess+=chunk.length;ok=true;delete colErrors[tbl];}
 
               else{totalFail+=chunk.length;failMsgs.push('['+tbl+'] '+e2.message);ok=true;}
@@ -8880,7 +8880,7 @@ const ExcelMgr={
     this._multiParsed=null;
     const pf2=this._pageFilter;this._pageFilter=null;
     if(totalSuccess>0){
-      /* [v2.29] SB 반영 대기 후 페이지 이동 */
+      /* [v2.372] SB 반영 대기 후 페이지 이동 */
       await new Promise(r=>setTimeout(r,600));
       if(pf2==='vendors'){DB.vendors=await SB.getVendors();Nav.go('vendors');}
       else if(pf2==='equip'||pf2==='equipment'){
@@ -9200,7 +9200,7 @@ const SearchPop={
     hd.addEventListener('mousedown',onDown);
   },
 _deactivateUser(id){
-  /* [v2.371] 사용자 비활성화 */
+  /* [v2.372] 사용자 비활성화 */
   Modal.confirm({title:'사용자 비활성화',msg:'해당 사용자를 비활성화하시겠습니까?',danger:true,onOk:async()=>{
     await SB.updateUser(id,{active:0});
     const u=DB.users.find(u=>u.id===id);if(u) u.active=0;
@@ -9234,7 +9234,7 @@ function setupHotkeys(){
       else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
     }
     else if(ev.key==='F5'){
-      /* [v2.371] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
+      /* [v2.372] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
       ev.preventDefault();
       if(Auth._u){
         const page=document.querySelector('.ni.active')?.dataset?.p||'home';
@@ -9274,7 +9274,7 @@ function setupHotkeys(){
   if(savedAuth){
     try{
       const {cur, u} = JSON.parse(savedAuth);
-      /* [v2.21 수정] 복원 시 저장된 사용자 정보로 표시 (admin 하드코딩 제거) */
+      /* [v2.372 수정] 복원 시 저장된 사용자 정보로 표시 (admin 하드코딩 제거) */
       Auth._cur = cur;
       Auth._u   = u;
       const roleLabel={'admin':'관','manager':'장','user':'사'};
@@ -9284,11 +9284,11 @@ function setupHotkeys(){
       });
       document.getElementById('loginOv').style.display='none';
       document.getElementById('app').classList.remove('hidden');
-      /* [v2.29] 설정 메뉴: 세션 복원 시에도 admin만 표시 */
+      /* [v2.372] 설정 메뉴: 세션 복원 시에도 admin만 표시 */
       const sm=document.getElementById('ni_settings');
       if(sm) sm.style.display=(u.role==='admin')?'':'none';
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
-      /* [v2.371] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
+      /* [v2.372] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
       (async()=>{
         try{
           if(_sb){
