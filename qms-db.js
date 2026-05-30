@@ -41,7 +41,7 @@ const SB={
      CHUNK=1000으로 SB 기본 단위와 일치시켜 페이지네이션
      data.length < CHUNK 이면 마지막 페이지 → 종료 */
 
-  /* ── 소프트 삭제 공통 헬퍼 [v2.367] ──
+  /* ── 소프트 삭제 공통 헬퍼 [v2.368] ──
      실제 삭제 대신 deleted_at = now() 로 표시
      복구: deleted_at = null 로 초기화 */
   async _softDelete(table, ids){
@@ -58,7 +58,7 @@ const SB={
     return {ok:true};
   },
 
-  /* ── 소프트 삭제 복구 공통 헬퍼 [v2.367] ── */
+  /* ── 소프트 삭제 복구 공통 헬퍼 [v2.368] ── */
   async _restoreDeleted(table, ids){
     if(!_sb) return {ok:true};
     const {error}=await _sb.from(table)
@@ -72,7 +72,7 @@ const SB={
     return {ok:true};
   },
 
-  /* ── 삭제된 항목 조회 [v2.367] ── */
+  /* ── 삭제된 항목 조회 [v2.368] ── */
   async getDeleted(table){
     if(!_sb) return [];
     const {data,error}=await _sb.from(table)
@@ -245,7 +245,7 @@ const SB={
   /* 멘션 목록 조회 */
   async getMentions(){
     if(!_sb) return DB.mentions||[];
-    /* [v2.367] deleted_at IS NULL 필터 — 소프트 삭제된 항목 제외 */
+    /* [v2.368] deleted_at IS NULL 필터 — 소프트 삭제된 항목 제외 */
     try{
       const {data,error}=await _sb.from('mentions')
         .select('*')
@@ -265,7 +265,7 @@ const SB={
   /* 멘션 등록 */
   async addMention(row){
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
-    /* [v2.367] SB mentions 테이블 실제 컬럼만 전송
+    /* [v2.368] SB mentions 테이블 실제 컬럼만 전송
        기본 컬럼: from, to, to_list, text, dept, message, ref, reply_to, read
        ※ channel/type/priority/status/thread_id 등 미생성 컬럼 제외 */
     const insertRow={
@@ -292,7 +292,7 @@ const SB={
 
   /* 멘션 수정 */
   async updateMention(id,patch){
-    /* [v2.367 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
+    /* [v2.368 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
     const {error}=await _sb.from('mentions').update(patch).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return {ok:false};}
@@ -302,7 +302,7 @@ const SB={
   /* 멘션 삭제 (soft delete: deleted_at 기록) */
   async deleteMention(id){
     if(!_sb){DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};}
-    /* [v2.367] 소프트 삭제 — deleted_at 설정 (복구 가능) */
+    /* [v2.368] 소프트 삭제 — deleted_at 설정 (복구 가능) */
     const res=await SB._softDelete('mentions', [id]);
     if(!res.ok) return {ok:false};
     DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};
@@ -654,7 +654,7 @@ const SB={
     /* [v2.29] upsert — code 중복 시 update (insert conflict 방지) */
     let insertRow={...allowed};
     let {error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false});
-    /* [v2.367] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
+    /* [v2.368] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
     if(error){
       console.error('[SB] addEquip 오류:',error.message);
       if(error.message?.includes('column')||error.message?.includes('schema')){
@@ -802,7 +802,7 @@ const DB={
     {id:4,vendor_name:'화학산업㈜',   vendor_type:'소모품',biz_no:'456-78-90123',ceo_name:'정사장',tel:'051-456-7890',fax:'051-456-7891',email:'chem@hwahak.co.kr',       manager:'윤담당',manager_tel:'010-4567-8901',manager_email:'yoon@hwahak.co.kr',  active:1,created_at:'2026-01-08',updated_at:'2026-01-08'},
     {id:5,vendor_name:'정밀측정기㈜', vendor_type:'외주',  biz_no:'567-89-01234',ceo_name:'한대표',tel:'02-567-8901', fax:'02-567-8902', email:'measure@jungmil.co.kr',   manager:'신담당',manager_tel:'010-5678-9012',manager_email:'shin@jungmil.co.kr', active:1,created_at:'2026-02-01',updated_at:'2026-04-20'},
   ],
-  users:[], /* [v2.367] 더미 삭제 — SB에서 로드 */
+  users:[], /* [v2.368] 더미 삭제 — SB에서 로드 */
     inspections:[], /* [v2.29] 더미 제거 — SB에서 로드 */
 
   nc:[
@@ -846,7 +846,7 @@ const DB={
     {id:3,from:'박담당',to:'관리자',dept:'생산팀',text:'@관리자 CAR-20260430-001 처리 부탁드립니다.',ref:'시정조치',time:'2시간 전',read:false,replies:[]},
     {id:4,from:'최엔지니어',to:'관리자',dept:'개발팀',text:'@관리자 EQ-003 교정 만료 확인 요청드립니다.',ref:'계측기관리',time:'1일 전',read:true,replies:[]},
   ],
-  /* ── 검사 기준서 [v2.367] ── */
+  /* ── 검사 기준서 [v2.368] ── */
   async getInspStd(){
     if(!_sb) return DB.insp_std||[];
     const data=await this._sbFetchAll('insp_std','item_code',true,q=>q.is('deleted_at',null));
@@ -877,7 +877,79 @@ const DB={
     return{ok:true};
   },
 
-  /* ── LOT 추적 [v2.367] ── */
+  /* ── Hold 관리 SB 함수 [v2.368] ── */
+  async getHolds(){
+    if(!_sb) return DB.holds||[];
+    const data=await this._sbFetchAll('holds','issued_date',false,q=>q.is('deleted_at',null));
+    if(data===null){console.warn('[SB] holds 조회 실패');return DB.holds||[];}
+    return data;
+  },
+  async addHold(row){
+    if(!_sb){const id=Date.now();DB.holds=(DB.holds||[]);DB.holds.unshift({id,...row});return{ok:true,id};}
+    const allowed={
+      hold_no:row.hold_no||'', lot_no:row.lot_no||'',
+      item_code:row.item_code||'', item_name:row.item_name||'',
+      qty:row.qty||null, reason:row.reason||'',
+      issued_by:row.issued_by||'', issued_date:row.issued_date||null,
+      status:row.status||'Hold중', ref_insp_no:row.ref_insp_no||'',
+    };
+    const {error}=await _sb.from('holds').insert(allowed);
+    if(error){Toast.show('Hold 저장 실패: '+error.message,'err');return{ok:false};}
+    const fresh=await this.getHolds();if(fresh) DB.holds=fresh;
+    return{ok:true};
+  },
+  async updateHold(id,patch){
+    if(!_sb){const r=(DB.holds||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
+    const {error}=await _sb.from('holds').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);
+    if(error){Toast.show('Hold 수정 실패: '+error.message,'err');return{ok:false};}
+    const r=(DB.holds||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);
+    return{ok:true};
+  },
+  async deleteHold(id){
+    if(!_sb){DB.holds=(DB.holds||[]).filter(r=>r.id!==id);return{ok:true};}
+    const res=await SB._softDelete('holds',[id]);
+    if(!res.ok) return{ok:false};
+    DB.holds=(DB.holds||[]).filter(r=>r.id!==id);return{ok:true};
+  },
+
+  /* ── 재검사 관리 SB 함수 [v2.368] ── */
+  async getReinspections(){
+    if(!_sb) return DB.reinspections||[];
+    const data=await this._sbFetchAll('reinspections','req_date',false,q=>q.is('deleted_at',null));
+    if(data===null){console.warn('[SB] reinspections 조회 실패');return DB.reinspections||[];}
+    return data;
+  },
+  async addReinsp(row){
+    if(!_sb){const id=Date.now();DB.reinspections=(DB.reinspections||[]);DB.reinspections.unshift({id,...row});return{ok:true,id};}
+    const allowed={
+      reinsp_no:row.reinsp_no||'', orig_no:row.orig_no||'',
+      lot_no:row.lot_no||'', item_code:row.item_code||'',
+      item_name:row.item_name||'', qty:row.qty||null,
+      req_date:row.req_date||null, insp_date:row.insp_date||null,
+      inspector:row.inspector||'', result:row.result||'',
+      status:row.status||'요청', note:row.note||'',
+      created_by:row.created_by||'',
+    };
+    const {error}=await _sb.from('reinspections').insert(allowed);
+    if(error){Toast.show('재검사 저장 실패: '+error.message,'err');return{ok:false};}
+    const fresh=await this.getReinspections();if(fresh) DB.reinspections=fresh;
+    return{ok:true};
+  },
+  async updateReinsp(id,patch){
+    if(!_sb){const r=(DB.reinspections||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
+    const {error}=await _sb.from('reinspections').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);
+    if(error){Toast.show('재검사 수정 실패: '+error.message,'err');return{ok:false};}
+    const r=(DB.reinspections||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);
+    return{ok:true};
+  },
+  async deleteReinsp(id){
+    if(!_sb){DB.reinspections=(DB.reinspections||[]).filter(r=>r.id!==id);return{ok:true};}
+    const res=await SB._softDelete('reinspections',[id]);
+    if(!res.ok) return{ok:false};
+    DB.reinspections=(DB.reinspections||[]).filter(r=>r.id!==id);return{ok:true};
+  },
+
+  /* ── LOT 추적 [v2.368] ── */
   async getLotTrace(lot_no){
     if(!_sb||!lot_no) return{inspections:[],nc:[],equip:[]};
     const q=lot_no.toLowerCase();
@@ -890,6 +962,9 @@ const DB={
       nc:(nc.data||[]),
     };
   },
+  /* [v2.368] 검사고도화 로컬 초기값 */
+  holds:[],
+  reinspections:[]
 
 };
 

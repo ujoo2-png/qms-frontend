@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.367] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.368] */
 "use strict";
 
 
@@ -1062,7 +1062,7 @@ const ExcelMgr={
     },
     nc:{
       title:'부적합관리',
-      /* [v2.367] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
+      /* [v2.368] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
       cols:[
         {key:'no',        label:'부적합번호', req:true,  sample:'NC-20260601-001'},
         {key:'in_out',    label:'사내외',     req:true,  sample:'사내'},
@@ -1080,7 +1080,7 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.367] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.368] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1138,7 +1138,7 @@ const ExcelMgr={
       dupKey:'no', dupLabel:'CAR번호', getData:()=>DB.cars,
     },
   
-    /* [v2.367] 검사 기준서 스키마 */
+    /* [v2.368] 검사 기준서 스키마 */
     insp_std:{
       title:'검사기준서',
       cols:[
@@ -1159,12 +1159,90 @@ const ExcelMgr={
       ],
       dupKey:'item_code', dupLabel:'품목코드', getData:()=>DB.insp_std||[],
     },
+    /* [v2.368] 검사 성적서 스키마 */
+    insp_cert:{
+      title:'검사성적서',
+      cols:[
+        {key:'insp_no',   label:'검사번호',  req:true,  sample:'INSP-20260601-001'},
+        {key:'type',      label:'검사유형',  req:true,  sample:'수입'},
+        {key:'item_code', label:'품목코드',  req:false, sample:'ITM-001'},
+        {key:'item_name', label:'품목명',    req:true,  sample:'알루미늄 바'},
+        {key:'lot_no',    label:'LOT번호',   req:false, sample:'LOT-20260601'},
+        {key:'insp_date', label:'검사일',    req:true,  sample:'2026-06-01'},
+        {key:'qty',       label:'검사수량',  req:false, sample:'100'},
+        {key:'result',    label:'판정',      req:true,  sample:'합격'},
+        {key:'inspector', label:'검사원',    req:false, sample:'김품질'},
+        {key:'cert_no',   label:'성적서번호', req:false, sample:'CERT-2026-001'},
+        {key:'note',      label:'비고',      req:false, sample:''},
+      ],
+      dupKey:'insp_no', dupLabel:'검사번호', getData:()=>DB.inspections||[],
+      save:async(rows)=>{
+        for(const row of rows){
+          const exists=(DB.inspections||[]).find(r=>r.insp_no===row.insp_no);
+          if(exists) await SB.updateInspection(exists.id,row);
+          else await SB.addInspection(row);
+        }
+        const fresh=await SB.getInspections();if(fresh) DB.inspections=fresh;
+      }
+    },
+    /* [v2.368] Hold 관리 스키마 */
+    insp_hold:{
+      title:'Hold관리',
+      cols:[
+        {key:'hold_no',     label:'Hold번호', req:true,  sample:'HOLD-20260601-001'},
+        {key:'lot_no',      label:'LOT번호',  req:true,  sample:'LOT-20260601'},
+        {key:'item_code',   label:'품목코드', req:false, sample:'ITM-001'},
+        {key:'item_name',   label:'품목명',   req:false, sample:'알루미늄 바'},
+        {key:'qty',         label:'Hold수량', req:false, sample:'50'},
+        {key:'reason',      label:'Hold사유', req:true,  sample:'치수 불량'},
+        {key:'issued_by',   label:'발령자',   req:false, sample:'김품질'},
+        {key:'issued_date', label:'발령일',   req:true,  sample:'2026-06-01'},
+        {key:'status',      label:'상태',     req:false, sample:'Hold중'},
+        {key:'ref_insp_no', label:'원검사번호',req:false, sample:'INSP-20260601-001'},
+      ],
+      dupKey:'hold_no', dupLabel:'Hold번호', getData:()=>DB.holds||[],
+      save:async(rows)=>{
+        for(const row of rows){
+          const exists=(DB.holds||[]).find(r=>r.hold_no===row.hold_no);
+          if(exists) await SB.updateHold(exists.id,row);
+          else await SB.addHold(row);
+        }
+        const fresh=await SB.getHolds();if(fresh) DB.holds=fresh;
+      }
+    },
+    /* [v2.368] 재검사 관리 스키마 */
+    insp_reinsp:{
+      title:'재검사관리',
+      cols:[
+        {key:'reinsp_no',  label:'재검사번호', req:true,  sample:'REINSP-20260601-001'},
+        {key:'orig_no',    label:'원검사번호', req:false, sample:'INSP-20260601-001'},
+        {key:'lot_no',     label:'LOT번호',   req:true,  sample:'LOT-20260601'},
+        {key:'item_code',  label:'품목코드',  req:false, sample:'ITM-001'},
+        {key:'item_name',  label:'품목명',    req:false, sample:'알루미늄 바'},
+        {key:'qty',        label:'수량',      req:false, sample:'50'},
+        {key:'req_date',   label:'요청일',    req:true,  sample:'2026-06-01'},
+        {key:'insp_date',  label:'검사일',    req:false, sample:'2026-06-05'},
+        {key:'inspector',  label:'검사원',    req:false, sample:'이검사'},
+        {key:'result',     label:'판정',      req:false, sample:'합격'},
+        {key:'status',     label:'상태',      req:false, sample:'요청'},
+        {key:'note',       label:'비고',      req:false, sample:''},
+      ],
+      dupKey:'reinsp_no', dupLabel:'재검사번호', getData:()=>DB.reinspections||[],
+      save:async(rows)=>{
+        for(const row of rows){
+          const exists=(DB.reinspections||[]).find(r=>r.reinsp_no===row.reinsp_no);
+          if(exists) await SB.updateReinsp(exists.id,row);
+          else await SB.addReinsp(row);
+        }
+        const fresh=await SB.getReinspections();if(fresh) DB.reinspections=fresh;
+      }
+    },
   },
 
   /* ── 양식 내려받기 ── */
-  /* [v2.367] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  /* [v2.368] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
-    /* [v2.367] 파일명: qms_제목_YYYY-MM-DD.xlsx */
+    /* [v2.368] 파일명: qms_제목_YYYY-MM-DD.xlsx */
     const n=new Date();
     const ts=n.getFullYear()+'-'
       +String(n.getMonth()+1).padStart(2,'0')+'-'
@@ -1338,9 +1416,9 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.367] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.368] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.367] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.368] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1361,7 +1439,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.367] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.368] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1506,7 +1584,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.367] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.368] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1753,7 +1831,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.367] 공통 _fileName 사용 */
+    /* [v2.368] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
       ?this._fileName(this._schemas[pageFilter].title)
       :this._fileName('통합업로드양식');
