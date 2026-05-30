@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.366] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.367] */
 "use strict";
 
 
@@ -1062,7 +1062,7 @@ const ExcelMgr={
     },
     nc:{
       title:'부적합관리',
-      /* [v2.366] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
+      /* [v2.367] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
       cols:[
         {key:'no',        label:'부적합번호', req:true,  sample:'NC-20260601-001'},
         {key:'in_out',    label:'사내외',     req:true,  sample:'사내'},
@@ -1080,7 +1080,7 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.366] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.367] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1138,7 +1138,7 @@ const ExcelMgr={
       dupKey:'no', dupLabel:'CAR번호', getData:()=>DB.cars,
     },
   
-    /* [v2.366] 검사 기준서 스키마 */
+    /* [v2.367] 검사 기준서 스키마 */
     insp_std:{
       title:'검사기준서',
       cols:[
@@ -1162,9 +1162,9 @@ const ExcelMgr={
   },
 
   /* ── 양식 내려받기 ── */
-  /* [v2.366] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  /* [v2.367] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
-    /* [v2.366] 파일명: qms_제목_YYYY-MM-DD.xlsx */
+    /* [v2.367] 파일명: qms_제목_YYYY-MM-DD.xlsx */
     const n=new Date();
     const ts=n.getFullYear()+'-'
       +String(n.getMonth()+1).padStart(2,'0')+'-'
@@ -1338,9 +1338,9 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.366] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.367] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.366] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.367] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1361,7 +1361,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.366] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.367] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1506,7 +1506,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.366] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.367] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1753,7 +1753,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.366] 공통 _fileName 사용 */
+    /* [v2.367] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
       ?this._fileName(this._schemas[pageFilter].title)
       :this._fileName('통합업로드양식');
@@ -2523,6 +2523,53 @@ const SearchPop={
         return [...insp,...ncs];
       },
       row:(r)=>[H.e(r._type||'-'),H.e(r.no||'-'),H.e(r.code||'-'),H.e(r.name||'-'),H.e(r.date||'-'),H.e(r.status||'-')],
+    },
+    insp_cert:{title:'검사 성적서 검색',
+      fields:[
+        {id:'sc_no',  label:'검사번호',  type:'text', ph:'검사번호'},
+        {id:'sc_code',label:'품목코드',  type:'text', ph:'품목코드'},
+        {id:'sc_type',label:'검사유형',  type:'select', opts:['','수입','공정','구매','외주','최종']},
+        {id:'sc_res', label:'판정',      type:'select', opts:['','합격','불합격','조건부합격']},
+      ],
+      cols:['검사번호','검사유형','품목코드','품목명','검사일','판정'],
+      get:(f)=>(DB.inspections||[]).filter(r=>{
+        if(f.sc_no   &&!(r.insp_no||'').includes(f.sc_no))   return false;
+        if(f.sc_code &&!(r.item_code||'').includes(f.sc_code))return false;
+        if(f.sc_type && r.type!==f.sc_type)                   return false;
+        if(f.sc_res  && r.result!==f.sc_res)                  return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.insp_no||'-'),H.e(r.type||'-'),H.e(r.item_code||'-'),H.e(r.item_name||'-'),H.e(r.insp_date||'-'),H.e(r.result||'-')],
+    },
+    insp_hold:{title:'Hold 검색',
+      fields:[
+        {id:'sh_no',  label:'Hold번호', type:'text', ph:'HOLD-번호'},
+        {id:'sh_lot', label:'LOT번호',  type:'text', ph:'LOT번호'},
+        {id:'sh_st',  label:'상태',     type:'select', opts:['','Hold중','조사중','해제']},
+      ],
+      cols:['Hold번호','LOT번호','품목코드','Hold사유','발령일','상태'],
+      get:(f)=>(DB.holds||[]).filter(r=>{
+        if(f.sh_no  &&!(r.hold_no||'').includes(f.sh_no))  return false;
+        if(f.sh_lot &&!(r.lot_no||'').includes(f.sh_lot))  return false;
+        if(f.sh_st  && r.status!==f.sh_st)                 return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.hold_no||'-'),H.e(r.lot_no||'-'),H.e(r.item_code||'-'),H.e(r.reason||'-'),H.e(r.issued_date||'-'),H.e(r.status||'-')],
+    },
+    insp_reinsp:{title:'재검사 검색',
+      fields:[
+        {id:'sr_no',  label:'재검사번호', type:'text', ph:'REINSP-번호'},
+        {id:'sr_lot', label:'LOT번호',    type:'text', ph:'LOT번호'},
+        {id:'sr_st',  label:'상태',       type:'select', opts:['','요청','진행중','합격','불합격']},
+      ],
+      cols:['재검사번호','원검사번호','LOT번호','요청일','판정','상태'],
+      get:(f)=>(DB.reinspections||[]).filter(r=>{
+        if(f.sr_no  &&!(r.reinsp_no||'').includes(f.sr_no)) return false;
+        if(f.sr_lot &&!(r.lot_no||'').includes(f.sr_lot))   return false;
+        if(f.sr_st  && r.status!==f.sr_st)                  return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.reinsp_no||'-'),H.e(r.orig_no||'-'),H.e(r.lot_no||'-'),H.e(r.req_date||'-'),H.e(r.result||'-'),H.e(r.status||'-')],
     },
   },
 
