@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.378] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.379] */
 "use strict";
 
 
@@ -7,7 +7,7 @@ Pages._copySql=function(){
   var e=document.getElementById('sqlBox');
   if(e) navigator.clipboard.writeText(e.textContent).then(function(){Toast.show('복사됨!','ok');});
 };
-/* [v2.378] settings 공지/로고 — Cfg에 실제 구현, Pages에서 위임 */
+/* [v2.379] settings 공지/로고 — Cfg에 실제 구현, Pages에서 위임 */
 Pages._addNotice  =function(){Cfg.noticeForm();};
 Pages._editNotice =function(i){Cfg.noticeForm(i);};
 Pages._uploadLogo =function(inp){Cfg.uploadLogo(inp);};
@@ -46,7 +46,7 @@ const Cfg={
       foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Cfg._saveNotice(${idx})">저장 <span class="kbd">F8</span></button>`
     });
   },
-  /* [v2.378] 공지 파일 미리보기 */
+  /* [v2.379] 공지 파일 미리보기 */
   _noticePreviewFile(inp){
     const f=inp.files[0];
     if(!f) return;
@@ -57,7 +57,7 @@ const Cfg={
       +'<button class="btn bxs berr" style="font-size:10px;padding:1px 6px" onclick="Cfg._noticeRemoveFile()">삭제</button>'
       +'</div>';
   },
-  /* [v2.378] 첨부파일 삭제 */
+  /* [v2.379] 첨부파일 삭제 */
   _noticeRemoveFile(){
     const inp=document.getElementById('nf');
     if(inp) inp.value='';
@@ -68,7 +68,7 @@ const Cfg={
     const g=id=>document.getElementById(id)?.value.trim();
     const obj={title:g('nt'),body:g('nb'),date:g('nd'),expire:g('ne'),author:g('na'),show:document.getElementById('ns')?.value==='1'};
     if(!obj.title||!obj.body){Toast.show('필수 항목을 입력하세요.','warn');return}
-    /* [v2.378] 파일 처리 */
+    /* [v2.379] 파일 처리 */
     const fileInp=document.getElementById('nf');
     const existFile=idx!=null?App.notices[idx]?.file:null;
     const doSave=async()=>{
@@ -854,7 +854,7 @@ const ExcelMgr={
         {key:'active',    label:'사용여부',  req:false, sample:'사용'},
         {key:'remark',    label:'비고',       req:false, sample:''},
       ],
-      /* [v2.378] 품목코드만 중복 확인, 필수값 외 빈칸 허용 */
+      /* [v2.379] 품목코드만 중복 확인, 필수값 외 빈칸 허용 */
       dupKey:'item_code',
       dupLabel:'품목코드',
       dupOnly:true,        // 중복 확인만, 빈칸은 무시
@@ -874,7 +874,7 @@ const ExcelMgr={
         {key:'manager_tel',   label:'담당자 연락처',req:false, sample:'010-0000-0000'},
         {key:'manager_email', label:'담당자 E-MAIL',req:false, sample:'manager@company.co.kr'},
       ],
-      /* [v2.378] 거래처명만 중복 확인, 필수값 외 빈칸 허용 */
+      /* [v2.379] 거래처명만 중복 확인, 필수값 외 빈칸 허용 */
       dupKey:'vendor_name',
       dupLabel:'거래처명',
       dupOnly:true,
@@ -914,7 +914,7 @@ const ExcelMgr={
         {key:'wo_no',       label:'작업지시번호',req:false, sample:''},
         {key:'note',        label:'특이사항',    req:false, sample:''},
       ],
-      /* [v2.378] 품목코드+거래처명 없으면 등록 안 됨, 동일시트 중복 허용 */
+      /* [v2.379] 품목코드+거래처명 없으면 등록 안 됨, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='수입'),
@@ -946,7 +946,7 @@ const ExcelMgr={
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
-      /* [v2.378] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      /* [v2.379] 품목코드+거래처명 필수, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='공정'),
@@ -979,7 +979,7 @@ const ExcelMgr={
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
-      /* [v2.378] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      /* [v2.379] 품목코드+거래처명 필수, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='구매'),
@@ -1014,7 +1014,7 @@ const ExcelMgr={
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
-      /* [v2.378] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      /* [v2.379] 품목코드+거래처명 필수, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='외주'),
@@ -1049,7 +1049,7 @@ const ExcelMgr={
       ],
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
-      /* [v2.378] 품목코드+거래처명 필수, 동일시트 중복 허용 */
+      /* [v2.379] 품목코드+거래처명 필수, 동일시트 중복 허용 */
       dupKey:'insp_no', dupLabel:'검사번호',
       allowFileDup:true,
       getData:()=>DB.inspections.filter(i=>i.type==='최종'),
@@ -1062,7 +1062,7 @@ const ExcelMgr={
     },
     nc:{
       title:'부적합관리',
-      /* [v2.378] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
+      /* [v2.379] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
       cols:[
         {key:'no',        label:'부적합번호', req:true,  sample:'NC-20260601-001'},
         {key:'in_out',    label:'사내외',     req:true,  sample:'사내'},
@@ -1080,7 +1080,7 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.378] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.379] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1138,7 +1138,7 @@ const ExcelMgr={
       dupKey:'no', dupLabel:'CAR번호', getData:()=>DB.cars,
     },
   
-    /* [v2.378] 검사 기준서 스키마 */
+    /* [v2.379] 검사 기준서 스키마 */
     insp_std:{
       title:'검사기준서',
       cols:[
@@ -1159,7 +1159,7 @@ const ExcelMgr={
       ],
       dupKey:'item_code', dupLabel:'품목코드', getData:()=>DB.insp_std||[],
     },
-    /* [v2.378] 검사 성적서 스키마 */
+    /* [v2.379] 검사 성적서 스키마 */
     insp_cert:{
       title:'검사성적서',
       cols:[
@@ -1185,7 +1185,7 @@ const ExcelMgr={
         const fresh=await SB.getInspections();if(fresh) DB.inspections=fresh;
       }
     },
-    /* [v2.378] Hold 관리 스키마 */
+    /* [v2.379] Hold 관리 스키마 */
     insp_hold:{
       title:'Hold관리',
       cols:[
@@ -1210,7 +1210,7 @@ const ExcelMgr={
         const fresh=await SB.getHolds();if(fresh) DB.holds=fresh;
       }
     },
-    /* [v2.378] 재검사 관리 스키마 */
+    /* [v2.379] 재검사 관리 스키마 */
     insp_reinsp:{
       title:'재검사관리',
       cols:[
@@ -1237,7 +1237,7 @@ const ExcelMgr={
         const fresh=await SB.getReinspections();if(fresh) DB.reinspections=fresh;
       }
     },
-    /* [v2.378] sqm 엑셀 업로드 스키마 */
+    /* [v2.379] sqm 엑셀 업로드 스키마 */
     sqm_eval:{
       title:'업체평가',
       cols:[
@@ -1288,9 +1288,9 @@ const ExcelMgr={
   },
 
   /* ── 양식 내려받기 ── */
-  /* [v2.378] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  /* [v2.379] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
-    /* [v2.378] 파일명: qms_제목_YYYY-MM-DD.xlsx */
+    /* [v2.379] 파일명: qms_제목_YYYY-MM-DD.xlsx */
     const n=new Date();
     const ts=n.getFullYear()+'-'
       +String(n.getMonth()+1).padStart(2,'0')+'-'
@@ -1398,9 +1398,9 @@ const ExcelMgr={
       try{
         const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
         const ws=wb.Sheets[wb.SheetNames[0]];
-        this._ws=ws; /* [v2.378] ws 저장 — 날짜 변환에 사용 */
+        this._ws=ws; /* [v2.379] ws 저장 — 날짜 변환에 사용 */
         const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-        /* [v2.378] 날짜 필드 변환 — 엑셀 시리얼/Date객체 → YYYY-MM-DD */
+        /* [v2.379] 날짜 필드 변환 — 엑셀 시리얼/Date객체 → YYYY-MM-DD */
         const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date']);
         const _cvDate=(v,ci,ri)=>{
           try{
@@ -1457,16 +1457,16 @@ const ExcelMgr={
     if(!raw||raw.length<2){Toast.show('데이터가 없습니다. 2행부터 데이터를 입력하세요.','warn');return}
 
     /* ── 헤더행(0행) 처리 ──
-       [v2.378 버그수정] 인덱스 기반 → 헤더 레이블 기반 파싱
+       [v2.379 버그수정] 인덱스 기반 → 헤더 레이블 기반 파싱
        이전: sc.cols[i] 순서에 맞춰 i번째 셀 매핑 → 엑셀 열 순서가 다르면 오매핑
        수정: 엑셀 헤더 레이블로 key 찾아 매핑 → 열 순서 무관 */
     const headerRow = raw[0].map(h=>String(h||'').replace(/\s*\*\s*$/,'').trim()); // 필수(*) 표시 제거
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.378] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.379] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.378] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.379] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1487,7 +1487,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.378] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.379] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1569,7 +1569,7 @@ const ExcelMgr={
   },
 
   /* ── 일괄등록 실행 ──
-     [v2.378 수정]
+     [v2.379 수정]
      - 버그: active '사용'→1 변환 누락 수정 (Number('사용')=NaN→0 문제)
      - 버그: failCnt 이중 계산 수정
      - 버그: 500건 청크 → Supabase payload 초과로 실패
@@ -1615,7 +1615,7 @@ const ExcelMgr={
 
     /* ── items 허용 컬럼 추출 함수 ── */
     const toAllowed=row=>{
-      /* [v2.378] 테이블별 허용 컬럼만 추출 — SB schema 오류 방지 */
+      /* [v2.379] 테이블별 허용 컬럼만 추출 — SB schema 오류 방지 */
       if(page==='items') return{
         major_category:row.major_category||'',
         category:      row.category||'',
@@ -1632,7 +1632,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.378] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.379] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1701,7 +1701,7 @@ const ExcelMgr={
     };
     const conflictCol=conflictMap[page]||null;
 
-    /* [v2.378] equip: SB.addEquip 헬퍼 직접 호출 (검사5종 방식과 동일)
+    /* [v2.379] equip: SB.addEquip 헬퍼 직접 호출 (검사5종 방식과 동일)
        — bulk insert 경로 우회 → toAllowed/insertOne 의존 제거
        — addEquip 내부에서 allowed 컬럼 필터 + 동적 컬럼 오류 자동 제거 */
     if((page==='equip'||page==='equipment')&&_sb){
@@ -1730,7 +1730,7 @@ const ExcelMgr={
     }
 
     /* ── Supabase bulk insert ──
-       [v2.378 수정] 1000건 제한 해결
+       [v2.379 수정] 1000건 제한 해결
        원인: 50ms 딜레이가 너무 짧아 Supabase rate limit 도달
        해결:
          1. 청크간 딜레이 200ms (rate limit 회피)
@@ -1857,14 +1857,14 @@ const ExcelMgr={
   },
 
   /* ════════════════════════════════════════════════════
-     A+C안: 멀티시트 통합 업로드 [v2.378 신규]
+     A+C안: 멀티시트 통합 업로드 [v2.379 신규]
      A: 하나의 파일에 품목/거래처/사용자/수입검사 시트 포함
      C: 전체 정합성 검사 통과 시에만 등록 버튼 활성화
         오류 행에 결과 열 자동 추가, 결과 엑셀 내보내기
      ════════════════════════════════════════════════════ */
 
   /* 멀티시트 양식 다운로드
-     [v2.378] pageFilter: 특정 시트만 포함 (null=전체) */
+     [v2.379] pageFilter: 특정 시트만 포함 (null=전체) */
   downloadAll(pageFilter=''){
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
     const wb=XLSX.utils.book_new();
@@ -1879,7 +1879,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.378] 공통 _fileName 사용 */
+    /* [v2.379] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
       ?this._fileName(this._schemas[pageFilter].title)
       :this._fileName('통합업로드양식');
@@ -1888,7 +1888,7 @@ const ExcelMgr={
   },
 
   /* 멀티시트 업로드 모달
-     [v2.378] pageFilter: 특정 시트만 표시 (예: 'vendors', 'insp_in' 등)
+     [v2.379] pageFilter: 특정 시트만 표시 (예: 'vendors', 'insp_in' 등)
              null이면 전체 8개 시트 표시 */
   openUploadAll(pageFilter=null){
     if(typeof XLSX==='undefined'){Toast.show('엑셀 라이브러리 로딩 중입니다.','warn');return}
@@ -1950,26 +1950,26 @@ const ExcelMgr={
     reader.onload=async(ev)=>{
       try{
         const wb=XLSX.read(ev.target.result,{type:'array'});
-        /* 시트명 → 스키마 키 매핑 — [v2.378] 검사 4종 추가 */
+        /* 시트명 → 스키마 키 매핑 — [v2.379] 검사 4종 추가 */
         const SMAP_ALL={'품목등록':'items','거래처등록':'vendors','사용자등록':'users',
           '수입검사':'insp_in','공정검사':'insp_pr','구매검사':'insp_pu',
           '외주검사':'insp_ou','최종검사':'insp_fi',
           '계측기등록':'equip'};
-        /* [v2.378] pageFilter: 특정 시트만 파싱 */
+        /* [v2.379] pageFilter: 특정 시트만 파싱 */
         const pf=this._pageFilter;
         const SMAP=pf
           ?Object.fromEntries(Object.entries(SMAP_ALL).filter(([,v])=>v===pf))
           :SMAP_ALL;
         const results={};
         let totalOk=0,totalErr=0,totalDup=0;
-        /* [v2.378 버그수정] SB 최신 데이터 강제 로드
+        /* [v2.379 버그수정] SB 최신 데이터 강제 로드
            실패 시 빈 배열로 초기화 → 구 캐시로 인한 중복 오판 방지 */
         if(_sb){
           try{
             DB.items=await SB.getItems();
             DB.vendors=await SB.getVendors();
             DB.users=await SB.getUsers();
-            /* [v2.378] 계측기 중복 체크용 */
+            /* [v2.379] 계측기 중복 체크용 */
             DB.equip=await SB.getEquip();
           }catch(e2){
             DB.items=[]; DB.vendors=[]; DB.users=[]; DB.equip=[];
@@ -1980,7 +1980,7 @@ const ExcelMgr={
           const ws=wb.Sheets[sName];
           if(!ws){results[pKey]={skip:true,sheetName:sName};continue;}
           const sc=this._schemas[pKey];
-          /* [v2.378] raw:true 유지 — 셀 직접 접근으로 날짜 변환 처리 */
+          /* [v2.379] raw:true 유지 — 셀 직접 접근으로 날짜 변환 처리 */
           const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
           if(!raw||raw.length<2){results[pKey]={skip:true,sheetName:sName,reason:'데이터 없음'};continue;}
           /* 헤더 기반 매핑 */
@@ -2007,7 +2007,7 @@ const ExcelMgr={
           };
           const parsedRows=dataRows.map((row,ri)=>{
             const obj={};
-            /* [v2.378] 날짜 변환 헬퍼
+            /* [v2.379] 날짜 변환 헬퍼
              우선순위: ① ws 셀의 .w(포맷문자열) ② 시리얼숫자 변환 ③ 원본값
              엑셀 날짜 시리얼(46027 등)을 YYYY-MM-DD로 변환 */
           const _cellToDateStr=(colIdx,rowIdx,rawVal)=>{
@@ -2184,7 +2184,7 @@ const ExcelMgr={
     const REQUIRED_SQL={
       inspections:"-- 검사 테이블 컬럼 추가\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS spec TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS insp_method TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS wo_no TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS note TEXT DEFAULT '';\nALTER TABLE inspections ADD COLUMN IF NOT EXISTS defect_rate NUMERIC DEFAULT 0;",
     };
-    /* [v2.378] 엑셀 날짜 → YYYY-MM-DD (Date객체/시리얼/문자열 모두 처리) */
+    /* [v2.379] 엑셀 날짜 → YYYY-MM-DD (Date객체/시리얼/문자열 모두 처리) */
     const _toDate=(v)=>{
       if(!v&&v!==0) return null;
       /* JS Date 객체 */
@@ -2215,7 +2215,7 @@ const ExcelMgr={
     };
     const toFullRow=(pKey,r)=>{
       if(pKey==='items') return{major_category:r.major_category||'',category:r.category||'',item_code:r.item_code||'',item_name:r.item_name||'',spec:r.spec||'',unit:r.unit||'EA',material:r.material||'',vendor_name:r.vendor_name||'',vendor_id:null,active:typeof r.active==='number'?r.active:1,remark:r.remark||'',created_at:r.created_at||null,updated_at:r.updated_at||null};
-      /* [v2.378] 검사5종 — SB.addInspection allowed와 동일 컬럼 */
+      /* [v2.379] 검사5종 — SB.addInspection allowed와 동일 컬럼 */
       if(['insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].includes(pKey)){
         const typeMap={insp_in:'수입',insp_pr:'공정',insp_pu:'구매',insp_ou:'외주',insp_fi:'최종'};
         return{type:r.type||typeMap[pKey]||'',vendor:r.vendor||'',insp_no:r.insp_no||'',
@@ -2225,7 +2225,7 @@ const ExcelMgr={
           fail_qty:Number(r.fail_qty)||0,defect_rate:Number(r.defect_rate)||0,
           wo_no:r.wo_no||'',note:r.note||'',created_at:_toDate(r.created_at),updated_at:null};
       }
-      /* [v2.378] 계측기 — SB.addEquip allowed와 동일 컬럼 */
+      /* [v2.379] 계측기 — SB.addEquip allowed와 동일 컬럼 */
       if(pKey==='equipment') return{code:r.code||'',name:r.name||'',model:r.model||'',
         maker:r.maker||'',range:r.range||'',res:r.res||'',loc:r.loc||'',
         operator:r.operator||'',
@@ -2265,7 +2265,7 @@ const ExcelMgr={
         }
         continue;
       }
-      /* [v2.378] 계측기: SB.addEquip 직접 호출 */
+      /* [v2.379] 계측기: SB.addEquip 직접 호출 */
       if((pKey==='equip'||pKey==='equipment')&&_sb){
         let cnt=0;
         for(const r of rows){
@@ -2280,7 +2280,7 @@ const ExcelMgr={
         }
         continue;
       }
-      /* [v2.378] 검사5종: SB.addInspection 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
+      /* [v2.379] 검사5종: SB.addInspection 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
       if(['insp_in','insp_pr','insp_pu','insp_ou','insp_fi'].includes(pKey)&&_sb){
         let cnt=0;
         for(const r of rows){
@@ -2295,7 +2295,7 @@ const ExcelMgr={
         }
         continue;
       }
-      /* [v2.378] 계측기: SB.addEquip 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
+      /* [v2.379] 계측기: SB.addEquip 직접 호출 (거래처 방식 — 컬럼 오류 자동 처리) */
       if(pKey==='equipment'&&_sb){
         let cnt=0;
         for(const r of rows){
@@ -2330,7 +2330,7 @@ const ExcelMgr={
               let e2;
               if(cfCol){({error:e2}=await _sb.from(tbl).upsert(fb,{onConflict:cfCol,ignoreDuplicates:false}));}
               else{({error:e2}=await _sb.from(tbl).insert(fb));}
-              /* [v2.378] SAFE 저장 성공하면 colErrors 제거 — SQL 실행 후 팝업 억제 */
+              /* [v2.379] SAFE 저장 성공하면 colErrors 제거 — SQL 실행 후 팝업 억제 */
               if(!e2){totalSuccess+=chunk.length;ok=true;delete colErrors[tbl];}
 
               else{totalFail+=chunk.length;failMsgs.push('['+tbl+'] '+e2.message);ok=true;}
@@ -2367,7 +2367,7 @@ const ExcelMgr={
     this._multiParsed=null;
     const pf2=this._pageFilter;this._pageFilter=null;
     if(totalSuccess>0){
-      /* [v2.378] SB 반영 대기 후 페이지 이동 */
+      /* [v2.379] SB 반영 대기 후 페이지 이동 */
       await new Promise(r=>setTimeout(r,600));
       if(pf2==='vendors'){DB.vendors=await SB.getVendors();Nav.go('vendors');}
       else if(pf2==='equip'||pf2==='equipment'){
