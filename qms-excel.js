@@ -1,4 +1,4 @@
-/* qms-excel.js — ExcelMgr + SearchPop [v2.368] */
+/* qms-excel.js — ExcelMgr + SearchPop [v2.369] */
 "use strict";
 
 
@@ -1062,7 +1062,7 @@ const ExcelMgr={
     },
     nc:{
       title:'부적합관리',
-      /* [v2.368] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
+      /* [v2.369] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */
       cols:[
         {key:'no',        label:'부적합번호', req:true,  sample:'NC-20260601-001'},
         {key:'in_out',    label:'사내외',     req:true,  sample:'사내'},
@@ -1080,7 +1080,7 @@ const ExcelMgr={
       ],
       dupKey:'no', dupLabel:'부적합번호', getData:()=>DB.nc,
     },
-    /* [v2.368] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
+    /* [v2.369] 계측기 업로드 양식 — 처음부터 새로 작성, 캐시 무효화 */
     equip:{
       title:'계측기_업로드양식',
       cols:[
@@ -1138,7 +1138,7 @@ const ExcelMgr={
       dupKey:'no', dupLabel:'CAR번호', getData:()=>DB.cars,
     },
   
-    /* [v2.368] 검사 기준서 스키마 */
+    /* [v2.369] 검사 기준서 스키마 */
     insp_std:{
       title:'검사기준서',
       cols:[
@@ -1159,7 +1159,7 @@ const ExcelMgr={
       ],
       dupKey:'item_code', dupLabel:'품목코드', getData:()=>DB.insp_std||[],
     },
-    /* [v2.368] 검사 성적서 스키마 */
+    /* [v2.369] 검사 성적서 스키마 */
     insp_cert:{
       title:'검사성적서',
       cols:[
@@ -1185,7 +1185,7 @@ const ExcelMgr={
         const fresh=await SB.getInspections();if(fresh) DB.inspections=fresh;
       }
     },
-    /* [v2.368] Hold 관리 스키마 */
+    /* [v2.369] Hold 관리 스키마 */
     insp_hold:{
       title:'Hold관리',
       cols:[
@@ -1210,7 +1210,7 @@ const ExcelMgr={
         const fresh=await SB.getHolds();if(fresh) DB.holds=fresh;
       }
     },
-    /* [v2.368] 재검사 관리 스키마 */
+    /* [v2.369] 재검사 관리 스키마 */
     insp_reinsp:{
       title:'재검사관리',
       cols:[
@@ -1240,9 +1240,9 @@ const ExcelMgr={
   },
 
   /* ── 양식 내려받기 ── */
-  /* [v2.368] 파일명 생성 공통 함수 — 중복 로직 제거 */
+  /* [v2.369] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
-    /* [v2.368] 파일명: qms_제목_YYYY-MM-DD.xlsx */
+    /* [v2.369] 파일명: qms_제목_YYYY-MM-DD.xlsx */
     const n=new Date();
     const ts=n.getFullYear()+'-'
       +String(n.getMonth()+1).padStart(2,'0')+'-'
@@ -1416,9 +1416,9 @@ const ExcelMgr={
     // 헤더→key 역매핑 테이블
     const labelToKey={};
     sc.cols.forEach(c=>{labelToKey[c.label]=c.key;});
-    /* [v2.368] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
+    /* [v2.369] equip 전용 한글 별칭 매핑 (다른 schema와 충돌 방지) */
     if(page==='equip'){
-      /* [v2.368] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
+      /* [v2.369] A_/B_/C_ 접두사 포함 매핑 + 기존 한글 그대로도 지원 */
       const equipAlias={
         'A_계측기코드':'code','계측기코드':'code','코드':'code',
         'B_계측기명':'name','계측기명':'name','기기명':'name',
@@ -1439,7 +1439,7 @@ const ExcelMgr={
     const colMap=headerRow.map(h=>labelToKey[(String(h||'').trim().replace(/\s*\*$/,''))]||null);
     // 헤더 매핑 여부 로그
     const mappedCols=colMap.filter(Boolean).length;
-    /* [v2.368] 진단: 매핑된 컬럼 목록 콘솔 출력 */
+    /* [v2.369] 진단: 매핑된 컬럼 목록 콘솔 출력 */
     console.log('[엑셀업로드] 헤더:', headerRow);
     console.log('[엑셀업로드] 매핑:', colMap.map((k,i)=>k?`${headerRow[i]}→${k}`:'(무시)'));
     if(mappedCols===0){
@@ -1584,7 +1584,7 @@ const ExcelMgr={
         updated_at:    row.updated_at||null,
       };
       if(page==='equipment'||page==='equip') return{
-        /* [v2.368] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
+        /* [v2.369] 전체 컬럼 명시 — maker/range/res/loc 누락 방지 */
         code:        row.code||'',
         name:        row.name||'',
         model:       row.model||row['모델번호']||'',
@@ -1831,7 +1831,7 @@ const ExcelMgr={
       ws['!cols']=[...sc.cols.map(c=>({wch:Math.max(c.label.length*2+4,14)})),{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,sc.title);
     });
-    /* [v2.368] 공통 _fileName 사용 */
+    /* [v2.369] 공통 _fileName 사용 */
     const fname=pageFilter&&this._schemas[pageFilter]
       ?this._fileName(this._schemas[pageFilter].title)
       :this._fileName('통합업로드양식');
@@ -2648,6 +2648,51 @@ const SearchPop={
         return true;
       }),
       row:(r)=>[H.e(r.reinsp_no||'-'),H.e(r.orig_no||'-'),H.e(r.lot_no||'-'),H.e(r.req_date||'-'),H.e(r.result||'-'),H.e(r.status||'-')],
+    },
+    sqm_eval:{title:'업체 평가 검색',
+      fields:[
+        {id:'sqe_vn',  label:'거래처명', type:'text', ph:'거래처명'},
+        {id:'sqe_gr',  label:'등급',     type:'select', opts:['','A','B','C','D']},
+        {id:'sqe_per', label:'평가기간', type:'text', ph:'예) 2026-Q2'},
+      ],
+      cols:['거래처','평가기간','종합점수','등급','PPM','클레임'],
+      get:(f)=>(DB.vendor_evals||[]).filter(r=>{
+        if(f.sqe_vn &&!(r.vendor_name||'').includes(f.sqe_vn))return false;
+        if(f.sqe_gr && r.grade!==f.sqe_gr)return false;
+        if(f.sqe_per&&!(r.period||'').includes(f.sqe_per))return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.period||'-'),H.e(String(r.total||'-')),H.e(r.grade||'-'),H.e(String(r.ppm||'0')),H.e(String(r.complaint||'0'))],
+    },
+    sqm_audit:{title:'업체 심사 검색',
+      fields:[
+        {id:'sqa_vn',  label:'거래처명', type:'text', ph:'거래처명'},
+        {id:'sqa_tp',  label:'심사유형', type:'select', opts:['','정기','수시','특별','인증']},
+        {id:'sqa_st',  label:'상태',     type:'select', opts:['','계획','진행중','완료','보류']},
+      ],
+      cols:['거래처','심사유형','계획일','심사자','점수','상태'],
+      get:(f)=>(DB.vendor_audits||[]).filter(r=>{
+        if(f.sqa_vn&&!(r.vendor_name||'').includes(f.sqa_vn))return false;
+        if(f.sqa_tp&&r.audit_type!==f.sqa_tp)return false;
+        if(f.sqa_st&&r.status!==f.sqa_st)return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.audit_type||'-'),H.e(r.plan_date||'-'),H.e(r.auditor||'-'),H.e(String(r.score??'-')),H.e(r.status||'-')],
+    },
+    sqm_delivery:{title:'납품 이력 검색',
+      fields:[
+        {id:'sqd_vn',  label:'거래처명', type:'text', ph:'거래처명'},
+        {id:'sqd_cd',  label:'품목코드', type:'text', ph:'품목코드'},
+        {id:'sqd_rs',  label:'판정',     type:'select', opts:['','합격','불합격']},
+      ],
+      cols:['검사일','거래처','품목코드','품목명','LOT번호','판정'],
+      get:(f)=>(DB.inspections||[]).filter(r=>{
+        if(f.sqd_vn&&!(r.vendor_name||'').includes(f.sqd_vn))return false;
+        if(f.sqd_cd&&!(r.item_code||'').includes(f.sqd_cd))return false;
+        if(f.sqd_rs&&r.result!==f.sqd_rs)return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.insp_date||'-'),H.e(r.vendor_name||'-'),H.e(r.item_code||'-'),H.e(r.item_name||'-'),H.e(r.lot_no||'-'),H.e(r.result||'-')],
     },
   },
 
