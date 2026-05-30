@@ -41,7 +41,7 @@ const SB={
      CHUNK=1000으로 SB 기본 단위와 일치시켜 페이지네이션
      data.length < CHUNK 이면 마지막 페이지 → 종료 */
 
-  /* ── 소프트 삭제 공통 헬퍼 [v2.370] ──
+  /* ── 소프트 삭제 공통 헬퍼 [v2.371] ──
      실제 삭제 대신 deleted_at = now() 로 표시
      복구: deleted_at = null 로 초기화 */
   async _softDelete(table, ids){
@@ -58,7 +58,7 @@ const SB={
     return {ok:true};
   },
 
-  /* ── 소프트 삭제 복구 공통 헬퍼 [v2.370] ── */
+  /* ── 소프트 삭제 복구 공통 헬퍼 [v2.371] ── */
   async _restoreDeleted(table, ids){
     if(!_sb) return {ok:true};
     const {error}=await _sb.from(table)
@@ -72,7 +72,7 @@ const SB={
     return {ok:true};
   },
 
-  /* ── 삭제된 항목 조회 [v2.370] ── */
+  /* ── 삭제된 항목 조회 [v2.371] ── */
   async getDeleted(table){
     if(!_sb) return [];
     const {data,error}=await _sb.from(table)
@@ -245,7 +245,7 @@ const SB={
   /* 멘션 목록 조회 */
   async getMentions(){
     if(!_sb) return DB.mentions||[];
-    /* [v2.370] deleted_at IS NULL 필터 — 소프트 삭제된 항목 제외 */
+    /* [v2.371] deleted_at IS NULL 필터 — 소프트 삭제된 항목 제외 */
     try{
       const {data,error}=await _sb.from('mentions')
         .select('*')
@@ -265,7 +265,7 @@ const SB={
   /* 멘션 등록 */
   async addMention(row){
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
-    /* [v2.370] SB mentions 테이블 실제 컬럼만 전송
+    /* [v2.371] SB mentions 테이블 실제 컬럼만 전송
        기본 컬럼: from, to, to_list, text, dept, message, ref, reply_to, read
        ※ channel/type/priority/status/thread_id 등 미생성 컬럼 제외 */
     const insertRow={
@@ -292,17 +292,23 @@ const SB={
 
   /* 멘션 수정 */
   async updateMention(id,patch){
-    /* [v2.370 PhaseA] status/channel/type/priority/pinned/reactions 포함 */
+    /* [v2.371] 실제 SB 컬럼만 업데이트 */
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
-    const {error}=await _sb.from('mentions').update(patch).eq('id',id);
-    if(error){Toast.show('수정 실패: '+error.message,'err');return {ok:false};}
-    const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};
+    /* 허용 컬럼만 필터링 */
+    const allowed={};
+    const COLS=['from','to','to_list','text','message','dept','ref','reply_to','read'];
+    COLS.forEach(k=>{if(k in patch) allowed[k]=patch[k];});
+    if(!Object.keys(allowed).length) return {ok:true};
+    const {error}=await _sb.from('mentions').update(allowed).eq('id',id);
+    if(error){console.warn('[SB] updateMention 오류:',error.message);return {ok:false};}
+    const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);
+    return {ok:true};
   },
 
   /* 멘션 삭제 (soft delete: deleted_at 기록) */
   async deleteMention(id){
     if(!_sb){DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};}
-    /* [v2.370] 소프트 삭제 — deleted_at 설정 (복구 가능) */
+    /* [v2.371] 소프트 삭제 — deleted_at 설정 (복구 가능) */
     const res=await SB._softDelete('mentions', [id]);
     if(!res.ok) return {ok:false};
     DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};
@@ -654,7 +660,7 @@ const SB={
     /* [v2.29] upsert — code 중복 시 update (insert conflict 방지) */
     let insertRow={...allowed};
     let {error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false});
-    /* [v2.370] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
+    /* [v2.371] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
     if(error){
       console.error('[SB] addEquip 오류:',error.message);
       if(error.message?.includes('column')||error.message?.includes('schema')){
@@ -802,7 +808,7 @@ const DB={
     {id:4,vendor_name:'화학산업㈜',   vendor_type:'소모품',biz_no:'456-78-90123',ceo_name:'정사장',tel:'051-456-7890',fax:'051-456-7891',email:'chem@hwahak.co.kr',       manager:'윤담당',manager_tel:'010-4567-8901',manager_email:'yoon@hwahak.co.kr',  active:1,created_at:'2026-01-08',updated_at:'2026-01-08'},
     {id:5,vendor_name:'정밀측정기㈜', vendor_type:'외주',  biz_no:'567-89-01234',ceo_name:'한대표',tel:'02-567-8901', fax:'02-567-8902', email:'measure@jungmil.co.kr',   manager:'신담당',manager_tel:'010-5678-9012',manager_email:'shin@jungmil.co.kr', active:1,created_at:'2026-02-01',updated_at:'2026-04-20'},
   ],
-  users:[], /* [v2.370] 더미 삭제 — SB에서 로드 */
+  users:[], /* [v2.371] 더미 삭제 — SB에서 로드 */
     inspections:[], /* [v2.29] 더미 제거 — SB에서 로드 */
 
   nc:[
@@ -846,7 +852,7 @@ const DB={
     {id:3,from:'박담당',to:'관리자',dept:'생산팀',text:'@관리자 CAR-20260430-001 처리 부탁드립니다.',ref:'시정조치',time:'2시간 전',read:false,replies:[]},
     {id:4,from:'최엔지니어',to:'관리자',dept:'개발팀',text:'@관리자 EQ-003 교정 만료 확인 요청드립니다.',ref:'계측기관리',time:'1일 전',read:true,replies:[]},
   ],
-  /* ── 검사 기준서 [v2.370] ── */
+  /* ── 검사 기준서 [v2.371] ── */
   async getInspStd(){
     if(!_sb) return DB.insp_std||[];
     const data=await this._sbFetchAll('insp_std','item_code',true,q=>q.is('deleted_at',null));
@@ -877,7 +883,7 @@ const DB={
     return{ok:true};
   },
 
-  /* ── Hold 관리 SB 함수 [v2.370] ── */
+  /* ── Hold 관리 SB 함수 [v2.371] ── */
   async getHolds(){
     if(!_sb) return DB.holds||[];
     const data=await this._sbFetchAll('holds','issued_date',false,q=>q.is('deleted_at',null));
@@ -912,7 +918,7 @@ const DB={
     DB.holds=(DB.holds||[]).filter(r=>r.id!==id);return{ok:true};
   },
 
-  /* ── 재검사 관리 SB 함수 [v2.370] ── */
+  /* ── 재검사 관리 SB 함수 [v2.371] ── */
   async getReinspections(){
     if(!_sb) return DB.reinspections||[];
     const data=await this._sbFetchAll('reinspections','req_date',false,q=>q.is('deleted_at',null));
@@ -950,7 +956,7 @@ const DB={
   },
 
   /* ════════════════════════════════════
-     공급업체 품질 SB 함수 [v2.370]
+     공급업체 품질 SB 함수 [v2.371]
      ════════════════════════════════════ */
 
   /* 업체 평가 */
@@ -1026,7 +1032,7 @@ const DB={
     return res;
   },
 
-  /* ── LOT 추적 [v2.370] ── */
+  /* ── LOT 추적 [v2.371] ── */
   async getLotTrace(lot_no){
     if(!_sb||!lot_no) return{inspections:[],nc:[],equip:[]};
     const q=lot_no.toLowerCase();
@@ -1039,7 +1045,7 @@ const DB={
       nc:(nc.data||[]),
     };
   },
-  /* [v2.370] 검사고도화 로컬 초기값 */
+  /* [v2.371] 검사고도화 로컬 초기값 */
   holds:[],
   reinspections:[]
 
