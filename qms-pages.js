@@ -5718,19 +5718,18 @@ const DB2={
 /* ══ B: 검사 고도화 ══ */
 Object.assign(Pages,{
 async insp_std(){
-  /* [v2.372] 검사 기준서 — SB 연동 강화, 오류 방어 */
+  /* [v2.372] 검사 기준서 — SB 연동, hasLayout 패턴 */
   const w=document.getElementById('pw');
-  w.innerHTML='<div class="spin"></div>';
+  const hasLayout=!!w.querySelector('#stdTbl');
+  if(!hasLayout) w.innerHTML='<div class="spin"></div>';
   try{
     const fresh=await SB.getInspStd();
     if(Array.isArray(fresh)) DB.insp_std=fresh;
     else if(!DB.insp_std) DB.insp_std=[];
   }catch(e){
-    console.warn('[insp_std] SB 조회 실패 — 로컬 데이터 사용',e);
+    console.warn('[insp_std] SB 조회 실패',e);
     if(!DB.insp_std) DB.insp_std=[];
   }
-  /* w를 비운 후 렌더 (spin 제거) */
-  w.innerHTML='';
   Pages._inspStdRender();
 },
 
@@ -6218,25 +6217,6 @@ _addStdRow(){
   tr.innerHTML=`<td style="text-align:center;color:var(--tm)">${n}</td><td><input class="fc"></td><td><input class="fc"></td><td><input class="fc"></td><td><input class="fc" style="width:50px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc"></td><td><button onclick="this.closest('tr').remove()" style="color:var(--err)">✕</button></td>`;
   b.appendChild(tr);
 },
-insp_cert(){
-  const w=document.getElementById('pw');const data=DB2.insp_cert;
-  w.innerHTML=`<div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📜</div><div><div class="sd-val">${data.length}</div><div class="sd-lbl">발행 성적서</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${data.filter(d=>d.final==='합격').length}</div><div class="sd-lbl">합격</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">❌</div><div><div class="sd-val">${data.filter(d=>d.final==='불합격').length}</div><div class="sd-lbl">불합격</div></div></div>
-  </div>
-  <div class="ph" style="margin-top:14px"><div><div class="ptit">📜 검사 성적서 (COA)</div><div class="psub">검사 결과 기반 성적서 자동 생성</div></div></div>
-  <div class="tbar"><div class="sw2"><input type="text" placeholder="성적서번호, LOT, 품목명..."></div>
-    <select class="fsel"><option value="">전체 결과</option><option>합격</option><option>불합격</option></select>
-  </div><div id="certTbl"></div>`;
-  Tbl.render({el:'#certTbl',cols:[
-    {key:'cert_no',label:'성적서번호',w:'155px'},{key:'lot',label:'LOT번호',w:'128px'},
-    {key:'item_name',label:'품목명'},{key:'insp_type',label:'검사유형',w:'78px',render:v=>`<span class="badge bblu">${H.e(v)}</span>`},
-    {key:'insp_date',label:'검사일',w:'88px'},{key:'qty',label:'수량',w:'72px',align:'right',render:v=>H.n(v)},
-    {key:'inspector',label:'검사자',w:'72px'},{key:'approver',label:'승인자',w:'72px'},
-    {key:'final',label:'최종판정',w:'78px',align:'center',render:v=>H.inspBadge(v)},
-  ],data,onRow:row=>Pages._certDetail(row)});
-},
 _certDetail(row){
   Modal.open({title:`📜 검사 성적서 — ${row.cert_no}`,size:'mxl',
     body:`<div style="border:2px solid var(--pri);border-radius:var(--rl);overflow:hidden">
@@ -6262,24 +6242,6 @@ _certDetail(row){
       </div></div>`,
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bout" onclick="window.print()">🖨️ 인쇄</button><button class="btn bpri" onclick="Toast.show('PDF 저장—백엔드 연동 후','info')">📥 PDF 저장</button>`});
 },
-lot_trace(){
-  const w=document.getElementById('pw');const data=DB2.lot_trace;
-  w.innerHTML=`<div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">🔗</div><div><div class="sd-val">${data.length}</div><div class="sd-lbl">추적 LOT</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚫</div><div><div class="sd-val">${data.filter(d=>d.hold).length}</div><div class="sd-lbl">Hold 중</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${data.filter(d=>d.insp_result==='합격').length}</div><div class="sd-lbl">합격</div></div></div>
-  </div>
-  <div class="ph" style="margin-top:14px"><div><div class="ptit">🔗 LOT 추적성</div><div class="psub">원자재 → 반제품 → 완제품 LOT 연결 추적</div></div></div>
-  <div class="tbar"><div class="sw2"><input type="text" placeholder="LOT번호, 품목명..."></div></div><div id="lotTbl"></div>`;
-  Tbl.render({el:'#lotTbl',cols:[
-    {key:'lot',label:'LOT번호',w:'135px'},{key:'item_name',label:'품목명'},
-    {key:'vendor',label:'공급업체',w:'110px'},{key:'recv_date',label:'입고일',w:'88px'},
-    {key:'recv_qty',label:'수량',w:'58px',align:'right',render:v=>H.n(v)},{key:'remain_qty',label:'잔여',w:'58px',align:'right',render:v=>H.n(v)},
-    {key:'insp_result',label:'검사결과',w:'78px',align:'center',render:v=>H.inspBadge(v)},
-    {key:'hold',label:'Hold',w:'62px',align:'center',render:v=>v?`<span class="badge bred">Hold</span>`:`<span class="badge bgrn">정상</span>`},
-    {key:'used_in',label:'사용처',w:'62px',align:'center',render:v=>`<span style="font-weight:700;color:var(--pri)">${v.length}건</span>`},
-  ],data,onRow:row=>Pages._lotDetail(row)});
-},
 _lotDetail(row){
   Modal.open({title:`🔗 LOT 추적 — ${row.lot}`,size:'mlg',
     body:`<div class="ir"><div class="il">LOT번호</div><div class="iv" style="font-family:'JetBrains Mono',monospace">${H.e(row.lot)}</div></div>
@@ -6290,38 +6252,6 @@ _lotDetail(row){
     <div class="ir"><div class="il">Hold</div><div class="iv">${row.hold?`<span class="badge bred">Hold 중</span> <span style="font-size:12px;color:var(--tm)">${H.e(row.hold_reason||'')}</span>`:`<span class="badge bgrn">정상</span>`}</div></div>
     ${row.used_in.length?`<div style="margin-top:14px"><div style="font-size:13px;font-weight:700;margin-bottom:9px">📦 사용처 (${row.used_in.length}건)</div><div class="xl-result"><table><thead><tr><th>LOT</th><th>품목</th><th>수량</th><th>처리일</th></tr></thead><tbody>${row.used_in.map(u=>`<tr><td style="font-family:'JetBrains Mono',monospace;font-size:11px">${H.e(u.wip_lot)}</td><td>${H.e(u.item)}</td><td style="text-align:right">${H.n(u.qty)}EA</td><td>${u.date}</td></tr>`).join('')}</tbody></table></div></div>`:`<div style="margin-top:14px;padding:12px;background:var(--bg);border-radius:var(--r);text-align:center;color:var(--tm)">사용 이력 없음</div>`}`,
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>${row.hold?`<button class="btn bok" onclick="Toast.show('Hold 해제(더미)','ok')">Hold 해제</button>`:''}`});
-},
-hold_mgmt(){
-  const w=document.getElementById('pw');const data=DB2.holds;
-  w.innerHTML=`<div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚫</div><div><div class="sd-val">${data.filter(d=>d.status==='Hold중').length}</div><div class="sd-lbl">Hold 중</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${data.filter(d=>d.status==='처리완료').length}</div><div class="sd-lbl">처리완료</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">📦</div><div><div class="sd-val">${data.filter(d=>d.status==='Hold중').reduce((s,d)=>s+d.qty,0)}</div><div class="sd-lbl">Hold 수량</div></div></div>
-  </div>
-  <div class="ph" style="margin-top:14px"><div><div class="ptit">🚫 Hold 관리</div><div class="psub">불합격·부적합 자재 격리 관리</div></div>
-    <div class="pac"><button class="btn bpri btn-f2" onclick="Pages._holdForm()">+ Hold 등록 <span class="kbd">F2</span></button></div>
-  </div><div id="holdTbl"></div>`;
-  Tbl.render({el:'#holdTbl',cols:[
-    {key:'hold_no',label:'Hold번호',w:'148px'},{key:'lot',label:'LOT번호',w:'128px'},{key:'item_name',label:'품목명'},
-    {key:'qty',label:'수량',w:'58px',align:'right',render:v=>H.n(v)},{key:'location',label:'보관위치',w:'118px'},
-    {key:'reason',label:'Hold 사유'},{key:'hold_date',label:'Hold일',w:'86px'},{key:'assignee',label:'담당자',w:'70px'},
-    {key:'status',label:'상태',w:'76px',render:v=>`<span class="badge ${v==='Hold중'?'bred':'bgrn'}">${H.e(v)}</span>`},
-  ],data,onDel:async(ids)=>{
-      /* [v2.372] 삭제 경고 팝업 — 데이터 */
-      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
-      const _doDelete=async()=>{
-        const numIds=ids.map(Number);
-        data=data.filter(r=>!numIds.includes(Number(r.id)));
-        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
-        render?.();
-      };
-      Modal.confirm({
-        title:'🗑️ 데이터 삭제 확인',
-        msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div>'+`<div style="font-size:14px;font-weight:700;margin:6px 0">선택한 <b style="color:#dc2626">${ids.length}건</b>의 데이터를 삭제합니다.</div>`+'<div style="font-size:12px;color:#64748b">삭제된 데이터는 복구가 어렵습니다. 계속하시겠습니까?</div></div>',
-        danger:true,
-        onOk:_doDelete
-      });
-    },onRow:row=>Pages._holdDetail(row)});
 },
 _holdForm(){Modal.open({title:'🚫 Hold 등록',size:'mlg',body:`<div class="fg2">
   <div class="fgroup"><label class="fl req">LOT번호</label><input class="fc" placeholder="LOT번호 입력"></div>
@@ -6340,28 +6270,6 @@ _holdDetail(row){Modal.open({title:`🚫 Hold 상세 — ${row.hold_no}`,size:'m
   <div class="ir"><div class="il">Hold 사유</div><div class="iv">${H.e(row.reason)}</div></div>
   <div class="ir"><div class="il">상태</div><div class="iv"><span class="badge ${row.status==='Hold중'?'bred':'bgrn'}">${H.e(row.status)}</span></div></div>`,
   foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>${row.status==='Hold중'?`<button class="btn bok" onclick="Toast.show('Hold 해제(더미)','ok');Modal.close()">✅ Hold 해제</button>`:''}`})},
-reinsp(){
-  const w=document.getElementById('pw');const data=DB2.reinsp;
-  w.innerHTML=`<div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">🔄</div><div><div class="sd-val">${data.length}</div><div class="sd-lbl">재검사 건수</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${data.filter(d=>d.result==='합격').length}</div><div class="sd-lbl">합격</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#ccfbf1;color:#0d9488">🔷</div><div><div class="sd-val">${data.filter(d=>d.result==='부분합격').length}</div><div class="sd-lbl">부분합격</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⭐</div><div><div class="sd-val">${data.filter(d=>d.result==='특채').length}</div><div class="sd-lbl">특채</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">🔖</div><div><div class="sd-val">${data.filter(d=>d.result==='무검사').length}</div><div class="sd-lbl">무검사</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#f1f5f9;color:#64748b">⏸</div><div><div class="sd-val">${data.filter(d=>d.result==='보류').length}</div><div class="sd-lbl">보류</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">❌</div><div><div class="sd-val">${data.filter(d=>d.result==='불합격').length}</div><div class="sd-lbl">불합격</div></div></div>
-  </div>
-  <div class="ph" style="margin-top:14px"><div><div class="ptit">🔄 재검사 관리</div><div class="psub">불합격 후 재검사 등록 및 이력 연결</div></div>
-    <div class="pac"><button class="btn bpri btn-f2" onclick="Pages._reinspForm()">+ 재검사 등록 <span class="kbd">F2</span></button></div>
-  </div><div id="reinspTbl"></div>`;
-  Tbl.render({el:'#reinspTbl',cols:[
-    {key:'reinsp_no',label:'재검사번호',w:'148px'},{key:'orig_lot',label:'원LOT',w:'128px'},
-    {key:'item_name',label:'품목명'},{key:'orig_result',label:'최초',w:'68px',render:v=>`<span class="badge bred">${H.e(v)}</span>`},
-    {key:'reinsp_date',label:'재검사일',w:'86px'},{key:'qty',label:'수량',w:'58px',align:'right',render:v=>H.n(v)},
-    {key:'reject_qty',label:'불합격',w:'58px',align:'right',render:v=>`<span style="color:var(--err);font-weight:700">${v}</span>`},
-    {key:'inspector',label:'검사자',w:'70px'},{key:'result',label:'결과',w:'78px',render:v=>H.inspBadge(v)},
-  ],data,onRow:row=>Pages._reinspDetail(row)});
-},
 _reinspDetail(row){
   Modal.open({title:'재검사 상세',size:'mmd',
     body:`<div class="ir"><div class="il">재검사번호</div><div class="iv">${H.e(row.reinsp_no)}</div></div>
