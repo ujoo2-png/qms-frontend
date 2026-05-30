@@ -1,4 +1,4 @@
-/* qms-init.js — hotkeys + 초기화 [v2.376] */
+/* qms-init.js — hotkeys + 초기화 [v2.377] */
 "use strict";
 
 
@@ -18,7 +18,7 @@ function setupHotkeys(){
       else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
     }
     else if(ev.key==='F5'){
-      /* [v2.376] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
+      /* [v2.377] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
       ev.preventDefault();
       if(Auth._u){
         const page=document.querySelector('.ni.active')?.dataset?.p||'home';
@@ -42,7 +42,7 @@ function setupHotkeys(){
 
 /* ══ 초기화 ══ */
 (function init(){
-  /* [v2.376] 날짜형식: 2026년 5월 25일(월) */
+  /* [v2.377] 날짜형식: 2026년 5월 25일(월) */
   const DAYS=['일','월','화','수','목','금','토'];
   const dateFmt=()=>{
     const d=new Date();
@@ -64,7 +64,7 @@ function setupHotkeys(){
   if(savedAuth){
     try{
       const {cur, u} = JSON.parse(savedAuth);
-      /* [v2.376 수정] 복원 시 저장된 사용자 정보로 표시 (admin 하드코딩 제거) */
+      /* [v2.377 수정] 복원 시 저장된 사용자 정보로 표시 (admin 하드코딩 제거) */
       Auth._cur = cur;
       Auth._u   = u;
       const roleLabel={'admin':'관','manager':'장','user':'사'};
@@ -74,11 +74,11 @@ function setupHotkeys(){
       });
       document.getElementById('loginOv').style.display='none';
       document.getElementById('app').classList.remove('hidden');
-      /* [v2.376] 설정 메뉴: 세션 복원 시에도 admin만 표시 */
+      /* [v2.377] 설정 메뉴: 세션 복원 시에도 admin만 표시 */
       const sm=document.getElementById('ni_settings');
       if(sm) sm.style.display=(u.role==='admin')?'':'none';
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
-      /* [v2.376] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
+      /* [v2.377] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
       (async()=>{
         try{
           if(_sb){
