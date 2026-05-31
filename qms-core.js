@@ -1,4 +1,4 @@
-/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.382] */
+/* qms-core.js — H 헬퍼 + Toast + Modal + App + Auth + Nav + Tbl + Cmt + UI [v2.383] */
 "use strict";
 
 
@@ -9,7 +9,7 @@ const App={
     {id:2,title:'계측기 정기교정 일정 공지',body:'EQ-003, EQ-005 계측기 교정이 5월 15일 예정되어 있습니다. 해당 계측기 사용 부서 준비 바랍니다.',author:'품질팀',date:'2026-05-02',expire:'2026-05-16',show:true},
   ],
   files:{},
-  /* [v2.382] 메뉴별 권한 저장소 */
+  /* [v2.383] 메뉴별 권한 저장소 */
   perms:{},
 };
 
@@ -21,13 +21,13 @@ const H={
   today(){return this.d(new Date())},
   _fmtSize(b){if(!b)return'0B';const u=['B','KB','MB','GB'];let i=0;while(b>=1024&&i<3){b/=1024;i++;}return b.toFixed(i>0?1:0)+u[i]},
   /* sha256: 비밀번호 해시 (Web Crypto API)
-     [v2.382] A2안: 평문 대신 SHA-256 해시로 저장/비교 */
+     [v2.383] A2안: 평문 대신 SHA-256 해시로 저장/비교 */
   async sha256(str){
     if(!str) return '';
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   },
-  /* [v2.382 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
+  /* [v2.383 A안] 계측기 상태 자동 계산 — 차기교정일(next) 기준
      만료(D<0) → 교정만료  |  D-30 이내 → 교정중  |  나머지 → 정상 */
   equipStatus(next){
     if(!next) return '정상';
@@ -36,7 +36,7 @@ const H={
     if(d<=30) return '교정중';
     return '정상';
   },
-  /* [v2.382] 검사결과 배지 HTML 생성
+  /* [v2.383] 검사결과 배지 HTML 생성
      합격:초록 / 부분합격:청록 / 특채:주황 / 보류:회색 / 불합격:빨강 */
   inspBadge(v){
     const MAP={
@@ -148,7 +148,7 @@ const Auth={
   _u:null,_pwV:false,
 
   switchTab(name,btn){
-    /* [v2.382] 탭 전환 시 이전 탭 입력값 초기화 */
+    /* [v2.383] 탭 전환 시 이전 탭 입력값 초기화 */
     const clearIds={
       findId:['findIdName','findIdEmail','findIdResult'],
       findPw:['fpId','fpEmail','fpNewPw','fpNewPw2'],
@@ -184,7 +184,7 @@ const Auth={
   },
 
   /* ── 로그인 처리 ──
-     [v2.382] A2: SHA-256 해시 비교
+     [v2.383] A2: SHA-256 해시 비교
      - admin/admin1234: 시스템 계정 (항상 허용)
      - 일반 사용자: DB.users에서 username 조회 후 password(해시) 비교 */
   async login(){
@@ -198,7 +198,7 @@ const Auth={
     if(!pw){if(ePw){ePw.textContent='비밀번호를 입력하세요.';ePw.style.display='block'}if(iPw)iPw.classList.add('err');ok=false;}
     else{if(ePw)ePw.style.display='none';if(iPw)iPw.classList.remove('err');}
     if(!ok)return;
-    /* [v2.382] admin 계정 하드코딩 복구 — SB 장애 시 비상 접근 보장 */
+    /* [v2.383] admin 계정 하드코딩 복구 — SB 장애 시 비상 접근 보장 */
     if(id==='admin'){
       const curHash=await H.sha256(pw);
       const adminPwHash=await H.sha256('admin1234');
@@ -220,13 +220,13 @@ const Auth={
       if(eId){eId.textContent='등록되지 않은 아이디입니다.';eId.style.display='block';}
       if(iId)iId.classList.add('err');return;
     }
-    /* [v2.382] pending(승인대기) vs 비활성 구분 */
-    /* [v2.382] pending: true/1/'true' 모두 처리 */
+    /* [v2.383] pending(승인대기) vs 비활성 구분 */
+    /* [v2.383] pending: true/1/'true' 모두 처리 */
     if(user.pending&&user.pending!==0&&user.pending!=='0'&&user.pending!==false){
       if(eId){eId.textContent='승인 대기 중입니다. 관리자 승인 후 로그인하세요.';eId.style.display='block';}
       if(iId)iId.classList.add('err');return;
     }
-    /* [v2.382] active===0 또는 null/undefined 모두 비활성 처리 */
+    /* [v2.383] active===0 또는 null/undefined 모두 비활성 처리 */
     if(user.active===0||user.active===null||user.active===undefined){
       if(eId){eId.textContent='비활성화된 계정입니다. 관리자에게 문의하세요.';eId.style.display='block';}
       if(iId)iId.classList.add('err');return;
@@ -251,9 +251,9 @@ const Auth={
       const e=document.getElementById(el);
       if(e)e.textContent=[(user.name||user.username||'?')[0],user.name||user.username,roleLabel[user.role]||'사용자',user.name||user.username][i];
     });
-    /* [v2.382] 최근 로그인 시각 SB 업데이트 */
+    /* [v2.383] 최근 로그인 시각 SB 업데이트 */
     if(_sb&&user.id) _sb.from('users').update({last_login:H.today()}).eq('id',user.id).then(()=>{});
-    /* [v2.382] 관리자 로그인 시 비번찾기 알림 표시 */
+    /* [v2.383] 관리자 로그인 시 비번찾기 알림 표시 */
     if(user.role==='admin'){
       try{
         const noti=JSON.parse(localStorage.getItem('qms_admin_noti')||'[]');
@@ -270,21 +270,21 @@ const Auth={
         }
       }catch(e){}
     }
-    /* [v2.382] 로그인창 admin 이메일 업데이트 (admin 계정) */
+    /* [v2.383] 로그인창 admin 이메일 업데이트 (admin 계정) */
     if(user.role==='admin'&&user.email){
       const eSpan=document.getElementById('adminContactEmail');
       if(eSpan) eSpan.textContent=user.email;
     }
-    /* [v2.382] 권한 설정 복원 — sessionStorage에서 로드 */
+    /* [v2.383] 권한 설정 복원 — sessionStorage에서 로드 */
     try{
       const _sp=sessionStorage.getItem('qms_perms');
       if(_sp) App.perms=JSON.parse(_sp);
     }catch(e){}
-    /* [v2.382] 설정 메뉴: 관리자만 표시 */
-    /* [v2.382] settings 모든 로그인 사용자에게 표시 */
+    /* [v2.383] 설정 메뉴: 관리자만 표시 */
+    /* [v2.383] settings 모든 로그인 사용자에게 표시 */
     const settingsMenu=document.getElementById('ni_settings');
     if(settingsMenu) settingsMenu.style.display='';
-    /* [v2.382] 게시기간 만료 공지 제외 */
+    /* [v2.383] 게시기간 만료 공지 제외 */
     const _today=H.today();
     const active=App.notices.filter(n=>n.show&&(!n.expire||n.expire>=_today)&&(!n.date||n.date<=_today));
     if(active.length){
@@ -303,7 +303,7 @@ const Auth={
     document.getElementById('npOverlay').classList.add('hidden');
     document.getElementById('loginOv').style.display='none';
     document.getElementById('app').classList.remove('hidden');
-    /* [v2.382] 로그인 직후 DB 일괄 로드 후 홈 진입 */
+    /* [v2.383] 로그인 직후 DB 일괄 로드 후 홈 진입 */
     (async()=>{
       try{
         if(_sb){
@@ -325,10 +325,10 @@ const Auth={
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
       Toast.show('로그인되었습니다.','ok');
-      /* [v2.382] 로그인 시 keepalive 자동 실행 */
+      /* [v2.383] 로그인 시 keepalive 자동 실행 */
       setTimeout(async()=>{
         try{if(_sb){await _sb.from('users').select('id').limit(1);localStorage.setItem('qms_keepalive',new Date().toISOString().slice(0,16).replace('T',' '));}}catch(e){}},2000);
-      /* [v2.382] 로그인 직후 멘션 배지 갱신 */
+      /* [v2.383] 로그인 직후 멘션 배지 갱신 */
       setTimeout(()=>TopNav.updateMentionBadge(),500);
     })();
   },
@@ -348,7 +348,7 @@ const Auth={
     Toast.show('로그아웃되었습니다.','info');
   },
 
-  /* ── 회원가입 [v2.382 복구] ──
+  /* ── 회원가입 [v2.383 복구] ──
      절차: 가입 신청 → DB에 pending(active=0) 저장 → 관리자가 설정>사용자관리에서 승인 */
   async signup(){
     const g=k=>(document.getElementById(k)?.value||'').trim();
@@ -411,7 +411,7 @@ const Auth={
   },
 
   /* ── 비밀번호 찾기 ──
-     [v2.382] B2안: 관리자 초기화 방식
+     [v2.383] B2안: 관리자 초기화 방식
      실제 이메일 발송 인프라 없음 → 관리자에게 초기화 요청 안내
      아이디+이름 확인 후 안내 메시지 표시 */
   async findPwStep1(){
@@ -460,7 +460,7 @@ const Auth={
   },
 
   contactAdmin(fromPwFind=false){
-    /* [v2.382] 비밀번호 찾기에서 호출 시 관리자 로그인 알림 저장 */
+    /* [v2.383] 비밀번호 찾기에서 호출 시 관리자 로그인 알림 저장 */
     if(fromPwFind){
       const fpId=(document.getElementById('fpId')?.value||'').trim();
       const req={type:'pw_reset',username:fpId,time:new Date().toLocaleString('ko-KR'),read:false};
@@ -506,7 +506,7 @@ const UI={
     const isHidden=pop.classList.contains('hidden');
     pop.classList.toggle('hidden');
     if(isHidden){
-      /* [v2.382] 팝업 열 때 실시간 멘션 렌더 */
+      /* [v2.383] 팝업 열 때 실시간 멘션 렌더 */
       UI.renderMpop();
     }
     document.getElementById('bdot').style.display='none';
@@ -552,7 +552,7 @@ const UI={
     }).join('');
   },
   markAllRead(){
-    /* [v2.382] 모두 읽음 처리 */
+    /* [v2.383] 모두 읽음 처리 */
     const me=Auth._cur||'admin';
     const isAdmin=Auth._u?.role==='admin';
     const unread=(DB.mentions||[]).filter(m=>
@@ -569,7 +569,7 @@ const UI={
 
 /* ══ 테이블 ══ */
 const Tbl={
-  /* [v2.382] 정렬 상태 저장 */
+  /* [v2.383] 정렬 상태 저장 */
   _sortKey:null, _sortDir:1,
 
   render({el,cols,data,onDel,onRow,ps=20,page=1}={}){
@@ -617,7 +617,7 @@ const Tbl={
       if(e2<pages) bs.push(`<button class="pb" style="pointer-events:none;opacity:.4">…</button>`);
       bs.push(`<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${page+1})" title="다음">›</button>`);
       bs.push(`<button class="pb" ${page===pages?'disabled':''} onclick="Tbl._pg(${pages})" title="마지막">»</button>`);
-      /* [v2.382] 페이지네이션: 정가운데 1줄 — 건수선택 | « ‹ 1 2 3 › » | N-M/전체 */
+      /* [v2.383] 페이지네이션: 정가운데 1줄 — 건수선택 | « ‹ 1 2 3 › » | N-M/전체 */
       pg=`<div class="pager" style="display:flex;justify-content:center;align-items:center;gap:8px;padding:8px 0;flex-wrap:nowrap">
         <select class="psel" onchange="Tbl._ps(this.value)" style="flex-shrink:0">
           ${[10,20,50,100].map(n=>`<option value="${n}"${ps===n?' selected':''}>${n}건</option>`).join('')}
@@ -626,7 +626,7 @@ const Tbl={
         <div class="pi" style="flex-shrink:0;font-size:11px;color:var(--tm)">${from}–${to}/${total}건</div>
       </div>`;
     }
-    /* [v2.382] 건수는 pager 안에 포함, 삭제버튼은 하단 별도 */
+    /* [v2.383] 건수는 pager 안에 포함, 삭제버튼은 하단 별도 */
     const delBar=onDel
       ?`<div id="tbarDel" style="display:none;justify-content:center;margin-top:8px">
           <button class="btn berr bsm" onclick="Tbl.delSel()">🗑 선택 삭제</button>
@@ -643,7 +643,7 @@ const Tbl={
     Tbl._curPage=page;
   },
 
-  /* [v2.382] 정렬 처리 */
+  /* [v2.383] 정렬 처리 */
   _sort(key){
     if(Tbl._sortKey===key){
       Tbl._sortDir*=-1;
@@ -654,7 +654,7 @@ const Tbl={
     Tbl.render({el:Tbl._curEl,cols:Tbl._curCols,data:Tbl._curData,
       onRow:Tbl._onRowFn,onDel:Tbl._onDelFn,ps:Tbl._curPs,page:1});
   },
-  /* [v2.382] onRow 이벤트 핸들러 — id→row 객체 변환 */
+  /* [v2.383] onRow 이벤트 핸들러 — id→row 객체 변환 */
   _onRow(id){
     if(!Tbl._onRowFn) return;
     /* id로 _curData에서 row 객체 찾기 */
@@ -682,7 +682,7 @@ const Tbl={
   delSel(){
     const ids=this.getSel();
     if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
-    /* [v2.382] 삭제 경고 팝업 강화 */
+    /* [v2.383] 삭제 경고 팝업 강화 */
     Modal.confirm({
       title:'🗑️ 선택 삭제 확인',
       msg:`<div style="text-align:center">
@@ -698,7 +698,7 @@ const Tbl={
 
 /* ══ 댓글 ══ */
 /* ── 댓글/멘션 위젯 ──
-   [v2.382] C1: SB.addMention 연동
+   [v2.383] C1: SB.addMention 연동
    댓글은 mentions 테이블에 key(item-id, vendor-id 등)로 저장
    _d: 로컬 캐시 (key별) */
 const Cmt={
@@ -1092,7 +1092,7 @@ function _validateItem(code){
 const TopNav={
   _map:{
     '기준정보':    [{label:'품목 등록',page:'items'},{label:'거래처 등록',page:'vendors'}],
-    /* [v2.382] 시스템 탭 — 설정/사용자등록 분리 */
+    /* [v2.383] 시스템 탭 — 설정/사용자등록 분리 */
     '시스템':      [{label:'설정',page:'settings'},{label:'사용자 등록',page:'sysusers'}],
     '품질관리':    [{label:'품질현황 대시보드',page:'quality_dash'},{label:'수입검사',page:'insp_in'},{label:'공정검사',page:'insp_pr'},{label:'구매검사',page:'insp_pu'},{label:'외주검사',page:'insp_ou'},{label:'최종검사',page:'insp_fi'},{label:'부적합 관리',page:'nc'},{label:'8D Report',page:'nc_8d'},{label:'반품/폐기',page:'nc_dispose'},{label:'불량 트렌드',page:'nc_trend'}],
     '검사 고도화': [{label:'검사 기준서',page:'insp_std'},{label:'검사 성적서',page:'insp_cert'},{label:'LOT 추적성',page:'lot_trace'},{label:'Hold 관리',page:'hold_mgmt'},{label:'재검사 관리',page:'reinsp'}],
@@ -1165,7 +1165,7 @@ const TopNav={
       }
     }
   },
-  /* [v2.382] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
+  /* [v2.383] 멘션함 탭 클릭 — 다른 모듈과 충돌 없이 독립 이동 */
   selectMention(){
     /* 기존 active 탭 해제 */
     document.querySelectorAll('.tb-mod').forEach(m=>m.classList.remove('on'));
@@ -1173,7 +1173,7 @@ const TopNav={
     /* 사이드바 필터링 없이 바로 mentions 페이지로 이동 */
     Nav.go('mentions');
   },
-  /* [v2.382] 멘션 미읽음 배지 업데이트 */
+  /* [v2.383] 멘션 미읽음 배지 업데이트 */
   updateMentionBadge(){
     const me=Auth._cur||'admin';
     const unread=(DB.mentions||[]).filter(m=>
@@ -1201,13 +1201,13 @@ const Nav={
   go(page){
     /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
     if(Auth._u) sessionStorage.setItem('qms_page', page);
-    /* [v2.382] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
+    /* [v2.383] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
     const _np=document.getElementById('npOverlay');
     if(_np&&!_np.classList.contains('hidden')) _np.classList.add('hidden');
-    /* [v2.382] 멘션함 이동 시 배지 업데이트 */
+    /* [v2.383] 멘션함 이동 시 배지 업데이트 */
     if(page==='mentions') setTimeout(()=>TopNav.updateMentionBadge(),300);
 
-    /* [v2.382] 권한 기반 접근 제어 */
+    /* [v2.383] 권한 기반 접근 제어 */
     const _role=Auth._u?.role||'viewer';
     const _roles=['admin','manager','user','viewer'];
     const _pKey=page+'_'+_role;
