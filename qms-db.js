@@ -1,4 +1,4 @@
-/* qms-db.js — DB 초기 데이터 + Supabase 객체 [v2.379] */
+/* qms-db.js — DB 초기 데이터 + Supabase 객체 [v2.380] */
 "use strict";
 
 const SUPABASE_URL  = 'https://phxlsnghgvowrxdlcsph.supabase.co';
@@ -18,9 +18,9 @@ if(window.supabase){
    테이블 미생성 시 자동으로 더미데이터로 폴백
 
    [수정 이력]
-   v2.379: SB 헬퍼 초기 구현 — getItems/getVendors/getInspections/getMentions 등
-   v2.379: SB.uploadFile/deleteFile — Supabase Storage 연동
-   v2.379: 일괄 버그 수정
+   v2.380: SB 헬퍼 초기 구현 — getItems/getVendors/getInspections/getMentions 등
+   v2.380: SB.uploadFile/deleteFile — Supabase Storage 연동
+   v2.380: 일괄 버그 수정
      - insert().select().single() → insert() 로 변경 (전체 8개 함수)
        원인: anon 키는 SELECT 권한이 없어 RLS 오류 발생
        해결: .select().single() 제거, 로컬 캐시는 별도 push 처리
@@ -37,11 +37,11 @@ const SB={
   /* 연결 여부 확인 */
   ok(){return !!_sb},
   /* ── _sbFetchAll: Supabase 1000건 제한 완전 해제 ──
-     [v2.379 근본수정] hasMore 로직 버그 수정
+     [v2.380 근본수정] hasMore 로직 버그 수정
      CHUNK=1000으로 SB 기본 단위와 일치시켜 페이지네이션
      data.length < CHUNK 이면 마지막 페이지 → 종료 */
 
-  /* ── 소프트 삭제 공통 헬퍼 [v2.379] ──
+  /* ── 소프트 삭제 공통 헬퍼 [v2.380] ──
      실제 삭제 대신 deleted_at = now() 로 표시
      복구: deleted_at = null 로 초기화 */
   async _softDelete(table, ids){
@@ -58,7 +58,7 @@ const SB={
     return {ok:true};
   },
 
-  /* ── 소프트 삭제 복구 공통 헬퍼 [v2.379] ── */
+  /* ── 소프트 삭제 복구 공통 헬퍼 [v2.380] ── */
   async _restoreDeleted(table, ids){
     if(!_sb) return {ok:true};
     const {error}=await _sb.from(table)
@@ -72,7 +72,7 @@ const SB={
     return {ok:true};
   },
 
-  /* ── 삭제된 항목 조회 [v2.379] ── */
+  /* ── 삭제된 항목 조회 [v2.380] ── */
   async getDeleted(table){
     if(!_sb) return [];
     const {data,error}=await _sb.from(table)
@@ -103,7 +103,7 @@ const SB={
     return all;
   },
 
-  /* ── [Phase 1 v2.379] 서버사이드 페이지네이션 헬퍼 ──
+  /* ── [Phase 1 v2.380] 서버사이드 페이지네이션 헬퍼 ──
      대용량 데이터(10만건+)에서도 안정적으로 동작
      params: { table, orderCol, ascending, page, pageSize, filters, search }
      filters: [{col, op, val}]  op: eq|ilike|gte|lte|neq
@@ -159,7 +159,7 @@ const SB={
   /* 검사 목록 조회 */
   async getInspections(type=null){
     if(!_sb) return type?DB.inspections.filter(i=>i.type===type):DB.inspections;
-    /* [v2.379] _sbFetchAll: 1000건 제한 해제 */
+    /* [v2.380] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('inspections','insp_date',false,
       type?q=>q.eq('type',type,q=>q.is('deleted_at',null)):null);
     if(data===null){console.warn('[SB] inspections 조회 실패');return [];}
@@ -169,9 +169,9 @@ const SB={
   /* 검사 등록 */
   async addInspection(row){
     if(!_sb){const id=Math.max(0,...DB.inspections.map(i=>i.id))+1;DB.inspections.push({id,...row});return {ok:true,id};}
-    /* [v2.379] 허용 컬럼만 추출 — SB inspections 실제 컬럼만 포함
+    /* [v2.380] 허용 컬럼만 추출 — SB inspections 실제 컬럼만 포함
        SQL 미실행 시 없는 컬럼(spec, insp_method, wo_no, note, defect_rate) 자동 제거 */
-    /* [v2.379] 엑셀 날짜 → YYYY-MM-DD (Date객체/시리얼/문자열 모두 처리) */
+    /* [v2.380] 엑셀 날짜 → YYYY-MM-DD (Date객체/시리얼/문자열 모두 처리) */
     const _fmtDate=(v)=>{
       if(!v&&v!==0) return null;
       if(v instanceof Date){const y=v.getUTCFullYear(),mo=v.getUTCMonth()+1,dy=v.getUTCDate();return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;}
@@ -201,9 +201,9 @@ const SB={
       wo_no:       row.wo_no||'',
       note:        row.note||'',
       created_at:  row.created_at||null,
-      updated_at:  null,  /* [v2.379] 등록 시 수정일 비움 */
+      updated_at:  null,  /* [v2.380] 등록 시 수정일 비움 */
     };
-    /* [v2.379] upsert 시도, 실패시 insert 폴백 */
+    /* [v2.380] upsert 시도, 실패시 insert 폴백 */
     let insertRow={...allowed};
     /* null 날짜를 undefined로 교체 (SB date 타입 오류 방지) */
     Object.keys(insertRow).forEach(k=>{
@@ -236,7 +236,7 @@ const SB={
   /* 부적합 목록 조회 */
   async getNc(){
     if(!_sb) return DB.nc;
-    /* [v2.379] _sbFetchAll: 1000건 제한 해제 */
+    /* [v2.380] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('nonconformances','date',false,q=>q.is('deleted_at',null));
     if(data===null){console.warn('[SB] nc 조회 실패');return [];}
     return data;
@@ -245,7 +245,7 @@ const SB={
   /* 멘션 목록 조회 */
   async getMentions(){
     if(!_sb) return DB.mentions||[];
-    /* [v2.379] deleted_at IS NULL 필터 — 소프트 삭제된 항목 제외 */
+    /* [v2.380] deleted_at IS NULL 필터 — 소프트 삭제된 항목 제외 */
     try{
       const {data,error}=await _sb.from('mentions')
         .select('*')
@@ -265,7 +265,7 @@ const SB={
   /* 멘션 등록 */
   async addMention(row){
     if(!_sb){const id=Math.max(0,...DB.mentions.map(m=>m.id))+1;DB.mentions.unshift({id,...row,replies:[]});return {ok:true};}
-    /* [v2.379] SB mentions 테이블 실제 컬럼만 전송
+    /* [v2.380] SB mentions 테이블 실제 컬럼만 전송
        기본 컬럼: from, to, to_list, text, dept, message, ref, reply_to, read
        ※ channel/type/priority/status/thread_id 등 미생성 컬럼 제외 */
     const insertRow={
@@ -278,7 +278,7 @@ const SB={
       ref:       row.ref||row.ref_key||'',
       reply_to:  row.reply_to||null,
       read:      row.read||false,
-      file_url:  row.file_url||null,   /* [v2.379] 파일 첨부 */
+      file_url:  row.file_url||null,   /* [v2.380] 파일 첨부 */
     };
     /* created_at 있으면 포함 */
     if(row.created_at) insertRow.created_at=row.created_at;
@@ -293,11 +293,11 @@ const SB={
 
   /* 멘션 수정 */
   async updateMention(id,patch){
-    /* [v2.379] 실제 SB 컬럼만 업데이트 */
+    /* [v2.380] 실제 SB 컬럼만 업데이트 */
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
     /* 허용 컬럼만 필터링 */
     const allowed={};
-    const COLS=['from','to','to_list','text','message','dept','ref','reply_to','read','file_url','saved'];  /* [v2.379] */
+    const COLS=['from','to','to_list','text','message','dept','ref','reply_to','read','file_url','saved'];  /* [v2.380] */
     COLS.forEach(k=>{if(k in patch) allowed[k]=patch[k];});
     if(!Object.keys(allowed).length) return {ok:true};
     const {error}=await _sb.from('mentions').update(allowed).eq('id',id);
@@ -309,7 +309,7 @@ const SB={
   /* 멘션 삭제 (soft delete: deleted_at 기록) */
   async deleteMention(id){
     if(!_sb){DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};}
-    /* [v2.379] 소프트 삭제 — deleted_at 설정 (복구 가능) */
+    /* [v2.380] 소프트 삭제 — deleted_at 설정 (복구 가능) */
     const res=await SB._softDelete('mentions', [id]);
     if(!res.ok) return {ok:false};
     DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};
@@ -332,7 +332,7 @@ const SB={
     if(error) console.warn('[SB] 파일 삭제 실패',error.message);
   },
 
-  /* [v2.379] deleteVendors: 일괄 삭제 */
+  /* [v2.380] deleteVendors: 일괄 삭제 */
   async deleteVendors(ids){
     const numIds=ids.map(Number);
     if(!numIds.length) return{ok:true};
@@ -347,14 +347,14 @@ const SB={
   /* ── 사용자 ── */
   async getUsers(){
     if(!_sb) return DB.users;
-    /* [v2.379] _sbFetchAll: 1000건 제한 해제 */
+    /* [v2.380] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('users','id',true);
     if(data===null){console.warn('[SB] users 조회 실패');return [];}
     return data;
   },
   async addUser(row){
     if(!_sb){const id=Math.max(0,...DB.users.map(u=>u.id))+1;DB.users.push({id,...row,updated_at:null});return{ok:true,id};}
-    /* [v2.379] updated_at null로 명시 — 등록 시 수정일 비움 */
+    /* [v2.380] updated_at null로 명시 — 등록 시 수정일 비움 */
     const insertRow={...row, updated_at:null};
     const {error}=await _sb.from('users').insert(insertRow);
     if(error){Toast.show('사용자 저장 실패: '+error.message,'err');return{ok:false};}
@@ -362,7 +362,7 @@ const SB={
   },
   async updateUser(id,patch){
     if(!_sb){const u=DB.users.find(u=>u.id===id);if(u)Object.assign(u,patch);return{ok:true};}
-    /* [v2.379] updated_at 오늘 날짜로 명시 — 수정 시만 기록 */
+    /* [v2.380] updated_at 오늘 날짜로 명시 — 수정 시만 기록 */
     const patchWithDate={...patch, updated_at:H.today()};
     const {error}=await _sb.from('users').update(patchWithDate).eq('id',id);
     if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
@@ -375,7 +375,7 @@ const SB={
     if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
     DB.users=DB.users.filter(u=>u.id!==id);return{ok:true};
   },
-  /* [v2.379] deleteUsers: 일괄 삭제 */
+  /* [v2.380] deleteUsers: 일괄 삭제 */
   async deleteUsers(ids){
     const numIds=ids.map(Number);
     if(!numIds.length) return{ok:true};
@@ -430,7 +430,7 @@ const SB={
     if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
     const i=DB.items.find(i=>i.id===id);if(i)Object.assign(i,patch);return{ok:true};
   },
-  /* [v2.379] deleteItem: 단건/복수 삭제 지원 */
+  /* [v2.380] deleteItem: 단건/복수 삭제 지원 */
   async deleteItem(id){
     if(!_sb){
       DB.items=DB.items.filter(i=>Number(i.id)!==Number(id));
@@ -448,7 +448,7 @@ const SB={
     return{ok:true};
   },
 
-  /* [v2.379] deleteItems: 복수 일괄 삭제 (IN 쿼리로 1번에 처리) */
+  /* [v2.380] deleteItems: 복수 일괄 삭제 (IN 쿼리로 1번에 처리) */
   async deleteItems(ids){
     const numIds=ids.map(Number);
     if(!numIds.length) return{ok:true}; /* 빈 배열 전달 시 전체 삭제 방지 */
@@ -466,7 +466,7 @@ const SB={
     }
     return{ok:true};
   },
-  /* [v2.379] deleteInspections: 검사 일괄 삭제 */
+  /* [v2.380] deleteInspections: 검사 일괄 삭제 */
   async deleteInspections(ids){
     const numIds=ids.map(Number);
     if(!numIds.length) return{ok:true};
@@ -482,7 +482,7 @@ const SB={
   /* ── 거래처 ── */
     async addVendor(row){
     if(!_sb){const id=Math.max(0,...DB.vendors.map(v=>v.id))+1;DB.vendors.push({id,...row});return{ok:true,id};}
-    /* [v2.379] 허용 컬럼만 추출 */
+    /* [v2.380] 허용 컬럼만 추출 */
     const allowed={
       vendor_type:   row.vendor_type||'',
       biz_no:        row.biz_no||'',
@@ -497,7 +497,7 @@ const SB={
       address:       row.address||'',
       active:        row.active!==undefined?Number(row.active):1,
       created_at:    row.created_at||null,
-      updated_at:    null,  /* [v2.379] 등록 시 수정일 비움 */
+      updated_at:    null,  /* [v2.380] 등록 시 수정일 비움 */
     };
     /* 1차 시도 */
     let insertRow={...allowed};
@@ -532,7 +532,7 @@ const SB={
     DB.vendors.push({id:Date.now(),...insertRow});
     return{ok:true};
   },
-  /* [v2.379] vendors 컬럼 추가 SQL 안내 팝업 */
+  /* [v2.380] vendors 컬럼 추가 SQL 안내 팝업 */
   _showVendorColSQL(){
     const sqlText='-- vendors 테이블 누락 컬럼 추가\n'
       +'ALTER TABLE vendors ADD COLUMN IF NOT EXISTS vendor_type TEXT DEFAULT \'\';\n'
@@ -551,7 +551,7 @@ const SB={
       foot:'<button class="btn bpri" onclick="Modal.close();SB._vendorColWarned=false">확인</button>'
     }),100);
   },
-  /* [v2.379] equipment 누락 컬럼 SQL 안내 */
+  /* [v2.380] equipment 누락 컬럼 SQL 안내 */
   _showEquipColSQL(){
     const sql=
       '-- equipment 테이블 누락 컬럼 추가\n'
@@ -571,7 +571,7 @@ const SB={
     }),200);
   },
 
-  /* [v2.379] mentions 테이블 누락 컬럼 SQL 안내 */
+  /* [v2.380] mentions 테이블 누락 컬럼 SQL 안내 */
   _showMentionColSQL(){
     const sql='-- mentions 테이블 누락 컬럼 추가\n'
       +'ALTER TABLE mentions ADD COLUMN IF NOT EXISTS dept TEXT DEFAULT \'\';\n'
@@ -607,7 +607,7 @@ const SB={
   /* ── 부적합 ── */
   async addNc(row){
     if(!_sb){const id=Math.max(0,...DB.nc.map(n=>n.id))+1;DB.nc.push({id,...row});return{ok:true,id};}
-    /* .select() 미사용: RLS 오류 방지 (v2.379) */
+    /* .select() 미사용: RLS 오류 방지 (v2.380) */
     const {error}=await _sb.from('nonconformances').insert(row);
     if(error){Toast.show('부적합 저장 실패: '+error.message,'err');return{ok:false};}
     DB.nc.push({id:Date.now(),...row});return{ok:true};
@@ -622,15 +622,15 @@ const SB={
   /* ── 계측기 ── */
   async getEquip(){
     if(!_sb) return DB.equip;
-    /* [v2.379] _sbFetchAll: 1000건 제한 해제 */
+    /* [v2.380] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('equipment','id',true,q=>q.is('deleted_at',null));
     if(data===null){console.warn('[SB] equip 조회 실패');return [];}
     return data;
   },
   async addEquip(row){
     if(!_sb){const id=Math.max(0,...DB.equip.map(e=>e.id))+1;DB.equip.push({id,...row});return{ok:true,id};}
-    /* [v2.379] 허용 컬럼만 추출 + 동적 컬럼 오류 제거 */
-    /* [v2.379] 날짜 시리얼/객체 → YYYY-MM-DD 변환 */
+    /* [v2.380] 허용 컬럼만 추출 + 동적 컬럼 오류 제거 */
+    /* [v2.380] 날짜 시리얼/객체 → YYYY-MM-DD 변환 */
     const _fmtD=(v)=>{
       if(!v&&v!==0) return null;
       if(v instanceof Date){const y=v.getUTCFullYear(),mo=v.getUTCMonth()+1,dy=v.getUTCDate();return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;}
@@ -658,10 +658,10 @@ const SB={
       updated_at:  null,
       created_at:  row.created_at||null,
     };
-    /* [v2.379] upsert — code 중복 시 update (insert conflict 방지) */
+    /* [v2.380] upsert — code 중복 시 update (insert conflict 방지) */
     let insertRow={...allowed};
     let {error}=await _sb.from('equipment').upsert(insertRow,{onConflict:'code',ignoreDuplicates:false});
-    /* [v2.379] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
+    /* [v2.380] 컬럼 자동 제거 루프 제거 — 에러 시 즉시 안내 */
     if(error){
       console.error('[SB] addEquip 오류:',error.message);
       if(error.message?.includes('column')||error.message?.includes('schema')){
@@ -683,13 +683,13 @@ const SB={
   /* ── 교정 ── */
   async getCals(){
     if(!_sb) return DB.cals;
-    /* [v2.379] _sbFetchAll: 1000건 제한 해제 */
+    /* [v2.380] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('calibrations','cal_date',false,q=>q.is('deleted_at',null));
     if(data===null){console.warn('[SB] cals 조회 실패');return [];}
     return data;
   },
   async addCal(row){
-    /* [v2.379 Phase1] allowed 컬럼 명시 */
+    /* [v2.380 Phase1] allowed 컬럼 명시 */
     const allowed={
       equip_code: row.equip_code||row.code||'',
       code:        row.code||row.equip_code||'',
@@ -712,7 +712,7 @@ const SB={
     DB.cals.push({id:Date.now(),...allowed});return{ok:true};
   },
 
-  /* ── [v2.379 Phase1] 교정이력 수정/삭제 ── */
+  /* ── [v2.380 Phase1] 교정이력 수정/삭제 ── */
   async updateCal(id, patch){
     if(!_sb){const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
     patch.updated_at=H.today();
@@ -727,7 +727,7 @@ const SB={
     DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};
   },
 
-  /* ── [v2.379 Phase1] 변경 이력 조회/저장 ── */
+  /* ── [v2.380 Phase1] 변경 이력 조회/저장 ── */
   async getLogs(equip_code){
     if(!_sb){return DB.equip_logs.filter(l=>l.equip_code===equip_code);}
     const{data,error}=await _sb.from('equipment_logs')
@@ -750,14 +750,14 @@ const SB={
   /* ── 문서 ── */
   async getDocs(){
     if(!_sb) return DB.docs;
-    /* [v2.379] _sbFetchAll: 1000건 제한 해제 */
+    /* [v2.380] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('documents','id',true);
     if(data===null){console.warn('[SB] docs 조회 실패');return [];}
     return data;
   },
   async addDoc(row){
     if(!_sb){const id=Math.max(0,...DB.docs.map(d=>d.id))+1;DB.docs.push({id,...row});return{ok:true,id};}
-    /* .select() 미사용: RLS 오류 방지 (v2.379) */
+    /* .select() 미사용: RLS 오류 방지 (v2.380) */
     const {error}=await _sb.from('documents').insert(row);
     if(error){Toast.show('문서 저장 실패: '+error.message,'err');return{ok:false};}
     DB.docs.push({id:Date.now(),...row});return{ok:true};
@@ -772,14 +772,14 @@ const SB={
   /* ── 시정조치(CAR) ── */
   async getCars(){
     if(!_sb) return DB.cars;
-    /* [v2.379] _sbFetchAll: 1000건 제한 해제 */
+    /* [v2.380] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('corrective_actions','date',false);
     if(data===null){console.warn('[SB] cars 조회 실패');return [];}
     return data;
   },
   async addCar(row){
     if(!_sb){const id=Math.max(0,...DB.cars.map(c=>c.id))+1;DB.cars.push({id,...row});return{ok:true,id};}
-    /* .select() 미사용: RLS 오류 방지 (v2.379) */
+    /* .select() 미사용: RLS 오류 방지 (v2.380) */
     const {error}=await _sb.from('corrective_actions').insert(row);
     if(error){Toast.show('CAR 저장 실패: '+error.message,'err');return{ok:false};}
     DB.cars.push({id:Date.now(),...row});return{ok:true};
@@ -809,8 +809,8 @@ const DB={
     {id:4,vendor_name:'화학산업㈜',   vendor_type:'소모품',biz_no:'456-78-90123',ceo_name:'정사장',tel:'051-456-7890',fax:'051-456-7891',email:'chem@hwahak.co.kr',       manager:'윤담당',manager_tel:'010-4567-8901',manager_email:'yoon@hwahak.co.kr',  active:1,created_at:'2026-01-08',updated_at:'2026-01-08'},
     {id:5,vendor_name:'정밀측정기㈜', vendor_type:'외주',  biz_no:'567-89-01234',ceo_name:'한대표',tel:'02-567-8901', fax:'02-567-8902', email:'measure@jungmil.co.kr',   manager:'신담당',manager_tel:'010-5678-9012',manager_email:'shin@jungmil.co.kr', active:1,created_at:'2026-02-01',updated_at:'2026-04-20'},
   ],
-  users:[], /* [v2.379] 더미 삭제 — SB에서 로드 */
-    inspections:[], /* [v2.379] 더미 제거 — SB에서 로드 */
+  users:[], /* [v2.380] 더미 삭제 — SB에서 로드 */
+    inspections:[], /* [v2.380] 더미 제거 — SB에서 로드 */
 
   nc:[
     {id:1,no:'NC-20260430-001',type:'수입',item:'알루미늄 바',date:'2026-04-30',status:'처리중',desc:'치수 불량 - 직경 기준 초과',assignee:'김품질'},
@@ -830,7 +830,7 @@ const DB={
     {id:3,code:'EQ-003',name:'다이얼게이지',date:'2025-11-15',agency:'한국계량측정',result:'합격',next:'2026-05-15',cert:'CAL-2025-015'},
     {id:4,code:'EQ-005',name:'경도계(로크웰)',date:'2025-10-01',agency:'㈜정밀측정',result:'합격',next:'2026-04-01',cert:'CAL-2025-010'},
   ],
-  /* [v2.379 Phase1] 계측기 변경이력 캐시 */
+  /* [v2.380 Phase1] 계측기 변경이력 캐시 */
   equip_logs:[],
   docs:[
     {id:1,no:'QP-20260110-001',type:'절차서',title:'수입검사 절차서',rev:'2.0',date:'2026-01-10',status:'유효',author:'김품질'},
@@ -853,7 +853,7 @@ const DB={
     {id:3,from:'박담당',to:'관리자',dept:'생산팀',text:'@관리자 CAR-20260430-001 처리 부탁드립니다.',ref:'시정조치',time:'2시간 전',read:false,replies:[]},
     {id:4,from:'최엔지니어',to:'관리자',dept:'개발팀',text:'@관리자 EQ-003 교정 만료 확인 요청드립니다.',ref:'계측기관리',time:'1일 전',read:true,replies:[]},
   ],
-  /* ── 검사 기준서 [v2.379] ── */
+  /* ── 검사 기준서 [v2.380] ── */
   async getInspStd(){
     if(!_sb) return DB.insp_std||[];
     const data=await this._sbFetchAll('insp_std','item_code',true,q=>q.is('deleted_at',null));
@@ -871,7 +871,7 @@ const DB={
       sample_size:row.sample_size||null, criteria:row.criteria||'',
       rev:row.rev||'A', rev_date:row.rev_date||null,
       created_by:row.created_by||'', note:row.note||'',
-      file_url:row.file_url||null,  /* [v2.379] 파일 URL */
+      file_url:row.file_url||null,  /* [v2.380] 파일 URL */
     };
     const {error}=await _sb.from('insp_std').insert(allowed);
     if(error){Toast.show('기준서 저장 실패: '+error.message,'err');return{ok:false};}
@@ -885,7 +885,7 @@ const DB={
     return{ok:true};
   },
 
-  /* ── Hold 관리 SB 함수 [v2.379] ── */
+  /* ── Hold 관리 SB 함수 [v2.380] ── */
   async getHolds(){
     if(!_sb) return DB.holds||[];
     const data=await this._sbFetchAll('holds','issued_date',false,q=>q.is('deleted_at',null));
@@ -920,7 +920,7 @@ const DB={
     DB.holds=(DB.holds||[]).filter(r=>r.id!==id);return{ok:true};
   },
 
-  /* ── 재검사 관리 SB 함수 [v2.379] ── */
+  /* ── 재검사 관리 SB 함수 [v2.380] ── */
   async getReinspections(){
     if(!_sb) return DB.reinspections||[];
     const data=await this._sbFetchAll('reinspections','req_date',false,q=>q.is('deleted_at',null));
@@ -958,7 +958,7 @@ const DB={
   },
 
   /* ════════════════════════════════════
-     공급업체 품질 SB 함수 [v2.379]
+     공급업체 품질 SB 함수 [v2.380]
      ════════════════════════════════════ */
 
   /* 업체 평가 */
@@ -1034,7 +1034,7 @@ const DB={
     return res;
   },
 
-  /* ── LOT 추적 [v2.379] ── */
+  /* ── LOT 추적 [v2.380] ── */
   async getLotTrace(lot_no){
     if(!_sb||!lot_no) return{inspections:[],nc:[],equip:[]};
     const q=lot_no.toLowerCase();
@@ -1047,7 +1047,7 @@ const DB={
       nc:(nc.data||[]),
     };
   },
-  /* [v2.379] 검사고도화 로컬 초기값 */
+  /* [v2.380] 검사고도화 로컬 초기값 */
   holds:[],
   reinspections:[]
 
