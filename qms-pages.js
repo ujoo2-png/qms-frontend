@@ -3970,6 +3970,35 @@ async _mentionToggleSave(id){
   Pages._mentionRefresh();
 },
 
+/* 멘션 파일 미리보기 [v2.379] */
+_mentionFilePreview(url){
+  if(!url){Toast.show('파일이 없습니다.','warn');return;}
+  const ext=(url.split('.').pop()||'').toLowerCase().split('?')[0];
+  const isImage=['jpg','jpeg','png','gif','webp'].includes(ext);
+  const isPdf=ext==='pdf';
+  const fileName=decodeURIComponent(url.split('/').pop()||'파일');
+  Modal.open({
+    title:'📎 첨부파일 미리보기',
+    size:'mlg',
+    foot:`<a href="${H.e(url)}" download target="_blank" class="btn bout bsm" style="font-size:12px">⬇ 다운로드</a>
+          <button class="btn bout" onclick="Modal.close()">닫기</button>`,
+    body: isImage
+      ? `<div style="text-align:center;padding:10px">
+           <img src="${H.e(url)}" alt="첨부 이미지"
+             style="max-width:100%;max-height:70vh;border-radius:6px;box-shadow:0 2px 12px #0002">
+         </div>`
+      : isPdf
+      ? `<div style="height:70vh">
+           <iframe src="${H.e(url)}" style="width:100%;height:100%;border:none;border-radius:6px"></iframe>
+         </div>`
+      : `<div style="text-align:center;padding:40px">
+           <div style="font-size:40px;margin-bottom:12px">📄</div>
+           <div style="font-size:13px;color:var(--tm);margin-bottom:16px">${H.e(fileName)}</div>
+           <a href="${H.e(url)}" download target="_blank" class="btn bpri">⬇ 다운로드</a>
+         </div>`,
+  });
+},
+
 /* 일괄 보관 [v2.379] */
 async _mentionBulkSave(){
   const ids=[...document.querySelectorAll('.mention-chk:checked')].map(c=>Number(c.dataset.id));
@@ -4009,6 +4038,14 @@ async _mentionDetail(id){
         ${m.ref?`<div class="ir" style="grid-column:1/-1"><div class="il">참조</div><div class="iv"><span class="badge bgry">${H.e(m.ref)}</span></div></div>`:''}
       </div>
       <div style="margin-top:10px;padding:12px;background:var(--bg2);border-radius:6px;font-size:14px;line-height:1.7;white-space:pre-wrap">${H.e(m.text||m.message||'')}</div>
+      ${m.file_url?`
+      <div style="margin-top:10px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:16px">📎</span>
+        <span style="font-size:12px;color:#1d4ed8;flex:1">${H.e(m.file_url.split('/').pop()||'첨부파일')}</span>
+        <button class="btn bxs bblu" style="font-size:11px;padding:2px 10px"
+          onclick="Pages._mentionFilePreview('${H.e(m.file_url||'')}')">👁 미리보기</button>
+        <a href="${H.e(m.file_url)}" download target="_blank" class="btn bxs bout" style="font-size:11px;padding:2px 10px">⬇ 다운로드</a>
+      </div>`:''}
     </div>`,
   });
 },
