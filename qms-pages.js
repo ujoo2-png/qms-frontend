@@ -3819,6 +3819,7 @@ _mentionRefresh(){
   h+='<th style="padding:8px;width:110px;text-align:center;font-weight:600;white-space:nowrap">수신자</th>';
   h+='<th style="padding:8px;width:120px;text-align:center;font-weight:600;cursor:pointer;white-space:nowrap" data-sort="created_at" onclick="Pages._mentionSort(this.dataset.sort,this)">시간 ⇅</th>';
   h+='<th style="padding:8px;width:58px;text-align:center;font-weight:600;white-space:nowrap">상태</th>';
+  h+='<th style="padding:8px;width:56px;text-align:center;font-weight:600;white-space:nowrap">파일</th>';
   h+='<th style="padding:8px;width:80px;text-align:center;font-weight:600;white-space:nowrap">액션</th>';
   h+='</tr></thead><tbody>';
 
@@ -3848,6 +3849,15 @@ _mentionRefresh(){
     h+=isUnread
       ? `<span class="badge bred" style="font-size:10px">미읽음</span>`
       : `<span class="badge bgry" style="font-size:10px">읽음</span>`;
+    h+=`</td>`;
+    /* 파일 셀 */
+    h+=`<td style="padding:7px 8px;text-align:center">`;
+    if(m.file_url){
+      h+=`<button class="btn bxs bblu" style="font-size:10px;padding:2px 6px"
+        title="파일 보기" onclick="event.stopPropagation();Pages._mentionFilePreview('${H.e(m.file_url||'')}')">📎</button>`;
+    } else {
+      h+=`<span style="color:var(--tl);font-size:11px">-</span>`;
+    }
     h+=`</td>`;
     h+=`<td style="padding:7px 8px;text-align:center;white-space:nowrap">`;
     h+=`<button class="btn bxs bout" style="font-size:10px;padding:2px 6px" title="답장" onclick="event.stopPropagation();Pages._mentionReply(${m.id},'${H.e(m.from||'')}')">↩</button> `;
@@ -4040,6 +4050,11 @@ async _mentionForm(){
         <textarea class="fc" id="mnText" rows="5" placeholder="@사용자명 태그 또는 내용 입력...
 업무 관련 멘션, 부적합 알림, 협조 요청 등"></textarea>
       </div>
+      <div class="fgroup" style="grid-column:1/-1">
+        <label class="fl">첨부파일 <span style="font-size:10px;color:var(--tm)">(PDF·이미지·문서)</span></label>
+        <input class="fc" type="file" id="mnFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.hwp"
+          style="padding:5px;font-size:12px">
+      </div>
     </div>`,
   });
 },
@@ -4056,6 +4071,17 @@ async _mentionSend(){
   if(!toList.length){Toast.show('수신자를 선택하세요.','warn');return;}
   if(!text){Toast.show('내용을 입력하세요.','warn');return;}
 
+  /* [v2.379] 파일 업로드 먼저 처리 */
+  let file_url=null;
+  const fileEl=document.getElementById('mnFile');
+  if(fileEl?.files?.length){
+    const file=fileEl.files[0];
+    Toast.show('파일 업로드 중...','info');
+    const uploadRes=await SB.uploadFile('mentions', file);
+    if(uploadRes?.url) file_url=uploadRes.url;
+    else{ Toast.show('파일 업로드 실패. 멘션은 계속 전송합니다.','warn'); }
+  }
+
   /* 수신자별로 전송 */
   let success=0;
   for(const to of toList){
@@ -4063,6 +4089,7 @@ async _mentionSend(){
       from:meName, to, to_list:toList,
       text, message:text, dept, ref,
       reply_to:null, read:false,
+      file_url,                          /* [v2.379] 파일 URL */
       created_at:new Date().toISOString(),
     };
     const res=await SB.addMention(row);
@@ -4520,145 +4547,271 @@ _certForm(){
    설정 [v2.379] — 일반설정 / 사용자 등록 / SB 대시보드
    ══════════════════════════════════════════ */
 async settings(){
+  /* [v2.373] settings 복구 — 3탭: ⚙️일반설정 / 👥사용자관리 / 🔌SB대시보드 */
   const w=document.getElementById('pw');
-  w.innerHTML='<div class="spin"></div>';
-
-  /* SB 최신 사용자 로드 */
-  try{
+  if(!Auth._u){await new Promise(r=>setTimeout(r,150));}
+  if(!DB.users||DB.users.length===0){
     const fresh=await SB.getUsers();
-    if(Array.isArray(fresh)&&fresh.length) DB.users=fresh;
-  }catch(e){console.warn('[settings] users 로드 실패',e);}
+    if(fresh&&fresh.length>0) DB.users=fresh;
+  }
+  const isAdmin=Auth._u?.role==='admin';
+  const notices=App.notices;
 
-  const isAdmin=(Auth._u?.role==='admin');
-
-  /* 렌더 함수 */
   const renderTab=(tab)=>{
-    document.querySelectorAll('.stab-btn').forEach(b=>
-      b.classList.toggle('on',b.dataset.tab===tab));
-    document.querySelectorAll('.stab-pane').forEach(p=>
-      p.style.display=p.dataset.tab===tab?'block':'none');
+    document.querySelectorAll('.stab-btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+    document.querySelectorAll('.stab-pane').forEach(p=>p.style.display=p.dataset.tab===tab?'block':'none');
+    if(tab==='sbdash') setTimeout(()=>Pages._renderSbDash(),0);
   };
 
-  /* 탭 구성 */
-  const tabs=[
-    {tab:'general', label:'⚙️ 일반설정'},
-    {tab:'users',   label:'👥 사용자 등록'},
-    {tab:'sbdash',  label:'🔌 SB 대시보드'},
+  const MENU_GROUPS=[
+    {group:'기준정보', pages:[
+      {page:'items',    label:'품목 등록'},
+      {page:'vendors',  label:'거래처 등록'},
+    ]},
+    {group:'품질관리', pages:[
+      {page:'quality_dash', label:'품질현황 대시보드'},
+      {page:'insp_in',  label:'수입검사'},
+      {page:'insp_pr',  label:'공정검사'},
+      {page:'insp_pu',  label:'구매검사'},
+      {page:'insp_ou',  label:'외주검사'},
+      {page:'insp_fi',  label:'최종검사'},
+      {page:'nc',       label:'부적합 관리'},
+    ]},
+    {group:'계측기관리', pages:[
+      {page:'equip',    label:'장비 현황'},
+      {page:'cal',      label:'교정 관리'},
+    ]},
+    {group:'문서관리', pages:[
+      {page:'docs',     label:'문서 목록'},
+      {page:'car',      label:'시정조치'},
+    ]},
   ];
+  const ROLES=['admin','manager','user','viewer'];
+  const ROLE_LABEL={admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'};
+  const ROLE_COLOR={admin:'background:#7c3aed;color:#fff',manager:'background:#2563eb;color:#fff',
+    user:'background:#059669;color:#fff',viewer:'background:#64748b;color:#fff'};
+  const DEFAULT_PERM={admin:true,manager:true,user:true,viewer:false};
+  const App_perms=App.perms=App.perms||{};
+  const permKey=(page,role)=>`${page}_${role}`;
+  const getPerm=(page,role)=>App_perms[permKey(page,role)]??DEFAULT_PERM[role]??false;
 
-  w.innerHTML=`
-    <div class="ph">
-      <div><div class="ptit">⚙️ 설정</div>
-        <div class="psub">일반설정 · 사용자 관리 · Supabase 대시보드</div></div>
+  const renderUserMgmt=()=>{
+    const allUsers=DB.users;
+    const pendingUsers=allUsers.filter(u=>u.pending||(!u.active&&u.active!==undefined));
+    const activeUsers=allUsers.filter(u=>!u.pending&&u.active!==0);
+    let no=0;
+    return (pendingUsers.length?`<div class="card" style="margin-bottom:14px;border:1px solid #f59e0b">
+      <div class="ch" style="background:#fef3c7"><div class="ct">⏳ 승인 대기 (${pendingUsers.length}명)</div></div>
+      <div class="ts"><table class="dt"><thead><tr>
+        <th>아이디</th><th>이름</th><th>부서</th><th>이메일</th><th>신청일</th><th>처리</th>
+      </tr></thead><tbody>${pendingUsers.map(u=>`<tr>
+        <td><strong>${H.e(u.username)}</strong></td><td>${H.e(u.name)}</td>
+        <td>${H.e(u.department||'-')}</td><td>${H.e(u.email||'-')}</td>
+        <td>${H.e(u.created_at||'-')}</td>
+        <td style="display:flex;gap:4px">
+          <button class="btn bsm bgrn" onclick="Pages._approveUser(${u.id},'${H.e(u.username)}')">✅ 승인</button>
+          <button class="btn bsm berr" onclick="Pages._rejectUser(${u.id},'${H.e(u.username)}')">❌ 거절</button>
+        </td>
+      </tr>`).join('')}</tbody></table></div></div>`:'')
+    +`<div class="card" style="margin-bottom:14px">
+      <div class="ch"><div class="ct">👥 사용자 목록 (${activeUsers.length}명)</div>
+        <button class="btn bpri bsm" onclick="Pages._uForm(null)">+ 사용자 등록</button>
+      </div>
+      <div class="ts"><table class="dt" style="font-size:12px">
+        <thead><tr>
+          <th style="width:28px"><input type="checkbox" id="umgmtAllChk"
+            onchange="document.querySelectorAll('.umgmt-chk').forEach(c=>c.checked=this.checked)"></th>
+          <th style="width:36px">No</th>
+          <th>이름</th><th>아이디</th><th>부서</th>
+          <th style="width:110px">연락처</th>
+          <th style="width:160px">E-MAIL</th>
+          <th>권한</th><th>상태</th>
+          <th style="width:90px">등록일</th>
+          <th style="width:90px">수정일</th>
+          <th style="width:110px">최근 로그인</th>
+          <th>비밀번호</th>
+        </tr></thead>
+        <tbody>${activeUsers.length===0
+          ?'<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--tm)">등록된 사용자가 없습니다.</td></tr>'
+          :activeUsers.map(u=>{
+            no++;
+            const roleOpts=ROLES.map(r=>'<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_LABEL[r]+'</option>').join('');
+            return '<tr>'
+              +'<td><input type="checkbox" class="umgmt-chk" value="'+u.id+'"></td>'
+              +'<td style="text-align:center;color:var(--tm)">'+no+'</td>'
+              +'<td><strong style="cursor:pointer;color:var(--pri)" onclick="Pages._uFormById('+u.id+')">'+H.e(u.name||u.username)+'</strong></td>'
+              +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
+              +'<td>'+H.e(u.department||'-')+'</td>'
+              +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
+              +'<td style="font-size:11px">'+(u.email?'<a href="mailto:'+H.e(u.email)+'" style="color:var(--acc)">'+H.e(u.email)+'</a>':'-')+'</td>'
+              +'<td style="white-space:nowrap">'
+              +'<span class="badge" style="'+ROLE_COLOR[u.role||'user']+';font-size:10px;margin-right:3px">'+ROLE_LABEL[u.role||'user']+'</span>'
+              +'<select class="fsel" style="font-size:10px;padding:1px 2px" onchange="Pages._setUserRole('+u.id+',this.dataset.un,this.value)" data-un="'+H.e(u.username)+'">'+roleOpts+'</select>'
+              +'</td>'
+              +'<td><span class="badge '+(u.active?'bgrn':'bgry')+'" style="cursor:pointer" onclick="Pages._uStatusPopup('+(u.id)+',this.dataset.nm)" data-nm="'+H.e(u.name||u.username)+'">'+( u.active?'활성':'비활성')+'</span></td>'
+              +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.created_at||'-')+'</td>'
+              +'<td style="font-size:11px;color:var(--tm)">'+(u.updated_at?H.e(u.updated_at):'')+'</td>'
+              +'<td style="font-size:11px;color:var(--tm)">'+(u.last_login?H.e(u.last_login):'')+'</td>'
+              +'<td><button class="btn bsm bamb" onclick="Pages._uResetPw('+(u.id)+',this.dataset.un)" data-un="'+H.e(u.username)+'">🔑 초기화</button></td>'
+              +'</tr>';
+          }).join('')}
+        </tbody>
+      </table></div></div>`;
+  };
+
+  const renderPermTable=()=>{
+    return `<div class="card">
+      <div class="ch"><div class="ct">🔐 메뉴별 접근 권한</div>
+        <button class="btn bsm bout" onclick="Pages._savePerms()" style="margin-left:auto">💾 저장</button>
+      </div>
+      <div class="ts"><table class="dt" style="font-size:12px">
+        <thead><tr>
+          <th style="min-width:100px">메뉴</th>
+          ${ROLES.map(r=>`<th style="width:72px;text-align:center">${ROLE_LABEL[r]}</th>`).join('')}
+        </tr></thead>
+        <tbody>${MENU_GROUPS.map(g=>`
+          <tr><td colspan="5" style="background:var(--bg2);font-weight:700;padding:6px 10px;font-size:11px;color:var(--tm)">${g.group}</td></tr>
+          ${g.pages.map(p=>`<tr>
+            <td style="padding-left:18px">${p.label}</td>
+            ${ROLES.map(r=>`<td style="text-align:center">
+              ${r==='admin'
+                ?`<span title="관리자는 항상 접근 가능">✅</span>`
+                :`<input type="checkbox" ${getPerm(p.page,r)?'checked':''}
+                   onchange="App.perms['${permKey(p.page,r)}']=this.checked">`}
+            </td>`).join('')}
+          </tr>`).join('')}`).join('')}
+        </tbody>
+      </table></div>
+    <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tm)">
+      <div style="font-weight:700;color:var(--tm);margin-bottom:6px">📌 권한 정의</div>
+      <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;line-height:1.6">
+        <span style="font-weight:600;color:#7c3aed">🟣 관리자</span><span>모든 메뉴 접근 및 수정 가능. 사용자 등록·승인·권한 관리. 시스템 설정 전체 관리.</span>
+        <span style="font-weight:600;color:#2563eb">🔵 매니저</span><span>담당 메뉴 조회·입력·수정 가능. 삭제 및 사용자 관리 제한. 주요 업무 담당자.</span>
+        <span style="font-weight:600;color:#059669">🟢 사용자</span><span>허용된 메뉴 조회·입력 가능. 수정·삭제 제한. 일반 업무 참여자.</span>
+        <span style="font-weight:600;color:#64748b">⚪ 뷰어</span><span>허용된 메뉴 조회만 가능. 입력·수정·삭제 불가. 열람 전용.</span>
+      </div>
+      <div style="margin-top:6px;color:var(--tl);font-size:10px">※ 권한 변경은 즉시 반영되며, 재로그인 시 확정됩니다. 체크박스 설정 후 반드시 [저장] 버튼을 누르세요.</div>
+    </div></div>`;
+  };
+
+  w.innerHTML=`<div class="ph"><div><div class="ptit">⚙️ 설정</div></div></div>
+  <div style="display:flex;gap:6px;margin-bottom:16px">
+    <button class="btn stab-btn on" data-tab="general" onclick="renderTab('general')" style="border-radius:8px">⚙️ 일반 설정</button>
+    <button class="btn stab-btn ${isAdmin?'':'bout'}" data-tab="usermgmt"
+      onclick="${isAdmin?`renderTab('usermgmt')`:`Toast.show('관리자만 접근 가능합니다.','warn')`}"
+      style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}"
+      title="${isAdmin?'사용자 관리':'관리자만 접근 가능'}">👥 사용자 관리${isAdmin?'':' 🔒'}</button>
+    <button class="btn stab-btn bout" data-tab="sbdash"
+      onclick="renderTab('sbdash')"
+      style="border-radius:8px">🔌 SB 대시보드</button>
+  </div>
+
+  <!-- 일반 설정 탭 -->
+  <div class="stab-pane" data-tab="general" style="display:block">
+    <div class="card" style="margin-bottom:14px">
+      <div class="ch" style="padding-bottom:10px">
+        <div class="ct">📢 공지사항 관리</div>
+        <button class="btn bpri bsm" onclick="Pages._addNotice()">+ 공지 추가</button>
+      </div>
+      <div class="ts"><table class="dt" style="font-size:12px">
+        <thead><tr>
+          <th style="width:28px"><input type="checkbox" id="noticeAllChk"
+            onchange="document.querySelectorAll('.notice-chk').forEach(c=>c.checked=this.checked)"></th>
+          <th style="width:36px">No</th><th>제목</th><th style="min-width:140px">내용</th>
+          <th style="width:92px">게시 시작일</th><th style="width:92px">게시 종료일</th>
+          <th style="width:72px;text-align:center">게시 여부</th>
+          <th style="width:56px;text-align:center">파일</th>
+          <th style="width:88px;text-align:center">관리</th>
+        </tr></thead>
+        <tbody>${notices.length===0
+          ?'<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--tm)">등록된 공지사항이 없습니다.</td></tr>'
+          :notices.map((n,i)=>{
+            const today=H.today();
+            const active=n.show&&(!n.expire||n.expire>=today)&&(!n.date||n.date<=today);
+            const expiredCls=n.expire&&n.expire<today?"color:#ef4444":"";
+            return '<tr>'
+              +'<td><input type="checkbox" class="notice-chk" value="'+i+'"></td>'
+              +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
+              +'<td style="font-weight:600;cursor:pointer" onclick="Pages._editNotice('+i+')">'+H.e(n.title)+'</td>'
+              +'<td style="color:var(--tm);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+H.e(n.body)+'</td>'
+              +'<td style="font-size:11px">'+(n.date||"-")+'</td>'
+              +'<td style="font-size:11px;'+expiredCls+'">'+(n.expire||"-")+'</td>'
+              +'<td style="text-align:center"><input type="checkbox" '+(n.show?"checked":"")+' onchange="App.notices['+i+'].show=this.checked"></td>'
+              +'<td style="text-align:center">'+(n.file?'<span title="'+H.e(n.file.name||"")+'">📎</span>':'<span style="color:var(--tl)">-</span>')+'</td>'
+              +'<td style="text-align:center;white-space:nowrap">'
+              +'<button class="btn bxs bgh" onclick="Pages._editNotice('+i+')">수정</button> '
+              +'<button class="btn bxs berr" onclick="Cfg.noticeDel('+i+')">삭제</button>'
+              +'</td></tr>';
+          }).join("")}
+        </tbody>
+      </table></div>
     </div>
-    <div class="stabs" style="margin-bottom:14px">
-      ${tabs.map((t,i)=>`<button class="stab-btn${i===0?' on':''}" data-tab="${t.tab}"
-        onclick="(function(b){
-          document.querySelectorAll('.stab-btn').forEach(x=>x.classList.toggle('on',x===b));
-          document.querySelectorAll('.stab-pane').forEach(p=>p.style.display=p.dataset.tab===b.dataset.tab?'block':'none');
-          if(b.dataset.tab==='sbdash') setTimeout(()=>Pages._renderSbDash(),100);
-          if(b.dataset.tab==='users')  Pages._renderSysUsers();
-        })(this)">${t.label}</button>`).join('')}
-    </div>
-    <!-- 일반설정 -->
-    <div class="stab-pane" data-tab="general" style="display:block">
-      <div class="card" style="padding:18px">
-        <div class="ch"><div class="ct">⚙️ 일반설정</div></div>
-        <div class="fg2">
-          <div class="fgroup"><label class="fl">회사명</label>
-            <input class="fc" id="stCo" value="${H.e(Auth._u?.company||'INNODIS')}"></div>
-          <div class="fgroup"><label class="fl">시스템 언어</label>
-            <select class="fc" id="stLang"><option>한국어</option><option>English</option></select></div>
-          <div class="fgroup"><label class="fl">테마</label>
-            <select class="fc" id="stTheme" onchange="UI.setTheme(this.value)">
-              <option value="light">라이트</option>
-              <option value="dark">다크</option>
-            </select></div>
-          <div class="fgroup"><label class="fl">알림</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px">
-              <input type="checkbox" id="stNotif" checked> 멘션 알림 사용</label></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card">
+        <div class="ch" style="padding-bottom:8px"><div class="ct" style="font-size:12px">🖼️ 회사 로고</div></div>
+        <div id="logoPreview" style="height:48px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;border:1px dashed var(--bd);border-radius:6px">
+          ${App.logo?`<img src="${App.logo}" style="max-height:44px;max-width:160px;object-fit:contain">`:
+          `<span style="color:var(--tl);font-size:11px">로고 없음</span>`}
         </div>
-        <div style="margin-top:14px">
-          <button class="btn bpri bsm" onclick="Toast.show('설정이 저장되었습니다.','ok')">💾 저장</button>
+        <div style="display:flex;gap:6px">
+          <label class="btn bout bsm" style="cursor:pointer;font-size:11px">📁 업로드
+            <input type="file" accept="image/*" style="display:none" onchange="Pages._uploadLogo(this)">
+          </label>
+          ${App.logo?`<button class="btn berr bsm" style="font-size:11px" onclick="Pages._removeLogo()">🗑️ 삭제</button>`:""}
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch" style="padding-bottom:8px"><div class="ct" style="font-size:12px">🔐 비밀번호 변경</div></div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <input class="fc" id="sPwCur" type="password" placeholder="현재 비밀번호" style="font-size:12px;padding:5px 8px">
+          <input class="fc" id="sPwNew" type="password" placeholder="새 비밀번호 (8자 이상)" style="font-size:12px;padding:5px 8px">
+          <input class="fc" id="sPwNew2" type="password" placeholder="새 비밀번호 확인" style="font-size:12px;padding:5px 8px">
+          <button class="btn bpri bsm" onclick="Pages._changePw()" style="font-size:12px">변경</button>
         </div>
       </div>
     </div>
-    <!-- 사용자 등록 -->
-    <div class="stab-pane" data-tab="users" style="display:none">
-      <div id="sysUsersContainer"><div class="spin"></div></div>
-    </div>
-    <!-- SB 대시보드 -->
-    <div class="stab-pane" data-tab="sbdash" style="display:none">
-      <div id="sbDashContainer"><div style="text-align:center;padding:40px;color:var(--tm)">
-        "SB 대시보드" 탭을 클릭하면 로드됩니다.</div>
+  </div>
+
+  <!-- 사용자 관리 탭 -->
+  <div class="stab-pane" data-tab="usermgmt" style="display:none">
+    ${isAdmin
+      ? renderUserMgmt()+renderPermTable()
+      : `<div class="card" style="text-align:center;padding:40px">
+          <div style="font-size:48px;margin-bottom:12px">🔒</div>
+          <div style="font-weight:700;margin-bottom:6px">관리자 전용 메뉴</div>
+          <div style="color:var(--tm);font-size:13px">이 메뉴는 관리자만 접근할 수 있습니다.</div>
+        </div>`}
+  </div>
+
+  <!-- SB 대시보드 탭 -->
+  <div class="stab-pane" data-tab="sbdash" style="display:none">
+    <div id="sbDashContainer">
+      <div style="text-align:center;padding:40px;color:var(--tm);font-size:13px">
+        🔄 탭 클릭 시 자동으로 로딩됩니다.
       </div>
-    </div>`;
+    </div>
+  </div>
+`;
+
+  window.renderTab=renderTab;
 },
 
-/* 사용자 등록 렌더 [v2.379] */
-async _renderSysUsers(){
-  const el=document.getElementById('sysUsersContainer');
-  if(!el) return;
-  el.innerHTML='<div class="spin"></div>';
-
-  try{
-    const fresh=await SB.getUsers();
-    if(Array.isArray(fresh)&&fresh.length) DB.users=fresh;
-  }catch(e){console.warn('[_renderSysUsers]',e);}
-
-  const users=DB.users||[];
-  el.innerHTML=`
-    <div class="ph" style="margin-bottom:10px">
-      <div><div class="ct" style="font-weight:700">👥 사용자 등록</div></div>
-      <div class="pac">
-        <button class="btn bpri bsm" onclick="Pages._uForm()">+ 사용자 등록</button>
-      </div>
-    </div>`;
-
-  Tbl.render({
-    el:el,
-    cols:[
-      {key:'username',   label:'아이디',    req:true},
-      {key:'name',       label:'이름',      req:true},
-      {key:'role',       label:'권한',      w:'70px',
-        render:v=>`<span class="badge ${v==='admin'?'bred':v==='manager'?'bblu':'bgry'}" style="font-size:10px">${v||'-'}</span>`},
-      {key:'department', label:'부서',      w:'90px'},
-      {key:'email',      label:'이메일'},
-      {key:'active',     label:'활성',      w:'60px',
-        render:v=>`<span class="badge ${v?'bgrn':'bgry'}" style="font-size:10px">${v?'활성':'비활성'}</span>`},
-    ],
-    data:users,
-    onRow:row=>Pages._uForm(row),
-    onDel:async(ids)=>{
-      const numIds=ids.map(Number);
-      const _doDelete=async()=>{
-        for(const id of numIds) await SB.deleteUser(id);
-        DB.users=DB.users.filter(r=>!numIds.includes(Number(r.id)));
-        Toast.show(numIds.length+'건 삭제','ok');
-        Pages._renderSysUsers();
-      };
-      Modal.confirm({title:'🗑️ 사용자 삭제',
-        msg:`<div style="text-align:center"><div style="font-size:28px">⚠️</div><div style="font-size:14px;font-weight:700">선택한 <b style="color:#dc2626">${ids.length}명</b>을 삭제합니다.</div></div>`,
-        danger:true,onOk:_doDelete});
-    }
-  });
-},
-
-/* sysusers — 설정 페이지 users 탭으로 이동 [v2.379] */
 async sysusers(){
+  /* [v2.373] 사용자 등록 → settings() 로드 후 usermgmt 탭 즉시 활성화 */
   await Pages.settings();
-  /* users 탭 활성화 */
   setTimeout(()=>{
-    const btn=document.querySelector('.stab-btn[data-tab="users"]');
-    if(btn) btn.click();
-  },150);
+    const btn=document.querySelector('.stab-btn[data-tab="usermgmt"]');
+    if(btn&&!btn.disabled&&!btn.style.opacity) btn.click();
+    else if(btn) btn.click();
+  },200);
 },
 
 /* SB 대시보드 [v2.379] */
 async _renderSbDash(){
-  const el=document.getElementById('sbDashContainer');
-  if(!el) return;
-  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--tm)">🔄 SB 정보 조회 중...</div>';
+  /* [v2.373] SB 대시보드 — 완전 재작성 */
+  const _pw=document.getElementById('sbDashContainer');
+  if(!_pw) return;
+  _pw.innerHTML='<div class="spin"></div>';
 
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','documents'];
@@ -4671,70 +4824,84 @@ async _renderSbDash(){
       }catch(e){counts[t]=0;}
     }));
   }
-
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
     mentions:'멘션',items:'품목',vendors:'거래처',nonconformances:'부적합',
     cars:'시정조치',documents:'문서'};
 
-  let html='<div class="card" style="margin-bottom:12px">';
-  html+=`<div class="ch"><div class="ct">🔌 Supabase 연결 상태</div>
-    <span style="font-size:11px;color:${_sb?'#22c55e':'#ef4444'};font-weight:700">${_sb?'● 연결됨':'● 연결 안됨'}</span></div>`;
-  html+='</div>';
+  const totalRows=Object.values(counts).reduce((a,b)=>a+b,0);
+  const connected=!!_sb;
 
-  html+='<div class="card" style="margin-bottom:12px">';
-  html+='<div class="ch"><div class="ct">📋 테이블별 데이터 현황</div></div>';
-  html+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html+='<thead><tr style="background:var(--bg2)"><th style="padding:7px 10px;text-align:left">테이블</th><th style="padding:7px 10px;text-align:right">행 수</th></tr></thead><tbody>';
+  let h='';
+  h+='<div class="card" style="margin-bottom:12px">';
+  h+='<div class="ch"><div class="ct">🔌 Supabase 연결 상태</div>';
+  h+='<span style="font-size:11px;color:'+(connected?'#22c55e':'#ef4444')+';font-weight:700">'+(connected?'● 연결됨':'● 연결 안됨')+'</span></div>';
+  h+='</div>';
+
+  h+='<div class="card" style="margin-bottom:12px">';
+  h+='<div class="ch"><div class="ct">📋 테이블별 데이터 현황</div>';
+  h+='<span style="font-size:11px;color:var(--tm)">총 '+totalRows.toLocaleString()+'행</span></div>';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h+='<thead><tr style="background:var(--bg2)">';
+  h+='<th style="padding:7px 10px;text-align:left">테이블</th>';
+  h+='<th style="padding:7px 10px;text-align:right">행 수</th>';
+  h+='<th style="padding:7px 10px;text-align:left">비율</th>';
+  h+='</tr></thead><tbody>';
   tables.forEach((t,i)=>{
-    html+=`<tr style="border-bottom:1px solid var(--bd);background:${i%2===0?'#fff':'var(--bg2)'}">
-      <td style="padding:7px 10px">${LABELS[t]||t}</td>
-      <td style="padding:7px 10px;text-align:right;font-weight:600">${(counts[t]||0).toLocaleString()}</td>
-    </tr>`;
+    const cnt=counts[t]||0;
+    const pct=totalRows>0?Math.round((cnt/totalRows)*100):0;
+    const bg=i%2===0?'#fff':'var(--bg2)';
+    h+='<tr style="border-bottom:1px solid var(--bd);background:'+bg+'">';
+    h+='<td style="padding:7px 10px">'+(LABELS[t]||t)+'</td>';
+    h+='<td style="padding:7px 10px;text-align:right;font-weight:600">'+cnt.toLocaleString()+'</td>';
+    h+='<td style="padding:7px 10px;min-width:120px">';
+    h+='<div style="display:flex;align-items:center;gap:6px">';
+    h+='<div style="flex:1;background:var(--bd);border-radius:4px;height:6px">';
+    h+='<div style="background:#3b82f6;border-radius:4px;height:6px;width:'+pct+'%"></div></div>';
+    h+='<span style="font-size:10px;color:var(--tm);width:28px">'+pct+'%</span>';
+    h+='</div></td></tr>';
   });
-  html+='</tbody></table></div>';
+  h+='</tbody></table></div>';
 
-  /* 휴지통 섹션 */
-  html+='<div class="card">';
-  html+='<div class="ch"><div class="ct">🗑️ 휴지통 (삭제된 데이터 복구)</div>';
-  html+='<button class="btn bsm bout" onclick="Pages._renderTrash()">🔄 목록 보기</button>';
-  html+='</div>';
-  html+='<div id="trashContainer" style="padding:8px 16px;font-size:12px;color:var(--tm)">';
-  html+='<div style="text-align:center;padding:16px;color:var(--tl)">🔄 "목록 보기"를 클릭하면 삭제된 데이터를 확인하고 복구할 수 있습니다.</div>';
-  html+='</div></div>';
+  h+='<div class="card" style="margin-bottom:12px">';
+  h+='<div class="ch"><div class="ct">🗑️ 휴지통 (삭제된 데이터 복구)</div>';
+  h+='<button class="btn bsm bout" onclick="Pages._renderTrash()">🔄 목록 보기</button></div>';
+  h+='<div id="trashContainer" style="padding:8px 16px;font-size:12px;color:var(--tm)">';
+  h+='<div style="text-align:center;padding:16px;color:var(--tl)">"목록 보기"를 클릭하면 삭제된 데이터를 확인하고 복구할 수 있습니다.</div>';
+  h+='</div></div>';
 
-  /* keepalive */
-  html+='<div class="card" style="margin-top:12px">';
-  html+='<div class="ch"><div class="ct">🛡️ 비활성 방지 (keepalive)</div></div>';
-  html+=`<div style="padding:10px 14px;font-size:12px">
-    <div style="color:var(--tm);margin-bottom:8px">Supabase 무료 플랜은 7일 미접속 시 일시정지됩니다.</div>
-    <button class="btn bpri bsm" onclick="Pages._sbKeepAlive()">🔄 지금 keepalive 전송</button>
-  </div></div>`;
+  h+='<div class="card">';
+  h+='<div class="ch"><div class="ct">🛡️ 비활성 방지 (keepalive)</div></div>';
+  h+='<div style="padding:10px 14px;font-size:12px">';
+  h+='<div style="color:var(--tm);margin-bottom:8px">Supabase 무료 플랜은 7일 미접속 시 일시정지됩니다.</div>';
+  h+='<button class="btn bpri bsm" onclick="Pages._sbKeepAlive()">🔄 지금 keepalive 전송</button>';
+  h+='</div></div>';
 
-  el.innerHTML=html;
+  _pw.innerHTML=h;
 },
 
 /* 휴지통 — 삭제된 데이터 목록 [v2.379] */
 async _renderTrash(){
+  /* [v2.373] 휴지통 — 삭제된 데이터 복구 */
   const el=document.getElementById('trashContainer');
   if(!el){Toast.show('SB 대시보드를 먼저 열어주세요.','warn');return;}
   el.innerHTML='<div style="text-align:center;padding:12px">🔄 조회 중...</div>';
 
   const TABLES=[
-    {tbl:'items',           label:'품목',      key:'item_code'},
-    {tbl:'vendors',         label:'거래처',     key:'vendor_name'},
-    {tbl:'nonconformances', label:'부적합',     key:'no'},
-    {tbl:'equipment',       label:'계측기',     key:'code'},
-    {tbl:'calibrations',    label:'교정',       key:'cert'},
-    {tbl:'inspections',     label:'검사',       key:'insp_no'},
-    {tbl:'mentions',        label:'멘션',       key:'text'},
-    {tbl:'users',           label:'사용자',     key:'username'},
+    {tbl:'items',           label:'품목',   key:'item_code'},
+    {tbl:'vendors',         label:'거래처',  key:'vendor_name'},
+    {tbl:'nonconformances', label:'부적합',  key:'no'},
+    {tbl:'equipment',       label:'계측기',  key:'code'},
+    {tbl:'calibrations',    label:'교정',   key:'cert'},
+    {tbl:'inspections',     label:'검사',   key:'insp_no'},
+    {tbl:'mentions',        label:'멘션',   key:'text'},
+    {tbl:'users',           label:'사용자',  key:'username'},
   ];
 
   const results=await Promise.all(TABLES.map(async t=>({
     ...t, rows: await SB.getDeleted(t.tbl)
   })));
 
-  const hasData=results.some(r=>r.rows.length>0);
+  const hasData=results.some(r=>r.rows&&r.rows.length>0);
   if(!hasData){
     el.innerHTML='<div style="text-align:center;padding:20px;color:var(--tm)">🗑️ 휴지통이 비어 있습니다.</div>';
     return;
@@ -4742,26 +4909,28 @@ async _renderTrash(){
 
   let h='';
   for(const r of results){
-    if(!r.rows.length) continue;
-    h+=`<div style="margin-bottom:12px;border:1px solid var(--bd);border-radius:6px;overflow:hidden">`;
-    h+=`<div style="background:var(--bg2);padding:7px 14px;font-size:12px;font-weight:700">`;
-    h+=H.e(r.label)+` <span style="background:#94a3b8;color:#fff;font-size:10px;padding:1px 8px;border-radius:10px">${r.rows.length}건</span></div>`;
+    if(!r.rows||!r.rows.length) continue;
+    h+='<div style="margin-bottom:12px;border:1px solid var(--bd);border-radius:6px;overflow:hidden">';
+    h+='<div style="background:var(--bg2);padding:7px 14px;font-size:12px;font-weight:700">';
+    h+=H.e(r.label);
+    h+=' <span style="background:#94a3b8;color:#fff;font-size:10px;padding:1px 8px;border-radius:10px">'+r.rows.length+'건</span></div>';
     h+='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead>';
-    h+='<tr style="background:#f8fafc"><th style="padding:5px 10px;text-align:left">식별자</th>';
+    h+='<tr style="background:#f8fafc">';
+    h+='<th style="padding:5px 10px;text-align:left">식별자</th>';
     h+='<th style="padding:5px 10px;text-align:left">삭제일</th>';
     h+='<th style="padding:5px 10px;text-align:center;width:80px">복구</th></tr></thead><tbody>';
     r.rows.forEach((row,i)=>{
       const bg=i%2===0?'#fff':'#f8fafc';
       const key=row[r.key]||row.id;
       const delAt=(row.deleted_at||'').slice(0,16).replace('T',' ');
-      h+=`<tr style="background:${bg};border-bottom:1px solid #f1f5f9">`;
-      h+=`<td style="padding:5px 10px;font-weight:600">${H.e(String(key))}</td>`;
-      h+=`<td style="padding:5px 10px;color:#94a3b8">${delAt}</td>`;
-      h+=`<td style="padding:5px 10px;text-align:center">
-        <button class="btn bsm bgrn" style="font-size:11px;padding:2px 10px"
-          data-tbl="${H.e(r.tbl)}" data-id="${row.id}"
-          onclick="Pages._restoreItem(this.dataset.tbl,+this.dataset.id)">↩ 복구</button>
-      </td></tr>`;
+      h+='<tr style="background:'+bg+';border-bottom:1px solid #f1f5f9">';
+      h+='<td style="padding:5px 10px;font-weight:600">'+H.e(String(key))+'</td>';
+      h+='<td style="padding:5px 10px;color:#94a3b8">'+delAt+'</td>';
+      h+='<td style="padding:5px 10px;text-align:center">';
+      h+='<button class="btn bsm bgrn" style="font-size:11px;padding:2px 10px"';
+      h+=' data-tbl="'+H.e(r.tbl)+'" data-id="'+row.id+'"';
+      h+=' onclick="Pages._restoreItem(this.dataset.tbl,+this.dataset.id)">↩ 복구</button>';
+      h+='</td></tr>';
     });
     h+='</tbody></table></div>';
   }
@@ -4816,27 +4985,27 @@ const Cfg={
   deleteLogo(){Modal.confirm({title:'로고 삭제',msg:'로고를 삭제하시겠습니까?',danger:true,onOk:()=>{applyLogo(null);Toast.show('삭제되었습니다.','ok');Pages.settings()}})},
   noticeForm(idx=null){
     const n=idx!=null?App.notices[idx]:{title:'',body:'',author:'관리자',date:H.today(),expire:'',show:true};
+    const fileHtml=n.file
+      ?'<div id="nfPreview" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg);border-radius:var(--r);border:1px solid var(--bd)">'
+        +'<span style="font-size:12px">📎 '+H.e(n.file.name||n.file)+'</span>'
+        +'<button class="btn bxs berr" style="font-size:10px;padding:1px 6px" onclick="Cfg._noticeRemoveFile()">삭제</button></div>'
+      :'<div id="nfPreview"></div>';
     Modal.open({title:idx!=null?'공지 수정':'공지 등록',size:'mmd',
-      body:`<div class="fg2">
-        <div class="fgroup ff"><label class="fl req">제목</label><input class="fc" id="nt" value="${H.e(n.title)}"></div>
-        <div class="fgroup ff"><label class="fl req">내용</label><textarea class="fc" id="nb" rows="3">${H.e(n.body)}</textarea></div>
-        <div class="fgroup"><label class="fl req">게시 시작일</label><input class="fc" type="date" id="nd" value="${n.date}"></div>
-        <div class="fgroup"><label class="fl req">게시 종료일</label><input class="fc" type="date" id="ne" value="${n.expire}"></div>
-        <div class="fgroup"><label class="fl">등록자</label><input class="fc" id="na" value="${H.e(n.author)}"></div>
-        <div class="fgroup"><label class="fl">게시 여부</label><select class="fc" id="ns"><option value="1" ${n.show?'selected':''}>게시</option><option value="0" ${!n.show?'selected':''}>게시중지</option></select></div>
-        <div class="fgroup ff"><label class="fl">파일 첨부</label>
-          <div style="display:flex;flex-direction:column;gap:6px;width:100%">
-            ${n.file?`<div id="nfPreview" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg);border-radius:var(--r);border:1px solid var(--bd)">
-              <span style="font-size:12px">📎 ${H.e(n.file.name||n.file)}</span>
-              <button class="btn bxs berr" style="font-size:10px;padding:1px 6px" onclick="Cfg._noticeRemoveFile()">삭제</button>
-            </div>`:'<div id="nfPreview"></div>'}
-            <input type="file" id="nf" class="fc" style="font-size:12px"
-              onchange="Cfg._noticePreviewFile(this)" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png,.zip">
-            <div style="font-size:11px;color:var(--tm)">지원: PDF, Word, Excel, PPT, 이미지, ZIP (최대 10MB)</div>
-          </div>
-        </div>
-      </div>`,
-      foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Cfg._saveNotice(${idx})">저장 <span class="kbd">F8</span></button>`
+      body:'<div class="fg2">'
+        +'<div class="fgroup ff"><label class="fl req">제목</label><input class="fc" id="nt" value="'+H.e(n.title)+'"></div>'
+        +'<div class="fgroup ff"><label class="fl req">내용</label><textarea class="fc" id="nb" rows="3">'+H.e(n.body)+'</textarea></div>'
+        +'<div class="fgroup"><label class="fl req">게시 시작일</label><input class="fc" type="date" id="nd" value="'+n.date+'"></div>'
+        +'<div class="fgroup"><label class="fl req">게시 종료일</label><input class="fc" type="date" id="ne" value="'+n.expire+'"></div>'
+        +'<div class="fgroup"><label class="fl">등록자</label><input class="fc" id="na" value="'+H.e(n.author)+'"></div>'
+        +'<div class="fgroup"><label class="fl">게시 여부</label><select class="fc" id="ns"><option value="1" '+(n.show?'selected':'')+'>게시</option><option value="0" '+(!n.show?'selected':'')+'>게시중지</option></select></div>'
+        +'<div class="fgroup ff"><label class="fl">파일 첨부</label>'
+        +'<div style="display:flex;flex-direction:column;gap:6px;width:100%">'
+        +fileHtml
+        +'<input type="file" id="nf" class="fc" style="font-size:12px" onchange="Cfg._noticePreviewFile(this)" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png,.zip">'
+        +'<div style="font-size:11px;color:var(--tm)">지원: PDF, Word, Excel, PPT, 이미지, ZIP (최대 10MB)</div>'
+        +'</div></div></div>',
+      foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
+          +'<button class="btn bpri btn-f8" onclick="Cfg._saveNotice('+idx+')">저장 <span class="kbd">F8</span></button>'
     });
   },
   /* [v2.379] 공지 파일 미리보기 */

@@ -278,6 +278,7 @@ const SB={
       ref:       row.ref||row.ref_key||'',
       reply_to:  row.reply_to||null,
       read:      row.read||false,
+      file_url:  row.file_url||null,   /* [v2.379] 파일 첨부 */
     };
     /* created_at 있으면 포함 */
     if(row.created_at) insertRow.created_at=row.created_at;
@@ -296,7 +297,7 @@ const SB={
     if(!_sb){const m=DB.mentions.find(m=>m.id===id);if(m)Object.assign(m,patch);return {ok:true};}
     /* 허용 컬럼만 필터링 */
     const allowed={};
-    const COLS=['from','to','to_list','text','message','dept','ref','reply_to','read'];
+    const COLS=['from','to','to_list','text','message','dept','ref','reply_to','read','file_url','saved'];  /* [v2.379] */
     COLS.forEach(k=>{if(k in patch) allowed[k]=patch[k];});
     if(!Object.keys(allowed).length) return {ok:true};
     const {error}=await _sb.from('mentions').update(allowed).eq('id',id);
