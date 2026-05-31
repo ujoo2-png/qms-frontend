@@ -204,7 +204,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 
 /* 세부메뉴 목록 */
 .mc-card-subs{
-  display:flex;flex-direction:column;gap:3px;
+  display:flex;flex-direction:column;gap:2px;
   overflow-y:auto;flex:1;
   scrollbar-width:thin;
   scrollbar-color:var(--bd) transparent;
@@ -216,13 +216,13 @@ input,select,textarea{font-family:inherit;font-size:13px}
    onclick: Nav.go(page) 직접 호출 (stopPropagation 사용 안 함)
    pointer-events:none on icon: 아이콘 클릭 시 부모 div onclick 정확히 발동 */
 .mc-card-sub{
-  font-size:12px;
+  font-size:11px;
   color:#374151;
-  padding:5px 8px;
-  border-radius:8px;
+  padding:3px 6px;
+  border-radius:6px;
   cursor:pointer;
   transition:background .12s,color .12s;
-  display:flex;align-items:center;gap:6px;
+  display:flex;align-items:center;gap:5px;
   white-space:nowrap;overflow:hidden;
   flex-shrink:0;
   font-weight:500;
