@@ -1,4 +1,27 @@
-/* qms-db.js — DB 초기 데이터 + Supabase 객체 [v2.394] */
+/* ================================================================
+   qms-db.js — Supabase DB 헬퍼 + 더미데이터
+   ================================================================
+   [버전 히스토리]
+   v2.394  2026-05-xx  SB 헬퍼 초기 구현
+                       - getItems/getVendors/getInspections/getMentions
+                       - uploadFile/deleteFile (Storage 연동)
+                       - _sbFetchAll: 1000건 제한 해제 (청크 페이지네이션)
+                       - _sbPage: 서버사이드 페이지네이션 헬퍼
+                       - insert().select().single() → insert() 변경
+                         (anon 키 RLS 오류 방지)
+                       - addItem: 허용 컬럼만 추출 (schema cache 오류 방지)
+                       - _softDelete / _restoreDeleted 공통 헬퍼 추가
+                       - 소프트 삭제: deleted_at 기록 방식 (복구 가능)
+   v2.395  2026-06-01  문서관리 고도화 SB 함수 추가 [DMS Upgrade]
+                       - SB.getDocMaster / addDocMaster / updateDocMaster / deleteDocMaster
+                       - SB.getDocMasterById / getExpiringDocs
+                       - SB.getDocVersions / addDocVersion / updateDocVersion / activateDocVersion
+                         * activateDocVersion: 승인 시 기존 active → obsolete 일괄 처리
+                       - SB.getDocApprovals / getMyPendingApprovals / addDocApprovals / processApproval
+                         * processApproval: SHA-256 전자서명 해시 생성
+                       - SB.addDistLog / getDistLog
+                         * addDistLog: INSERT ONLY — 수정·삭제 불가 불변 감사 로그
+   ================================================================ */
 "use strict";
 
 const SUPABASE_URL  = 'https://phxlsnghgvowrxdlcsph.supabase.co';
@@ -1072,11 +1095,46 @@ const DB={
 
 /* ══ 헬퍼 ══ *//* ══ 토스트 ══ */
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 SB 함수 [v2.395]
-   테이블: doc_master / doc_versions / doc_approvals / doc_dist_log
+   문서관리 고도화 SB 함수 [v2.395 신규 추가 — 2026-06-01]
+   ────────────────────────────────────────────────────────────
+   [테이블 구조]
+   doc_master    : 문서 원장 (1건 = 문서 1개)
+                   컬럼: doc_no(문서번호), title, doc_type, category,
+                         tags(배열), status, current_ver, owner_id,
+                         dept, review_cycle, next_review_at
+   doc_versions  : 버전 이력 (doc_master:doc_versions = 1:N)
+                   컬럼: doc_id(FK), ver_no, file_url, file_name,
+                         file_size, change_summary, change_detail,
+                         status, created_by, approved_by, approved_at, published_at
+   doc_approvals : 결재 워크플로우 (doc_versions:doc_approvals = 1:N)
+                   컬럼: doc_ver_id(FK), approver_id(FK), step_order,
+                         step_type(reviewer/approver), action(pending/approved/rejected),
+                         comment, signature(SHA-256), signed_at, notified_at
+   doc_dist_log  : 열람·배포 감사 로그 (INSERT ONLY — UPDATE/DELETE 금지)
+                   컬럼: doc_id(FK), doc_ver_id, user_id, action, dept,
+                         share_token, expires_at, ip_addr
+   ────────────────────────────────────────────────────────────
+   [status 흐름]
+   draft → in_review → (승인) → active
+                     → (반려) → draft (재기안)
+   active → (신버전 발행) → obsolete
    ════════════════════════════════════════════════════════════ */
 
-/* ── doc_master (문서 원장) ── */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   doc_master (문서 원장) CRUD
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/**
+ * [v2.395] 전체 문서 원장 조회
+ * @param {object} filters - 필터 옵션 (선택)
+ *   - filters.status   : 'draft'|'in_review'|'active'|'obsolete'
+ *   - filters.doc_type : 'procedure'|'instruction'|'form'|'record'|'other'
+ *   - filters.keyword  : 제목 부분 일치 검색 (ilike)
+ * @returns {Array} doc_master 행 배열 (없으면 [])
+ *
+ * [주의] 1000건 이상 시 루프가 아닌 단순 select 사용
+ *        대량 문서 환경이면 _sbFetchAll로 교체 필요
+ */
 SB.getDocMaster=async function(filters={}){
   if(!_sb)return[];
   let rows=[];
@@ -1097,6 +1155,17 @@ SB.getDocMasterById=async function(id){
   if(error){console.warn('[SB] getDocMasterById:',error.message);return null;}
   return data;
 };
+
+/**
+ * [v2.395] 문서 원장 등록 (신규 기안)
+ * @param {object} row - 등록할 문서 정보
+ *   필수: doc_no(문서번호 UNIQUE), title(제목), doc_type(유형)
+ *   선택: category, tags(배열), dept, review_cycle, next_review_at
+ * @returns {{ok:boolean}}
+ *
+ * [주의] doc_no는 UNIQUE 제약 — 중복 시 Supabase 오류 발생
+ *        tags는 text[] 배열 타입 — 반드시 Array.isArray 체크 후 전달
+ */
 SB.addDocMaster=async function(row){
   if(!_sb)return{ok:false};
   const allowed={
@@ -1112,6 +1181,14 @@ SB.addDocMaster=async function(row){
   if(error){Toast.show('문서 저장 실패: '+error.message,'err');return{ok:false};}
   return{ok:true};
 };
+
+/**
+ * [v2.395] 문서 원장 수정
+ * @param {number} id     - doc_master.id
+ * @param {object} patch  - 수정할 필드만 포함한 객체
+ *   updated_at는 함수 내부에서 자동 설정 (호출 시 포함 불필요)
+ * @returns {{ok:boolean}}
+ */
 SB.updateDocMaster=async function(id,patch){
   if(!_sb)return{ok:false};
   patch.updated_at=new Date().toISOString();
@@ -1119,12 +1196,30 @@ SB.updateDocMaster=async function(id,patch){
   if(error){Toast.show('문서 수정 실패: '+error.message,'err');return{ok:false};}
   return{ok:true};
 };
+
+/**
+ * [v2.395] 문서 원장 물리 삭제
+ * @param {number} id - doc_master.id
+ * @returns {{ok:boolean}}
+ *
+ * [주의] 하드 딜리트 — 복구 불가
+ *        active 상태 문서는 호출 전 상태 체크 필수 (Pages._docDel에서 처리)
+ *        doc_versions는 ON DELETE CASCADE로 함께 삭제됨
+ */
 SB.deleteDocMaster=async function(id){
   if(!_sb)return{ok:false};
   const{error}=await _sb.from('doc_master').delete().eq('id',id);
   if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
   return{ok:true};
 };
+
+/**
+ * [v2.395] 검토 만료 임박 문서 조회
+ * @param {number} days - 오늘로부터 N일 이내 만료 문서 (기본 30일)
+ * @returns {Array} next_review_at ≤ (오늘+days) 인 active 문서 배열
+ *
+ * [활용] D6 검토 주기 알림, 문서 목록 강조 표시 (D-30: 주황, D-7: 빨강)
+ */
 SB.getExpiringDocs=async function(days=30){
   if(!_sb)return[];
   const target=new Date();target.setDate(target.getDate()+days);
@@ -1135,7 +1230,10 @@ SB.getExpiringDocs=async function(days=30){
   return error?[]:(data||[]);
 };
 
-/* ── doc_versions (버전 이력) ── */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   doc_versions (개정 버전 이력) CRUD
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 SB.getDocVersions=async function(docId){
   if(!_sb)return[];
   const{data,error}=await _sb.from('doc_versions')
@@ -1144,6 +1242,18 @@ SB.getDocVersions=async function(docId){
   if(error){console.warn('[SB] getDocVersions:',error.message);return[];}
   return data||[];
 };
+
+/**
+ * [v2.395] 버전 이력 등록 (기안 제출 시 호출)
+ * @param {object} row
+ *   필수: doc_id(FK), ver_no('v1.0' 형식)
+ *   선택: file_url, file_name, file_size, change_summary, change_detail,
+ *         status('draft'|'in_review'), created_by(users.id)
+ * @returns {{ok:boolean, id:number|null}} — id는 생성된 doc_versions.id
+ *
+ * [주의] doc_id + ver_no 조합 UNIQUE — 같은 버전 중복 기안 시 오류
+ *        반드시 _nextVer() 등으로 버전 번호 자동 증가 후 호출
+ */
 SB.addDocVersion=async function(row){
   if(!_sb)return{ok:false,id:null};
   const allowed={
@@ -1162,6 +1272,22 @@ SB.updateDocVersion=async function(id,patch){
   if(error){Toast.show('버전 수정 실패: '+error.message,'err');return{ok:false};}
   return{ok:true};
 };
+
+/**
+ * [v2.395] 버전 활성화 — 승인 완료 시 일괄 상태 전환
+ * @param {number} docId      - doc_master.id
+ * @param {number} verId      - 활성화할 doc_versions.id
+ * @param {string} verNo      - 활성화할 버전 번호 (예: 'v2.0')
+ * @param {number} approverId - 최종 승인자 users.id
+ *
+ * [처리 순서]
+ *   1. doc_versions: doc_id + status='active' 인 행 → obsolete 일괄 업데이트
+ *   2. doc_versions: verId → active + approved_by/approved_at/published_at 기록
+ *   3. doc_master:   status='active', current_ver=verNo, updated_at=now() 업데이트
+ *
+ * [주의] 트랜잭션 미지원 (Supabase anon 키 제약)
+ *        1번 성공 후 2번 실패 시 orphan 상태 가능 → 오류 발생 시 수동 복구 필요
+ */
 SB.activateDocVersion=async function(docId,verId,verNo,approverId){
   if(!_sb)return{ok:false};
   const now=new Date().toISOString();
@@ -1173,7 +1299,12 @@ SB.activateDocVersion=async function(docId,verId,verNo,approverId){
   return{ok:true};
 };
 
-/* ── doc_approvals (결재) ── */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   doc_approvals (결재 워크플로우) CRUD
+   step_order: 1,2,3 = 검토자 순서 / 99 = 최종 결재자
+   action: pending(대기) → approved(승인) | rejected(반려)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 SB.getDocApprovals=async function(docVerId){
   if(!_sb)return[];
   const{data,error}=await _sb.from('doc_approvals')
@@ -1181,13 +1312,38 @@ SB.getDocApprovals=async function(docVerId){
     .eq('doc_ver_id',docVerId).order('step_order',{ascending:true});
   return error?[]:(data||[]);
 };
+/**
+ * [v2.395 버그수정 2026-06-01] 내 결재 대기 목록
+ * doc_ver 조인 시 doc(문서 원장)까지 중첩 조인하여 제목 포함
+ * @param {number} userId - 결재자 users.id
+ */
 SB.getMyPendingApprovals=async function(userId){
   if(!_sb)return[];
+  /* [버그수정] doc_ver_id → doc_versions, doc_id → doc_master 중첩 조인
+     doc_title은 doc_master.title에서 가져와야 함 */
   const{data,error}=await _sb.from('doc_approvals')
-    .select('*, doc_ver:doc_ver_id(id,ver_no,change_summary,doc_id)')
-    .eq('approver_id',userId).eq('action','pending')
+    .select(`
+      *,
+      doc_ver:doc_ver_id (
+        id,
+        ver_no,
+        change_summary,
+        doc_id,
+        doc_title:doc_id ( title )
+      )
+    `)
+    .eq('approver_id',userId)
+    .eq('action','pending')
     .order('created_at',{ascending:false});
-  return error?[]:(data||[]);
+  if(error){console.warn('[SB] getMyPendingApprovals:',error.message);return[];}
+  /* doc_title 중첩 조인값을 flat하게 처리 */
+  const rows=(data||[]).map(a=>{
+    if(a.doc_ver&&a.doc_ver.doc_title){
+      a.doc_ver.doc_title_str=a.doc_ver.doc_title?.title||'';
+    }
+    return a;
+  });
+  return rows;
 };
 SB.addDocApprovals=async function(rows){
   if(!_sb||!rows.length)return{ok:false};
@@ -1195,6 +1351,22 @@ SB.addDocApprovals=async function(rows){
   if(error){Toast.show('결재선 저장 실패: '+error.message,'err');return{ok:false};}
   return{ok:true};
 };
+
+/**
+ * [v2.395] 결재 처리 (승인 또는 반려)
+ * @param {number} approvalId - doc_approvals.id
+ * @param {string} action     - 'approved' | 'rejected'
+ * @param {string} comment    - 검토 의견 / 반려 사유 (반려 시 필수)
+ * @returns {{ok:boolean}}
+ *
+ * [처리 내용]
+ *   - action, comment, signed_at(now) 업데이트
+ *   - 반려 후 기안자에게 멘션 발송은 Pages._doReject에서 별도 처리
+ *
+ * [승인 완료 판단]
+ *   processApproval 호출 후 Pages._doApprove에서 모든 step approved 여부 확인
+ *   전체 approved → SB.activateDocVersion 호출
+ */
 SB.processApproval=async function(approvalId,action,comment){
   if(!_sb)return{ok:false};
   const{error}=await _sb.from('doc_approvals')
@@ -1204,7 +1376,25 @@ SB.processApproval=async function(approvalId,action,comment){
   return{ok:true};
 };
 
-/* ── doc_dist_log (열람/다운로드 로그) ── */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   doc_dist_log (열람·배포 감사 로그)
+   [설계 원칙] INSERT ONLY — 수정·삭제 금지 (불변 감사 로그)
+   action 종류: view(열람) / download(다운) / print(인쇄) /
+                share(외부공유) / revision_submit(기안) / new_submit(신규등록)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/**
+ * [v2.395] 열람·다운로드 로그 기록
+ * @param {object} row
+ *   필수: doc_id
+ *   선택: doc_ver_id, user_id, action, dept
+ * @returns {void} — 로그 실패는 console.warn만 출력 (사용자 경험 방해 방지)
+ *
+ * [중요] 이 함수는 절대 UPDATE / DELETE 하지 않는다
+ *        ISO 심사 증적 자료로 활용되는 불변 로그 테이블
+ *        Supabase RLS에서도 INSERT만 허용하도록 설정 권장
+ */
 SB.addDistLog=async function(row){
   if(!_sb)return;
   const{error}=await _sb.from('doc_dist_log').insert({

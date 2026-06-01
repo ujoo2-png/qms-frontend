@@ -18,6 +18,21 @@
   ║        품목코드/사업자번호 중복 방지, 기준정보 연동 검증          ║
   ║  v2.394  홈 레이아웃 버그 수정, 관리자 문의 z-index 수정          ║
   ║        개인정보 수정 기능 (사용자DB 연동, 홈 헤더 프로필 버튼)    ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  v2.395  문서관리 고도화 (DMS Upgrade) [2026-06-01]              ║
+  ║  · 사이드바 문서관리 서브메뉴 5개 추가                             ║
+  ║    - 문서 목록(docs): Supabase 연동, 상태탭, 만료 D-day 강조       ║
+  ║    - 결재함(doc_approval): 승인/반려, 전자서명, 멘션함 알림         ║
+  ║    - 개정 이력(doc_history): 버전 타임라인, 결재현황 팝업           ║
+  ║    - 지식 검색(doc_search): 제목/번호/태그 실시간 검색              ║
+  ║    - 기록 관리(rec): 기존 유지                                     ║
+  ║  · Supabase 테이블 4개 신설                                       ║
+  ║    - doc_master: 문서 원장 (버전·상태·검토주기)                     ║
+  ║    - doc_versions: 개정 버전 이력 (파일·개정사유)                  ║
+  ║    - doc_approvals: 결재 워크플로우 (전자서명·타임스탬프)            ║
+  ║    - doc_dist_log: 열람·다운로드 감사 로그 (불변 INSERT-ONLY)       ║
+  ║  · ISO 9001:2015 7.5 문서화된 정보 요구사항 준수                   ║
+  ║  · 글로벌 KMS(Confluence/Document360/Bloomfire) 기능 반영          ║
   ║  v2.394 검사 5종 고도화 (구매/외주 추가, 출하→최종검사 변경)      ║
   ║        17컬럼 통일, 거래처/품목 기준정보 참조 검증               ║
   ║        엑셀 일괄등록 미등록 차단, F3 날짜 퀵버튼                 ║
@@ -168,7 +183,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.394</title>
+<title>QMS - 품질경영시스템 v2.395</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="qms-style.css?v=2.394">
@@ -231,7 +246,7 @@
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.394</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.395</div>
         </div>
       </div>
     </div>
@@ -381,7 +396,7 @@
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.394</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.395</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
   </div>
 </div>
 
@@ -392,7 +407,7 @@
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.394</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.395</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -450,7 +465,7 @@
       <div class="ns"><div class="nst">문서관리</div>
         <div class="ni" data-p="docs" onclick="Nav.go('docs')"><span class="nii">📄</span><span class="nt">문서 목록</span></div>
         <div class="ni" data-p="doc_approval" onclick="Nav.go('doc_approval')"><span class="nii">✍️</span><span class="nt">결재함 <span id="ni_approval_badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:999px;margin-left:4px">0</span></span></div>
-        <div class="ni" data-p="doc_history" onclick="Nav.go('doc_history')"><span class="nii">🕐</span><span class="nt">개정 이력</span></div>
+        <div class="ni" data-p="doc_history_home" onclick="Nav.go('doc_history_home')"><span class="nii">🕐</span><span class="nt">개정 이력</span></div>
         <div class="ni" data-p="doc_search" onclick="Nav.go('doc_search')"><span class="nii">🔍</span><span class="nt">지식 검색</span></div>
         <div class="ni" data-p="rec" onclick="Nav.go('rec')"><span class="nii">📋</span><span class="nt">기록 관리</span></div>
       </div>

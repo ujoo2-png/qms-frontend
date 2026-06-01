@@ -576,9 +576,17 @@ textarea.fc{resize:vertical;min-height:68px}
 .stab-btn.on{background:var(--pri);color:#fff;border-color:var(--pri)}
 .stab-btn.bout{background:transparent;border:1.5px solid var(--bd);color:var(--tx)}
 
-/* ════════════════════════════════════════
-   문서관리 고도화 추가 스타일 [v2.395]
-   ════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════
+   문서관리 고도화 추가 스타일 [v2.395 신규 — 2026-06-01]
+   ────────────────────────────────────────────────────────────
+   [추가 항목]
+   .doc-tab / .doc-tab.on   : 문서 상태 탭 바 (active 하이라이트)
+   .doc-cnt                 : 탭 건수 배지 (파란색 = 선택됨)
+   .badge.bred              : 빨간 배지 (폐기/만료 표시용)
+   .btn.bxs                 : 초소형 버튼 (테이블 내 아이콘 버튼)
+   .pdesc                   : 페이지 부제목 (ptit 아래 회색 설명)
+   div[onclick*="doc_history"]:hover  : 검색 결과 카드 hover 효과
+   ════════════════════════════════════════════════════════════ */
 
 /* 문서 상태 탭 */
 .doc-tab{background:none;border:none;padding:8px 14px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:color .15s;display:inline-flex;align-items:center;gap:5px;}
