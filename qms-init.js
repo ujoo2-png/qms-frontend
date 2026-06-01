@@ -83,8 +83,8 @@ function setupHotkeys(){
         try{
           if(_sb){
             const [eq,ca,it,nc,us,me,docs,cars,vd] = await Promise.all([
-              SB.getEquip(), SB.getCals(), SB.getItems(), SB.getNCs(),
-              SB.getUsers(), SB.getMentions(), SB.getDocs(), SB.getCars(),
+              SB.getEquip(), SB.getCals(), SB.getItems(), SB.getNc(),
+              SB.getUsers(), SB.getMentions(), SB.getDocs?.() || SB.getDocMaster(), SB.getCars(),
               SB.getVendors()
             ]);
             if(eq)   DB.equip   = eq;

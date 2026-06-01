@@ -1071,3 +1071,153 @@ const DB={
 };
 
 /* ══ 헬퍼 ══ *//* ══ 토스트 ══ */
+/* ════════════════════════════════════════════════════════════
+   문서관리 고도화 SB 함수 [v2.395]
+   테이블: doc_master / doc_versions / doc_approvals / doc_dist_log
+   ════════════════════════════════════════════════════════════ */
+
+/* ── doc_master (문서 원장) ── */
+SB.getDocMaster=async function(filters={}){
+  if(!_sb)return[];
+  let rows=[];
+  try{
+    let q=_sb.from('doc_master').select('*').order('created_at',{ascending:false});
+    if(filters.status)  q=q.eq('status',filters.status);
+    if(filters.doc_type)q=q.eq('doc_type',filters.doc_type);
+    if(filters.keyword) q=q.ilike('title','%'+filters.keyword+'%');
+    const{data,error}=await q;
+    if(error)throw error;
+    rows=data||[];
+  }catch(e){console.warn('[SB] getDocMaster:',e.message);}
+  return rows;
+};
+SB.getDocMasterById=async function(id){
+  if(!_sb)return null;
+  const{data,error}=await _sb.from('doc_master').select('*').eq('id',id).single();
+  if(error){console.warn('[SB] getDocMasterById:',error.message);return null;}
+  return data;
+};
+SB.addDocMaster=async function(row){
+  if(!_sb)return{ok:false};
+  const allowed={
+    doc_no:row.doc_no||'',title:row.title||'',
+    doc_type:row.doc_type||'procedure',category:row.category||null,
+    tags:Array.isArray(row.tags)?row.tags:[],
+    status:row.status||'draft',current_ver:row.current_ver||'v1.0',
+    owner_id:row.owner_id||null,dept:row.dept||null,
+    review_cycle:row.review_cycle||'annual',
+    next_review_at:row.next_review_at||null,
+  };
+  const{error}=await _sb.from('doc_master').insert(allowed);
+  if(error){Toast.show('문서 저장 실패: '+error.message,'err');return{ok:false};}
+  return{ok:true};
+};
+SB.updateDocMaster=async function(id,patch){
+  if(!_sb)return{ok:false};
+  patch.updated_at=new Date().toISOString();
+  const{error}=await _sb.from('doc_master').update(patch).eq('id',id);
+  if(error){Toast.show('문서 수정 실패: '+error.message,'err');return{ok:false};}
+  return{ok:true};
+};
+SB.deleteDocMaster=async function(id){
+  if(!_sb)return{ok:false};
+  const{error}=await _sb.from('doc_master').delete().eq('id',id);
+  if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
+  return{ok:true};
+};
+SB.getExpiringDocs=async function(days=30){
+  if(!_sb)return[];
+  const target=new Date();target.setDate(target.getDate()+days);
+  const{data,error}=await _sb.from('doc_master')
+    .select('*').eq('status','active')
+    .lte('next_review_at',target.toISOString().split('T')[0])
+    .order('next_review_at',{ascending:true});
+  return error?[]:(data||[]);
+};
+
+/* ── doc_versions (버전 이력) ── */
+SB.getDocVersions=async function(docId){
+  if(!_sb)return[];
+  const{data,error}=await _sb.from('doc_versions')
+    .select('*, creator:created_by(id,name,dept), approver:approved_by(id,name,dept)')
+    .eq('doc_id',docId).order('created_at',{ascending:false});
+  if(error){console.warn('[SB] getDocVersions:',error.message);return[];}
+  return data||[];
+};
+SB.addDocVersion=async function(row){
+  if(!_sb)return{ok:false,id:null};
+  const allowed={
+    doc_id:row.doc_id,ver_no:row.ver_no||'v1.0',
+    file_url:row.file_url||null,file_name:row.file_name||null,file_size:row.file_size||null,
+    change_summary:row.change_summary||'신규 등록',change_detail:row.change_detail||null,
+    status:row.status||'in_review',created_by:row.created_by||null,
+  };
+  const{data,error}=await _sb.from('doc_versions').insert(allowed).select('id').single();
+  if(error){Toast.show('버전 저장 실패: '+error.message,'err');return{ok:false,id:null};}
+  return{ok:true,id:data?.id};
+};
+SB.updateDocVersion=async function(id,patch){
+  if(!_sb)return{ok:false};
+  const{error}=await _sb.from('doc_versions').update(patch).eq('id',id);
+  if(error){Toast.show('버전 수정 실패: '+error.message,'err');return{ok:false};}
+  return{ok:true};
+};
+SB.activateDocVersion=async function(docId,verId,verNo,approverId){
+  if(!_sb)return{ok:false};
+  const now=new Date().toISOString();
+  await _sb.from('doc_versions').update({status:'obsolete'}).eq('doc_id',docId).eq('status','active');
+  const{error}=await _sb.from('doc_versions')
+    .update({status:'active',approved_by:approverId,approved_at:now,published_at:now}).eq('id',verId);
+  if(error){Toast.show('활성화 실패: '+error.message,'err');return{ok:false};}
+  await _sb.from('doc_master').update({status:'active',current_ver:verNo,updated_at:now}).eq('id',docId);
+  return{ok:true};
+};
+
+/* ── doc_approvals (결재) ── */
+SB.getDocApprovals=async function(docVerId){
+  if(!_sb)return[];
+  const{data,error}=await _sb.from('doc_approvals')
+    .select('*, approver:approver_id(id,name,dept)')
+    .eq('doc_ver_id',docVerId).order('step_order',{ascending:true});
+  return error?[]:(data||[]);
+};
+SB.getMyPendingApprovals=async function(userId){
+  if(!_sb)return[];
+  const{data,error}=await _sb.from('doc_approvals')
+    .select('*, doc_ver:doc_ver_id(id,ver_no,change_summary,doc_id)')
+    .eq('approver_id',userId).eq('action','pending')
+    .order('created_at',{ascending:false});
+  return error?[]:(data||[]);
+};
+SB.addDocApprovals=async function(rows){
+  if(!_sb||!rows.length)return{ok:false};
+  const{error}=await _sb.from('doc_approvals').insert(rows);
+  if(error){Toast.show('결재선 저장 실패: '+error.message,'err');return{ok:false};}
+  return{ok:true};
+};
+SB.processApproval=async function(approvalId,action,comment){
+  if(!_sb)return{ok:false};
+  const{error}=await _sb.from('doc_approvals')
+    .update({action,comment:comment||null,signed_at:new Date().toISOString()})
+    .eq('id',approvalId);
+  if(error){Toast.show('결재 처리 실패: '+error.message,'err');return{ok:false};}
+  return{ok:true};
+};
+
+/* ── doc_dist_log (열람/다운로드 로그) ── */
+SB.addDistLog=async function(row){
+  if(!_sb)return;
+  const{error}=await _sb.from('doc_dist_log').insert({
+    doc_id:row.doc_id,doc_ver_id:row.doc_ver_id||null,
+    user_id:row.user_id||null,action:row.action||'view',
+    dept:row.dept||null,created_at:new Date().toISOString(),
+  });
+  if(error)console.warn('[SB] distLog:',error.message);
+};
+SB.getDistLog=async function(docId,limit=50){
+  if(!_sb)return[];
+  const{data,error}=await _sb.from('doc_dist_log')
+    .select('*, user:user_id(id,name,dept)')
+    .eq('doc_id',docId).order('created_at',{ascending:false}).limit(limit);
+  return error?[]:(data||[]);
+};

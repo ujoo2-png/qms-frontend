@@ -575,3 +575,26 @@ textarea.fc{resize:vertical;min-height:68px}
 .stab-btn:hover{background:var(--bg3);color:var(--tx)}
 .stab-btn.on{background:var(--pri);color:#fff;border-color:var(--pri)}
 .stab-btn.bout{background:transparent;border:1.5px solid var(--bd);color:var(--tx)}
+
+/* ════════════════════════════════════════
+   문서관리 고도화 추가 스타일 [v2.395]
+   ════════════════════════════════════════ */
+
+/* 문서 상태 탭 */
+.doc-tab{background:none;border:none;padding:8px 14px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:color .15s;display:inline-flex;align-items:center;gap:5px;}
+.doc-tab:hover{color:var(--text);}
+.doc-tab.on{color:#1a5fa8;border-bottom-color:#1a5fa8;font-weight:500;}
+.doc-cnt{background:var(--bg2);color:var(--muted);font-size:10px;padding:1px 5px;border-radius:999px;font-weight:600;}
+.doc-tab.on .doc-cnt{background:#dbeafe;color:#1e40af;}
+
+/* 배지 추가 색상 */
+.badge.bred{background:#fee2e2;color:#991b1b;}
+
+/* 초소형 버튼 */
+.btn.bxs{padding:3px 7px;font-size:12px;min-width:0;}
+
+/* 페이지 설명 */
+.pdesc{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* 결재함 카드 hover */
+div[onclick*="doc_history"]:hover{border-color:#93c5fd!important;background:#eff6ff!important;}
