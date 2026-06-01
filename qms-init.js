@@ -1,14 +1,4 @@
-/* ================================================================
-   qms-init.js — 키보드 단축키 + 앱 초기화
-   ================================================================
-   [버전 히스토리]
-   v2.394  2026-05-xx  F2/F3/F5/F8/Escape 단축키 설정
-                       sessionStorage 기반 로그인 상태 + 마지막 페이지 복원
-                       DB 일괄 로드 후 페이지 이동 (빈 DB 렌더 방지)
-   v2.395  2026-06-01  SB.getNCs() → SB.getNc() 함수명 오타 수정
-                       SB.getDocs() → SB.getDocs?.() || SB.getDocMaster() 호환 처리
-                       (기존 documents 테이블 + 신규 doc_master 테이블 병행 지원)
-   ================================================================ */
+/* qms-init.js — hotkeys + 초기화 [v2.395.2] */
 "use strict";
 
 
@@ -94,7 +84,7 @@ function setupHotkeys(){
           if(_sb){
             const [eq,ca,it,nc,us,me,docs,cars,vd] = await Promise.all([
               SB.getEquip(), SB.getCals(), SB.getItems(), SB.getNc(),
-              SB.getUsers(), SB.getMentions(), SB.getDocs?.() || SB.getDocMaster(), SB.getCars(),
+              SB.getUsers(), SB.getMentions(), SB.getDocs?.() || SB.getDocMaster(),SB.getDocs?.() || SB.getDocMaster(), SB.getCars(),
               SB.getVendors()
             ]);
             if(eq)   DB.equip   = eq;
