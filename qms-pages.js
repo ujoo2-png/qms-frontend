@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.396.1]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.397.1]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -441,20 +441,24 @@ async _uDeleteConfirm(userId){
   if(!uid){Toast.show('삭제할 사용자를 찾을 수 없습니다.','err');return;}
   const res=await SB.deleteUser(Number(uid));
   if(!res?.ok) return;
-  /* [v2.396.1] 로컬 DB 즉시 갱신 */
+  /* [v2.397.1] 로컬 DB 즉시 갱신 */
   DB.users=DB.users.filter(u=>Number(u.id)!==Number(uid));
   Modal.close();
   Toast.show('사용자가 삭제되었습니다.','ok');
-  /* 목록 갱신 */
-  const pw=document.getElementById('pw');
-  if(pw){
-    const uPane=pw.querySelector('.stab-pane[data-tab="usermgmt"]');
-    if(uPane&&typeof window.renderUserMgmt==='function'){
-      const fresh=await SB.getUsers();
-      if(fresh) DB.users=fresh;
-      uPane.innerHTML=window.renderUserMgmt()+(typeof window.renderPermTable==='function'?window.renderPermTable():'');
-    }
-  }
+  /* [v2.397.1 버그수정] settings() 재호출로 목록 완전 갱신
+     기존: stab-pane querySelector → settings() 재진입 시 DOM 재생성으로 작동 안 함
+     수정: SB에서 최신 users 재조회 후 settings() 재호출 → usermgmt 탭 자동 활성 */
+  try{
+    const fresh=await SB.getUsers();
+    if(Array.isArray(fresh)) DB.users=fresh;
+  }catch(e){}
+  /* settings() 재호출 후 usermgmt 탭 활성화 */
+  await Pages.settings();
+  /* usermgmt 탭 자동 클릭 (사용자 관리 탭으로 복귀) */
+  setTimeout(function(){
+    var btn=document.querySelector('.stab-btn[data-tab="usermgmt"]');
+    if(btn) btn.click();
+  }, 80);
 },
 _uStatusPopup(userId, userName){
   const u=DB.users.find(x=>x.id===userId);
@@ -3574,7 +3578,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.396.1]
+   문서관리 고도화 페이지 함수 [v2.397.1]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3605,7 +3609,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.396.1]
+   D1: 문서 목록 [v2.397.1]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3779,41 +3783,63 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.396.1] ── */
+/* ── 칸반 보드 [v2.397.1] ── */
+/* ── 칸반 보드 [v2.397.1 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
   var rows=window._docRows||[];
   var cols=[
-    {key:'draft',     label:'📝 초안',   cls:'bgry'},
-    {key:'in_review', label:'🔄 검토중', cls:'bblu'},
-    {key:'active',    label:'✅ 유효',   cls:'bgrn'},
-    {key:'obsolete',  label:'🗄 폐기',   cls:'bred'},
+    {key:'draft',     icon:'📝',label:'초안',   hdrBg:'#f1f5f9',hdrClr:'#475569',brdClr:'#e2e8f0',cnt:'bgry'},
+    {key:'in_review', icon:'🔄',label:'검토중', hdrBg:'#eff6ff',hdrClr:'#1d4ed8',brdClr:'#bfdbfe',cnt:'bblu'},
+    {key:'active',    icon:'✅',label:'유효',   hdrBg:'#f0fdf4',hdrClr:'#15803d',brdClr:'#86efac',cnt:'bgrn'},
+    {key:'obsolete',  icon:'🗄',label:'폐기',   hdrBg:'#fff5f5',hdrClr:'#b91c1c',brdClr:'#fca5a5',cnt:'bred'},
   ];
-  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 0">'+
+  el.innerHTML=
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 0">'+
     cols.map(function(col){
       var colRows=rows.filter(function(r){return r.status===col.key;});
-      return'<div style="background:var(--bg2);border-radius:10px;padding:10px;min-height:120px">'+
-        '<div style="font-size:12px;font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'+
-          '<span>'+col.label+'</span>'+
-          '<span class="badge '+col.cls+'" style="font-size:10px">'+colRows.length+'</span>'+
+      return'<div style="background:var(--bg2);border:1.5px solid '+col.brdClr+';border-radius:12px;overflow:hidden;display:flex;flex-direction:column">'+
+        /* 컬럼 헤더 */
+        '<div style="background:'+col.hdrBg+';padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid '+col.brdClr+'">'+
+          '<div style="display:flex;align-items:center;gap:6px">'+
+            '<span style="font-size:14px">'+col.icon+'</span>'+
+            '<span style="font-size:13px;font-weight:700;color:'+col.hdrClr+'">'+col.label+'</span>'+
+          '</div>'+
+          '<span class="badge '+col.cnt+'" style="font-size:11px;font-weight:700">'+colRows.length+'</span>'+
         '</div>'+
+        /* 카드 목록 */
+        '<div style="padding:8px;flex:1;min-height:80px">'+
         colRows.map(function(r){
-          return'<div style="background:var(--card);border:1px solid var(--brd);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;transition:box-shadow .15s" onclick="Pages.doc_history('+r.id+')" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.08)\'" onmouseout="this.style.boxShadow=\'\'">'+
-            '<div style="font-family:monospace;font-size:10px;font-weight:700;color:#1a5fa8;margin-bottom:2px">'+H.e(r.doc_no||'-')+'</div>'+
-            '<div style="font-weight:500;line-height:1.3;margin-bottom:4px">'+H.e(r.title||'-')+'</div>'+
-            '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          var dday=Pages._dDay(r.next_review_at);
+          var dtLabel=Pages._DT[r.doc_type]||r.doc_type||'';
+          return'<div style="background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:all .15s" '+
+            'onclick="Pages.doc_history('+r.id+')" '+
+            'onmouseover="this.style.borderColor=\''+col.brdClr+'\';this.style.boxShadow=\'0 3px 10px rgba(0,0,0,.09)\';this.style.transform=\'translateY(-1px)\'" '+
+            'onmouseout="this.style.borderColor=\'var(--brd)\';this.style.boxShadow=\'\';this.style.transform=\'\'">'+
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'+
+              '<span style="font-family:monospace;font-size:10px;font-weight:700;color:'+col.hdrClr+';background:'+col.hdrBg+';padding:1px 5px;border-radius:3px">'+H.e(r.doc_no||'-')+'</span>'+
               '<span style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px">'+H.e(r.current_ver||'-')+'</span>'+
-              Pages._dDay(r.next_review_at)+
+            '</div>'+
+            '<div style="font-weight:600;font-size:12px;line-height:1.4;margin-bottom:6px;color:var(--text)">'+H.e(r.title||'-')+'</div>'+
+            '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
+              (dtLabel?'<span style="background:#f1f5f9;color:#64748b;font-size:10px;padding:1px 5px;border-radius:3px">'+dtLabel+'</span>':'')+
+              (r.dept?'<span style="background:#f1f5f9;color:#64748b;font-size:10px;padding:1px 5px;border-radius:3px">'+H.e(r.dept)+'</span>':'')+
+              (dday?'<span style="margin-left:auto">'+dday+'</span>':'')+
             '</div>'+
           '</div>';
         }).join('')+
-        (!colRows.length?'<div style="text-align:center;padding:20px 0;color:var(--muted);font-size:12px">없음</div>':'')+
+        (!colRows.length?
+          '<div style="text-align:center;padding:24px 8px;color:var(--muted)">'+
+            '<div style="font-size:22px;opacity:.35;margin-bottom:4px">'+col.icon+'</div>'+
+            '<div style="font-size:11px">해당 문서 없음</div>'+
+          '</div>':'')+
+        '</div>'+
       '</div>';
     }).join('')+
-  '</div>';
+    '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.396.1] ── */
+/* ── 문서 상세 팝업 [v2.397.1] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3833,7 +3859,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.396.1] ── */
+/* ── D2: 문서 등록 [v2.397.1] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3907,7 +3933,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.396.1] ── */
+/* ── D2-B: 개정 기안 [v2.397.1] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -3963,7 +3989,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.396.1]
+   D3: 내 결재함 [v2.397.1]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -3981,12 +4007,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.396.1] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.397.1] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.396.1] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.397.1] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4088,9 +4114,22 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.396.1]
+   D4: 개정 이력 타임라인 [v2.397.1]
    ══════════════════════════════════════════════════ */
-doc_history_home:function(){Nav.go('docs');},
+/* [v2.397.1] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+doc_history_home:async function(){
+  await Pages.docs();
+  /* 문서 목록 로드 완료 후 상단에 안내 배너 삽입 */
+  var w=document.getElementById('pw');
+  if(!w)return;
+  var banner=document.createElement('div');
+  banner.style.cssText='background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;display:flex;align-items:center;gap:8px';
+  banner.innerHTML='<span style="font-size:16px">🕐</span><span>개정 이력을 보려면 아래 목록에서 <b>문서번호 또는 제목</b>을 클릭하세요.</span>';
+  /* stat-dash 다음에 삽입 */
+  var ph=w.querySelector('.ph');
+  if(ph) ph.insertAdjacentElement('beforebegin', banner);
+  else w.insertBefore(banner, w.firstChild);
+},
 async doc_history(docId){
   if(!docId){Nav.go('docs');return;}
   var w=document.getElementById('pw');
@@ -4112,21 +4151,35 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.396.1] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.397.1] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
+    /* [v2.397.1 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
-      '<div class="ir-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0;border:1px solid var(--brd);border-radius:10px;overflow:hidden">'+
-      [['문서번호','<span style="font-family:monospace;font-weight:700;color:#1a5fa8">'+H.e(doc.doc_no)+'</span>'],
-       ['문서 제목','<strong>'+H.e(doc.title||'-')+'</strong>'],
-       ['유형','<span class="badge bblu" style="font-size:10px">'+(Pages._DT[doc.doc_type]||doc.doc_type||'-')+'</span>'],
-       ['현재버전','<span style="background:#ede9fe;color:#5b21b6;font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px">'+H.e(doc.current_ver||'-')+'</span>'],
-       ['상태',Pages._dBadge(doc.status)],
-       ['담당부서',H.e(doc.dept||'-')],
-       ['다음검토일',H.e(doc.next_review_at||'-')+' '+Pages._dDay(doc.next_review_at)],
-       ['첨부 파일',filesBtnHtml],
-      ].map(function(x){
-        return'<div class="ir"><div class="il">'+x[0]+'</div><div class="iv">'+x[1]+'</div></div>';
-      }).join('')+
+      /* 헤더: 그라디언트 배경 + 문서번호/제목/유형/버전 */
+      '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;overflow:hidden">'+
+        '<div style="background:linear-gradient(135deg,#1a5fa8 0%,#2563eb 100%);padding:14px 18px;color:#fff">'+
+          '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+            '<span style="font-family:monospace;font-size:12px;font-weight:700;background:rgba(255,255,255,.22);padding:3px 10px;border-radius:6px">'+H.e(doc.doc_no||'-')+'</span>'+
+            '<span style="font-size:15px;font-weight:700">'+H.e(doc.title||'-')+'</span>'+
+            '<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+
+              '<span style="background:rgba(255,255,255,.22);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px">'+(Pages._DT[doc.doc_type]||doc.doc_type||'-')+'</span>'+
+              '<span style="background:rgba(255,255,255,.22);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px">'+H.e(doc.current_ver||'-')+'</span>'+
+            '</span>'+
+          '</div>'+
+        '</div>'+
+        /* 하단: 메타 그리드 */
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));">'+
+          [['📌 상태',Pages._dBadge(doc.status)],
+           ['🏢 담당부서',H.e(doc.dept||'-')],
+           ['📅 다음 검토일',H.e(doc.next_review_at||'-')+' '+Pages._dDay(doc.next_review_at)],
+           ['📎 첨부 파일',filesBtnHtml],
+          ].map(function(x){
+            return'<div style="padding:12px 16px;border-right:1px solid var(--brd);border-top:1px solid var(--brd)">'+
+              '<div style="font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.03em;margin-bottom:4px">'+x[0]+'</div>'+
+              '<div style="font-size:13px;font-weight:500">'+x[1]+'</div>'+
+            '</div>';
+          }).join('')+
+        '</div>'+
       '</div>';
     var tl=document.getElementById('vTimeline');
     if(!vers.length){
@@ -4205,7 +4258,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.396.1]
+   지식 검색 허브 [v2.397.1]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4241,6 +4294,290 @@ _dsSearch:function(kw){
   el.innerHTML=html+'</div>';
 },
 
+
+/* ══════════════════════════════════════════════════
+   D5: 배포 관리 [v2.397.1 Phase 2]
+   ══════════════════════════════════════════════════ */
+async doc_distribution(){
+  var w=document.getElementById('pw');
+  w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+  var docs=[];var summary={byAction:{},byDoc:[],total:0};
+  try{docs=await SB.getDocMaster();summary=await SB.getDistLogSummary();}catch(e){}
+  var ba=summary.byAction||{};var totalCnt=summary.total||0;
+  w.innerHTML=
+    '<div class="stat-dash">'+
+    '<div class="sd-card" style="cursor:pointer" onclick="Pages._distFilter(\'all\')">'+
+      '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📊</div>'+
+      '<div><div class="sd-val">'+totalCnt+'</div><div class="sd-lbl">전체(30일)</div></div></div>'+
+    '<div class="sd-card" style="cursor:pointer" onclick="Pages._distFilter(\'download\')">'+
+      '<div class="sd-icon" style="background:#d1fae5;color:#059669">⬇️</div>'+
+      '<div><div class="sd-val">'+(ba.download||0)+'</div><div class="sd-lbl">다운로드</div></div></div>'+
+    '<div class="sd-card" style="cursor:pointer" onclick="Pages._distFilter(\'view\')">'+
+      '<div class="sd-icon" style="background:#ede9fe;color:#7c3aed">👁️</div>'+
+      '<div><div class="sd-val">'+(ba.view||0)+'</div><div class="sd-lbl">열람</div></div></div>'+
+    '<div class="sd-card" style="cursor:pointer" onclick="Pages._distFilter(\'share\')">'+
+      '<div class="sd-icon" style="background:#fef3c7;color:#d97706">🔗</div>'+
+      '<div><div class="sd-val">'+(ba.share||0)+'</div><div class="sd-lbl">외부공유</div></div></div>'+
+    '</div>'+
+    '<div class="ph" style="margin-top:14px"><div>'+
+      '<div class="ptit">📤 배포 관리</div>'+
+      '<div style="font-size:12px;color:var(--muted)">열람·다운로드·공유 이력 (최근 30일)</div>'+
+    '</div></div>'+
+    '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-end">'+
+      '<div style="flex:1;min-width:200px">'+
+        '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">문서 선택</div>'+
+        '<select class="fsel" id="distDocSel" style="width:100%;padding:8px 10px" onchange="Pages._distLoadLog(this.value)">'+
+          '<option value="">— 전체 문서 이력 —</option>'+
+          docs.map(function(d){return'<option value="'+d.id+'">'+H.e(d.doc_no)+' '+H.e(d.title)+'</option>';}).join('')+
+        '</select>'+
+      '</div>'+
+      '<div>'+
+        '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">외부 공유 링크</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<select class="fsel" id="distShareHours" style="width:110px">'+
+            '<option value="24">24시간</option><option value="72" selected>72시간</option>'+
+            '<option value="168">7일</option><option value="720">30일</option>'+
+          '</select>'+
+          '<button class="btn bpri bsm" onclick="Pages._distCreateShare()">🔗 링크 발급</button>'+
+        '</div>'+
+      '</div>'+
+      '<button class="btn bout bsm" onclick="Pages._distExcel()">📥 이력 출력</button>'+
+    '</div>'+
+    '<div class="tbar">'+
+      '<div class="sw2"><input type="text" id="distKw" placeholder="문서번호, 이름, 부서..." oninput="Pages._distKwFilter(this.value)"></div>'+
+      '<select class="fsel" id="distActionF" onchange="Pages._distActionFilter(this.value)">'+
+        '<option value="">전체 액션</option><option value="view">열람</option>'+
+        '<option value="download">다운로드</option><option value="share">외부공유</option>'+
+      '</select>'+
+    '</div>'+
+    '<div id="distTbl"></div>'+
+    '<div style="margin-top:20px">'+
+      '<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--muted)">📈 최근 30일 인기 문서 TOP 10</div>'+
+      '<div style="border:1px solid var(--brd);border-radius:8px;overflow:hidden">'+
+        (summary.byDoc&&summary.byDoc.length
+          ?'<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+            '<thead><tr style="background:var(--bg2)"><th style="padding:8px 12px;width:36px">순위</th>'+
+            '<th style="padding:8px 12px;width:120px">문서번호</th><th style="padding:8px 12px">제목</th>'+
+            '<th style="padding:8px 12px;text-align:right;width:60px">이용수</th></tr></thead><tbody>'+
+            summary.byDoc.map(function(d,i){
+              return'<tr style="border-bottom:1px solid var(--brd)">'+
+                '<td style="padding:7px 12px;text-align:center;font-weight:700;color:'+(i<3?'#f59e0b':'var(--muted)')+'">'+
+                  (i<3?['🥇','🥈','🥉'][i]:i+1)+'</td>'+
+                '<td style="padding:7px 12px;font-family:monospace;font-size:11px;color:#1a5fa8">'+H.e(d.doc_no)+'</td>'+
+                '<td style="padding:7px 12px">'+H.e(d.title)+'</td>'+
+                '<td style="padding:7px 12px;text-align:right;font-weight:700">'+d.count+'</td></tr>';
+            }).join('')+'</tbody></table>'
+          :'<div style="padding:24px;text-align:center;color:var(--muted)">아직 배포 이력이 없습니다.</div>')+
+      '</div>'+
+    '</div>';
+  window._distRows=[];window._distActionF='';window._distKw='';
+  Pages._distLoadLog('');
+},
+_distLoadLog:async function(docId){
+  var rows=[];
+  try{
+    if(docId){rows=await SB.getDocDistLog(Number(docId),'all',200);}
+    else if(_sb){
+      var res=await _sb.from('doc_dist_log')
+        .select('*, user:user_id(id,name,dept), doc:doc_id(doc_no,title)')
+        .order('created_at',{ascending:false}).limit(100);
+      rows=res.data||[];
+    }
+  }catch(e){}
+  window._distRows=rows;Pages._distRender(rows);
+},
+_distRender:function(rows){
+  var lb={view:'👁️ 열람',download:'⬇️ 다운로드',share:'🔗 공유',distribute:'📤 배포',revision_submit:'📝 기안',print:'🖨️ 인쇄'};
+  var cls={view:'bblu',download:'bgrn',share:'bamb',distribute:'bpri',revision_submit:'bgry'};
+  var data=(rows||[]).map(function(r){
+    return{id:r.id,
+      created_at:r.created_at?new Date(r.created_at).toLocaleString('ko-KR'):'',
+      doc_no:r.doc&&r.doc.doc_no||'-',
+      doc_title:r.doc&&r.doc.title||'-',
+      action:r.action||'-',
+      user_name:r.user&&r.user.name||'외부',
+      dept:r.user&&r.user.dept||r.dept||'-',
+      share_token:r.share_token||'',
+      expires_at:r.expires_at?new Date(r.expires_at).toLocaleString('ko-KR'):'',
+    };
+  });
+  Tbl.render({el:'#distTbl',cols:[
+    {key:'created_at',  label:'일시',       w:'140px'},
+    {key:'doc_no',      label:'문서번호',   w:'120px',render:function(v){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8">'+H.e(v)+'</span>';}},
+    {key:'doc_title',   label:'문서 제목'},
+    {key:'action',      label:'액션',       w:'100px',align:'center',render:function(v){return'<span class="badge '+(cls[v]||'bgry')+'" style="font-size:10px">'+(lb[v]||H.e(v))+'</span>';}},
+    {key:'user_name',   label:'사용자',     w:'80px'},
+    {key:'dept',        label:'부서',       w:'70px'},
+    {key:'share_token', label:'공유토큰',   w:'100px',render:function(v){return v?'<span style="font-family:monospace;font-size:10px;color:var(--muted)">'+H.e(v.slice(0,8))+'...</span>':'-';}},
+    {key:'expires_at',  label:'만료일',     w:'120px',render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
+  ],data:data});
+},
+_distFilter:function(action){window._distActionF=action;var s=document.getElementById('distActionF');if(s)s.value=action==='all'?'':action;Pages._distApplyFilter();},
+_distActionFilter:function(v){window._distActionF=v;Pages._distApplyFilter();},
+_distKwFilter:function(v){window._distKw=v;Pages._distApplyFilter();},
+_distApplyFilter:function(){
+  var rows=window._distRows||[];
+  var af=window._distActionF||'';var kw=(window._distKw||'').toLowerCase();
+  if(af&&af!=='all')rows=rows.filter(function(r){return r.action===af;});
+  if(kw)rows=rows.filter(function(r){
+    return (r.doc&&r.doc.doc_no||'').toLowerCase().includes(kw)||
+           (r.doc&&r.doc.title||'').toLowerCase().includes(kw)||
+           (r.user&&r.user.name||'').toLowerCase().includes(kw)||
+           (r.user&&r.user.dept||r.dept||'').toLowerCase().includes(kw);
+  });
+  Pages._distRender(rows);
+},
+_distCreateShare:async function(){
+  var docId=document.getElementById('distDocSel')?.value;
+  if(!docId){Toast.show('공유할 문서를 먼저 선택하세요.','warn');return;}
+  var hours=parseInt(document.getElementById('distShareHours')?.value||'72');
+  var doc=(window._docRows||[]).find(function(d){return String(d.id)===String(docId);});
+  var r=await SB.createShareToken(Number(docId),null,hours);
+  if(!r.ok){Toast.show('링크 발급에 실패했습니다.','err');return;}
+  var expireStr=new Date(r.expiresAt).toLocaleString('ko-KR');
+  Modal.open({title:'🔗 외부 공유 링크 발급 완료',size:'sm',
+    body:'<div style="text-align:center;padding:8px 0">'+
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">'+(doc?'<b>'+H.e(doc.doc_no)+' '+H.e(doc.title)+'</b><br>':'')+'</div>'+
+      '<div style="background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:12px;margin-bottom:12px">'+
+        '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">공유 토큰</div>'+
+        '<div style="font-family:monospace;font-size:13px;font-weight:700;word-break:break-all">'+H.e(r.token)+'</div>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--muted)">⏰ 만료: <b>'+expireStr+'</b> ('+hours+'시간 후)</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:8px">※ 토큰을 복사하여 외부 수신자에게 전달하세요.</div>'+
+    '</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+         '<button class="btn bpri" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+r.token+'\').then(function(){Toast.show(\'복사되었습니다.\',\'ok\');})">📋 토큰 복사</button>',
+  });
+  Pages._distLoadLog(docId);
+},
+_distExcel:function(){
+  var rows=window._distRows||[];
+  if(!rows.length){Toast.show('출력할 이력이 없습니다.','warn');return;}
+  var hdrs=['일시','문서번호','제목','액션','사용자','부서','공유토큰','만료일'];
+  var data=rows.map(function(r){return[
+    r.created_at?new Date(r.created_at).toLocaleString('ko-KR'):'',
+    r.doc&&r.doc.doc_no||'-',r.doc&&r.doc.title||'-',r.action||'-',
+    r.user&&r.user.name||'외부',r.user&&r.user.dept||r.dept||'-',
+    r.share_token||'',r.expires_at?new Date(r.expires_at).toLocaleString('ko-KR'):'',
+  ];});
+  if(typeof downloadExcel==='function') downloadExcel('배포이력',hdrs,data);
+  else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
+},
+
+/* ══════════════════════════════════════════════════
+   D6: 검토 주기 관리 [v2.397.1 Phase 2]
+   ══════════════════════════════════════════════════ */
+async doc_review_cycle(){
+  var w=document.getElementById('pw');
+  w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+  var rows=[];
+  try{rows=await SB.getDocMaster();}catch(e){}
+  var today=new Date();
+  var expired=[],d7=[],d30=[];
+  rows.forEach(function(r){
+    if(!r.next_review_at||r.status!=='active')return;
+    var d=Math.ceil((new Date(r.next_review_at)-today)/86400000);
+    if(d<0)expired.push(r);else if(d<=7)d7.push(r);else if(d<=30)d30.push(r);
+  });
+  w.innerHTML=
+    '<div class="stat-dash">'+
+    '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'expired\')">'+
+      '<div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚨</div>'+
+      '<div><div class="sd-val">'+expired.length+'</div><div class="sd-lbl">만료됨</div></div></div>'+
+    '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'d7\')">'+
+      '<div class="sd-icon" style="background:#fef3c7;color:#d97706">⚠️</div>'+
+      '<div><div class="sd-val">'+d7.length+'</div><div class="sd-lbl">D-7 이내</div></div></div>'+
+    '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'d30\')">'+
+      '<div class="sd-icon" style="background:#fef9c3;color:#ca8a04">📅</div>'+
+      '<div><div class="sd-val">'+d30.length+'</div><div class="sd-lbl">D-30 이내</div></div></div>'+
+    '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'all\')">'+
+      '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>'+
+      '<div><div class="sd-val">'+rows.filter(function(r){return r.status==="active";}).length+'</div><div class="sd-lbl">전체 유효</div></div></div>'+
+    '</div>'+
+    '<div class="ph" style="margin-top:14px"><div>'+
+      '<div class="ptit">🔔 검토 주기 관리</div>'+
+      '<div style="font-size:12px;color:var(--muted)">만료 임박 문서 현황 및 검토 주기 설정</div>'+
+    '</div><div class="pac">'+
+      '<button class="btn bred bsm" onclick="Pages._rcSendAlert(7)">🚨 D-7 긴급알림</button>'+
+      '<button class="btn bamb bsm" onclick="Pages._rcSendAlert(30)">🔔 D-30 알림발송</button>'+
+    '</div></div>'+
+    '<div class="tbar">'+
+      '<div class="sw2"><input type="text" id="rcKw" placeholder="문서번호, 제목, 부서..." oninput="Pages._rcKwFilter(this.value)"></div>'+
+      '<select class="fsel" id="rcCycleF" onchange="Pages._rcCycleFilter(this.value)">'+
+        '<option value="">전체 주기</option><option value="monthly">매월</option>'+
+        '<option value="quarterly">분기</option><option value="biannual">반기</option><option value="annual">연간</option>'+
+      '</select>'+
+      '<button class="btn bout bsm" onclick="Pages._rcBulkChange()">⚙️ 일괄 주기 변경</button>'+
+    '</div>'+
+    '<div id="rcTbl"></div>';
+  window._rcAllRows=rows;window._rcFilter_val='all';window._rcKw='';window._rcCycle='';
+  Pages._rcRender(rows.filter(function(r){return r.status==='active';}));
+},
+_rcFilter:function(f){window._rcFilter_val=f;Pages._rcApplyFilter();},
+_rcKwFilter:function(v){window._rcKw=v;Pages._rcApplyFilter();},
+_rcCycleFilter:function(v){window._rcCycle=v;Pages._rcApplyFilter();},
+_rcApplyFilter:function(){
+  var rows=(window._rcAllRows||[]).filter(function(r){return r.status==='active';});
+  var today=new Date();var f=window._rcFilter_val||'all';
+  if(f==='expired')rows=rows.filter(function(r){return r.next_review_at&&Math.ceil((new Date(r.next_review_at)-today)/86400000)<0;});
+  else if(f==='d7') rows=rows.filter(function(r){var d=r.next_review_at&&Math.ceil((new Date(r.next_review_at)-today)/86400000);return d>=0&&d<=7;});
+  else if(f==='d30')rows=rows.filter(function(r){var d=r.next_review_at&&Math.ceil((new Date(r.next_review_at)-today)/86400000);return d>=0&&d<=30;});
+  var kw=(window._rcKw||'').toLowerCase();var cy=window._rcCycle||'';
+  if(kw)rows=rows.filter(function(r){return(r.title||'').toLowerCase().includes(kw)||(r.doc_no||'').toLowerCase().includes(kw)||(r.dept||'').toLowerCase().includes(kw);});
+  if(cy)rows=rows.filter(function(r){return r.review_cycle===cy;});
+  Pages._rcRender(rows);
+},
+_rcRender:function(rows){
+  var cycleOpts=function(cur){return['monthly','quarterly','biannual','annual'].map(function(k){return'<option value="'+k+'"'+(cur===k?' selected':'')+'>'+{monthly:'매월',quarterly:'분기',biannual:'반기',annual:'연간'}[k]+'</option>';}).join('');};
+  Tbl.render({el:'#rcTbl',cols:[
+    {key:'doc_no',        label:'문서번호',   w:'120px',render:function(v,row){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';}},
+    {key:'title',         label:'제목',       render:function(v,row){return'<span style="font-weight:500;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';}},
+    {key:'review_cycle',  label:'검토 주기',  w:'100px',align:'center',
+      render:function(v,row){return'<select class="fsel" style="font-size:11px;padding:2px 4px" onchange="Pages._rcUpdateCycle('+row.id+',this.value)">'+cycleOpts(v)+'</select>';}},
+    {key:'next_review_at',label:'다음 검토일',w:'140px',
+      render:function(v,row){return'<input type="date" style="font-size:11px;padding:2px 6px;border:1px solid var(--brd);border-radius:4px;background:var(--bg)" value="'+H.e(v||'')+'" onchange="Pages._rcUpdateDate('+row.id+',this.value)">';}},
+    {key:'next_review_at',label:'D-day',      w:'80px',align:'center',render:function(v){return Pages._dDay(v)||'<span style="font-size:11px;color:var(--muted)">-</span>';}},
+    {key:'dept',          label:'부서',       w:'70px',align:'center'},
+    {key:'id',            label:'검토완료',   w:'80px',align:'center',
+      render:function(v,row){return'<button class="btn bgrn bxs" onclick="Pages._rcComplete('+v+',\''+H.e(row.review_cycle||'annual')+'\')" title="완료처리-다음주기자동계산">✅ 완료</button>';}},
+  ],data:rows,onDel:null});
+},
+_rcUpdateCycle:async function(docId,cycle){
+  var r=await SB.bulkUpdateReviewCycle([docId],cycle);
+  if(r.ok){var row=(window._rcAllRows||[]).find(function(x){return x.id===docId;});if(row)row.review_cycle=cycle;Toast.show('검토 주기 변경됨','ok');}
+},
+_rcUpdateDate:async function(docId,date){
+  if(!date)return;
+  var r=await SB.updateNextReviewDate(docId,date);
+  if(r.ok){var row=(window._rcAllRows||[]).find(function(x){return x.id===docId;});if(row)row.next_review_at=date;Toast.show('검토일 변경됨','ok');Pages._rcApplyFilter();}
+},
+_rcComplete:async function(docId,cycle){
+  var r=await SB.completeReview(docId,cycle);
+  if(r.ok){var row=(window._rcAllRows||[]).find(function(x){return x.id===docId;});if(row)row.next_review_at=r.nextDate;Toast.show('검토 완료! 다음 검토일: '+r.nextDate,'ok',3000);Pages._rcApplyFilter();}
+},
+_rcBulkChange:function(){
+  var ids=Tbl.getSel();
+  if(!ids.length){Toast.show('변경할 문서를 선택하세요.','warn');return;}
+  Modal.open({title:'⚙️ 일괄 검토 주기 변경',size:'sm',
+    body:'<div style="margin-bottom:12px"><div style="font-size:13px;margin-bottom:10px">선택된 <b>'+ids.length+'건</b> 검토 주기 변경</div>'+
+      '<select class="fc" id="bulkCycleVal"><option value="monthly">매월</option><option value="quarterly">분기</option>'+
+      '<option value="biannual">반기</option><option value="annual" selected>연간</option></select></div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+         '<button class="btn bpri" onclick="Pages._rcBulkSave('+JSON.stringify(ids)+')">변경</button>',
+  });
+},
+_rcBulkSave:async function(ids){
+  var cycle=document.getElementById('bulkCycleVal')?.value||'annual';
+  var r=await SB.bulkUpdateReviewCycle(ids,cycle);
+  if(r.ok){ids.forEach(function(id){var row=(window._rcAllRows||[]).find(function(x){return Number(x.id)===Number(id);});if(row)row.review_cycle=cycle;});Toast.show(r.updated+'건 변경 완료','ok');Modal.close();Pages._rcApplyFilter();}
+},
+_rcSendAlert:async function(days){
+  var btn=event&&event.target;if(btn){btn.disabled=true;btn.textContent='발송 중...';}
+  try{
+    var r=await SB.sendReviewAlerts(days);
+    if(r.ok){if(r.sent>0)Toast.show('📬 알림 '+r.sent+'건 발송 완료!','ok',4000);else Toast.show('발송 대상 없음 (담당자 미지정 문서 제외)','warn',3000);}
+  }finally{if(btn){btn.disabled=false;btn.textContent=days===7?'🚨 D-7 긴급알림':'🔔 D-30 알림발송';}}
+},
 /* ══════════════════════════════════════════════════
    기록 관리 [v2.396 — doc_type='record' 조회]
    Phase 1 포함 기능: doc_master record 유형 문서 관리
@@ -5797,7 +6134,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.396.1] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.397.1] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',

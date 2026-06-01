@@ -1243,3 +1243,218 @@ SB.getDistLog=async function(docId,limit){
     .eq('doc_id',docId).order('created_at',{ascending:false}).limit(limit);
   return res.error?[]:(res.data||[]);
 };
+
+/* ════════════════════════════════════════════════════════════
+   Phase 2 SB 함수 [v2.397.1 신규 — 2026-06-01]
+   D5: 배포 관리 / D6: 검토 주기 알림
+   ════════════════════════════════════════════════════════════ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   D5: 배포 관리 — doc_dist_log 확장
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/**
+ * [v2.397.1] 외부 공유 링크 토큰 발급
+ * @param {number} docId     - doc_master.id
+ * @param {number} docVerId  - doc_versions.id
+ * @param {number} hours     - 링크 유효 시간 (기본 72시간)
+ * @returns {{ok:boolean, token:string, expiresAt:string}}
+ *
+ * [구조] doc_dist_log 에 action='share' 로 INSERT
+ *        share_token = 무작위 32자리 hex 문자열
+ *        expires_at  = 발급 시각 + hours
+ */
+SB.createShareToken=async function(docId,docVerId,hours){
+  hours=hours||72;
+  if(!_sb)return{ok:false,token:null,expiresAt:null};
+  try{
+    /* 32자리 랜덤 토큰 생성 */
+    var arr=new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    var token=Array.from(arr).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+    var expiresAt=new Date(Date.now()+hours*3600000).toISOString();
+    var res=await _sb.from('doc_dist_log').insert({
+      doc_id:docId,
+      doc_ver_id:docVerId||null,
+      action:'share',
+      share_token:token,
+      expires_at:expiresAt,
+      created_at:new Date().toISOString(),
+    });
+    if(res.error){
+      console.warn('[SB] createShareToken:',res.error.message);
+      return{ok:false,token:null,expiresAt:null};
+    }
+    return{ok:true,token:token,expiresAt:expiresAt};
+  }catch(e){
+    console.warn('[SB] createShareToken:',e.message);
+    return{ok:false,token:null,expiresAt:null};
+  }
+};
+
+/**
+ * [v2.397.1] 특정 문서의 배포/열람 로그 조회 (기존 getDistLog 확장 래퍼)
+ * @param {number} docId  - doc_master.id
+ * @param {string} action - 'all'|'view'|'download'|'share' (기본 'all')
+ * @param {number} limit  - 최대 건수 (기본 100)
+ */
+SB.getDocDistLog=async function(docId,action,limit){
+  action=action||'all'; limit=limit||100;
+  if(!_sb)return[];
+  try{
+    var q=_sb.from('doc_dist_log')
+      .select('*, user:user_id(id,name,dept)')
+      .eq('doc_id',docId)
+      .order('created_at',{ascending:false})
+      .limit(limit);
+    if(action!=='all') q=q.eq('action',action);
+    var res=await q;
+    if(res.error){console.warn('[SB] getDocDistLog:',res.error.message);return[];}
+    return res.data||[];
+  }catch(e){return[];}
+};
+
+/**
+ * [v2.397.1] 전체 배포 로그 집계 — 대시보드용
+ * @param {string} since - ISO 날짜 문자열 (기본: 30일 전)
+ * @returns {{byAction:{}, byDoc:[], total:number}}
+ */
+SB.getDistLogSummary=async function(since){
+  if(!_sb)return{byAction:{},byDoc:[],total:0};
+  try{
+    var sinceDate=since||(new Date(Date.now()-30*86400000).toISOString());
+    var res=await _sb.from('doc_dist_log')
+      .select('action, doc_id, doc_master:doc_id(doc_no,title)')
+      .gte('created_at',sinceDate)
+      .order('created_at',{ascending:false})
+      .limit(500);
+    if(res.error)return{byAction:{},byDoc:[],total:0};
+    var rows=res.data||[];
+    var byAction={};
+    var byDocMap={};
+    rows.forEach(function(r){
+      byAction[r.action]=(byAction[r.action]||0)+1;
+      var key=r.doc_id;
+      if(!byDocMap[key]){
+        byDocMap[key]={
+          doc_id:r.doc_id,
+          doc_no:r.doc_master&&r.doc_master.doc_no||'-',
+          title:r.doc_master&&r.doc_master.title||'-',
+          count:0
+        };
+      }
+      byDocMap[key].count++;
+    });
+    var byDoc=Object.values(byDocMap).sort(function(a,b){return b.count-a.count;}).slice(0,10);
+    return{byAction:byAction,byDoc:byDoc,total:rows.length};
+  }catch(e){return{byAction:{},byDoc:[],total:0};}
+};
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   D6: 검토 주기 관리 — doc_master 연장
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/**
+ * [v2.397.1] 검토 주기 일괄 업데이트
+ * @param {number[]} ids          - doc_master.id 배열
+ * @param {string}   review_cycle - 'monthly'|'quarterly'|'biannual'|'annual'
+ * @returns {{ok:boolean, updated:number}}
+ */
+SB.bulkUpdateReviewCycle=async function(ids,review_cycle){
+  if(!_sb||!ids.length)return{ok:false,updated:0};
+  try{
+    var res=await _sb.from('doc_master')
+      .update({review_cycle:review_cycle,updated_at:new Date().toISOString()})
+      .in('id',ids);
+    if(res.error){
+      Toast.show('검토 주기 변경 실패: '+res.error.message,'err');
+      return{ok:false,updated:0};
+    }
+    return{ok:true,updated:ids.length};
+  }catch(e){return{ok:false,updated:0};}
+};
+
+/**
+ * [v2.397.1] 다음 검토일 개별 업데이트
+ * @param {number} docId          - doc_master.id
+ * @param {string} next_review_at - YYYY-MM-DD
+ */
+SB.updateNextReviewDate=async function(docId,next_review_at){
+  if(!_sb)return{ok:false};
+  var res=await _sb.from('doc_master')
+    .update({next_review_at:next_review_at,updated_at:new Date().toISOString()})
+    .eq('id',docId);
+  if(res.error){Toast.show('검토일 변경 실패: '+res.error.message,'err');return{ok:false};}
+  return{ok:true};
+};
+
+/**
+ * [v2.397.1] 검토 완료 처리 — 다음 검토일 자동 계산 후 갱신
+ * @param {number} docId - doc_master.id
+ * @param {string} cycle - review_cycle 값 (없으면 doc_master에서 조회)
+ *
+ * [계산 규칙]
+ *  monthly   : +1개월
+ *  quarterly : +3개월
+ *  biannual  : +6개월
+ *  annual    : +12개월 (기본)
+ */
+SB.completeReview=async function(docId,cycle){
+  if(!_sb)return{ok:false};
+  try{
+    var doc=await SB.getDocMasterById(docId);
+    if(!doc)return{ok:false};
+    var reviewCycle=cycle||doc.review_cycle||'annual';
+    var monthMap={monthly:1,quarterly:3,biannual:6,annual:12};
+    var addMonths=monthMap[reviewCycle]||12;
+    var base=doc.next_review_at?new Date(doc.next_review_at):new Date();
+    base.setMonth(base.getMonth()+addMonths);
+    var nextDate=base.toISOString().split('T')[0];
+    var res=await _sb.from('doc_master')
+      .update({next_review_at:nextDate,updated_at:new Date().toISOString()})
+      .eq('id',docId);
+    if(res.error){Toast.show('검토 완료 처리 실패: '+res.error.message,'err');return{ok:false};}
+    return{ok:true,nextDate:nextDate};
+  }catch(e){return{ok:false};}
+};
+
+/**
+ * [v2.397.1] 만료 임박 문서 일괄 멘션 알림 발송
+ * @param {number} days - 몇 일 이내 만료 문서에 알림 (7 또는 30)
+ * @returns {{ok:boolean, sent:number}} — 발송 건수
+ *
+ * [동작]
+ *  1. getExpiringDocs(days)로 만료 임박 문서 조회
+ *  2. 각 문서 owner_id → 멘션함에 알림 발송
+ *  3. 발송 건수 반환
+ *
+ * [호출 시점]
+ *  - 앱 로그인 시 자동 1회 호출 (qms-init.js)
+ *  - D6 검토주기 화면에서 "알림 발송" 버튼 수동 호출
+ */
+SB.sendReviewAlerts=async function(days){
+  days=days||30;
+  var docs=await SB.getExpiringDocs(days);
+  if(!docs.length)return{ok:true,sent:0};
+  var sent=0;
+  var cur=typeof Auth!=='undefined'&&Auth._u?Auth._u.username||Auth._u.name||'시스템':'시스템';
+  for(var i=0;i<docs.length;i++){
+    var doc=docs[i];
+    if(!doc.owner_id)continue;
+    var d=Math.ceil((new Date(doc.next_review_at)-new Date())/86400000);
+    var label=d<=0?'만료됨':('D-'+d);
+    try{
+      await SB.addMention({
+        from:cur,
+        to:String(doc.owner_id),
+        text:'[검토 주기 알림] '+doc.doc_no+' '+doc.title+
+             ' 검토일: '+doc.next_review_at+' ('+label+')\n'+
+             '문서 검토 후 \'검토 완료\' 처리해 주세요.',
+        ref:'doc_review_cycle',
+        read:false,
+      });
+      sent++;
+    }catch(e){console.warn('[SB] sendReviewAlerts 멘션 실패:',e.message);}
+  }
+  return{ok:true,sent:sent};
+};
