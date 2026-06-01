@@ -1,4 +1,4 @@
-/* qms-db.js — DB 초기 데이터 + Supabase 객체 [v2.395.2]
+/* qms-db.js — DB 초기 데이터 + Supabase 객체 [v2.396]
    v2.395  2026-06-01  문서관리 고도화 SB 함수 추가 (하단 참조) */
 "use strict";
 

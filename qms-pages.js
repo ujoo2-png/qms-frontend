@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.395.2]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.396]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -3571,174 +3571,278 @@ _msaTab(btn,id){
   btn.classList.add('on');const el=document.getElementById(id);if(el)el.classList.add('on');
 },
 
-/* ── 문서관리 고도화 [v2.395.2] ── */
-/* 상태·유형 한글 레이블 상수 */
+/* ════════════════════════════════════════════════════════════
+   문서관리 고도화 페이지 함수 [v2.396]
+   ────────────────────────────────────────────────────────────
+   v2.395   2026-06-01  최초 구현
+   v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
+   v2.395.2 2026-06-01  버그수정 — Pages is not defined
+   v2.396   2026-06-01  공통 UI 규칙 전면 준수
+                         · stat-dash 클릭 시 해당 필터 이동
+                         · Tbl.render 기반 테이블 (체크박스+정렬 내장)
+                         · SearchPop F3 버튼 추가
+                         · 칸반 탭 추가 (목록/칸반 전환)
+                         · 기록관리 구현 (doc_type=record 조회)
+                         · 결재함 사용자 매칭 강화 (설정→사용자등록 연동)
+   ════════════════════════════════════════════════════════════ */
+
+/* ── 상수: 상태·유형 한글 레이블 ── */
 _DS:{draft:'초안',in_review:'검토중',pending:'승인대기',active:'유효',obsolete:'폐기',archived:'보관'},
 _DT:{procedure:'절차서',instruction:'작업지시서',form:'양식',record:'기록',other:'기타'},
-/* 상태 배지 HTML */
 _dBadge:function(s){
   var m={draft:'bgry',in_review:'bblu',pending:'bamb',active:'bgrn',obsolete:'bred',archived:'bgry'};
   return'<span class="badge '+(m[s]||'bgry')+'">'+(Pages._DS[s]||s)+'</span>';
 },
-/* 만료 D-day 배지 HTML */
 _dDay:function(dt){
   if(!dt)return'';
   var d=Math.ceil((new Date(dt)-new Date())/86400000);
-  if(d<0)  return'<span class="badge bred">만료</span>';
+  if(d<0)  return'<span class="badge bred" title="검토 만료">만료</span>';
   if(d<=7) return'<span class="badge bred">D-'+d+'</span>';
   if(d<=30)return'<span class="badge bamb">D-'+d+'</span>';
   return'';
 },
 
-/* ── D1: 문서 목록 [v2.395.2] ── */
+/* ══════════════════════════════════════════════════
+   D1: 문서 목록 [v2.396]
+   기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
+   ══════════════════════════════════════════════════ */
 async docs(){
   var w=document.getElementById('pw');
+  w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+  window._docRows=[];
+  try{ window._docRows=await SB.getDocMaster(); }catch(e){ Toast.show('문서 조회 실패: '+e.message,'err'); }
+
+  var rows=window._docRows;
+  var cnt={all:rows.length,active:0,in_review:0,draft:0,obsolete:0};
+  rows.forEach(function(r){if(cnt[r.status]!==undefined)cnt[r.status]++;});
+  var byType={};
+  rows.forEach(function(r){var t=Pages._DT[r.doc_type]||r.doc_type||'-';byType[t]=(byType[t]||0)+1;});
+
   w.innerHTML=
-    '<div class="ph">'+
-      '<div>'+
-        '<div class="ptit">📄 문서 목록</div>'+
-        '<div style="font-size:12px;color:var(--muted)">ISO 9001 관리 문서 전체 현황</div>'+
+    /* ① stat-dash — 클릭 시 해당 상태 필터 + 목록 이동 */
+    '<div class="stat-dash">'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'\',\'all\')" title="전체 목록">'+
+        '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📄</div>'+
+        '<div><div class="sd-val">'+cnt.all+'</div><div class="sd-lbl">전체 문서</div></div>'+
       '</div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'active\',\'유효\')" title="유효 문서만">'+
+        '<div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div>'+
+        '<div><div class="sd-val">'+cnt.active+'</div><div class="sd-lbl">유효</div></div>'+
+      '</div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'in_review\',\'검토중\')" title="검토중 문서만">'+
+        '<div class="sd-icon" style="background:#dbeafe;color:#2563eb">🔄</div>'+
+        '<div><div class="sd-val">'+cnt.in_review+'</div><div class="sd-lbl">검토중</div></div>'+
+      '</div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'draft\',\'초안\')" title="초안만">'+
+        '<div class="sd-icon" style="background:#fef3c7;color:#d97706">📝</div>'+
+        '<div><div class="sd-val">'+cnt.draft+'</div><div class="sd-lbl">초안</div></div>'+
+      '</div>'+
+      Object.entries(byType).map(function(e){
+        return'<div class="sd-card sd-sm" style="cursor:pointer" onclick="Pages._docTypeClick(\''+e[0]+'\')" title="'+e[0]+' 보기">'+
+          '<div class="sd-lbl">'+e[0]+'</div>'+
+          '<div class="sd-val" style="font-size:17px">'+e[1]+'</div>'+
+        '</div>';
+      }).join('')+
+    '</div>'+
+
+    /* ② 페이지 헤더 */
+    '<div class="ph" style="margin-top:14px"><div><div class="ptit">📄 문서 목록</div></div>'+
       '<div class="pac">'+
-        '<button class="btn bout bsm" onclick="Pages._docExcelDown()">📥 목록 출력</button>'+
         '<button class="btn bpri btn-f2" onclick="Pages._docForm()">+ 문서 등록 <span class="kbd">F2</span></button>'+
       '</div>'+
     '</div>'+
-    '<div style="display:flex;gap:0;border-bottom:2px solid var(--brd);margin-bottom:16px;overflow-x:auto" id="docTabs">'+
-      '<button class="doc-tab on" data-st="" onclick="Pages._docTab(this,\'\')">전체 <b class="doc-cnt" id="dcnt-all">-</b></button>'+
-      '<button class="doc-tab" data-st="active" onclick="Pages._docTab(this,\'active\')">✅ 유효 <b class="doc-cnt" id="dcnt-active">-</b></button>'+
-      '<button class="doc-tab" data-st="in_review" onclick="Pages._docTab(this,\'in_review\')">🔄 검토중 <b class="doc-cnt" id="dcnt-in_review">-</b></button>'+
-      '<button class="doc-tab" data-st="draft" onclick="Pages._docTab(this,\'draft\')">📝 초안 <b class="doc-cnt" id="dcnt-draft">-</b></button>'+
-      '<button class="doc-tab" data-st="obsolete" onclick="Pages._docTab(this,\'obsolete\')">🗄 폐기 <b class="doc-cnt" id="dcnt-obsolete">-</b></button>'+
-    '</div>'+
-    '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'+
-      '<div style="position:relative;flex:1;min-width:200px">'+
-        '<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)">🔍</span>'+
-        '<input type="text" id="docKw" style="width:100%;padding:8px 10px 8px 32px;border:1px solid var(--brd);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box" placeholder="문서번호, 제목, 태그..." oninput="Pages._docFilter()">'+
-      '</div>'+
-      '<select id="docTypeF" style="padding:8px 10px;border:1px solid var(--brd);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text)" onchange="Pages._docFilter()">'+
+
+    /* ③ 툴바 — 엑셀 + 검색 + F3 */
+    '<button class="btn btn-xl-down bsm" onclick="Pages._docExcelDown()" title="목록 내려받기">📥 목록 내려받기</button>'+
+    '<div class="tbar">'+
+      '<div class="sw2"><input type="text" id="docKw" placeholder="문서번호, 제목, 태그..." oninput="Pages._docKwFilter(this.value)"></div>'+
+      '<select class="fsel" id="docTypeF" onchange="Pages._docTpFilter(this.value)">'+
         '<option value="">전체 유형</option>'+
         Object.entries(Pages._DT).map(function(e){return'<option value="'+e[0]+'">'+e[1]+'</option>';}).join('')+
       '</select>'+
+      '<button class="btn bout bsm" onclick="SearchPop.open(\'docs\')" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>'+
     '</div>'+
-    '<div id="docTbl" style="border:1px solid var(--brd);border-radius:10px;overflow:hidden">'+
-      '<div style="padding:40px;text-align:center;color:var(--muted)">⏳ 로딩 중...</div>'+
-    '</div>';
-  window._docRows=[];window._docSt='';
-  try{
-    window._docRows=await SB.getDocMaster();
-    Pages._docRender();Pages._docCounts();
-  }catch(e){
-    document.getElementById('docTbl').innerHTML='<div style="padding:40px;text-align:center;color:var(--err)">⚠️ 로드 실패: '+H.e(e.message)+'</div>';
+
+    /* ④ 목록/칸반 탭 */
+    '<div class="tbar" style="border-bottom:2px solid var(--brd);padding-bottom:0;gap:0" id="docViewTabs">'+
+      '<button class="stab-btn on" data-tab="list"   onclick="Pages._docViewTab(\'list\',this)">📋 목록</button>'+
+      '<button class="stab-btn"   data-tab="kanban" onclick="Pages._docViewTab(\'kanban\',this)">📌 칸반</button>'+
+    '</div>'+
+
+    /* ⑤ 목록/칸반 영역 */
+    '<div id="docListPane"><div id="docTbl"></div></div>'+
+    '<div id="docKanbanPane" style="display:none"><div id="docKanban"></div></div>';
+
+  /* 전역 필터 초기화 */
+  window._docSt=''; window._docTp=''; window._docKw='';
+  Pages._docRender();
+  Pages._docKanban();
+},
+
+/* stat-dash 클릭 → 상태 필터 + 목록 탭 활성 */
+_docStatClick:function(st,label){
+  window._docSt=st; window._docTp=''; window._docKw='';
+  var kw=document.getElementById('docKw'); if(kw)kw.value='';
+  var tp=document.getElementById('docTypeF'); if(tp)tp.value='';
+  Pages._docViewTab('list', document.querySelector('#docViewTabs [data-tab="list"]'));
+  Pages._docRender();
+},
+/* 유형 sd-card 클릭 → 유형 필터 */
+_docTypeClick:function(typeName){
+  var key=Object.keys(Pages._DT).find(function(k){return Pages._DT[k]===typeName;})||'';
+  window._docTp=key; window._docSt=''; window._docKw='';
+  var tp=document.getElementById('docTypeF'); if(tp)tp.value=key;
+  Pages._docViewTab('list', document.querySelector('#docViewTabs [data-tab="list"]'));
+  Pages._docRender();
+},
+/* 목록/칸반 탭 전환 */
+_docViewTab:function(tab,btn){
+  document.querySelectorAll('#docViewTabs .stab-btn').forEach(function(b){b.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  var lp=document.getElementById('docListPane');
+  var kp=document.getElementById('docKanbanPane');
+  if(tab==='list'){
+    if(lp)lp.style.display=''; if(kp)kp.style.display='none';
+  } else {
+    if(lp)lp.style.display='none'; if(kp)kp.style.display='';
+    Pages._docKanban();
   }
 },
-/* 탭 전환 */
-_docTab:function(btn,st){
-  document.querySelectorAll('.doc-tab').forEach(function(b){b.classList.remove('on');});
-  btn.classList.add('on');window._docSt=st;Pages._docFilter();
-},
-/* 필터 적용 */
-_docFilter:function(){
-  var kw=(document.getElementById('docKw')?.value||'').toLowerCase();
-  var tp=document.getElementById('docTypeF')?.value||'';
-  var st=window._docSt||'';
+/* 인라인 필터 핸들러 */
+_docKwFilter:function(v){window._docKw=v; Pages._docRender();},
+_docTpFilter:function(v){window._docTp=v; Pages._docRender();},
+/* 필터 적용 후 rows 반환 */
+_docFiltered:function(){
   var rows=window._docRows||[];
-  if(st)rows=rows.filter(function(r){return r.status===st;});
-  if(tp)rows=rows.filter(function(r){return r.doc_type===tp;});
-  if(kw)rows=rows.filter(function(r){
+  var st=window._docSt||''; var tp=window._docTp||''; var kw=(window._docKw||'').toLowerCase();
+  if(st) rows=rows.filter(function(r){return r.status===st;});
+  if(tp) rows=rows.filter(function(r){return r.doc_type===tp;});
+  if(kw) rows=rows.filter(function(r){
     return (r.title||'').toLowerCase().includes(kw)||
            (r.doc_no||'').toLowerCase().includes(kw)||
            (r.tags||[]).some(function(t){return t.toLowerCase().includes(kw);});
   });
-  Pages._docRender(rows);
-},
-/* 테이블 렌더링 */
-_docRender:function(rows){
-  if(rows===undefined)rows=window._docRows||[];
-  var el=document.getElementById('docTbl');if(!el)return;
-  if(!rows.length){
-    el.innerHTML='<div style="padding:48px;text-align:center;color:var(--muted)"><div style="font-size:32px">📭</div><div>해당하는 문서가 없습니다.</div></div>';
-    return;
-  }
-  var html='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
-    '<thead><tr style="background:var(--bg2);border-bottom:1.5px solid var(--brd)">'+
-    '<th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--muted);width:130px">문서번호</th>'+
-    '<th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--muted)">제목 / 태그</th>'+
-    '<th style="padding:10px 8px;text-align:center;font-weight:600;color:var(--muted);width:80px">유형</th>'+
-    '<th style="padding:10px 8px;text-align:center;font-weight:600;color:var(--muted);width:60px">버전</th>'+
-    '<th style="padding:10px 8px;text-align:center;font-weight:600;color:var(--muted);width:80px">상태</th>'+
-    '<th style="padding:10px 8px;text-align:left;font-weight:600;color:var(--muted);width:120px">다음 검토일</th>'+
-    '<th style="padding:10px 8px;text-align:center;font-weight:600;color:var(--muted);width:70px">부서</th>'+
-    '<th style="padding:10px 8px;text-align:center;font-weight:600;color:var(--muted);width:80px">작업</th>'+
-    '</tr></thead><tbody>'+
-    rows.map(function(r,i){
-      var dday=Pages._dDay(r.next_review_at);
-      var rowBg=dday.includes('bred')?'background:#fff5f5':dday.includes('bamb')?'background:#fffbeb':i%2===1?'background:var(--bg2)':'';
-      var chips=(r.tags||[]).map(function(t){return'<span style="background:#f1f5f9;color:#475569;font-size:10px;padding:1px 5px;border-radius:3px;margin-left:3px">'+H.e(t)+'</span>';}).join('');
-      var safeTitle=H.e(r.title||'').replace(/'/g,'&#39;');
-      var safeStatus=r.status||'draft';
-      return'<tr style="'+rowBg+';border-bottom:1px solid var(--brd)">'+
-        '<td style="padding:10px 14px"><span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+r.id+')">'+H.e(r.doc_no||'-')+'</span></td>'+
-        '<td style="padding:10px 14px"><span style="font-weight:500;cursor:pointer" onclick="Pages.doc_history('+r.id+')" onmouseover="this.style.color=\'#1a5fa8\'" onmouseout="this.style.color=\'\'">'+H.e(r.title)+'</span>'+chips+'</td>'+
-        '<td style="padding:10px 8px;text-align:center"><span class="badge bblu" style="font-size:10px">'+(Pages._DT[r.doc_type]||r.doc_type||'-')+'</span></td>'+
-        '<td style="padding:10px 8px;text-align:center"><span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span></td>'+
-        '<td style="padding:10px 8px;text-align:center">'+Pages._dBadge(r.status)+'</td>'+
-        '<td style="padding:10px 8px;font-size:12px;white-space:nowrap">'+(r.next_review_at||'-')+' '+dday+'</td>'+
-        '<td style="padding:10px 8px;text-align:center;font-size:12px;color:var(--muted)">'+H.e(r.dept||'-')+'</td>'+
-        '<td style="padding:10px 8px;text-align:center">'+
-          '<div style="display:flex;gap:3px;justify-content:center">'+
-          '<button class="btn bout bxs" onclick="Pages.doc_history('+r.id+')" title="이력">🕐</button>'+
-          '<button class="btn bout bxs" onclick="Pages._docRevForm('+r.id+')" title="개정">✏️</button>'+
-          '<button class="btn bout bxs" style="border-color:#fca5a5;color:#dc2626" onclick="Pages._docDel('+r.id+',\''+safeTitle+'\',\''+safeStatus+'\')" title="삭제">🗑</button>'+
-          '</div></td>'+
-        '</tr>';
-    }).join('')+
-    '</tbody></table>'+
-    '<div style="padding:8px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--brd);background:var(--bg2)">총 <b>'+rows.length+'</b>건</div>';
-  el.innerHTML=html;
-},
-/* 탭 건수 배지 */
-_docCounts:function(){
-  var rows=window._docRows||[];
-  var cnt={};rows.forEach(function(r){cnt[r.status]=(cnt[r.status]||0)+1;});
-  var all=document.getElementById('dcnt-all');if(all)all.textContent=rows.length;
-  ['active','in_review','draft','obsolete'].forEach(function(s){
-    var el=document.getElementById('dcnt-'+s);if(el)el.textContent=cnt[s]||0;
-  });
-},
-/* 삭제 확인 */
-_docDel:function(id,title,status){
-  if(status==='active'){Toast.show('유효 문서는 삭제할 수 없습니다.','warn');return;}
-  Modal.confirm({title:'문서 삭제',
-    msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div><b>'+H.e(title)+'</b> 문서를 삭제하시겠습니까?</div>',
-    danger:true,onOk:async function(){
-      var r=await SB.deleteDocMaster(id);
-      if(r.ok){window._docRows=(window._docRows||[]).filter(function(x){return x.id!==id;});Pages._docFilter();Pages._docCounts();Toast.show('삭제되었습니다.','ok');}
-    }
-  });
-},
-/* 엑셀 목록 출력 */
-_docExcelDown:function(){
-  var rows=window._docRows||[];
-  if(!rows.length){Toast.show('출력할 데이터가 없습니다.','warn');return;}
-  var hdrs=['문서번호','제목','유형','분류','버전','상태','담당부서','다음검토일','태그'];
-  var data=rows.map(function(r){return[r.doc_no,r.title,Pages._DT[r.doc_type]||r.doc_type,r.category,r.current_ver,Pages._DS[r.status]||r.status,r.dept,r.next_review_at,(r.tags||[]).join(',')];});
-  if(typeof downloadExcel==='function') downloadExcel('문서목록',hdrs,data);
-  else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
+  return rows;
 },
 
-/* ── D2: 문서 등록 [v2.395.2] ── */
+/* ── 목록 렌더링 — Tbl.render (체크박스+정렬 기본 내장) ── */
+_docRender:function(){
+  var rows=Pages._docFiltered();
+  Tbl.render({
+    el:'#docTbl',
+    cols:[
+      {key:'doc_no',        label:'문서번호',   w:'130px',
+        render:function(v,row){
+          return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';
+        }},
+      {key:'title',         label:'제목',
+        render:function(v,row){
+          var chips=(row.tags||[]).map(function(t){
+            return'<span style="background:#f1f5f9;color:#475569;font-size:10px;padding:1px 4px;border-radius:3px;margin-left:3px">'+H.e(t)+'</span>';
+          }).join('');
+          return'<span style="font-weight:500;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>'+chips;
+        }},
+      {key:'doc_type',      label:'유형',       w:'78px', align:'center',
+        render:function(v){return'<span class="badge bblu" style="font-size:10px">'+(Pages._DT[v]||v||'-')+'</span>';}},
+      {key:'current_ver',   label:'버전',       w:'58px', align:'center',
+        render:function(v){return'<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px">'+H.e(v||'-')+'</span>';}},
+      {key:'status',        label:'상태',       w:'72px', align:'center',
+        render:function(v){return Pages._dBadge(v);}},
+      {key:'next_review_at',label:'다음 검토일', w:'120px',
+        render:function(v,row){return H.e(v||'-')+' '+Pages._dDay(v);}},
+      {key:'dept',          label:'부서',       w:'68px', align:'center'},
+    ],
+    data:rows,
+    onDel:async function(ids){
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      var hasActive=(window._docRows||[]).some(function(r){return ids.includes(r.id)&&r.status==='active';});
+      if(hasActive){Toast.show('유효(Active) 문서는 삭제할 수 없습니다.','warn');return;}
+      Modal.confirm({
+        title:'🗑️ 문서 삭제 확인',
+        msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div>'+
+            '<div style="font-size:14px;font-weight:700;margin:6px 0">선택한 <b style="color:#dc2626">'+ids.length+'건</b>의 문서를 삭제합니다.</div>'+
+            '<div style="font-size:12px;color:#64748b">연결된 버전 이력도 함께 삭제됩니다.</div></div>',
+        danger:true,
+        onOk:async function(){
+          for(var i=0;i<ids.length;i++) await SB.deleteDocMaster(ids[i]);
+          window._docRows=(window._docRows||[]).filter(function(x){return!ids.includes(x.id);});
+          Pages._docRender(); Pages._docKanban();
+          Toast.show(ids.length+'건 삭제되었습니다.','ok');
+        }
+      });
+    },
+    onRow:function(row){if(row)Pages._docDetail(row);},
+  });
+},
+
+/* ── 칸반 보드 [v2.396] ── */
+_docKanban:function(){
+  var el=document.getElementById('docKanban'); if(!el)return;
+  var rows=window._docRows||[];
+  var cols=[
+    {key:'draft',     label:'📝 초안',   cls:'bgry'},
+    {key:'in_review', label:'🔄 검토중', cls:'bblu'},
+    {key:'active',    label:'✅ 유효',   cls:'bgrn'},
+    {key:'obsolete',  label:'🗄 폐기',   cls:'bred'},
+  ];
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 0">'+
+    cols.map(function(col){
+      var colRows=rows.filter(function(r){return r.status===col.key;});
+      return'<div style="background:var(--bg2);border-radius:10px;padding:10px;min-height:120px">'+
+        '<div style="font-size:12px;font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'+
+          '<span>'+col.label+'</span>'+
+          '<span class="badge '+col.cls+'" style="font-size:10px">'+colRows.length+'</span>'+
+        '</div>'+
+        colRows.map(function(r){
+          return'<div style="background:var(--card);border:1px solid var(--brd);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;transition:box-shadow .15s" onclick="Pages.doc_history('+r.id+')" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.08)\'" onmouseout="this.style.boxShadow=\'\'">'+
+            '<div style="font-family:monospace;font-size:10px;font-weight:700;color:#1a5fa8;margin-bottom:2px">'+H.e(r.doc_no||'-')+'</div>'+
+            '<div style="font-weight:500;line-height:1.3;margin-bottom:4px">'+H.e(r.title||'-')+'</div>'+
+            '<div style="display:flex;justify-content:space-between;align-items:center">'+
+              '<span style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px">'+H.e(r.current_ver||'-')+'</span>'+
+              Pages._dDay(r.next_review_at)+
+            '</div>'+
+          '</div>';
+        }).join('')+
+        (!colRows.length?'<div style="text-align:center;padding:20px 0;color:var(--muted);font-size:12px">없음</div>':'')+
+      '</div>';
+    }).join('')+
+  '</div>';
+},
+
+/* ── 문서 상세 팝업 [v2.396] ── */
+_docDetail:function(row){
+  Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
+    body:
+      '<div class="ir"><div class="il">문서번호</div><div class="iv" style="font-family:monospace;font-weight:700;color:#1a5fa8">'+H.e(row.doc_no||'-')+'</div></div>'+
+      '<div class="ir"><div class="il">제목</div><div class="iv"><strong>'+H.e(row.title||'-')+'</strong></div></div>'+
+      '<div class="ir"><div class="il">유형</div><div class="iv"><span class="badge bblu">'+(Pages._DT[row.doc_type]||row.doc_type||'-')+'</span></div></div>'+
+      '<div class="ir"><div class="il">버전 / 상태</div><div class="iv">'+H.e(row.current_ver||'-')+' '+Pages._dBadge(row.status)+'</div></div>'+
+      '<div class="ir"><div class="il">담당 부서</div><div class="iv">'+H.e(row.dept||'-')+'</div></div>'+
+      '<div class="ir"><div class="il">다음 검토일</div><div class="iv">'+H.e(row.next_review_at||'-')+' '+Pages._dDay(row.next_review_at)+'</div></div>'+
+      '<div class="ir"><div class="il">태그</div><div class="iv">'+
+        (row.tags||[]).map(function(t){return'<span style="background:#f1f5f9;color:#475569;font-size:11px;padding:2px 7px;border-radius:4px;margin-right:4px">'+H.e(t)+'</span>';}).join('')+
+      '</div></div>',
+    foot:
+      '<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+      '<button class="btn bout" onclick="Modal.close();Pages.doc_history('+row.id+')">🕐 이력</button>'+
+      '<button class="btn bpri" onclick="Modal.close();Pages._docRevForm('+row.id+')">✏️ 개정 기안</button>',
+  });
+},
+
+/* ── D2: 문서 등록 [v2.396] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
     var uOpts=users.map(function(u){return'<option value="'+u.id+'">'+H.e(u.name||u.username)+'('+H.e(u.dept||'')+')</option>';}).join('');
-    var dtOpts=Object.entries(Pages._DT).map(function(e){return'<option value="'+e[0]+'"'+(editDoc&&editDoc.doc_type===e[0]?' selected':'')+'>'+e[1]+'</option>';}).join('');
+    var dtOpts=Object.entries(Pages._DT).map(function(e){
+      return'<option value="'+e[0]+'"'+(editDoc&&editDoc.doc_type===e[0]?' selected':'')+'>'+e[1]+'</option>';
+    }).join('');
     Modal.open({title:'신규 문서 등록',size:'mlg',body:
       '<div class="fg2">'+
       '<div class="fgroup"><label class="fl req">문서번호</label><input class="fc" id="fnDocNo" placeholder="예: QP-001" value="'+H.e(editDoc?editDoc.doc_no:'')+'"></div>'+
       '<div class="fgroup"><label class="fl req">문서 제목</label><input class="fc" id="fnTitle" placeholder="예: 수입검사 절차서" value="'+H.e(editDoc?editDoc.title:'')+'"></div>'+
       '<div class="fgroup"><label class="fl req">문서 유형</label><select class="fc" id="fnType">'+dtOpts+'</select></div>'+
-      '<div class="fgroup"><label class="fl">분류</label><select class="fc" id="fnCat"><option value="">선택 안함</option>'+['품질','생산','구매','안전','환경','기타'].map(function(c){return'<option'+(editDoc&&editDoc.category===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'+
+      '<div class="fgroup"><label class="fl">분류</label><select class="fc" id="fnCat"><option value="">선택 안함</option>'+['품질','생산','구매','안전','환경','기타'].map(function(x){return'<option'+(editDoc&&editDoc.category===x?' selected':'')+'>'+x+'</option>';}).join('')+'</select></div>'+
       '<div class="fgroup"><label class="fl">검토 주기</label><select class="fc" id="fnCycle"><option value="annual">연간</option><option value="biannual">반기</option><option value="quarterly">분기</option><option value="monthly">매월</option></select></div>'+
       '<div class="fgroup"><label class="fl">담당 부서</label><input class="fc" id="fnDept" value="'+H.e(editDoc?editDoc.dept:'')+'"></div>'+
       '<div class="fgroup ff"><label class="fl">태그</label><input class="fc" id="fnTags" placeholder="쉼표로 구분 (예: ISO9001, 품질관리)" value="'+H.e(editDoc?(editDoc.tags||[]).join(', '):'')+'"></div>'+
@@ -3754,26 +3858,40 @@ _docSave:async function(editId){
   if(!docNo){Toast.show('문서번호를 입력하세요.','warn');return;}
   if(!title){Toast.show('문서 제목을 입력하세요.','warn');return;}
   var tags=(document.getElementById('fnTags')?.value||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
-  var row={doc_no:docNo,title:title,doc_type:document.getElementById('fnType')?.value,category:document.getElementById('fnCat')?.value||null,review_cycle:document.getElementById('fnCycle')?.value||'annual',dept:document.getElementById('fnDept')?.value?.trim()||null,tags:tags,status:'draft',current_ver:'v1.0'};
-  var r=await SB.addDocMaster(row);if(!r.ok)return;
+  var row={doc_no:docNo,title:title,doc_type:document.getElementById('fnType')?.value,
+           category:document.getElementById('fnCat')?.value||null,
+           review_cycle:document.getElementById('fnCycle')?.value||'annual',
+           dept:document.getElementById('fnDept')?.value?.trim()||null,
+           tags:tags,status:'draft',current_ver:'v1.0'};
+  var r=await SB.addDocMaster(row); if(!r.ok)return;
   var allDocs=await SB.getDocMaster();
   var newDoc=allDocs.find(function(d){return d.doc_no===docNo;});
   if(newDoc){
-    var vr=await SB.addDocVersion({doc_id:newDoc.id,ver_no:'v1.0',change_summary:document.getElementById('fnSummary')?.value?.trim()||'신규 등록',status:'draft'});
+    var vr=await SB.addDocVersion({doc_id:newDoc.id,ver_no:'v1.0',
+      change_summary:document.getElementById('fnSummary')?.value?.trim()||'신규 등록',status:'draft'});
     var appId=document.getElementById('fnApprover')?.value;
     if(appId&&vr.ok&&vr.id){
       await SB.addDocApprovals([{doc_ver_id:vr.id,approver_id:parseInt(appId),step_order:99,step_type:'approver',action:'pending'}]);
       await SB.updateDocMaster(newDoc.id,{status:'in_review'});
       await SB.updateDocVersion(vr.id,{status:'in_review'});
       var cur=Auth.cur();
-      await SB.addMention({from:cur?cur.name||cur.username:'시스템',to:String(appId),text:'[문서 결재 요청] '+title+' (v1.0) 결재를 요청드립니다.',ref:'doc_approval'});
+      await SB.addMention({from:cur?cur.name||cur.username:'시스템',to:String(appId),
+        text:'[문서 결재 요청] '+title+' (v1.0) 결재를 요청드립니다.',ref:'doc_approval'});
     }
   }
-  Toast.show('문서가 등록되었습니다.','ok');Modal.close();
-  window._docRows=await SB.getDocMaster();Pages._docFilter();Pages._docCounts();
+  Toast.show('문서가 등록되었습니다.','ok'); Modal.close();
+  window._docRows=await SB.getDocMaster(); Pages._docRender(); Pages._docKanban();
+},
+_docExcelDown:function(){
+  var rows=Pages._docFiltered();
+  if(!rows.length){Toast.show('출력할 데이터가 없습니다.','warn');return;}
+  var hdrs=['문서번호','제목','유형','분류','버전','상태','담당부서','다음검토일','태그'];
+  var data=rows.map(function(r){return[r.doc_no,r.title,Pages._DT[r.doc_type]||r.doc_type,r.category,r.current_ver,Pages._DS[r.status]||r.status,r.dept,r.next_review_at,(r.tags||[]).join(',')];});
+  if(typeof downloadExcel==='function') downloadExcel('문서목록',hdrs,data);
+  else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.395.2] ── */
+/* ── D2-B: 개정 기안 [v2.396] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -3783,14 +3901,16 @@ _docRevForm:async function(docId){
   var m=curVer.match(/v?(\d+)\.(\d+)/);
   var nextVer=m?'v'+m[1]+'.'+(parseInt(m[2])+1):'v1.1';
   Modal.open({title:'개정 기안 — '+H.e(doc.doc_no)+' '+H.e(doc.title),size:'mlg',body:
-    '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#1e40af">현재 버전: <b>'+H.e(curVer)+'</b> → 신규 버전: <b>'+H.e(nextVer)+'</b></div>'+
+    '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#1e40af">'+
+    '현재 버전: <b>'+H.e(curVer)+'</b> → 신규 버전: <b>'+H.e(nextVer)+'</b></div>'+
     '<div class="fg2">'+
     '<div class="fgroup ff"><label class="fl req">개정 사유</label><input class="fc" id="rvSummary" placeholder="예: 작업 절차 변경에 따른 내용 수정"></div>'+
     '<div class="fgroup ff"><label class="fl">세부 변경 내용</label><textarea class="fc" id="rvDetail" rows="3"></textarea></div>'+
     '<div class="fgroup"><label class="fl req">신규 버전 번호</label><input class="fc" id="rvVerNo" value="'+H.e(nextVer)+'"></div>'+
     '<div class="fgroup"><label class="fl">최종 결재자</label><select class="fc" id="rvApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
     '</div>',
-  foot:'<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri" onclick="Pages._docRevSave('+docId+')">개정 기안 제출</button>'});
+  foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+       '<button class="btn bpri" onclick="Pages._docRevSave('+docId+')">개정 기안 제출</button>'});
 },
 _docRevSave:async function(docId){
   var summary=document.getElementById('rvSummary')?.value?.trim();
@@ -3803,41 +3923,80 @@ _docRevSave:async function(docId){
   if(!vr.ok)return;
   if(appId&&vr.id){
     await SB.addDocApprovals([{doc_ver_id:vr.id,approver_id:parseInt(appId),step_order:99,step_type:'approver',action:'pending'}]);
-    var doc=await SB.getDocMasterById(docId);var cur=Auth.cur();
-    await SB.addMention({from:cur?cur.name||cur.username:'시스템',to:String(appId),text:'[개정 결재 요청] '+(doc?doc.title:'')+'('+verNo+') 결재를 요청드립니다.',ref:'doc_approval'});
+    var doc=await SB.getDocMasterById(docId); var cur=Auth.cur();
+    await SB.addMention({from:cur?cur.name||cur.username:'시스템',to:String(appId),
+      text:'[개정 결재 요청] '+(doc?doc.title:'')+'('+verNo+') 결재를 요청드립니다.',ref:'doc_approval'});
   }
   await SB.updateDocMaster(docId,{status:'in_review'});
-  Toast.show('개정 기안이 제출되었습니다.','ok');Modal.close();
-  window._docRows=await SB.getDocMaster();Pages._docFilter();Pages._docCounts();
+  Toast.show('개정 기안이 제출되었습니다.','ok'); Modal.close();
+  window._docRows=await SB.getDocMaster(); Pages._docRender(); Pages._docKanban();
 },
 
-/* ── D3: 내 결재함 [v2.395.2] ── */
+/* ══════════════════════════════════════════════════
+   D3: 내 결재함 [v2.396]
+   설정→사용자관리(users 테이블)와 직접 연동
+   ══════════════════════════════════════════════════ */
 async doc_approval(){
   var w=document.getElementById('pw');
   var user=Auth.cur();
   if(!user){
-    w.innerHTML='<div class="ph"><div><div class="ptit">✍️ 내 결재함</div></div></div><div class="card"><div class="es"><div class="es-icon">🔒</div><div>로그인이 필요합니다.</div></div></div>';
+    w.innerHTML='<div class="ph"><div><div class="ptit">✍️ 내 결재함</div></div></div>'+
+      '<div class="card"><div class="es"><div class="es-icon">🔒</div><div>로그인이 필요합니다.</div></div></div>';
     return;
   }
-  w.innerHTML='<div class="ph"><div><div class="ptit">✍️ 내 결재함</div><div style="font-size:12px;color:var(--muted)">문서 결재 대기 목록</div></div></div><div id="approvalList"><div style="padding:40px;text-align:center;color:var(--muted)">⏳ 조회 중...</div></div>';
+  w.innerHTML=
+    '<div class="ph"><div><div class="ptit">✍️ 내 결재함</div>'+
+    '<div style="font-size:12px;color:var(--muted)">문서 결재 대기 목록</div></div></div>'+
+    '<div id="approvalList"><div class="es"><div class="es-icon">⏳</div><div>조회 중...</div></div></div>';
+
   var el=document.getElementById('approvalList');
   try{
-    /* Auth.cur()에 id가 있으면 바로 사용, 없으면 users에서 매칭 */
-    var meId=user.id||null;
-    if(!meId){
-      var users=await SB.getUsers();
-      var me=users.find(function(u){return u.name===user.name||u.username===user.username||u.name===user.username||u.username===user.name;});
-      if(!me){
-        el.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)"><div style="font-size:32px">👤</div><div>사용자 정보를 찾을 수 없습니다.</div><div style="font-size:12px;margin-top:6px">로그인 계정('+H.e(user.name||user.username||'-')+')과 users 테이블의 name이 일치하는지 확인하세요.</div></div>';
-        return;
-      }
-      meId=me.id;
+    /* [v2.396] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+       Auth._u = users row 전체. id/name/username 순으로 매칭 */
+    var users=await SB.getUsers();
+    var meId=null;
+
+    /* 1순위: Auth._u.id 가 users 테이블 id와 일치 */
+    if(user.id){
+      var byId=users.find(function(u){return Number(u.id)===Number(user.id);});
+      if(byId) meId=Number(byId.id);
     }
-    var list=await SB.getMyPendingApprovals(meId);
-    if(!list.length){
-      el.innerHTML='<div style="padding:48px;text-align:center;color:var(--muted)"><div style="font-size:32px">✅</div><div style="font-size:15px;font-weight:500">결재 대기 없음</div></div>';
+    /* 2순위: name 또는 username 매칭 */
+    if(!meId){
+      var loginName=user.name||user.username||'';
+      var byName=users.find(function(u){
+        return u.name===loginName||u.username===loginName||
+               u.name===user.username||u.username===user.name;
+      });
+      if(byName) meId=Number(byName.id);
+    }
+
+    if(!meId){
+      el.innerHTML=
+        '<div style="padding:40px;text-align:center;color:var(--muted)">'+
+        '<div style="font-size:36px;margin-bottom:10px">👤</div>'+
+        '<div style="font-weight:600;font-size:14px;margin-bottom:8px">사용자 매칭 실패</div>'+
+        '<div style="font-size:13px;line-height:1.6">'+
+          '로그인 계정 <b>'+H.e(user.name||user.username||'-')+'</b>이<br>'+
+          '<b>시스템 → 설정 → 사용자 관리</b>에 등록된<br>'+
+          '사용자의 이름(name)과 일치하지 않습니다.'+
+        '</div>'+
+        '<button class="btn bout bsm" style="margin-top:14px" onclick="Nav.go(\'users\')">⚙️ 사용자 관리로 이동</button>'+
+        '</div>';
       return;
     }
+
+    var list=await SB.getMyPendingApprovals(meId);
+    if(!list.length){
+      el.innerHTML=
+        '<div style="padding:48px;text-align:center;color:var(--muted)">'+
+        '<div style="font-size:36px;margin-bottom:10px">✅</div>'+
+        '<div style="font-size:15px;font-weight:500">결재 대기 없음</div>'+
+        '<div style="font-size:13px;margin-top:4px">현재 처리할 결재 문서가 없습니다.</div>'+
+        '</div>';
+      return;
+    }
+
     var html='<div style="display:flex;flex-direction:column;gap:10px">';
     list.forEach(function(a){
       var ver=a.doc_ver||{};
@@ -3860,37 +4019,42 @@ async doc_approval(){
         '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:var(--bg2);border-radius:6px">📝 '+H.e(summary)+'</div>'+
         '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
           '<input type="text" id="cmt_'+a.id+'" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--brd);border-radius:6px;font-size:12px;background:var(--bg)" placeholder="의견 입력 (반려 시 필수)">'+
-          '<button class="btn bgrn bsm" onclick="Pages._doApprove('+a.id+','+( ver.doc_id||0)+','+(ver.id||0)+',\''+verNo.replace(/'/g,"\\'")+'\',' +meId+')">✅ 승인</button>'+
+          '<button class="btn bgrn bsm" onclick="Pages._doApprove('+a.id+','+(ver.doc_id||0)+','+(ver.id||0)+',\''+H.e(verNo).replace(/'/g,"\\'")+'\','+meId+')">✅ 승인</button>'+
           '<button class="btn bred bsm" onclick="Pages._doReject('+a.id+')">❌ 반려</button>'+
           '<button class="btn bout bsm" onclick="Pages.doc_history('+(ver.doc_id||0)+')">🕐 이력</button>'+
         '</div>'+
         '</div>';
     });
-    html+='</div>';
-    el.innerHTML=html;
+    el.innerHTML=html+'</div>';
   }catch(e){
     el.innerHTML='<div style="padding:40px;text-align:center;color:var(--err)">⚠️ 결재 목록 로드 실패: '+H.e(e.message)+'</div>';
   }
 },
 _doApprove:async function(approvalId,docId,verId,verNo,meId){
   var comment=document.getElementById('cmt_'+approvalId)?.value||'';
-  var r=await SB.processApproval(approvalId,'approved',comment);if(!r.ok)return;
+  var r=await SB.processApproval(approvalId,'approved',comment); if(!r.ok)return;
   if(docId&&verId&&verNo){
     var approvals=await SB.getDocApprovals(verId);
     var allDone=approvals.every(function(a){return a.action==='approved';});
-    if(allDone){await SB.activateDocVersion(docId,verId,verNo,meId||null);Toast.show('✅ 승인 완료! 유효 문서로 발행되었습니다.','ok',3000);}
-    else Toast.show('승인 처리되었습니다.','ok');
-  } else Toast.show('승인 처리되었습니다.','ok');
+    if(allDone){
+      await SB.activateDocVersion(docId,verId,verNo,meId||null);
+      Toast.show('✅ 승인 완료! 유효 문서로 발행되었습니다.','ok',3000);
+    } else {
+      Toast.show('승인 처리되었습니다.','ok');
+    }
+  } else { Toast.show('승인 처리되었습니다.','ok'); }
   Pages.doc_approval();
 },
 _doReject:async function(approvalId){
   var comment=document.getElementById('cmt_'+approvalId)?.value?.trim();
   if(!comment){Toast.show('반려 시 사유를 입력해야 합니다.','warn');return;}
-  var r=await SB.processApproval(approvalId,'rejected',comment);if(!r.ok)return;
-  Toast.show('반려 처리되었습니다.','ok');Pages.doc_approval();
+  var r=await SB.processApproval(approvalId,'rejected',comment); if(!r.ok)return;
+  Toast.show('반려 처리되었습니다.','ok'); Pages.doc_approval();
 },
 
-/* ── D4: 개정 이력 [v2.395.2] ── */
+/* ══════════════════════════════════════════════════
+   D4: 개정 이력 타임라인 [v2.396]
+   ══════════════════════════════════════════════════ */
 doc_history_home:function(){Nav.go('docs');},
 async doc_history(docId){
   if(!docId){Nav.go('docs');return;}
@@ -3901,85 +4065,114 @@ async doc_history(docId){
       '<div class="ptit" id="vHistTitle">📋 개정 이력</div>'+
     '</div><div class="pac" id="vHistActions"></div></div>'+
     '<div id="vDocInfo" style="background:var(--bg2);border:1px solid var(--brd);border-radius:10px;padding:14px 18px;margin-bottom:18px"></div>'+
-    '<div id="vTimeline"><div style="padding:40px;text-align:center;color:var(--muted)">⏳ 이력 조회 중...</div></div>';
+    '<div id="vTimeline"><div class="es"><div class="es-icon">⏳</div><div>이력 조회 중...</div></div></div>';
   try{
-    var results=await Promise.all([SB.getDocMasterById(docId),SB.getDocVersions(docId)]);
-    var doc=results[0];var vers=results[1];
-    if(!doc){document.getElementById('vTimeline').innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)"><div style="font-size:32px">⚠️</div><div>문서를 찾을 수 없습니다.</div></div>';return;}
+    var res=await Promise.all([SB.getDocMasterById(docId),SB.getDocVersions(docId)]);
+    var doc=res[0]; var vers=res[1];
+    if(!doc){
+      document.getElementById('vTimeline').innerHTML='<div class="es"><div class="es-icon">⚠️</div><div>문서를 찾을 수 없습니다.</div></div>';
+      return;
+    }
     document.getElementById('vHistTitle').textContent='📋 '+doc.doc_no+' — '+doc.title;
-    document.getElementById('vHistActions').innerHTML='<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button><button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
+    document.getElementById('vHistActions').innerHTML=
+      '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
+      '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
     document.getElementById('vDocInfo').innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">'+
       [['문서번호','<span style="font-family:monospace;font-weight:700;color:#1a5fa8">'+H.e(doc.doc_no)+'</span>'],
-       ['유형',Pages._DT[doc.doc_type]||doc.doc_type||'-'],
+       ['유형', Pages._DT[doc.doc_type]||doc.doc_type||'-'],
        ['현재버전','<span style="background:#ede9fe;color:#5b21b6;font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px">'+H.e(doc.current_ver||'-')+'</span>'],
-       ['상태',Pages._dBadge(doc.status)],
-       ['담당부서',H.e(doc.dept||'-')],
-       ['다음검토일',(doc.next_review_at||'-')+' '+Pages._dDay(doc.next_review_at)]
-      ].map(function(x){return'<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+x[0]+'</div><div style="font-size:13px;font-weight:500">'+x[1]+'</div></div>';}).join('')+
-      '</div>';
+       ['상태', Pages._dBadge(doc.status)],
+       ['담당부서', H.e(doc.dept||'-')],
+       ['다음검토일', H.e(doc.next_review_at||'-')+' '+Pages._dDay(doc.next_review_at)],
+      ].map(function(x){
+        return'<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+x[0]+'</div>'+
+              '<div style="font-size:13px;font-weight:500">'+x[1]+'</div></div>';
+      }).join('')+'</div>';
     var tl=document.getElementById('vTimeline');
-    if(!vers.length){tl.innerHTML='<div style="padding:48px;text-align:center;color:var(--muted)"><div style="font-size:32px">📭</div><div>버전 이력이 없습니다.</div></div>';return;}
+    if(!vers.length){
+      tl.innerHTML='<div class="es"><div class="es-icon">📭</div><div>버전 이력이 없습니다.</div></div>';
+      return;
+    }
     tl.innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--brd)">총 <b>'+vers.length+'</b>개 버전</div><div>'+
-    vers.map(function(v,i){
-      var isLatest=i===0;var isObs=v.status==='obsolete';
-      var dotBg=isLatest?'#d1fae5':isObs?'#f1f5f9':'#ede9fe';
-      var dotClr=isLatest?'#059669':isObs?'#94a3b8':'#7c3aed';
-      var apDate=v.approved_at?new Date(v.approved_at).toLocaleDateString('ko-KR'):'';
-      var safeFile=v.file_url?(H.e(v.file_name||v.ver_no).replace(/'/g,"&#39;")):'';
-      return'<div style="display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--brd);opacity:'+(isObs?'.65':'1')+'">'+
-        '<div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:'+dotBg+';color:'+dotClr+';display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:2px">'+(isLatest?'⭐':'🕐')+'</div>'+
-        '<div style="flex:1">'+
-          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">'+
-            '<span style="background:'+(isLatest?'#dcfce7':'#ede9fe')+';color:'+(isLatest?'#166534':'#5b21b6')+';font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px">'+H.e(v.ver_no)+'</span>'+
-            Pages._dBadge(v.status)+
-            (isLatest?'<span class="badge bblu" style="font-size:10px">최신</span>':'')+
-            (isObs?'<span style="font-size:11px;color:#94a3b8">🔒 폐기</span>':'')+
-            '<span style="font-size:11px;color:var(--muted);margin-left:auto">'+new Date(v.created_at).toLocaleDateString('ko-KR')+'</span>'+
-          '</div>'+
-          '<div style="font-size:13px;margin-bottom:6px">'+H.e(v.change_summary||'(개정 사유 없음)')+'</div>'+
-          '<div style="display:flex;gap:12px;font-size:11px;color:var(--muted);flex-wrap:wrap;margin-bottom:8px">'+
-            (v.creator?'<span>기안: '+H.e(v.creator.name||'-')+'</span>':'')+
-            (v.approver?'<span>승인: '+H.e(v.approver.name||'-')+'</span>':'')+
-            (apDate?'<span>승인일: '+apDate+'</span>':'')+
-          '</div>'+
-          '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
-            (v.file_url?'<button class="btn bout bxs" onclick="Pages._docDownload('+docId+','+v.id+',\''+v.file_url+'\',\''+safeFile+'\')">📥 다운로드</button>':'')+
-            '<button class="btn bout bxs" onclick="Pages._showApprovals('+v.id+')">📋 결재 현황</button>'+
-          '</div>'+
-        '</div></div>';
-    }).join('')+'</div>';
-  }catch(e){document.getElementById('vTimeline').innerHTML='<div style="padding:40px;text-align:center;color:var(--err)">⚠️ '+H.e(e.message)+'</div>';}
+      vers.map(function(v,i){
+        var isLatest=i===0; var isObs=v.status==='obsolete';
+        var dotBg=isLatest?'#d1fae5':isObs?'#f1f5f9':'#ede9fe';
+        var dotClr=isLatest?'#059669':isObs?'#94a3b8':'#7c3aed';
+        var apDate=v.approved_at?new Date(v.approved_at).toLocaleDateString('ko-KR'):'';
+        var safeFile=v.file_url?(H.e(v.file_name||v.ver_no).replace(/'/g,'&#39;')):'';
+        return'<div style="display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--brd);opacity:'+(isObs?'.65':'1')+'">'+
+          '<div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:'+dotBg+';color:'+dotClr+';display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:2px">'+(isLatest?'⭐':'🕐')+'</div>'+
+          '<div style="flex:1">'+
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">'+
+              '<span style="background:'+(isLatest?'#dcfce7':'#ede9fe')+';color:'+(isLatest?'#166534':'#5b21b6')+';font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px">'+H.e(v.ver_no)+'</span>'+
+              Pages._dBadge(v.status)+
+              (isLatest?'<span class="badge bblu" style="font-size:10px">최신</span>':'')+
+              (isObs?'<span style="font-size:11px;color:#94a3b8">🔒 폐기</span>':'')+
+              '<span style="font-size:11px;color:var(--muted);margin-left:auto">'+new Date(v.created_at).toLocaleDateString('ko-KR')+'</span>'+
+            '</div>'+
+            '<div style="font-size:13px;margin-bottom:6px">'+H.e(v.change_summary||'(개정 사유 없음)')+'</div>'+
+            '<div style="display:flex;gap:12px;font-size:11px;color:var(--muted);flex-wrap:wrap;margin-bottom:8px">'+
+              (v.creator?'<span>기안: '+H.e(v.creator.name||'-')+'</span>':'')+
+              (v.approver?'<span>승인: '+H.e(v.approver.name||'-')+'</span>':'')+
+              (apDate?'<span>승인일: '+apDate+'</span>':'')+
+            '</div>'+
+            '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+              (v.file_url?'<button class="btn bout bxs" onclick="Pages._docDownload('+docId+','+v.id+',\''+v.file_url+'\',\''+safeFile+'\')">📥 파일 다운로드</button>':'')+
+              '<button class="btn bout bxs" onclick="Pages._showApprovals('+v.id+')">📋 결재 현황</button>'+
+            '</div>'+
+          '</div></div>';
+      }).join('')+'</div>';
+  }catch(e){
+    document.getElementById('vTimeline').innerHTML='<div class="es"><div class="es-icon">⚠️</div><div>'+H.e(e.message)+'</div></div>';
+  }
 },
 _docDownload:async function(docId,verId,fileUrl,fileName){
   await SB.addDistLog({doc_id:docId,doc_ver_id:verId,action:'download'});
-  var a=document.createElement('a');a.href=fileUrl;a.download=fileName;a.target='_blank';a.click();
+  var a=document.createElement('a'); a.href=fileUrl; a.download=fileName; a.target='_blank'; a.click();
 },
 _showApprovals:async function(verId){
-  var list=[];try{list=await SB.getDocApprovals(verId);}catch(e){}
-  var stepLabel={reviewer:'🔍 검토',approver:'🔏 최종 결재'};
-  var actionCls={pending:'bamb',approved:'bgrn',rejected:'bred'};
-  var actionTxt={pending:'대기',approved:'승인',rejected:'반려'};
+  var list=[]; try{list=await SB.getDocApprovals(verId);}catch(e){}
+  var sL={reviewer:'🔍 검토',approver:'🔏 최종 결재'};
+  var aC={pending:'bamb',approved:'bgrn',rejected:'bred'};
+  var aT={pending:'대기',approved:'승인',rejected:'반려'};
   var body=list.length
-    ?'<div style="display:flex;flex-direction:column;gap:8px">'+list.map(function(a){return'<div style="display:flex;gap:10px;background:var(--bg2);border-radius:8px;padding:10px 12px"><div style="width:26px;height:26px;border-radius:50%;background:var(--card);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(a.step_order===99?'최종':a.step_order)+'</div><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:3px;flex-wrap:wrap"><span style="font-size:11px;background:var(--card);border-radius:3px;padding:1px 5px;color:var(--muted)">'+(stepLabel[a.step_type]||a.step_type)+'</span><span>'+H.e(a.approver?a.approver.name:'-')+'</span><span class="badge '+(actionCls[a.action]||'bgry')+'" style="font-size:10px">'+(actionTxt[a.action]||a.action)+'</span></div>'+(a.comment?'<div style="font-size:12px;color:var(--muted);font-style:italic">"'+H.e(a.comment)+'"</div>':'')+(a.signed_at?'<div style="font-size:11px;color:var(--muted)">'+new Date(a.signed_at).toLocaleString('ko-KR')+'</div>':'')+'</div></div>';}).join('')+'</div>'
+    ?'<div style="display:flex;flex-direction:column;gap:8px">'+
+      list.map(function(a){
+        return'<div style="display:flex;gap:10px;background:var(--bg2);border-radius:8px;padding:10px 12px">'+
+          '<div style="width:26px;height:26px;border-radius:50%;background:var(--card);border:1px solid var(--brd);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(a.step_order===99?'최종':a.step_order)+'</div>'+
+          '<div style="flex:1">'+
+            '<div style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:3px;flex-wrap:wrap">'+
+              '<span style="font-size:11px;background:var(--card);border-radius:3px;padding:1px 5px;color:var(--muted)">'+(sL[a.step_type]||a.step_type)+'</span>'+
+              '<span>'+H.e(a.approver?a.approver.name:'-')+'</span>'+
+              '<span class="badge '+(aC[a.action]||'bgry')+'" style="font-size:10px">'+(aT[a.action]||a.action)+'</span>'+
+            '</div>'+
+            (a.comment?'<div style="font-size:12px;color:var(--muted);font-style:italic">"'+H.e(a.comment)+'"</div>':'')+
+            (a.signed_at?'<div style="font-size:11px;color:var(--muted)">'+new Date(a.signed_at).toLocaleString('ko-KR')+'</div>':'')+
+          '</div></div>';
+      }).join('')+'</div>'
     :'<div style="padding:30px;text-align:center;color:var(--muted)"><div style="font-size:28px">📋</div><div>등록된 결재 정보가 없습니다.</div></div>';
-  Modal.open({title:'결재 현황',size:'sm',body:body,foot:'<button class="btn bpri" onclick="Modal.close()">닫기</button>'});
+  Modal.open({title:'결재 현황',size:'sm',body:body,
+    foot:'<button class="btn bpri" onclick="Modal.close()">닫기</button>'});
 },
 _docHistExcel:async function(docId){
   try{
-    var results=await Promise.all([SB.getDocMasterById(docId),SB.getDocVersions(docId)]);
-    var doc=results[0];var vers=results[1];
+    var res=await Promise.all([SB.getDocMasterById(docId),SB.getDocVersions(docId)]);
+    var doc=res[0]; var vers=res[1];
     var hdrs=['버전','상태','개정 사유','기안자','승인자','승인일','파일명'];
     var data=vers.map(function(v){return[v.ver_no,Pages._DS[v.status]||v.status,v.change_summary||'',v.creator?v.creator.name:'',v.approver?v.approver.name:'',v.approved_at?new Date(v.approved_at).toLocaleDateString('ko-KR'):'',v.file_name||''];});
     if(typeof downloadExcel==='function') downloadExcel((doc?doc.doc_no:'doc')+'_개정이력',hdrs,data);
   }catch(e){Toast.show('이력 출력 실패: '+e.message,'err');}
 },
 
-/* ── 지식 검색 허브 [v2.395.2] ── */
+/* ══════════════════════════════════════════════════
+   지식 검색 허브 [v2.396]
+   ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
   w.innerHTML=
-    '<div class="ph"><div><div class="ptit">🔍 지식 검색 허브</div><div style="font-size:12px;color:var(--muted)">문서번호 · 제목 · 태그 통합 실시간 검색</div></div></div>'+
+    '<div class="ph"><div><div class="ptit">🔍 지식 검색 허브</div>'+
+    '<div style="font-size:12px;color:var(--muted)">문서번호 · 제목 · 태그 통합 실시간 검색</div></div></div>'+
     '<div style="margin-bottom:16px"><input type="text" id="dsKw" style="width:100%;padding:12px 16px;border:2px solid var(--brd);border-radius:10px;font-size:15px;background:var(--bg);color:var(--text);box-sizing:border-box" placeholder="🔍 문서 제목, 번호, 태그를 입력하세요..." oninput="Pages._dsSearch(this.value)" autofocus></div>'+
     '<div id="dsResult"><div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px">🔍</div><div>검색어를 입력하면 바로 결과가 표시됩니다.</div></div></div>';
   if(!window._docRows||!window._docRows.length) window._docRows=await SB.getDocMaster();
@@ -3988,7 +4181,9 @@ _dsSearch:function(kw){
   var el=document.getElementById('dsResult');
   if(!kw||kw.length<1){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px">🔍</div><div>검색어를 입력하세요.</div></div>';return;}
   var rows=(window._docRows||[]).filter(function(r){
-    return (r.title||'').toLowerCase().includes(kw.toLowerCase())||(r.doc_no||'').toLowerCase().includes(kw.toLowerCase())||(r.tags||[]).some(function(t){return t.toLowerCase().includes(kw.toLowerCase());});
+    return (r.title||'').toLowerCase().includes(kw.toLowerCase())||
+           (r.doc_no||'').toLowerCase().includes(kw.toLowerCase())||
+           (r.tags||[]).some(function(t){return t.toLowerCase().includes(kw.toLowerCase());});
   });
   if(!rows.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:32px">📭</div><div>\''+H.e(kw)+'\' 검색 결과가 없습니다.</div></div>';return;}
   var html='<div style="font-size:12px;color:var(--muted);margin-bottom:10px">\'<b>'+H.e(kw)+'</b>\' 검색 결과 <b>'+rows.length+'</b>건</div><div style="display:flex;flex-direction:column;gap:8px">';
@@ -4004,12 +4199,111 @@ _dsSearch:function(kw){
         (r.tags||[]).map(function(t){return'<span style="background:#f1f5f9;color:#475569;font-size:11px;padding:1px 6px;border-radius:3px">'+H.e(t)+'</span>';}).join('')+
       '</div></div>';
   });
-  html+='</div>';
-  el.innerHTML=html;
+  el.innerHTML=html+'</div>';
 },
 
-/* ── 기록 관리 [기존 유지] ── */
-rec(){document.getElementById('pw').innerHTML=`<div class="ph"><div><div class="ptit">📋 기록 관리</div></div></div><div class="card"><div class="es"><div class="es-icon">📋</div><div>기록 관리 — 백엔드 연동 후 활성화</div></div></div>`},
+/* ══════════════════════════════════════════════════
+   기록 관리 [v2.396 — doc_type='record' 조회]
+   Phase 1 포함 기능: doc_master record 유형 문서 관리
+   ══════════════════════════════════════════════════ */
+async rec(){
+  var w=document.getElementById('pw');
+  w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+  window._recRows=[];
+  try{ window._recRows=await SB.getDocMaster({doc_type:'record'}); }catch(e){ Toast.show('기록 조회 실패: '+e.message,'err'); }
+
+  var rows=window._recRows;
+  var cnt={all:rows.length,active:0,draft:0};
+  rows.forEach(function(r){if(r.status==='active')cnt.active++;if(r.status==='draft')cnt.draft++;});
+
+  w.innerHTML=
+    '<div class="stat-dash">'+
+      '<div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>'+
+        '<div><div class="sd-val">'+cnt.all+'</div><div class="sd-lbl">전체 기록</div></div></div>'+
+      '<div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div>'+
+        '<div><div class="sd-val">'+cnt.active+'</div><div class="sd-lbl">유효</div></div></div>'+
+      '<div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">📝</div>'+
+        '<div><div class="sd-val">'+cnt.draft+'</div><div class="sd-lbl">초안</div></div></div>'+
+    '</div>'+
+    '<div class="ph" style="margin-top:14px"><div><div class="ptit">📋 기록 관리</div></div>'+
+      '<div class="pac">'+
+        '<button class="btn bpri btn-f2" onclick="Pages._recForm()">+ 기록 등록 <span class="kbd">F2</span></button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="tbar">'+
+      '<div class="sw2"><input type="text" id="recKw" placeholder="기록번호, 제목..." oninput="Pages._recKwFilter(this.value)"></div>'+
+      '<button class="btn bout bsm" onclick="SearchPop.open(\'docs\')" title="통합 검색 (F3)">🔎 Search <span class="kbd">F3</span></button>'+
+    '</div>'+
+    '<div id="recTbl"></div>';
+
+  Pages._recRender(rows);
+},
+_recKwFilter:function(kw){
+  var rows=window._recRows||[];
+  if(kw) rows=rows.filter(function(r){
+    return (r.title||'').toLowerCase().includes(kw.toLowerCase())||
+           (r.doc_no||'').toLowerCase().includes(kw.toLowerCase());
+  });
+  Pages._recRender(rows);
+},
+_recRender:function(rows){
+  Tbl.render({
+    el:'#recTbl',
+    cols:[
+      {key:'doc_no',        label:'기록번호',   w:'130px',
+        render:function(v,row){
+          return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';
+        }},
+      {key:'title',         label:'제목',
+        render:function(v,row){
+          return'<span style="font-weight:500;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';
+        }},
+      {key:'current_ver',   label:'버전',       w:'58px', align:'center',
+        render:function(v){return'<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px">'+H.e(v||'-')+'</span>';}},
+      {key:'status',        label:'상태',       w:'72px', align:'center',
+        render:function(v){return Pages._dBadge(v);}},
+      {key:'next_review_at',label:'다음 검토일', w:'110px',
+        render:function(v){return H.e(v||'-')+' '+Pages._dDay(v);}},
+      {key:'dept',          label:'부서',       w:'68px', align:'center'},
+    ],
+    data:rows,
+    onDel:async function(ids){
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({
+        title:'🗑️ 기록 삭제',
+        msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div>'+
+            '<div style="font-size:14px;font-weight:700;margin:6px 0">선택한 <b style="color:#dc2626">'+ids.length+'건</b>을 삭제합니다.</div></div>',
+        danger:true,
+        onOk:async function(){
+          for(var i=0;i<ids.length;i++) await SB.deleteDocMaster(ids[i]);
+          window._recRows=(window._recRows||[]).filter(function(x){return!ids.includes(x.id);});
+          Pages._recRender(window._recRows);
+          Toast.show(ids.length+'건 삭제되었습니다.','ok');
+        }
+      });
+    },
+    onRow:function(row){if(row)Pages._docDetail(row);},
+  });
+},
+_recForm:function(){
+  SB.getUsers().then(function(users){
+    var uOpts=users.map(function(u){return'<option value="'+u.id+'">'+H.e(u.name||u.username)+'('+H.e(u.dept||'')+')</option>';}).join('');
+    Modal.open({title:'기록 등록',size:'mlg',body:
+      '<div class="fg2">'+
+      '<div class="fgroup"><label class="fl req">기록 번호</label><input class="fc" id="fnDocNo" placeholder="예: REC-001"></div>'+
+      '<div class="fgroup"><label class="fl req">기록 제목</label><input class="fc" id="fnTitle" placeholder="예: 수입검사 성적서"></div>'+
+      '<div class="fgroup" style="display:none"><select class="fc" id="fnType"><option value="record" selected>기록</option></select></div>'+
+      '<div class="fgroup"><label class="fl">분류</label><select class="fc" id="fnCat"><option value="">선택 안함</option>'+['품질','생산','구매','안전','환경','기타'].map(function(x){return'<option>'+x+'</option>';}).join('')+'</select></div>'+
+      '<div class="fgroup"><label class="fl">검토 주기</label><select class="fc" id="fnCycle"><option value="annual">연간</option><option value="quarterly">분기</option><option value="monthly">매월</option></select></div>'+
+      '<div class="fgroup"><label class="fl">담당 부서</label><input class="fc" id="fnDept"></div>'+
+      '<div class="fgroup ff"><label class="fl">태그</label><input class="fc" id="fnTags" placeholder="쉼표로 구분 (예: 검사기록, 품질)"></div>'+
+      '<div class="fgroup"><label class="fl">결재자</label><select class="fc" id="fnApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
+      '<div class="fgroup ff"><label class="fl">비고</label><input class="fc" id="fnSummary"></div>'+
+      '</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+         '<button class="btn bpri" onclick="Pages._docSave(null)">등록</button>'});
+  });
+},},
 /* ── 시정조치 ── */
 car(){
   const w=document.getElementById('pw');

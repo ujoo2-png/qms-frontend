@@ -115,6 +115,7 @@
   ║  · Supabase 4개 테이블 (doc_master/versions/approvals/dist_log) ║
   ║  v2.395.1 2026-06-01  버그수정: 버전표기/홈카드/TopNav/결재함/이력빈화면 ║
   ║  v2.395.2 2026-06-01  버그수정: Pages is not defined 치명적 오류 수정   ║
+  ║  v2.396   2026-06-01  공통UI 준수: stat-dash클릭필터/Tbl.render/F3/칸반/기록관리 ║
   ║        [1] Auth.login() async 전환 + DB.users 연계           ║
   ║            admin 외 사용자 로그인 작동                        ║
   ║        [2] Auth.findId() DB.users 연계 (이름+이메일)          ║
@@ -179,7 +180,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.395.2</title>
+<title>QMS - 품질경영시스템 v2.396</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="qms-style.css?v=2.394">
@@ -242,7 +243,7 @@
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.395.2</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.396</div>
         </div>
       </div>
     </div>
@@ -392,7 +393,7 @@
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.395.2</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.396</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
   </div>
 </div>
 
@@ -403,7 +404,7 @@
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.395.2</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.396</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>

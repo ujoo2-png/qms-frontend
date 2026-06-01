@@ -1,4 +1,4 @@
-/* qms-init.js — hotkeys + 초기화 [v2.395.2] */
+/* qms-init.js — hotkeys + 초기화 [v2.396] */
 "use strict";
 
 
