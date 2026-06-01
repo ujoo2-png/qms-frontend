@@ -4303,7 +4303,7 @@ _recForm:function(){
     foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
          '<button class="btn bpri" onclick="Pages._docSave(null)">등록</button>'});
   });
-},},
+},
 /* ── 시정조치 ── */
 car(){
   const w=document.getElementById('pw');
