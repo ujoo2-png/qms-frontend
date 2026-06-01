@@ -1245,7 +1245,7 @@ SB.getDistLog=async function(docId,limit){
 };
 
 /* ════════════════════════════════════════════════════════════
-   Phase 2 SB 함수 [v2.397.1 신규 — 2026-06-01]
+   Phase 2 SB 함수 [v2.397.2 신규 — 2026-06-01]
    D5: 배포 관리 / D6: 검토 주기 알림
    ════════════════════════════════════════════════════════════ */
 
@@ -1254,7 +1254,7 @@ SB.getDistLog=async function(docId,limit){
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 /**
- * [v2.397.1] 외부 공유 링크 토큰 발급
+ * [v2.397.2] 외부 공유 링크 토큰 발급
  * @param {number} docId     - doc_master.id
  * @param {number} docVerId  - doc_versions.id
  * @param {number} hours     - 링크 유효 시간 (기본 72시간)
@@ -1293,7 +1293,7 @@ SB.createShareToken=async function(docId,docVerId,hours){
 };
 
 /**
- * [v2.397.1] 특정 문서의 배포/열람 로그 조회 (기존 getDistLog 확장 래퍼)
+ * [v2.397.2] 특정 문서의 배포/열람 로그 조회 (기존 getDistLog 확장 래퍼)
  * @param {number} docId  - doc_master.id
  * @param {string} action - 'all'|'view'|'download'|'share' (기본 'all')
  * @param {number} limit  - 최대 건수 (기본 100)
@@ -1315,7 +1315,7 @@ SB.getDocDistLog=async function(docId,action,limit){
 };
 
 /**
- * [v2.397.1] 전체 배포 로그 집계 — 대시보드용
+ * [v2.397.2] 전체 배포 로그 집계 — 대시보드용
  * @param {string} since - ISO 날짜 문자열 (기본: 30일 전)
  * @returns {{byAction:{}, byDoc:[], total:number}}
  */
@@ -1355,7 +1355,7 @@ SB.getDistLogSummary=async function(since){
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 /**
- * [v2.397.1] 검토 주기 일괄 업데이트
+ * [v2.397.2] 검토 주기 일괄 업데이트
  * @param {number[]} ids          - doc_master.id 배열
  * @param {string}   review_cycle - 'monthly'|'quarterly'|'biannual'|'annual'
  * @returns {{ok:boolean, updated:number}}
@@ -1375,7 +1375,7 @@ SB.bulkUpdateReviewCycle=async function(ids,review_cycle){
 };
 
 /**
- * [v2.397.1] 다음 검토일 개별 업데이트
+ * [v2.397.2] 다음 검토일 개별 업데이트
  * @param {number} docId          - doc_master.id
  * @param {string} next_review_at - YYYY-MM-DD
  */
@@ -1389,7 +1389,7 @@ SB.updateNextReviewDate=async function(docId,next_review_at){
 };
 
 /**
- * [v2.397.1] 검토 완료 처리 — 다음 검토일 자동 계산 후 갱신
+ * [v2.397.2] 검토 완료 처리 — 다음 검토일 자동 계산 후 갱신
  * @param {number} docId - doc_master.id
  * @param {string} cycle - review_cycle 값 (없으면 doc_master에서 조회)
  *
@@ -1419,7 +1419,7 @@ SB.completeReview=async function(docId,cycle){
 };
 
 /**
- * [v2.397.1] 만료 임박 문서 일괄 멘션 알림 발송
+ * [v2.397.2] 만료 임박 문서 일괄 멘션 알림 발송
  * @param {number} days - 몇 일 이내 만료 문서에 알림 (7 또는 30)
  * @returns {{ok:boolean, sent:number}} — 발송 건수
  *

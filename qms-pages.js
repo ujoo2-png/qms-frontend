@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.397.1]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.397.2]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -441,24 +441,31 @@ async _uDeleteConfirm(userId){
   if(!uid){Toast.show('삭제할 사용자를 찾을 수 없습니다.','err');return;}
   const res=await SB.deleteUser(Number(uid));
   if(!res?.ok) return;
-  /* [v2.397.1] 로컬 DB 즉시 갱신 */
-  DB.users=DB.users.filter(u=>Number(u.id)!==Number(uid));
+  /* [v2.397.2 버그수정] 삭제 후 목록 완전 갱신
+     근본 원인: settings()는 async(DB 조회) 작업 포함 → 80ms setTimeout 으로는
+               DOM 완성 전에 btn.click()이 실행됨 → usermgmt 탭 미활성
+     수정: sysusers() 검증 패턴 동일 적용 (200ms + btn.click())
+     참고: window.renderTab = settings() 마지막에 전역 노출 → 200ms 후 안전 */
+
+  /* ① 로컬 DB 즉시 필터링 */
+  DB.users = DB.users.filter(u => Number(u.id) !== Number(uid));
   Modal.close();
-  Toast.show('사용자가 삭제되었습니다.','ok');
-  /* [v2.397.1 버그수정] settings() 재호출로 목록 완전 갱신
-     기존: stab-pane querySelector → settings() 재진입 시 DOM 재생성으로 작동 안 함
-     수정: SB에서 최신 users 재조회 후 settings() 재호출 → usermgmt 탭 자동 활성 */
+  Toast.show('사용자가 삭제되었습니다.', 'ok');
+
+  /* ② SB 최신 users 재조회 */
   try{
-    const fresh=await SB.getUsers();
-    if(Array.isArray(fresh)) DB.users=fresh;
+    const fresh = await SB.getUsers();
+    if(Array.isArray(fresh)) DB.users = fresh;
   }catch(e){}
-  /* settings() 재호출 후 usermgmt 탭 활성화 */
+
+  /* ③ settings() 전체 재렌더 (sysusers()와 동일 패턴) */
   await Pages.settings();
-  /* usermgmt 탭 자동 클릭 (사용자 관리 탭으로 복귀) */
+
+  /* ④ 200ms 후 usermgmt 탭 클릭 — DOM 완성 보장 후 실행 */
   setTimeout(function(){
-    var btn=document.querySelector('.stab-btn[data-tab="usermgmt"]');
-    if(btn) btn.click();
-  }, 80);
+    const btn = document.querySelector('.stab-btn[data-tab="usermgmt"]');
+    if(btn && !btn.disabled) btn.click();
+  }, 200);
 },
 _uStatusPopup(userId, userName){
   const u=DB.users.find(x=>x.id===userId);
@@ -3578,7 +3585,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.397.1]
+   문서관리 고도화 페이지 함수 [v2.397.2]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3609,7 +3616,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.397.1]
+   D1: 문서 목록 [v2.397.2]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3783,8 +3790,8 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.397.1] ── */
-/* ── 칸반 보드 [v2.397.1 UI개선] ── */
+/* ── 칸반 보드 [v2.397.2] ── */
+/* ── 칸반 보드 [v2.397.2 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
   var rows=window._docRows||[];
@@ -3839,7 +3846,7 @@ _docKanban:function(){
     '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.397.1] ── */
+/* ── 문서 상세 팝업 [v2.397.2] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3859,7 +3866,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.397.1] ── */
+/* ── D2: 문서 등록 [v2.397.2] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3933,7 +3940,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.397.1] ── */
+/* ── D2-B: 개정 기안 [v2.397.2] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -3989,7 +3996,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.397.1]
+   D3: 내 결재함 [v2.397.2]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -4007,12 +4014,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.397.1] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.397.2] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.397.1] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.397.2] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4114,9 +4121,9 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.397.1]
+   D4: 개정 이력 타임라인 [v2.397.2]
    ══════════════════════════════════════════════════ */
-/* [v2.397.1] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+/* [v2.397.2] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
 doc_history_home:async function(){
   await Pages.docs();
   /* 문서 목록 로드 완료 후 상단에 안내 배너 삽입 */
@@ -4151,9 +4158,9 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.397.1] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.397.2] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
-    /* [v2.397.1 UI개선] 개정이력 문서 정보 배너 */
+    /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
       /* 헤더: 그라디언트 배경 + 문서번호/제목/유형/버전 */
       '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;overflow:hidden">'+
@@ -4258,7 +4265,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.397.1]
+   지식 검색 허브 [v2.397.2]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4296,7 +4303,7 @@ _dsSearch:function(kw){
 
 
 /* ══════════════════════════════════════════════════
-   D5: 배포 관리 [v2.397.1 Phase 2]
+   D5: 배포 관리 [v2.397.2 Phase 2]
    ══════════════════════════════════════════════════ */
 async doc_distribution(){
   var w=document.getElementById('pw');
@@ -4465,7 +4472,7 @@ _distExcel:function(){
 },
 
 /* ══════════════════════════════════════════════════
-   D6: 검토 주기 관리 [v2.397.1 Phase 2]
+   D6: 검토 주기 관리 [v2.397.2 Phase 2]
    ══════════════════════════════════════════════════ */
 async doc_review_cycle(){
   var w=document.getElementById('pw');
@@ -6134,7 +6141,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.397.1] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.397.2] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
