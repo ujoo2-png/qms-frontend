@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.396]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.396.1]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -441,6 +441,8 @@ async _uDeleteConfirm(userId){
   if(!uid){Toast.show('삭제할 사용자를 찾을 수 없습니다.','err');return;}
   const res=await SB.deleteUser(Number(uid));
   if(!res?.ok) return;
+  /* [v2.396.1] 로컬 DB 즉시 갱신 */
+  DB.users=DB.users.filter(u=>Number(u.id)!==Number(uid));
   Modal.close();
   Toast.show('사용자가 삭제되었습니다.','ok');
   /* 목록 갱신 */
@@ -3572,7 +3574,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.396]
+   문서관리 고도화 페이지 함수 [v2.396.1]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3603,7 +3605,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.396]
+   D1: 문서 목록 [v2.396.1]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3751,6 +3753,8 @@ _docRender:function(){
       {key:'next_review_at',label:'다음 검토일', w:'120px',
         render:function(v,row){return H.e(v||'-')+' '+Pages._dDay(v);}},
       {key:'dept',          label:'부서',       w:'68px', align:'center'},
+      {key:'id',            label:'파일',       w:'58px', align:'center',
+        render:function(v,row){return FM.btn('doc-'+v);}},
     ],
     data:rows,
     onDel:async function(ids){
@@ -3775,7 +3779,7 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.396] ── */
+/* ── 칸반 보드 [v2.396.1] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
   var rows=window._docRows||[];
@@ -3809,7 +3813,7 @@ _docKanban:function(){
   '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.396] ── */
+/* ── 문서 상세 팝업 [v2.396.1] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3829,7 +3833,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.396] ── */
+/* ── D2: 문서 등록 [v2.396.1] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3848,6 +3852,13 @@ _docForm:function(editDoc){
       '<div class="fgroup ff"><label class="fl">태그</label><input class="fc" id="fnTags" placeholder="쉼표로 구분 (예: ISO9001, 품질관리)" value="'+H.e(editDoc?(editDoc.tags||[]).join(', '):'')+'"></div>'+
       '<div class="fgroup"><label class="fl">최종 결재자</label><select class="fc" id="fnApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
       '<div class="fgroup ff"><label class="fl">개정 사유</label><input class="fc" id="fnSummary" placeholder="신규 등록 시 생략 가능"></div>'+
+      '<div class="fgroup ff"><label class="fl">첨부 파일</label>'+
+        '<label style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px dashed var(--bd);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--tm)">'+
+          '📁 파일 선택 (모든 형식)'+
+          '<input type="file" multiple id="fnFile" style="display:none" onchange="FM.add(&quot;doc-new&quot;,this)">'+
+        '</label>'+
+        '<button class="btn bout bsm" style="margin-left:8px" onclick="FM.modal(&quot;doc-new&quot;)">📎 파일 목록</button>'+
+      '</div>'+
       '</div>',
     foot:'<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri" onclick="Pages._docSave(null)">등록</button>'});
   });
@@ -3879,6 +3890,11 @@ _docSave:async function(editId){
         text:'[문서 결재 요청] '+title+' (v1.0) 결재를 요청드립니다.',ref:'doc_approval'});
     }
   }
+  /* 파일 이동: doc-new → doc-{id} */
+  if(newDoc&&App.files['doc-new']&&App.files['doc-new'].length){
+    App.files['doc-'+newDoc.id]=App.files['doc-new'];
+    delete App.files['doc-new'];
+  }
   Toast.show('문서가 등록되었습니다.','ok'); Modal.close();
   window._docRows=await SB.getDocMaster(); Pages._docRender(); Pages._docKanban();
 },
@@ -3891,7 +3907,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.396] ── */
+/* ── D2-B: 개정 기안 [v2.396.1] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -3908,6 +3924,13 @@ _docRevForm:async function(docId){
     '<div class="fgroup ff"><label class="fl">세부 변경 내용</label><textarea class="fc" id="rvDetail" rows="3"></textarea></div>'+
     '<div class="fgroup"><label class="fl req">신규 버전 번호</label><input class="fc" id="rvVerNo" value="'+H.e(nextVer)+'"></div>'+
     '<div class="fgroup"><label class="fl">최종 결재자</label><select class="fc" id="rvApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
+    '<div class="fgroup ff"><label class="fl">개정 파일 첨부</label>'+
+      '<label style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px dashed var(--bd);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--tm)">'+
+        '📁 파일 선택'+
+        '<input type="file" multiple id="rvFile" style="display:none" onchange="FM.add(\'doc-rev-'+docId+'\',this)">'+
+      '</label>'+
+        '<button class="btn bout bsm" style="margin-left:8px" onclick="FM.modal(\'doc-rev-'+docId+'\')">📎 파일 목록</button>'+
+    '</div>'+
     '</div>',
   foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
        '<button class="btn bpri" onclick="Pages._docRevSave('+docId+')">개정 기안 제출</button>'});
@@ -3928,12 +3951,19 @@ _docRevSave:async function(docId){
       text:'[개정 결재 요청] '+(doc?doc.title:'')+'('+verNo+') 결재를 요청드립니다.',ref:'doc_approval'});
   }
   await SB.updateDocMaster(docId,{status:'in_review'});
+  /* 파일: doc-rev-{docId} → doc-{docId} 병합 */
+  var revKey='doc-rev-'+docId;
+  if(App.files[revKey]&&App.files[revKey].length){
+    if(!App.files['doc-'+docId]) App.files['doc-'+docId]=[];
+    App.files['doc-'+docId]=App.files['doc-'+docId].concat(App.files[revKey]);
+    delete App.files[revKey];
+  }
   Toast.show('개정 기안이 제출되었습니다.','ok'); Modal.close();
   window._docRows=await SB.getDocMaster(); Pages._docRender(); Pages._docKanban();
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.396]
+   D3: 내 결재함 [v2.396.1]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -3951,24 +3981,29 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.396] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.396.1] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* 1순위: Auth._u.id 가 users 테이블 id와 일치 */
+    /* [v2.396.1] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+       Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
+       Auth._cur = 로그인 username 문자열 */
+
+    /* 1순위: Auth._u.id 직접 매핑 */
     if(user.id){
       var byId=users.find(function(u){return Number(u.id)===Number(user.id);});
       if(byId) meId=Number(byId.id);
     }
-    /* 2순위: name 또는 username 매칭 */
+    /* 2순위: username (로그인 아이디) 매칭 */
     if(!meId){
-      var loginName=user.name||user.username||'';
-      var byName=users.find(function(u){
-        return u.name===loginName||u.username===loginName||
-               u.name===user.username||u.username===user.name;
+      var loginId=user.username||Auth._cur||'';
+      var loginNm=user.name||'';
+      var byUser=users.find(function(u){
+        return (loginId && (u.username===loginId||u.name===loginId)) ||
+               (loginNm && (u.name===loginNm||u.username===loginNm));
       });
-      if(byName) meId=Number(byName.id);
+      if(byUser) meId=Number(byUser.id);
     }
 
     if(!meId){
@@ -4053,7 +4088,7 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.396]
+   D4: 개정 이력 타임라인 [v2.396.1]
    ══════════════════════════════════════════════════ */
 doc_history_home:function(){Nav.go('docs');},
 async doc_history(docId){
@@ -4077,18 +4112,22 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
+    /* [v2.396.1] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    var filesBtnHtml=FM.btn('doc-'+docId);
     document.getElementById('vDocInfo').innerHTML=
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">'+
+      '<div class="ir-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0;border:1px solid var(--brd);border-radius:10px;overflow:hidden">'+
       [['문서번호','<span style="font-family:monospace;font-weight:700;color:#1a5fa8">'+H.e(doc.doc_no)+'</span>'],
-       ['유형', Pages._DT[doc.doc_type]||doc.doc_type||'-'],
+       ['문서 제목','<strong>'+H.e(doc.title||'-')+'</strong>'],
+       ['유형','<span class="badge bblu" style="font-size:10px">'+(Pages._DT[doc.doc_type]||doc.doc_type||'-')+'</span>'],
        ['현재버전','<span style="background:#ede9fe;color:#5b21b6;font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px">'+H.e(doc.current_ver||'-')+'</span>'],
-       ['상태', Pages._dBadge(doc.status)],
-       ['담당부서', H.e(doc.dept||'-')],
-       ['다음검토일', H.e(doc.next_review_at||'-')+' '+Pages._dDay(doc.next_review_at)],
+       ['상태',Pages._dBadge(doc.status)],
+       ['담당부서',H.e(doc.dept||'-')],
+       ['다음검토일',H.e(doc.next_review_at||'-')+' '+Pages._dDay(doc.next_review_at)],
+       ['첨부 파일',filesBtnHtml],
       ].map(function(x){
-        return'<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+x[0]+'</div>'+
-              '<div style="font-size:13px;font-weight:500">'+x[1]+'</div></div>';
-      }).join('')+'</div>';
+        return'<div class="ir"><div class="il">'+x[0]+'</div><div class="iv">'+x[1]+'</div></div>';
+      }).join('')+
+      '</div>';
     var tl=document.getElementById('vTimeline');
     if(!vers.length){
       tl.innerHTML='<div class="es"><div class="es-icon">📭</div><div>버전 이력이 없습니다.</div></div>';
@@ -4166,7 +4205,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.396]
+   지식 검색 허브 [v2.396.1]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4265,6 +4304,8 @@ _recRender:function(rows){
       {key:'next_review_at',label:'다음 검토일', w:'110px',
         render:function(v){return H.e(v||'-')+' '+Pages._dDay(v);}},
       {key:'dept',          label:'부서',       w:'68px', align:'center'},
+      {key:'id',            label:'파일',       w:'58px', align:'center',
+        render:function(v,row){return FM.btn('doc-'+v);}},
     ],
     data:rows,
     onDel:async function(ids){
@@ -5569,6 +5610,7 @@ async settings(){
           <th style="width:90px">수정일</th>
           <th style="width:110px">최근 로그인</th>
           <th>비밀번호</th>
+          <th style="width:56px">수정</th>
         </tr></thead>
         <tbody>${activeUsers.length===0
           ?'<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--tm)">등록된 사용자가 없습니다.</td></tr>'
@@ -5592,6 +5634,7 @@ async settings(){
               +'<td style="font-size:11px;color:var(--tm)">'+(u.updated_at?H.e(u.updated_at):'')+'</td>'
               +'<td style="font-size:11px;color:var(--tm)">'+(u.last_login?H.e(u.last_login):'')+'</td>'
               +'<td><button class="btn bsm bamb" onclick="Pages._uResetPw('+(u.id)+',this.dataset.un)" data-un="'+H.e(u.username)+'">🔑 초기화</button></td>'
+              +'<td style="text-align:center"><button class="btn bsm bpri" onclick="Pages._uFormById('+(u.id)+')" title="사용자 정보 수정">✏️ 수정</button></td>'
               +'</tr>';
           }).join('')}
         </tbody>
@@ -5754,11 +5797,12 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
+  /* [v2.396.1] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
-    'nonconformances','cars','documents'];
+    'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
     mentions:'멘션',items:'품목',vendors:'거래처',nonconformances:'부적합',
-    cars:'시정조치',documents:'문서'};
+    cars:'시정조치',doc_master:'문서'};
   const COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6',
     '#06b6d4','#f97316','#84cc16','#ec4899'];
 

@@ -1,4 +1,4 @@
-/* qms-db.js — DB 초기 데이터 + Supabase 객체 [v2.396]
+/* qms-db.js — DB 초기 데이터 + Supabase 객체 [v2.396.1]
    v2.395  2026-06-01  문서관리 고도화 SB 함수 추가 (하단 참조) */
 "use strict";
 
@@ -385,22 +385,22 @@ const SB={
     if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
     const u=DB.users.find(u=>u.id===id);if(u)Object.assign(u,patch);return{ok:true};
   },
+  /* [v2.396.1 버그수정] deleteUser: error 변수 미정의 수정 → _softDelete 결과로 판단 */
   async deleteUser(id){
-    if(!_sb){DB.users=DB.users.filter(u=>u.id!==id);return{ok:true};}
+    if(!_sb){DB.users=DB.users.filter(u=>Number(u.id)!==Number(id));return{ok:true};}
     const res=await SB._softDelete('users', [id]);
-    if(!res.ok) return {ok:false};
-    if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
-    DB.users=DB.users.filter(u=>u.id!==id);return{ok:true};
+    if(!res.ok){Toast.show('삭제 실패: '+(res.msg||'알 수 없는 오류'),'err');return{ok:false};}
+    DB.users=DB.users.filter(u=>Number(u.id)!==Number(id));
+    return{ok:true};
   },
-  /* [v2.394] deleteUsers: 일괄 삭제 */
+  /* [v2.394] deleteUsers: 일괄 삭제 [v2.396.1 error변수 버그 수정] */
   async deleteUsers(ids){
     const numIds=ids.map(Number);
     if(!numIds.length) return{ok:true};
     if(!_sb){DB.users=DB.users.filter(u=>!numIds.includes(Number(u.id)));return{ok:true};}
-    const res=await SB._softDelete('users', ids);
-    if(!res.ok) return {ok:false};
+    const res=await SB._softDelete('users', numIds);
+    if(!res.ok){console.error('[SB] deleteUsers 실패:',res.msg||'');return{ok:false,msg:res.msg||''};}
     DB.users=DB.users.filter(u=>!numIds.includes(Number(u.id)));
-    if(error){console.error('[SB] deleteUsers 실패:',error.message);return{ok:false,msg:error.message};}
     return{ok:true};
   },
 
@@ -1125,6 +1125,32 @@ SB.deleteDocMaster=async function(id){
   var res=await _sb.from('doc_master').delete().eq('id',id);
   if(res.error){Toast.show('삭제 실패: '+res.error.message,'err');return{ok:false};}
   return{ok:true};
+};
+
+/**
+ * [v2.396.1 신규] 검토 만료 임박 문서 조회
+ * @param {number} days - 오늘로부터 N일 이내 만료 문서 (기본 30)
+ * @returns {Array} next_review_at ≤ (오늘+days) 인 active 문서 배열 (오름차순)
+ *
+ * [활용]
+ *  - D1 문서목록 만료 강조 (클라이언트 _dDay()와 병행)
+ *  - Phase 2 D6 검토주기 알림: 만료 D-30/D-7 멘션함 자동 발송 시 사용
+ */
+SB.getExpiringDocs=async function(days){
+  days=days||30;
+  if(!_sb)return[];
+  try{
+    var target=new Date();
+    target.setDate(target.getDate()+days);
+    var targetStr=target.toISOString().split('T')[0]; // YYYY-MM-DD
+    var res=await _sb.from('doc_master')
+      .select('*')
+      .eq('status','active')
+      .lte('next_review_at',targetStr)
+      .order('next_review_at',{ascending:true});
+    if(res.error){console.warn('[SB] getExpiringDocs:',res.error.message);return[];}
+    return res.data||[];
+  }catch(e){console.warn('[SB] getExpiringDocs:',e.message);return[];}
 };
 
 /* ── doc_versions ── */
