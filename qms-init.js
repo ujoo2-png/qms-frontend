@@ -99,6 +99,8 @@ function setupHotkeys(){
           }
         }catch(e){ console.warn('[세션복원] DB 로드 오류:', e); }
         Nav.go(savedPage);
+        /* [v2.398.5] 세션 복원 후 Magic Indicator 초기화 */
+        setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 200);
         if(savedPage !== 'home'){
           Toast.show('마지막 화면으로 돌아왔습니다.','info',2000);
         }
@@ -109,5 +111,4 @@ function setupHotkeys(){
     }
   }
 })();
-/* [v2.398.4] Magic Indicator 초기화 */
-setTimeout(function(){ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 300);
+/* [v2.398.5] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
