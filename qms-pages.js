@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.397.2]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.398]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -3585,7 +3585,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.397.2]
+   문서관리 고도화 페이지 함수 [v2.398]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3616,7 +3616,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.397.2]
+   D1: 문서 목록 [v2.398]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3790,7 +3790,7 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.397.2] ── */
+/* ── 칸반 보드 [v2.398] ── */
 /* ── 칸반 보드 [v2.397.2 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
@@ -3846,7 +3846,7 @@ _docKanban:function(){
     '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.397.2] ── */
+/* ── 문서 상세 팝업 [v2.398] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3866,7 +3866,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.397.2] ── */
+/* ── D2: 문서 등록 [v2.398] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3940,7 +3940,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.397.2] ── */
+/* ── D2-B: 개정 기안 [v2.398] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -3996,7 +3996,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.397.2]
+   D3: 내 결재함 [v2.398]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -4014,12 +4014,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.397.2] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.398] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.397.2] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.398] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4121,9 +4121,9 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.397.2]
+   D4: 개정 이력 타임라인 [v2.398]
    ══════════════════════════════════════════════════ */
-/* [v2.397.2] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+/* [v2.398] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
 doc_history_home:async function(){
   await Pages.docs();
   /* 문서 목록 로드 완료 후 상단에 안내 배너 삽입 */
@@ -4158,7 +4158,7 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.397.2] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.398] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
     /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
@@ -4265,7 +4265,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.397.2]
+   지식 검색 허브 [v2.398]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4584,6 +4584,416 @@ _rcSendAlert:async function(days){
     var r=await SB.sendReviewAlerts(days);
     if(r.ok){if(r.sent>0)Toast.show('📬 알림 '+r.sent+'건 발송 완료!','ok',4000);else Toast.show('발송 대상 없음 (담당자 미지정 문서 제외)','warn',3000);}
   }finally{if(btn){btn.disabled=false;btn.textContent=days===7?'🚨 D-7 긴급알림':'🔔 D-30 알림발송';}}
+},
+/* ══════════════════════════════════════════════════
+   D7: 연관 문서 추천 [v2.398 Phase 3]
+   동일 태그 기반 연관 문서 패널 + 유사 문서 추천
+   ══════════════════════════════════════════════════ */
+
+/**
+ * [v2.398] D7: 연관 문서 추천 페이지
+ * [UI 구성]
+ *  ① 문서 선택 → 해당 문서의 태그 표시
+ *  ② 동일 태그를 가진 연관 문서 목록 (태그 일치도순 정렬)
+ *  ③ 문서 유형별 추천 그룹
+ *  ④ 전체 태그 클라우드 (태그 클릭 → 해당 태그 문서 표시)
+ */
+async doc_recommend(){
+  var w=document.getElementById('pw');
+  w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+
+  var rows=[];
+  try{ rows=await SB.getDocMaster(); }catch(e){}
+
+  /* 태그 빈도 집계 */
+  var tagMap={};
+  rows.forEach(function(r){
+    (r.tags||[]).forEach(function(t){
+      tagMap[t]=(tagMap[t]||0)+1;
+    });
+  });
+  var tagList=Object.entries(tagMap).sort(function(a,b){return b[1]-a[1];});
+
+  w.innerHTML=
+    '<div class="ph"><div>'+
+      '<div class="ptit">💡 연관 문서 추천</div>'+
+      '<div style="font-size:12px;color:var(--muted)">태그 기반 연관 문서 탐색 · 유사 문서 추천</div>'+
+    '</div></div>'+
+
+    /* ① 문서 선택 */
+    '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px 18px;margin-bottom:16px">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">📄 기준 문서 선택</div>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'+
+        '<select class="fsel" id="rcDocSel" style="flex:1;min-width:220px;padding:9px 12px" onchange="Pages._rcLoadRecommend(this.value)">'+
+          '<option value="">— 문서를 선택하세요 —</option>'+
+          rows.filter(function(r){return r.status==='active';}).map(function(r){
+            return'<option value="'+r.id+'">'+H.e(r.doc_no)+' '+H.e(r.title)+'</option>';
+          }).join('')+
+        '</select>'+
+        '<div id="rcTagBadges" style="display:flex;gap:4px;flex-wrap:wrap"></div>'+
+      '</div>'+
+    '</div>'+
+
+    /* ② 연관 문서 결과 */
+    '<div id="rcResult">'+
+      '<div style="text-align:center;padding:32px;color:var(--muted)">'+
+        '<div style="font-size:32px;margin-bottom:8px">💡</div>'+
+        '<div>위에서 기준 문서를 선택하면<br>연관 문서를 추천해 드립니다.</div>'+
+      '</div>'+
+    '</div>'+
+
+    /* ③ 태그 클라우드 */
+    '<div style="margin-top:20px">'+
+      '<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--muted)">🏷️ 전체 태그 현황 <span style="font-size:11px;font-weight:400">(클릭 시 해당 태그 문서 표시)</span></div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        tagList.map(function(e){
+          var t=e[0], cnt=e[1];
+          /* 빈도에 따라 폰트 크기 조절 */
+          var maxCnt=tagList[0]?tagList[0][1]:1;
+          var sz=Math.round(10+((cnt/maxCnt)*6));
+          return'<button style="background:var(--bg2);border:1px solid var(--brd);border-radius:999px;padding:4px 10px;font-size:'+sz+'px;cursor:pointer;color:var(--text);transition:all .15s" '+
+            'onclick="Pages._rcTagFilter(\''+H.e(t).replace(/'/g,"\\'")+'\')" '+
+            'onmouseover="this.style.background=\'#eff6ff\';this.style.borderColor=\'#93c5fd\'" '+
+            'onmouseout="this.style.background=\'var(--bg2)\';this.style.borderColor=\'var(--brd)\'">'+
+            H.e(t)+' <span style="font-size:10px;color:var(--muted)">'+cnt+'</span>'+
+          '</button>';
+        }).join('')+
+        (!tagList.length?'<div style="color:var(--muted);font-size:13px">등록된 태그가 없습니다.</div>':'')+
+      '</div>'+
+    '</div>';
+
+  window._rcDocRows=rows;
+},
+
+/* 선택 문서 기준 연관 문서 로드 */
+_rcLoadRecommend:function(docId){
+  if(!docId){
+    document.getElementById('rcTagBadges').innerHTML='';
+    document.getElementById('rcResult').innerHTML=
+      '<div style="text-align:center;padding:32px;color:var(--muted)"><div style="font-size:32px">💡</div><div>문서를 선택해 주세요.</div></div>';
+    return;
+  }
+  var rows=window._rcDocRows||[];
+  var base=rows.find(function(r){return String(r.id)===String(docId);});
+  if(!base) return;
+  var baseTags=base.tags||[];
+
+  /* 기준 문서 태그 배지 표시 */
+  var badgesEl=document.getElementById('rcTagBadges');
+  if(badgesEl){
+    badgesEl.innerHTML=baseTags.length
+      ?baseTags.map(function(t){
+          return'<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600">'+H.e(t)+'</span>';
+        }).join('')
+      :'<span style="font-size:12px;color:var(--muted)">태그 없음</span>';
+  }
+
+  /* 연관도 계산: 공통 태그 수 기준 */
+  var others=rows.filter(function(r){return String(r.id)!==String(docId);});
+  var scored=others.map(function(r){
+    var rTags=r.tags||[];
+    var common=baseTags.filter(function(t){return rTags.includes(t);});
+    return{row:r, score:common.length, common:common};
+  }).filter(function(x){return x.score>0;})
+    .sort(function(a,b){return b.score-a.score;});
+
+  var el=document.getElementById('rcResult');
+  if(!scored.length){
+    el.innerHTML=
+      '<div style="background:var(--bg2);border-radius:10px;padding:24px;text-align:center;color:var(--muted)">'+
+        '<div style="font-size:28px;margin-bottom:8px">📭</div>'+
+        '<div>연관 문서가 없습니다.<br><span style="font-size:12px">태그를 추가하면 더 많은 문서를 추천받을 수 있습니다.</span></div>'+
+      '</div>';
+    return;
+  }
+
+  /* 결과 렌더 */
+  el.innerHTML=
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:10px">'+
+      '<b>'+H.e(base.doc_no)+'</b> 기준 — 연관 문서 <b>'+scored.length+'</b>건'+
+    '</div>'+
+    '<div style="display:flex;flex-direction:column;gap:8px">'+
+    scored.map(function(x){
+      var r=x.row;
+      var pct=Math.round((x.score/Math.max(baseTags.length,1))*100);
+      /* 연관도 색상 */
+      var barClr=pct>=80?'#059669':pct>=50?'#2563eb':'#94a3b8';
+      return'<div style="background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:13px 16px;cursor:pointer;transition:all .15s" '+
+        'onclick="Pages.doc_history('+r.id+')" '+
+        'onmouseover="this.style.borderColor=\'#93c5fd\';this.style.background=\'#eff6ff\'" '+
+        'onmouseout="this.style.borderColor=\'var(--brd)\';this.style.background=\'var(--card)\'">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">'+
+          '<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8">'+H.e(r.doc_no||'-')+'</span>'+
+          '<span style="font-weight:600;font-size:13px;flex:1">'+H.e(r.title||'-')+'</span>'+
+          Pages._dBadge(r.status)+
+          '<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span>'+
+        '</div>'+
+        /* 공통 태그 */
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
+          '<span style="font-size:10px;color:var(--muted)">공통 태그:</span>'+
+          x.common.map(function(t){
+            return'<span style="background:#fef9c3;color:#92400e;border:1px solid #fde68a;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:600">'+H.e(t)+'</span>';
+          }).join('')+
+        '</div>'+
+        /* 연관도 바 */
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<span style="font-size:10px;color:var(--muted);width:40px">연관도</span>'+
+          '<div style="flex:1;height:5px;background:var(--brd);border-radius:3px;overflow:hidden">'+
+            '<div style="height:100%;background:'+barClr+';width:'+pct+'%;border-radius:3px;transition:width .3s"></div>'+
+          '</div>'+
+          '<span style="font-size:11px;font-weight:700;color:'+barClr+';width:34px;text-align:right">'+pct+'%</span>'+
+        '</div>'+
+      '</div>';
+    }).join('')+
+    '</div>';
+},
+
+/* 태그 클라우드 클릭 → 해당 태그 문서 목록 표시 */
+_rcTagFilter:function(tag){
+  var rows=window._rcDocRows||[];
+  var filtered=rows.filter(function(r){return(r.tags||[]).includes(tag);});
+
+  /* 선택 해제 */
+  var sel=document.getElementById('rcDocSel');
+  if(sel) sel.value='';
+  var badges=document.getElementById('rcTagBadges');
+  if(badges) badges.innerHTML='<span style="background:#fef9c3;color:#92400e;border:1px solid #fde68a;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px">🏷️ '+H.e(tag)+'</span>';
+
+  var el=document.getElementById('rcResult');
+  if(!filtered.length){
+    el.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted)"><div style="font-size:28px">📭</div><div>\''+H.e(tag)+'\' 태그 문서가 없습니다.</div></div>';
+    return;
+  }
+
+  el.innerHTML=
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:10px">'+
+      '🏷️ <b>'+H.e(tag)+'</b> 태그 문서 <b>'+filtered.length+'</b>건'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">'+
+    filtered.map(function(r){
+      return'<div style="background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .15s" '+
+        'onclick="Pages.doc_history('+r.id+')" '+
+        'onmouseover="this.style.borderColor=\'#93c5fd\';this.style.background=\'#eff6ff\'" '+
+        'onmouseout="this.style.borderColor=\'var(--brd)\';this.style.background=\'var(--card)\'">'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+
+          '<span style="font-family:monospace;font-size:10px;font-weight:700;color:#1a5fa8">'+H.e(r.doc_no||'-')+'</span>'+
+          Pages._dBadge(r.status)+
+        '</div>'+
+        '<div style="font-weight:600;font-size:12px;margin-bottom:6px;line-height:1.4">'+H.e(r.title||'-')+'</div>'+
+        '<div style="display:flex;gap:4px;flex-wrap:wrap">'+
+          (r.tags||[]).map(function(t){
+            var isMatch=(t===tag);
+            return'<span style="background:'+(isMatch?'#fef9c3':'#f1f5f9')+';color:'+(isMatch?'#92400e':'#475569')+';border:1px solid '+(isMatch?'#fde68a':'transparent')+';font-size:10px;padding:1px 5px;border-radius:3px;'+(isMatch?'font-weight:600':'')+'\">'+H.e(t)+'</span>';
+          }).join('')+
+        '</div>'+
+      '</div>';
+    }).join('')+
+    '</div>';
+},
+
+/* ══════════════════════════════════════════════════
+   D8: 문서 현황 대시보드 [v2.398 Phase 4]
+   KPI 카드 · 유형 분포 · 상태 현황 · 심사 준비율 게이지
+   ══════════════════════════════════════════════════ */
+
+/**
+ * [v2.398] D8: 문서 현황 대시보드
+ * [UI 구성]
+ *  ① KPI 카드 4종 (전체/유효/검토중/만료임박)
+ *  ② 유형별 분포 — 바 차트 (Canvas)
+ *  ③ 상태별 현황 — 도넛 차트 (Canvas)
+ *  ④ 심사 준비율 게이지
+ *  ⑤ 최근 등록/개정 이력 5건
+ */
+async doc_dashboard(){
+  var w=document.getElementById('pw');
+  w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>대시보드 로딩 중...</div></div>';
+
+  var rows=[];
+  try{ rows=await SB.getDocMaster(); }catch(e){}
+
+  /* ── 집계 ── */
+  var total=rows.length;
+  var byStatus={draft:0,in_review:0,active:0,obsolete:0};
+  rows.forEach(function(r){if(byStatus[r.status]!==undefined)byStatus[r.status]++;});
+
+  var byType={};
+  rows.forEach(function(r){
+    var t=Pages._DT[r.doc_type]||r.doc_type||'기타';
+    byType[t]=(byType[t]||0)+1;
+  });
+
+  var today=new Date();
+  var expiring=rows.filter(function(r){
+    if(!r.next_review_at||r.status!=='active')return false;
+    var d=Math.ceil((new Date(r.next_review_at)-today)/86400000);
+    return d<=30;
+  }).length;
+
+  /* 심사 준비율: 유효(active) / 전체 유효+검토중 */
+  var readyBase=byStatus.active+byStatus.in_review;
+  var readyPct=readyBase>0?Math.round((byStatus.active/readyBase)*100):0;
+
+  /* 최근 등록/개정 5건 (created_at 기준) */
+  var recent=rows.slice().sort(function(a,b){
+    return new Date(b.created_at||0)-new Date(a.created_at||0);
+  }).slice(0,5);
+
+  w.innerHTML=
+    '<div class="ph"><div>'+
+      '<div class="ptit">📊 문서 현황 대시보드</div>'+
+      '<div style="font-size:12px;color:var(--muted)">ISO 9001 문서화된 정보 관리 현황</div>'+
+    '</div><div class="pac">'+
+      '<button class="btn bout bsm" onclick="Pages._dashRefresh()">🔄 새로고침</button>'+
+    '</div></div>'+
+
+    /* ① KPI 카드 */
+    '<div class="stat-dash" style="margin-bottom:20px">'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'\',\'all\')">'+
+        '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📄</div>'+
+        '<div><div class="sd-val">'+total+'</div><div class="sd-lbl">전체 문서</div></div>'+
+      '</div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'active\',\'유효\')">'+
+        '<div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div>'+
+        '<div><div class="sd-val">'+byStatus.active+'</div><div class="sd-lbl">유효(Active)</div></div>'+
+      '</div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'in_review\',\'검토중\')">'+
+        '<div class="sd-icon" style="background:#dbeafe;color:#2563eb">🔄</div>'+
+        '<div><div class="sd-val">'+byStatus.in_review+'</div><div class="sd-lbl">검토중</div></div>'+
+      '</div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages.doc_review_cycle()">'+
+        '<div class="sd-icon" style="background:'+(expiring>0?'#fee2e2':'#f0fdf4')+';color:'+(expiring>0?'#dc2626':'#059669')+'">'+
+          (expiring>0?'⚠️':'✅')+
+        '</div>'+
+        '<div><div class="sd-val" style="color:'+(expiring>0?'#dc2626':'#059669')+'">'+expiring+'</div>'+
+        '<div class="sd-lbl">D-30 만료임박</div></div>'+
+      '</div>'+
+    '</div>'+
+
+    /* ② 차트 영역 */
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
+
+      /* 유형별 분포 */
+      '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px">'+
+        '<div style="font-size:13px;font-weight:600;margin-bottom:12px">📂 유형별 분포</div>'+
+        '<div id="dashTypeChart"></div>'+
+      '</div>'+
+
+      /* 상태별 현황 + 심사준비율 */
+      '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px">'+
+        '<div style="font-size:13px;font-weight:600;margin-bottom:12px">📊 상태별 현황</div>'+
+        '<div id="dashStatusChart"></div>'+
+        /* 심사 준비율 게이지 */
+        '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--brd)">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+            '<span style="font-size:12px;font-weight:600">🏅 심사 준비율</span>'+
+            '<span style="font-size:16px;font-weight:500;color:'+(readyPct>=80?'#059669':readyPct>=60?'#d97706':'#dc2626')+'">'+readyPct+'%</span>'+
+          '</div>'+
+          '<div style="height:10px;background:var(--brd);border-radius:5px;overflow:hidden">'+
+            '<div style="height:100%;background:'+(readyPct>=80?'#059669':readyPct>=60?'#f59e0b':'#ef4444')+';width:'+readyPct+'%;border-radius:5px;transition:width .6s ease"></div>'+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+
+            '유효 '+byStatus.active+'건 / (유효+검토중) '+readyBase+'건 기준'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+
+    '</div>'+
+
+    /* ③ 최근 등록/개정 */
+    '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px">'+
+      '<div style="font-size:13px;font-weight:600;margin-bottom:12px">🕐 최근 등록/개정 문서</div>'+
+      (recent.length
+        ?'<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+          '<thead><tr style="background:var(--bg2)">'+
+            '<th style="padding:8px 12px;text-align:left;font-weight:600;color:var(--muted);width:130px">문서번호</th>'+
+            '<th style="padding:8px 12px;text-align:left;font-weight:600;color:var(--muted)">제목</th>'+
+            '<th style="padding:8px 12px;text-align:center;font-weight:600;color:var(--muted);width:80px">버전</th>'+
+            '<th style="padding:8px 12px;text-align:center;font-weight:600;color:var(--muted);width:80px">상태</th>'+
+            '<th style="padding:8px 12px;text-align:right;font-weight:600;color:var(--muted);width:120px">등록일</th>'+
+          '</tr></thead><tbody>'+
+          recent.map(function(r){
+            return'<tr style="border-bottom:1px solid var(--brd)" onmouseover="this.style.background=\'var(--hover)\'" onmouseout="this.style.background=\'\'">'+
+              '<td style="padding:8px 12px"><span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+r.id+')">'+H.e(r.doc_no||'-')+'</span></td>'+
+              '<td style="padding:8px 12px;font-weight:500;cursor:pointer" onclick="Pages.doc_history('+r.id+')">'+H.e(r.title||'-')+'</td>'+
+              '<td style="padding:8px 12px;text-align:center"><span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span></td>'+
+              '<td style="padding:8px 12px;text-align:center">'+Pages._dBadge(r.status)+'</td>'+
+              '<td style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted)">'+
+                (r.created_at?new Date(r.created_at).toLocaleDateString('ko-KR'):'-')+
+              '</td>'+
+            '</tr>';
+          }).join('')+
+          '</tbody></table>'
+        :'<div style="padding:24px;text-align:center;color:var(--muted)">등록된 문서가 없습니다.</div>')+
+    '</div>';
+
+  /* 차트 렌더 (약간의 딜레이로 DOM 완성 후 실행) */
+  window._dashByType=byType;
+  window._dashByStatus=byStatus;
+  setTimeout(function(){ Pages._dashRenderCharts(); }, 100);
+},
+
+/* 차트 렌더 */
+_dashRenderCharts:function(){
+  var byType=window._dashByType||{};
+  var byStatus=window._dashByStatus||{};
+
+  /* ① 유형별 분포 — 수평 바 차트 (CSS 기반, Chart.js 불필요) */
+  var typeEl=document.getElementById('dashTypeChart');
+  if(typeEl){
+    var entries=Object.entries(byType).sort(function(a,b){return b[1]-a[1];});
+    var maxVal=entries.length?entries[0][1]:1;
+    var colors=['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0891b2'];
+    typeEl.innerHTML=entries.map(function(e,i){
+      var pct=Math.round((e[1]/maxVal)*100);
+      return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+        '<div style="width:64px;font-size:11px;color:var(--muted);text-align:right;flex-shrink:0">'+H.e(e[0])+'</div>'+
+        '<div style="flex:1;height:18px;background:var(--bg2);border-radius:4px;overflow:hidden">'+
+          '<div style="height:100%;background:'+(colors[i%colors.length])+';width:'+pct+'%;border-radius:4px;transition:width .5s ease;display:flex;align-items:center;padding-left:6px">'+
+            '<span style="font-size:10px;color:#fff;font-weight:600;white-space:nowrap">'+e[1]+'건</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('')||'<div style="color:var(--muted);font-size:12px">데이터 없음</div>';
+  }
+
+  /* ② 상태별 현황 — 컬러 스택 바 */
+  var statusEl=document.getElementById('dashStatusChart');
+  if(statusEl){
+    var statusDef=[
+      {key:'active',    label:'유효',   clr:'#059669'},
+      {key:'in_review', label:'검토중', clr:'#2563eb'},
+      {key:'draft',     label:'초안',   clr:'#94a3b8'},
+      {key:'obsolete',  label:'폐기',   clr:'#dc2626'},
+    ];
+    var total2=Object.values(byStatus).reduce(function(s,v){return s+v;},0)||1;
+
+    statusEl.innerHTML=
+      /* 스택 바 */
+      '<div style="height:24px;border-radius:6px;overflow:hidden;display:flex;margin-bottom:10px">'+
+        statusDef.filter(function(s){return byStatus[s.key]>0;}).map(function(s){
+          var pct=Math.round((byStatus[s.key]/total2)*100);
+          return'<div style="background:'+s.clr+';width:'+pct+'%;display:flex;align-items:center;justify-content:center" title="'+s.label+': '+byStatus[s.key]+'건">'+
+            (pct>8?'<span style="font-size:10px;color:#fff;font-weight:600">'+pct+'%</span>':'')+
+          '</div>';
+        }).join('')+
+      '</div>'+
+      /* 범례 */
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
+        statusDef.map(function(s){
+          return'<div style="display:flex;align-items:center;gap:4px">'+
+            '<div style="width:10px;height:10px;border-radius:2px;background:'+s.clr+'"></div>'+
+            '<span style="font-size:11px;color:var(--muted)">'+s.label+' '+byStatus[s.key]+'</span>'+
+          '</div>';
+        }).join('')+
+      '</div>';
+  }
+},
+
+/* 대시보드 새로고침 */
+_dashRefresh:async function(){
+  window._docRows=null;
+  await Pages.doc_dashboard();
 },
 /* ══════════════════════════════════════════════════
    기록 관리 [v2.396 — doc_type='record' 조회]
@@ -6141,7 +6551,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.397.2] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.398] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',

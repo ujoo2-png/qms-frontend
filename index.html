@@ -182,7 +182,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.397.2</title>
+<title>QMS - 품질경영시스템 v2.398</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="qms-style.css?v=2.394">
@@ -245,7 +245,7 @@
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.397.2</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.398</div>
         </div>
       </div>
     </div>
@@ -395,7 +395,7 @@
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.397.2</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.398</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
   </div>
 </div>
 
@@ -406,7 +406,7 @@
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.397.2</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.398</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -466,6 +466,8 @@
         <div class="ni" data-p="doc_approval" onclick="Nav.go('doc_approval')"><span class="nii">✍️</span><span class="nt">결재함 <span id="ni_approval_badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:999px;margin-left:4px">0</span></span></div>
         <div class="ni" data-p="doc_history_home" onclick="Nav.go('doc_history_home')"><span class="nii">🕐</span><span class="nt">개정 이력</span></div>
         <div class="ni" data-p="doc_search" onclick="Nav.go('doc_search')"><span class="nii">🔍</span><span class="nt">지식 검색</span></div>
+        <div class="ni" data-p="doc_recommend" onclick="Nav.go('doc_recommend')"><span class="nii">💡</span><span class="nt">연관 문서</span></div>
+        <div class="ni" data-p="doc_dashboard" onclick="Nav.go('doc_dashboard')"><span class="nii">📊</span><span class="nt">현황 대시보드</span></div>
         <div class="ni" data-p="doc_distribution" onclick="Nav.go('doc_distribution')"><span class="nii">📤</span><span class="nt">배포 관리</span></div>
         <div class="ni" data-p="doc_review_cycle" onclick="Nav.go('doc_review_cycle')"><span class="nii">🔔</span><span class="nt">검토 주기</span></div>
         <div class="ni" data-p="rec" onclick="Nav.go('rec')"><span class="nii">📋</span><span class="nt">기록 관리</span></div>
