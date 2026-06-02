@@ -1460,12 +1460,12 @@ SB.sendReviewAlerts=async function(days){
 };
 
 /* ════════════════════════════════════════════════════════════
-   공지사항 SB 함수 [v2.398.1 신규]
+   공지사항 SB 함수 [v2.398.2 신규]
    테이블: notices (id, title, body, author, date, expire, show, file_url, file_name, created_at)
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.398.1] 공지사항 전체 조회
+ * [v2.398.2] 공지사항 전체 조회
  * @returns {Array} created_at 내림차순 (최신순)
  *
  * [문제 배경] 기존 App.notices는 qms-core.js 하드코딩 배열
@@ -1485,7 +1485,7 @@ SB.getNotices = async function() {
 };
 
 /**
- * [v2.398.1] 공지사항 등록
+ * [v2.398.2] 공지사항 등록
  * @param {object} row - { title, body, author, date, expire, show, file_url, file_name }
  */
 SB.addNotice = async function(row) {
@@ -1513,7 +1513,7 @@ SB.addNotice = async function(row) {
 };
 
 /**
- * [v2.398.1] 공지사항 수정
+ * [v2.398.2] 공지사항 수정
  * @param {number} id  - notices.id
  * @param {object} patch - 변경할 필드
  */
@@ -1531,7 +1531,7 @@ SB.updateNotice = async function(id, patch) {
 };
 
 /**
- * [v2.398.1] 공지사항 삭제
+ * [v2.398.2] 공지사항 삭제
  * @param {number} id - notices.id
  */
 SB.deleteNotice = async function(id) {

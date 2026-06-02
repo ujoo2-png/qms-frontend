@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.398.1]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.398.2]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -3585,7 +3585,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.398.1]
+   문서관리 고도화 페이지 함수 [v2.398.2]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3616,7 +3616,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.398.1]
+   D1: 문서 목록 [v2.398.2]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3790,7 +3790,7 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.398.1] ── */
+/* ── 칸반 보드 [v2.398.2] ── */
 /* ── 칸반 보드 [v2.397.2 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
@@ -3846,7 +3846,7 @@ _docKanban:function(){
     '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.398.1] ── */
+/* ── 문서 상세 팝업 [v2.398.2] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3866,7 +3866,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.398.1] ── */
+/* ── D2: 문서 등록 [v2.398.2] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3940,7 +3940,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.398.1] ── */
+/* ── D2-B: 개정 기안 [v2.398.2] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -3996,7 +3996,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.398.1]
+   D3: 내 결재함 [v2.398.2]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -4014,12 +4014,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.398.1] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.398.2] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.398.1] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.398.2] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4121,9 +4121,9 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.398.1]
+   D4: 개정 이력 타임라인 [v2.398.2]
    ══════════════════════════════════════════════════ */
-/* [v2.398.1] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+/* [v2.398.2] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
 doc_history_home:async function(){
   await Pages.docs();
   /* 문서 목록 로드 완료 후 상단에 안내 배너 삽입 */
@@ -4158,7 +4158,7 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.398.1] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.398.2] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
     /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
@@ -4265,7 +4265,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.398.1]
+   지식 검색 허브 [v2.398.2]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4586,12 +4586,12 @@ _rcSendAlert:async function(days){
   }finally{if(btn){btn.disabled=false;btn.textContent=days===7?'🚨 D-7 긴급알림':'🔔 D-30 알림발송';}}
 },
 /* ══════════════════════════════════════════════════
-   D7: 연관 문서 추천 [v2.398.1 Phase 3]
+   D7: 연관 문서 추천 [v2.398.2 Phase 3]
    동일 태그 기반 연관 문서 패널 + 유사 문서 추천
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.398.1] D7: 연관 문서 추천 페이지
+ * [v2.398.2] D7: 연관 문서 추천 페이지
  * [UI 구성]
  *  ① 문서 선택 → 해당 문서의 태그 표시
  *  ② 동일 태그를 가진 연관 문서 목록 (태그 일치도순 정렬)
@@ -4792,12 +4792,12 @@ _rcTagFilter:function(tag){
 },
 
 /* ══════════════════════════════════════════════════
-   D8: 문서 현황 대시보드 [v2.398.1 Phase 4]
+   D8: 문서 현황 대시보드 [v2.398.2 Phase 4]
    KPI 카드 · 유형 분포 · 상태 현황 · 심사 준비율 게이지
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.398.1] D8: 문서 현황 대시보드
+ * [v2.398.2] D8: 문서 현황 대시보드
  * [UI 구성]
  *  ① KPI 카드 4종 (전체/유효/검토중/만료임박)
  *  ② 유형별 분포 — 바 차트 (Canvas)
@@ -6289,10 +6289,17 @@ async settings(){
     if(fresh&&fresh.length>0) DB.users=fresh;
   }
   const isAdmin=Auth._u?.role==='admin';
-  /* [v2.398.1] 공지사항 최신 로드 — DB 영속화 */
+  /* [v2.398.2] 공지사항 최신 로드 — Supabase 영속화
+     [버그수정] RLS 오류/네트워크 오류 시 App.notices(더미) 유지
+     [버그수정] notices 테이블 미생성 시 빈 배열 대신 기존 목록 유지 */
   try{
     var freshNotices=await SB.getNotices();
-    if(Array.isArray(freshNotices)) App.notices=freshNotices;
+    /* 정상 배열이고 length > 0 이거나 DB가 확실히 연결된 경우만 덮어씀
+       → 빈 배열 반환 = 테이블 없음/오류 가능성 → 기존 더미 유지 */
+    if(Array.isArray(freshNotices) && (freshNotices.length > 0 || !window._noticesDBChecked)){
+      App.notices = freshNotices;
+      window._noticesDBChecked = true;  // 한 번이라도 성공하면 빈 배열도 허용
+    }
   }catch(e){ console.warn('[settings] 공지 로드 실패:', e.message); }
   const notices=App.notices;
 
@@ -6383,10 +6390,19 @@ async settings(){
               +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
               +'<td>'+H.e(u.department||'-')+'</td>'
               +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
-              +'<td style="font-size:11px">'+(u.email?'<a href="mailto:'+H.e(u.email)+'" style="color:var(--acc)">'+H.e(u.email)+'</a>':'-')+'</td>'
               +'<td style="white-space:nowrap">'
-              +'<span class="badge" style="'+ROLE_COLOR[u.role||'user']+';font-size:10px;margin-right:3px">'+ROLE_LABEL[u.role||'user']+'</span>'
-              +'<select class="fsel" style="font-size:10px;padding:1px 2px" onchange="Pages._setUserRole('+u.id+',this.dataset.un,this.value)" data-un="'+H.e(u.username)+'">'+roleOpts+'</select>'
+              +(function(){
+                  var safeRole=(['admin','manager','user','viewer'].includes(u.role))?u.role:'user';
+                  var bStyle=ROLE_COLOR[safeRole]||'background:#64748b;color:#fff';
+                  var bLabel=ROLE_LABEL[safeRole]||'사용자';
+                  var rOpts=ROLES.map(function(r){return'<option value="'+r+'"'+(safeRole===r?' selected':'')+'>'+ROLE_LABEL[r]+'</option>';}).join('');
+                  return '<div style="display:flex;align-items:center;gap:4px">'+
+                    '<span class="badge" style="'+bStyle+';font-size:10px;min-width:44px;text-align:center">'+bLabel+'</span>'+
+                    '<select class="fsel" style="font-size:10px;padding:2px 4px;min-width:68px" '+
+                    'onchange="Pages._setUserRole('+u.id+',this.dataset.un,this.value)" '+
+                    'data-un="'+H.e(u.username)+'">'+rOpts+'</select>'+
+                    '</div>';
+              })()
               +'</td>'
               +'<td><span class="badge '+(u.active?'bgrn':'bgry')+'" style="cursor:pointer" onclick="Pages._uStatusPopup('+(u.id)+',this.dataset.nm)" data-nm="'+H.e(u.name||u.username)+'">'+( u.active?'활성':'비활성')+'</span></td>'
               +'<td style="font-size:11px;color:var(--tm)">'+H.e(u.created_at||'-')+'</td>'
@@ -6465,7 +6481,7 @@ async settings(){
           <th style="width:88px;text-align:center">관리</th>
         </tr></thead>
         <tbody>${(()=>{
-          /* [v2.398.1] 최신순 정렬: created_at 없으면 date 기준 */
+          /* [v2.398.2] 최신순 정렬: created_at 없으면 date 기준 */
           const sorted=[...notices].sort((a,b)=>{
             const da=a.created_at||a.date||''; const db=b.created_at||b.date||'';
             return db.localeCompare(da);
@@ -6475,10 +6491,10 @@ async settings(){
             const today=H.today();
             /* 게시중 = show:true + 오늘이 date~expire 범위 내 */
             const active=n.show&&(!n.expire||n.expire>=today)&&(!n.date||n.date<=today);
-            /* [v2.398.1] 게시중 행 음영 */
+            /* [v2.398.2] 게시중 행 음영 */
             const rowBg=active?'background:#f0fdf4;':'';
             const expiredCls=n.expire&&n.expire<today?"color:#ef4444":"";
-            return '<tr style="'+rowBg+'">'  /* [v2.398.1] 게시중 행 음영 */
+            return '<tr style="'+rowBg+'">'  /* [v2.398.2] 게시중 행 음영 */
               +'<td><input type="checkbox" class="notice-chk" value="'+(n.id||i)+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
               +'<td style="font-weight:600;cursor:pointer" onclick="Pages._editNoticeById(n)">'+H.e(n.title)+'</td>'
@@ -6565,7 +6581,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.398.1] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.398.2] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
@@ -6823,7 +6839,25 @@ const Cfg={
         +'<div class="fgroup ff"><label class="fl req">내용</label><textarea class="fc" id="nb" rows="3">'+H.e(n.body)+'</textarea></div>'
         +'<div class="fgroup"><label class="fl req">게시 시작일</label><input class="fc" type="date" id="nd" value="'+n.date+'"></div>'
         +'<div class="fgroup"><label class="fl req">게시 종료일</label><input class="fc" type="date" id="ne" value="'+n.expire+'"></div>'
-        +'<div class="fgroup"><label class="fl">등록자</label><input class="fc" id="na" value="'+H.e(n.author)+'"></div>'
+        +'<div class="fgroup"><label class="fl">등록자</label>'+
+        '<select class="fc" id="na">'+
+          (function(){
+            /* [v2.398.2] 관리자+매니저 권한 사용자만 표시 */
+            var admins=(DB.users||[]).filter(function(u){
+              return u.active!==0&&u.active!==false&&!u.pending&&
+                     (u.role==='admin'||u.role==='manager');
+            });
+            var opts=admins.map(function(u){
+              var nm=H.e(u.name||u.username);
+              var sel=(n.author===nm||n.author===u.username)?' selected':'';
+              return'<option value="'+nm+'"'+sel+'>'+nm+' ('+H.e(u.dept||u.department||'')+'/'+H.e(u.role==='admin'?'관리자':'매니저')+')</option>';
+            }).join('');
+            /* 현재 로그인 사용자가 기본 선택 */
+            if(!opts) opts='<option value="관리자">관리자</option>';
+            return opts;
+          })()+
+        '</select>'+
+       '</div>'
         +'<div class="fgroup"><label class="fl">게시 여부</label><select class="fc" id="ns"><option value="1" '+(n.show?'selected':'')+'>게시</option><option value="0" '+(!n.show?'selected':'')+'>게시중지</option></select></div>'
         +'<div class="fgroup ff"><label class="fl">파일 첨부</label>'
         +'<div style="display:flex;flex-direction:column;gap:6px;width:100%">'
@@ -6883,7 +6917,7 @@ const Cfg={
         /* 기존 파일 유지 */
         obj.file=existFile;
       }
-      /* [v2.398.1] Supabase 영속화 저장
+      /* [v2.398.2] Supabase 영속화 저장
          기존: App.notices.push() → 메모리만, 새로고침/배포 시 초기화
          수정: SB.addNotice/updateNotice → DB 저장 → SB.getNotices로 재로드 */
       var saveRes;
@@ -6903,7 +6937,7 @@ const Cfg={
   },
   noticeToggle(i){App.notices[i].show=!App.notices[i].show;Toast.show('변경되었습니다.','ok');Pages.settings()},
 
-  /* [v2.398.1] id 기반 공지 토글 */
+  /* [v2.398.2] id 기반 공지 토글 */
   async _noticeToggleById(n){
     var newShow=!n.show;
     var r=await SB.updateNotice(n.id,{show:newShow});
@@ -6913,7 +6947,7 @@ const Cfg={
     }
   },
 
-  /* [v2.398.1] id 기반 공지 삭제 */
+  /* [v2.398.2] id 기반 공지 삭제 */
   async _noticeDelById(n){
     Modal.confirm({title:'공지 삭제',msg:'<b>'+H.e(n.title)+'</b> 공지사항을 삭제하시겠습니까?',danger:true,
       onOk:async function(){
@@ -6923,13 +6957,13 @@ const Cfg={
     });
   },
 
-  /* [v2.398.1] id 기반 공지 수정 — _addNotice에 객체 전달 */
+  /* [v2.398.2] id 기반 공지 수정 — _addNotice에 객체 전달 */
   _editNoticeById(n){
     /* n 객체를 전달하여 수정 모달 오픈 */
     var idx=App.notices.findIndex(function(x){return x.id===n.id;});
     Pages._addNotice(idx>=0?idx:null, n);
   },
-  /* [v2.398.1] 공지 삭제 — Supabase 연동 */
+  /* [v2.398.2] 공지 삭제 — Supabase 연동 */
   noticeDel(i){
     var notice=App.notices[i];
     if(!notice){Toast.show('공지를 찾을 수 없습니다.','warn');return;}
