@@ -109,3 +109,5 @@ function setupHotkeys(){
     }
   }
 })();
+/* [v2.398.4] Magic Indicator 초기화 */
+setTimeout(function(){ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 300);

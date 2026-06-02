@@ -1107,6 +1107,8 @@ const TopNav={
     // 상단 버튼 active
     document.querySelectorAll('.tb-mod').forEach(b=>b.classList.remove('on'));
     if(btn) btn.classList.add('on');
+    // [v2.398.4] Magic Indicator 이동
+    TopNav._moveIndicator(btn);
     // 서브탭 렌더링
     this._renderSubs(mod);
     // 사이드바 필터링
@@ -1114,6 +1116,27 @@ const TopNav={
     // 첫 번째 세부메뉴로 이동
     const subs=this._map[mod]||[];
     if(subs.length>0) Nav.go(subs[0].page);
+  },
+
+  /* [v2.398.4] Magic Indicator 위치 계산 + 이동 */
+  _moveIndicator(btn){
+    const ind=document.getElementById('tbIndicator');
+    if(!ind||!btn) return;
+    const container=document.getElementById('tbModules');
+    if(!container) return;
+    const cRect=container.getBoundingClientRect();
+    const bRect=btn.getBoundingClientRect();
+    /* container 기준 상대 좌표 계산 */
+    const left=bRect.left - cRect.left + container.scrollLeft;
+    const width=bRect.width;
+    ind.style.left=left+'px';
+    ind.style.width=width+'px';
+  },
+
+  /* [v2.398.4] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
+  _initIndicator(){
+    const activeBtn=document.querySelector('.tb-mod.on');
+    TopNav._moveIndicator(activeBtn);
   },
   /* 서브탭 렌더링 */
   _renderSubs(mod){
