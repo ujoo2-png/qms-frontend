@@ -325,7 +325,7 @@ const Auth={
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
       Toast.show('로그인되었습니다.','ok');
-      /* [v2.398.5] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
+      /* [v2.398.6] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
       setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 150);
       /* [v2.394] 로그인 시 keepalive 자동 실행 */
       setTimeout(async()=>{
@@ -1109,7 +1109,7 @@ const TopNav={
     // 상단 버튼 active
     document.querySelectorAll('.tb-mod').forEach(b=>b.classList.remove('on'));
     if(btn) btn.classList.add('on');
-    // [v2.398.5] Magic Indicator 이동
+    // [v2.398.6] Magic Indicator 이동
     TopNav._moveIndicator(btn);
     // 서브탭 렌더링
     this._renderSubs(mod);
@@ -1120,7 +1120,8 @@ const TopNav={
     if(subs.length>0) Nav.go(subs[0].page);
   },
 
-  /* [v2.398.5] Magic Indicator 위치 계산 + 이동 */
+  /* [v2.398.6] Magic Indicator 위치 계산 + 이동 */
+  /* [v2.398.6] Magic Indicator pill 이동 — container 기준 left/width만 제어 */
   _moveIndicator(btn){
     const ind=document.getElementById('tbIndicator');
     if(!ind||!btn) return;
@@ -1128,16 +1129,16 @@ const TopNav={
     if(!container) return;
     const cRect=container.getBoundingClientRect();
     const bRect=btn.getBoundingClientRect();
-    /* container 기준 상대 좌표 계산 */
-    const left=bRect.left - cRect.left + container.scrollLeft;
+    /* container padding(4px) 오프셋 포함 */
+    const left=(bRect.left - cRect.left) + container.scrollLeft;
     const width=bRect.width;
     ind.style.left=left+'px';
     ind.style.width=width+'px';
   },
 
-  /* [v2.398.5] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
+  /* [v2.398.6] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
   _initIndicator(){
-    /* [v2.398.5] getBoundingClientRect가 0이면 재시도 (DOM 렌더 대기) */
+    /* [v2.398.6] getBoundingClientRect가 0이면 재시도 (DOM 렌더 대기) */
     const _try=(attempt)=>{
       const activeBtn=document.querySelector('.tb-mod.on');
       if(!activeBtn) return;
