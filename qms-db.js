@@ -1460,12 +1460,12 @@ SB.sendReviewAlerts=async function(days){
 };
 
 /* ════════════════════════════════════════════════════════════
-   공지사항 SB 함수 [v2.399.3 신규]
+   공지사항 SB 함수 [v2.399.4 신규]
    테이블: notices (id, title, body, author, date, expire, show, file_url, file_name, created_at)
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.399.3] 공지사항 전체 조회
+ * [v2.399.4] 공지사항 전체 조회
  * @returns {Array} created_at 내림차순 (최신순)
  *
  * [문제 배경] 기존 App.notices는 qms-core.js 하드코딩 배열
@@ -1485,7 +1485,7 @@ SB.getNotices = async function() {
 };
 
 /**
- * [v2.399.3] 공지사항 등록
+ * [v2.399.4] 공지사항 등록
  * @param {object} row - { title, body, author, date, expire, show, file_url, file_name }
  */
 SB.addNotice = async function(row) {
@@ -1513,7 +1513,7 @@ SB.addNotice = async function(row) {
 };
 
 /**
- * [v2.399.3] 공지사항 수정
+ * [v2.399.4] 공지사항 수정
  * @param {number} id  - notices.id
  * @param {object} patch - 변경할 필드
  */
@@ -1531,7 +1531,7 @@ SB.updateNotice = async function(id, patch) {
 };
 
 /**
- * [v2.399.3] 공지사항 삭제
+ * [v2.399.4] 공지사항 삭제
  * @param {number} id - notices.id
  */
 SB.deleteNotice = async function(id) {
@@ -1547,12 +1547,12 @@ SB.deleteNotice = async function(id) {
 };
 
 /* ════════════════════════════════════════════════════════════
-   Q&A SB 함수 [v2.399.3 신규]
+   Q&A SB 함수 [v2.399.4 신규]
    테이블: qna + qna_replies
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.399.3] Q&A 목록 조회
+ * [v2.399.4] Q&A 목록 조회
  * @param {object} filter - { category, menu_ref, status }
  * @returns {Array} created_at 내림차순, 고정글 상단
  */
@@ -1574,7 +1574,7 @@ SB.getQna = async function(filter) {
 };
 
 /**
- * [v2.399.3] Q&A 단건 조회 (답변 포함)
+ * [v2.399.4] Q&A 단건 조회 (답변 포함)
  * @param {number} id
  */
 SB.getQnaById = async function(id) {
@@ -1591,7 +1591,7 @@ SB.getQnaById = async function(id) {
   } catch(e) { return null; }
 };
 
-/** [v2.399.3] Q&A 등록 */
+/** [v2.399.4] Q&A 등록 */
 SB.addQna = async function(row) {
   if (!_sb) return { ok: false };
   try {
@@ -1603,13 +1603,15 @@ SB.addQna = async function(row) {
       author:    row.author    || '관리자',
       status:    row.status    || 'open',
       is_pinned: row.is_pinned || false,
+      file_url:  row.file_url  || null,
+      file_name: row.file_name || null,
     });
     if (res.error) { Toast.show('Q&A 저장 실패: ' + res.error.message, 'err'); return { ok: false }; }
     return { ok: true };
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.399.3] Q&A 수정 */
+/** [v2.399.4] Q&A 수정 */
 SB.updateQna = async function(id, patch) {
   if (!_sb) return { ok: false };
   try {
@@ -1620,7 +1622,7 @@ SB.updateQna = async function(id, patch) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.399.3] Q&A 삭제 */
+/** [v2.399.4] Q&A 삭제 */
 SB.deleteQna = async function(id) {
   if (!_sb) return { ok: false };
   try {
@@ -1630,7 +1632,7 @@ SB.deleteQna = async function(id) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.399.3] 답변 등록 */
+/** [v2.399.4] 답변 등록 */
 SB.addQnaReply = async function(qna_id, body, author, is_answer) {
   if (!_sb) return { ok: false };
   try {
@@ -1647,7 +1649,7 @@ SB.addQnaReply = async function(qna_id, body, author, is_answer) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.399.3] 답변 삭제 */
+/** [v2.399.4] 답변 삭제 */
 SB.deleteQnaReply = async function(id) {
   if (!_sb) return { ok: false };
   try {

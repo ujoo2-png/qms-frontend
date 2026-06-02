@@ -4996,6 +4996,319 @@ _dashRefresh:async function(){
   await Pages.doc_dashboard();
 },
 /* ══════════════════════════════════════════════════
+   Q&A 페이지 [v2.399.4]
+   사이드바 메인 4번째 메뉴 — 매뉴얼/Q&A/팁 통합
+   ══════════════════════════════════════════════════ */
+async qna(){
+  var w=document.getElementById('pw');
+  w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+
+  var rows=[];
+  try{ rows=await SB.getQna(); }catch(e){ Toast.show('Q&A 로드 실패: '+e.message,'err'); }
+
+  var cnt={all:rows.length,manual:0,qna:0,tip:0,open:0,resolved:0};
+  rows.forEach(function(r){
+    if(cnt[r.category]!==undefined) cnt[r.category]++;
+    if(r.status==='open'||r.status==='in_progress') cnt.open++;
+    if(r.status==='resolved') cnt.resolved++;
+  });
+
+  w.innerHTML=
+    /* ① stat-dash */
+    '<div class="stat-dash">'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._qnaFilter(\'all\')" title="전체">'+
+        '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>'+
+        '<div><div class="sd-val">'+cnt.all+'</div><div class="sd-lbl">전체</div></div></div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._qnaFilter(\'manual\')" title="매뉴얼">'+
+        '<div class="sd-icon" style="background:#dbeafe;color:#1d4ed8">📖</div>'+
+        '<div><div class="sd-val">'+cnt.manual+'</div><div class="sd-lbl">매뉴얼</div></div></div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._qnaFilter(\'qna\')" title="Q&A">'+
+        '<div class="sd-icon" style="background:#fef3c7;color:#92400e">❓</div>'+
+        '<div><div class="sd-val">'+cnt.qna+'</div><div class="sd-lbl">Q&A</div></div></div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._qnaFilter(\'tip\')" title="팁">'+
+        '<div class="sd-icon" style="background:#d1fae5;color:#065f46">💡</div>'+
+        '<div><div class="sd-val">'+cnt.tip+'</div><div class="sd-lbl">팁</div></div></div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._qnaStatusFilter(\'open\')">'+
+        '<div class="sd-icon" style="background:#fee2e2;color:#dc2626">🔴</div>'+
+        '<div><div class="sd-val">'+cnt.open+'</div><div class="sd-lbl">미해결</div></div></div>'+
+      '<div class="sd-card" style="cursor:pointer" onclick="Pages._qnaStatusFilter(\'resolved\')">'+
+        '<div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div>'+
+        '<div><div class="sd-val">'+cnt.resolved+'</div><div class="sd-lbl">해결됨</div></div></div>'+
+    '</div>'+
+
+    /* ② 헤더 */
+    '<div class="ph" style="margin-top:14px"><div>'+
+      '<div class="ptit">❓ Q&A</div>'+
+      '<div style="font-size:12px;color:var(--muted)">매뉴얼 · 질문/오류 접수 · 팁 & 기타</div>'+
+    '</div><div class="pac">'+
+      '<button class="btn bpri btn-f2" onclick="Pages._qnaForm()">+ 등록 <span class="kbd">F2</span></button>'+
+    '</div></div>'+
+
+    /* ③ 툴바 */
+    '<div class="tbar">'+
+      '<div class="sw2"><input type="text" id="qnaKw" placeholder="제목, 내용 검색..." oninput="Pages._qnaKwFilter(this.value)"></div>'+
+      '<select class="fsel" id="qnaCatF" onchange="Pages._qnaCatFilter(this.value)">'+
+        '<option value="">전체 분류</option>'+
+        '<option value="manual">📖 매뉴얼</option>'+
+        '<option value="qna">❓ Q&A</option>'+
+        '<option value="tip">💡 팁</option>'+
+      '</select>'+
+      '<select class="fsel" id="qnaStF" onchange="Pages._qnaStFilter(this.value)">'+
+        '<option value="">전체 상태</option>'+
+        '<option value="open">🔴 접수</option>'+
+        '<option value="in_progress">🔵 처리중</option>'+
+        '<option value="resolved">✅ 해결됨</option>'+
+        '<option value="closed">⬜ 닫힘</option>'+
+      '</select>'+
+    '</div>'+
+    '<div id="qnaTbl"></div>';
+
+  window._qnaRows=rows;
+  window._qnaCat=''; window._qnaSt=''; window._qnaKw='';
+  Pages._qnaRender(rows);
+},
+
+/* 필터 핸들러 */
+_qnaFilter:function(cat){
+  window._qnaCat=cat==='all'?'':cat; window._qnaSt=''; window._qnaKw='';
+  var sel=document.getElementById('qnaCatF');if(sel)sel.value=cat==='all'?'':cat;
+  var sel2=document.getElementById('qnaStF');if(sel2)sel2.value='';
+  Pages._qnaApply();
+},
+_qnaStatusFilter:function(st){
+  window._qnaSt=st; window._qnaCat=''; window._qnaKw='';
+  var sel=document.getElementById('qnaStF');if(sel)sel.value=st;
+  var sel2=document.getElementById('qnaCatF');if(sel2)sel2.value='';
+  Pages._qnaApply();
+},
+_qnaKwFilter:function(v){window._qnaKw=v;Pages._qnaApply();},
+_qnaCatFilter:function(v){window._qnaCat=v;Pages._qnaApply();},
+_qnaStFilter:function(v){window._qnaSt=v;Pages._qnaApply();},
+_qnaApply:function(){
+  var rows=window._qnaRows||[];
+  var cat=window._qnaCat||'';var st=window._qnaSt||'';var kw=(window._qnaKw||'').toLowerCase();
+  if(cat) rows=rows.filter(function(r){return r.category===cat;});
+  if(st){
+    if(st==='open') rows=rows.filter(function(r){return r.status==='open'||r.status==='in_progress';});
+    else rows=rows.filter(function(r){return r.status===st;});
+  }
+  if(kw) rows=rows.filter(function(r){
+    return (r.title||'').toLowerCase().includes(kw)||(r.body||'').toLowerCase().includes(kw);
+  });
+  Pages._qnaRender(rows);
+},
+
+/* 목록 렌더 — Tbl.render */
+_qnaRender:function(rows){
+  var catL={manual:'📖 매뉴얼',qna:'❓ Q&A',tip:'💡 팁'};
+  var catC={manual:'bblu',qna:'bamb',tip:'bgrn'};
+  var stL={open:'접수',in_progress:'처리중',resolved:'해결됨',closed:'닫힘'};
+  var stC={open:'bamb',in_progress:'bblu',resolved:'bgrn',closed:'bgry'};
+  Tbl.render({
+    el:'#qnaTbl',
+    cols:[
+      {key:'is_pinned',  label:'',       w:'28px', align:'center',
+        render:function(v){return v?'<span style="color:#f59e0b">📌</span>':'';}},
+      {key:'category',   label:'분류',   w:'80px', align:'center',
+        render:function(v){return'<span class="badge '+(catC[v]||'bgry')+'" style="font-size:10px">'+(catL[v]||v)+'</span>';}},
+      {key:'title',      label:'제목',
+        render:function(v,row){
+          var fileIcon=(row.file_url?'📎 ':'');
+          return'<span style="font-weight:600;cursor:pointer" onclick="Pages._qnaDetail('+row.id+')">'+fileIcon+H.e(v||'-')+'</span>';}},
+      {key:'status',     label:'상태',   w:'72px', align:'center',
+        render:function(v){return'<span class="badge '+(stC[v]||'bgry')+'" style="font-size:10px">'+(stL[v]||v)+'</span>';}},
+      {key:'author',     label:'작성자', w:'70px', align:'center'},
+      {key:'view_count', label:'조회',   w:'48px', align:'center',
+        render:function(v){return'<span style="font-size:11px;color:var(--muted)">'+((v||0))+'</span>';}},
+      {key:'created_at', label:'등록일', w:'90px',
+        render:function(v){return v?'<span style="font-size:11px">'+new Date(v).toLocaleDateString('ko-KR')+'</span>':'-';}},
+    ],
+    data:rows,
+    onDel:async function(ids){
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({title:'🗑️ Q&A 삭제',
+        msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div><div>선택한 <b style="color:#dc2626">'+ids.length+'건</b>을 삭제합니다.</div></div>',
+        danger:true,onOk:async function(){
+          for(var i=0;i<ids.length;i++) await SB.deleteQna(ids[i]);
+          window._qnaRows=(window._qnaRows||[]).filter(function(x){return!ids.includes(x.id);});
+          Pages._qnaRender(window._qnaRows);
+          Toast.show(ids.length+'건 삭제되었습니다.','ok');
+        }
+      });
+    },
+    onRow:function(row){if(row)Pages._qnaDetail(row.id);},
+  });
+},
+
+/* 상세 보기 */
+_qnaDetail:async function(id){
+  var r=await SB.getQnaById(id);
+  if(!r){Toast.show('항목을 불러올 수 없습니다.','err');return;}
+  var catL={manual:'📖 매뉴얼',qna:'❓ Q&A',tip:'💡 팁'};
+  var stL={open:'접수됨',in_progress:'처리중',resolved:'해결됨',closed:'닫힘'};
+  var stC={open:'bamb',in_progress:'bblu',resolved:'bgrn',closed:'bgry'};
+  var isAdmin=Auth._u&&(Auth._u.role==='admin'||Auth._u.role==='manager');
+  var me=Auth._u?(Auth._u.name||Auth._u.username):'';
+  var replies=r.replies||[];
+
+  Modal.open({title:'Q&A 상세',size:'xlg',body:
+    '<div style="padding:4px 0">'+
+      /* 헤더 */
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+
+        '<span class="badge '+(({manual:'bblu',qna:'bamb',tip:'bgrn'})[r.category]||'bgry')+'">'+(catL[r.category]||r.category)+'</span>'+
+        '<span class="badge '+(stC[r.status]||'bgry')+'">'+(stL[r.status]||r.status)+'</span>'+
+        (r.is_pinned?'<span style="color:#f59e0b;font-size:12px">📌 고정</span>':'')+
+        (isAdmin?'<select class="fsel" style="font-size:11px;padding:2px 6px;margin-left:auto" onchange="Pages._qnaChgStatus('+r.id+',this.value)">'+
+          '<option value="open"'+(r.status==='open'?' selected':'')+'>접수</option>'+
+          '<option value="in_progress"'+(r.status==='in_progress'?' selected':'')+'>처리중</option>'+
+          '<option value="resolved"'+(r.status==='resolved'?' selected':'')+'>해결됨</option>'+
+          '<option value="closed"'+(r.status==='closed'?' selected':'')+'>닫힘</option>'+
+        '</select>':'')+
+      '</div>'+
+      '<div style="font-size:16px;font-weight:700;margin-bottom:6px">'+H.e(r.title)+'</div>'+
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">'+
+        '<span>✍️ '+H.e(r.author)+'</span>'+
+        '<span>'+(r.created_at?new Date(r.created_at).toLocaleDateString('ko-KR'):'-')+'</span>'+
+        '<span>👁️ '+(r.view_count||0)+' 조회</span>'+
+      '</div>'+
+      /* 본문 */
+      '<div style="font-size:13px;line-height:1.7;white-space:pre-wrap;padding:14px;background:var(--bg2);border-radius:var(--r);margin-bottom:14px">'+H.e(r.body||'')+'</div>'+
+      /* 첨부파일 */
+      (r.file_url?'<div style="margin-bottom:14px"><a href="'+H.e(r.file_url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg2);border:1px solid var(--brd);border-radius:var(--r);font-size:12px;color:var(--acc);text-decoration:none">📎 '+H.e(r.file_name||'첨부파일')+' <span style="font-size:10px;color:var(--muted)">다운로드</span></a></div>':'')+
+      /* 답변 목록 */
+      '<div style="font-size:13px;font-weight:600;margin-bottom:10px">💬 답변 '+replies.length+'건</div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'+
+      replies.map(function(rep){
+        return'<div style="background:'+(rep.is_answer?'#f0fdf4':'var(--bg2)')+';border:1px solid '+(rep.is_answer?'#86efac':'var(--brd)')+';border-radius:var(--r);padding:10px 14px">'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">'+
+            (rep.is_answer?'<span style="font-size:10px;font-weight:700;background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:3px">✅ 공식 답변</span>':'')+
+            '<span style="font-size:12px;font-weight:600">'+H.e(rep.author)+'</span>'+
+            '<span style="font-size:11px;color:var(--muted)">'+(rep.created_at?new Date(rep.created_at).toLocaleDateString('ko-KR'):'')+'</span>'+
+            (isAdmin?'<button class="btn bxs berr" style="margin-left:auto" onclick="Pages._qnaDelReply('+rep.id+','+r.id+')">삭제</button>':'')+
+          '</div>'+
+          '<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">'+H.e(rep.body)+'</div>'+
+        '</div>';
+      }).join('')+
+      (!replies.length?'<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">아직 답변이 없습니다.</div>':'')+
+      '</div>'+
+      /* 답변 작성 */
+      '<div style="border-top:1px solid var(--brd);padding-top:14px">'+
+        '<div style="font-size:12px;font-weight:600;margin-bottom:6px">답변 작성</div>'+
+        '<textarea id="qnaReplyTxt" rows="3" class="fc" placeholder="답변 내용 입력..."></textarea>'+
+        '<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px">'+
+          (isAdmin?'<button class="btn bgrn bsm" onclick="Pages._qnaReply('+r.id+',true)">✅ 공식 답변</button>':'')+
+          '<button class="btn bpri bsm" onclick="Pages._qnaReply('+r.id+',false)">📝 답변 등록</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+      (isAdmin?'<button class="btn bout" onclick="Modal.close();Pages._qnaForm('+r.id+')">✏️ 수정</button>'+
+               '<button class="btn bred bsm" onclick="Pages._qnaDel('+r.id+')">🗑️ 삭제</button>':''),
+  });
+},
+
+/* 답변 등록 */
+_qnaReply:async function(qnaId,isAnswer){
+  var txt=document.getElementById('qnaReplyTxt')?.value?.trim();
+  if(!txt){Toast.show('답변 내용을 입력하세요.','warn');return;}
+  var me=Auth._u?(Auth._u.name||Auth._u.username):'관리자';
+  var r=await SB.addQnaReply(qnaId,txt,me,isAnswer);
+  if(r.ok){Toast.show(isAnswer?'✅ 공식 답변 등록':'답변 등록','ok');Modal.close();Pages._qnaDetail(qnaId);Pages.qna();}
+},
+_qnaDelReply:async function(replyId,qnaId){
+  Modal.confirm({title:'답변 삭제',msg:'이 답변을 삭제하시겠습니까?',danger:true,
+    onOk:async function(){var r=await SB.deleteQnaReply(replyId);if(r.ok){Toast.show('삭제됨','ok');Modal.close();Pages._qnaDetail(qnaId);}}
+  });
+},
+_qnaChgStatus:async function(id,st){
+  var r=await SB.updateQna(id,{status:st});
+  if(r.ok){Toast.show('상태 변경됨','ok');window._qnaRows=await SB.getQna();Pages._qnaApply();}
+},
+_qnaDel:async function(id){
+  Modal.confirm({title:'Q&A 삭제',msg:'삭제하시겠습니까?',danger:true,
+    onOk:async function(){var r=await SB.deleteQna(id);if(r.ok){Toast.show('삭제됨','ok');Modal.close();window._qnaRows=await SB.getQna();Pages._qnaApply();}}
+  });
+},
+
+/* 등록/수정 폼 — 파일 첨부 포함 */
+_qnaForm:async function(editId){
+  var edit=null;
+  if(editId){try{edit=await SB.getQnaById(editId);}catch(e){}}
+  var me=Auth._u?(Auth._u.name||Auth._u.username):'관리자';
+  var menuOpts=[{v:'',l:'— 메뉴 선택 안함 —'},{v:'docs',l:'문서관리'},{v:'items',l:'품목 등록'},
+    {v:'vendors',l:'거래처'},{v:'insp_in',l:'수입검사'},{v:'nc',l:'부적합'},{v:'car',l:'시정조치'},
+    {v:'equip',l:'계측기'},{v:'quality_dash',l:'품질현황'}];
+  var isAdmin=Auth._u&&(Auth._u.role==='admin'||Auth._u.role==='manager');
+
+  Modal.open({title:edit?'Q&A 수정':'Q&A 등록',size:'mlg',body:
+    '<div class="fg2">'+
+    '<div class="fgroup"><label class="fl req">분류</label>'+
+      '<select class="fc" id="qfCat">'+
+        '<option value="qna"'+((!edit||edit.category==='qna')?' selected':'')+'>❓ Q&A / 오류 접수</option>'+
+        '<option value="tip"'+(edit&&edit.category==='tip'?' selected':'')+'>💡 팁 & 기타</option>'+
+        '<option value="manual"'+(edit&&edit.category==='manual'?' selected':'')+'>📖 매뉴얼</option>'+
+      '</select></div>'+
+    '<div class="fgroup"><label class="fl">관련 메뉴</label>'+
+      '<select class="fc" id="qfMenu">'+
+        menuOpts.map(function(o){return'<option value="'+o.v+'"'+(edit&&edit.menu_ref===o.v?' selected':'')+'>'+o.l+'</option>';}).join('')+
+      '</select></div>'+
+    '<div class="fgroup ff"><label class="fl req">제목</label>'+
+      '<input class="fc" id="qfTitle" placeholder="제목을 입력하세요" value="'+H.e(edit?edit.title:'')+'"></div>'+
+    '<div class="fgroup ff"><label class="fl req">내용</label>'+
+      '<textarea class="fc" id="qfBody" rows="5" placeholder="내용을 입력하세요">'+H.e(edit?edit.body:'')+'</textarea></div>'+
+    '<div class="fgroup ff"><label class="fl">첨부 파일</label>'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        '<label style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1.5px dashed var(--brd);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--muted)">'+
+          '📁 파일 선택'+
+          '<input type="file" id="qfFile" style="display:none" onchange="Pages._qnaFilePreview(this)">'+
+        '</label>'+
+        '<span id="qfFileName" style="font-size:11px;color:var(--muted)">'+(edit&&edit.file_name?'📎 '+H.e(edit.file_name):'선택된 파일 없음')+'</span>'+
+      '</div>'+
+    '</div>'+
+    (isAdmin?'<div class="fgroup"><label class="fl">고정글</label>'+
+      '<select class="fc" id="qfPin"><option value="0">일반</option>'+
+      '<option value="1"'+(edit&&edit.is_pinned?' selected':'')+'>📌 고정</option></select></div>':'')+
+    '</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+         '<button class="btn bpri" onclick="Pages._qnaSave('+(editId||'null')+')">저장</button>',
+  });
+},
+_qnaFilePreview:function(inp){
+  var lbl=document.getElementById('qfFileName');
+  if(inp.files&&inp.files[0]&&lbl) lbl.textContent='📎 '+inp.files[0].name;
+},
+_qnaSave:async function(editId){
+  var title=document.getElementById('qfTitle')?.value?.trim();
+  var body=document.getElementById('qfBody')?.value?.trim();
+  if(!title){Toast.show('제목을 입력하세요.','warn');return;}
+  if(!body){Toast.show('내용을 입력하세요.','warn');return;}
+  var me=Auth._u?(Auth._u.name||Auth._u.username):'관리자';
+  var isAdmin=Auth._u&&(Auth._u.role==='admin'||Auth._u.role==='manager');
+  var row={
+    category:document.getElementById('qfCat')?.value||'qna',
+    menu_ref:document.getElementById('qfMenu')?.value||null,
+    title:title,body:body,author:me,
+    is_pinned:document.getElementById('qfPin')?.value==='1'||false,
+    file_url:null,file_name:null,
+  };
+  /* 파일 업로드 */
+  var fileInput=document.getElementById('qfFile');
+  if(fileInput&&fileInput.files&&fileInput.files[0]){
+    try{
+      var uploaded=await SB.uploadFile('qna',fileInput.files[0]);
+      if(uploaded&&uploaded.url){row.file_url=uploaded.url;row.file_name=fileInput.files[0].name;}
+    }catch(e){console.warn('파일 업로드 실패:',e.message);}
+  }
+  var r;
+  if(editId){r=await SB.updateQna(editId,row);}
+  else{row.status='open';r=await SB.addQna(row);}
+  if(r.ok){
+    Toast.show(editId?'수정되었습니다.':'등록되었습니다.','ok');
+    Modal.close();
+    window._qnaRows=await SB.getQna();Pages._qnaApply();
+  }
+},
+/* ══════════════════════════════════════════════════
    기록 관리 [v2.396 — doc_type='record' 조회]
    Phase 1 포함 기능: doc_master record 유형 문서 관리
    ══════════════════════════════════════════════════ */
