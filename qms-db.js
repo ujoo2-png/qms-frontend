@@ -1458,3 +1458,90 @@ SB.sendReviewAlerts=async function(days){
   }
   return{ok:true,sent:sent};
 };
+
+/* ════════════════════════════════════════════════════════════
+   공지사항 SB 함수 [v2.398.1 신규]
+   테이블: notices (id, title, body, author, date, expire, show, file_url, file_name, created_at)
+   ════════════════════════════════════════════════════════════ */
+
+/**
+ * [v2.398.1] 공지사항 전체 조회
+ * @returns {Array} created_at 내림차순 (최신순)
+ *
+ * [문제 배경] 기존 App.notices는 qms-core.js 하드코딩 배열
+ *            → push()로 메모리에만 저장 → 새로고침/배포 시 초기화
+ * [수정] Supabase notices 테이블에 영속화
+ *        로컬 폴백: _sb 없으면 App.notices 사용 (더미 환경 호환)
+ */
+SB.getNotices = async function() {
+  if (!_sb) return App.notices || [];
+  try {
+    var res = await _sb.from('notices')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (res.error) { console.warn('[SB] getNotices:', res.error.message); return App.notices || []; }
+    return res.data || [];
+  } catch(e) { console.warn('[SB] getNotices:', e.message); return App.notices || []; }
+};
+
+/**
+ * [v2.398.1] 공지사항 등록
+ * @param {object} row - { title, body, author, date, expire, show, file_url, file_name }
+ */
+SB.addNotice = async function(row) {
+  if (!_sb) {
+    row.id = Date.now();
+    row.created_at = new Date().toISOString();
+    App.notices.unshift(row);  // 맨 앞에 삽입 (최신순)
+    return { ok: true };
+  }
+  try {
+    var allowed = {
+      title:     row.title || '',
+      body:      row.body  || '',
+      author:    row.author || '관리자',
+      date:      row.date  || null,
+      expire:    row.expire || null,
+      show:      row.show  !== undefined ? row.show : true,
+      file_url:  row.file_url  || null,
+      file_name: row.file_name || null,
+    };
+    var res = await _sb.from('notices').insert(allowed);
+    if (res.error) { Toast.show('공지 저장 실패: ' + res.error.message, 'err'); return { ok: false }; }
+    return { ok: true };
+  } catch(e) { Toast.show('공지 저장 실패: ' + e.message, 'err'); return { ok: false }; }
+};
+
+/**
+ * [v2.398.1] 공지사항 수정
+ * @param {number} id  - notices.id
+ * @param {object} patch - 변경할 필드
+ */
+SB.updateNotice = async function(id, patch) {
+  if (!_sb) {
+    var idx = (App.notices || []).findIndex(function(n) { return n.id === id; });
+    if (idx >= 0) Object.assign(App.notices[idx], patch);
+    return { ok: true };
+  }
+  try {
+    var res = await _sb.from('notices').update(patch).eq('id', id);
+    if (res.error) { Toast.show('공지 수정 실패: ' + res.error.message, 'err'); return { ok: false }; }
+    return { ok: true };
+  } catch(e) { return { ok: false }; }
+};
+
+/**
+ * [v2.398.1] 공지사항 삭제
+ * @param {number} id - notices.id
+ */
+SB.deleteNotice = async function(id) {
+  if (!_sb) {
+    App.notices = (App.notices || []).filter(function(n) { return n.id !== id; });
+    return { ok: true };
+  }
+  try {
+    var res = await _sb.from('notices').delete().eq('id', id);
+    if (res.error) { Toast.show('공지 삭제 실패: ' + res.error.message, 'err'); return { ok: false }; }
+    return { ok: true };
+  } catch(e) { return { ok: false }; }
+};
