@@ -640,9 +640,20 @@ textarea.fc{resize:vertical;min-height:68px}
    Q&A 팝업 [v2.399]
    ════════════════════════════════════════════════════ */
 
+/* Q&A 버튼 — topbar 전용 스타일 */
+.qna-topbar-btn{
+  padding:4px 12px;font-size:11px;font-weight:700;
+  background:rgba(255,255,255,.18);color:#fff;
+  border:1px solid rgba(255,255,255,.3);
+  border-radius:999px;cursor:pointer;white-space:nowrap;
+  transition:all .15s;letter-spacing:.02em;
+}
+.qna-topbar-btn:hover{background:rgba(255,255,255,.28);}
+.qna-topbar-btn.active{background:rgba(255,255,255,.35);}
+
 /* Q&A 팝업 컨테이너 */
 .qna-pop{
-  position:fixed;top:58px;right:54px;
+  position:fixed;top:58px;right:16px;
   width:360px;max-height:calc(100vh - 80px);
   background:var(--sur);border:1px solid var(--bd);
   border-radius:var(--rl);box-shadow:var(--shl);

@@ -325,7 +325,7 @@ const Auth={
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
       Toast.show('로그인되었습니다.','ok');
-      /* [v2.399] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
+      /* [v2.399.2] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
       setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 150);
       /* [v2.394] 로그인 시 keepalive 자동 실행 */
       setTimeout(async()=>{
@@ -1109,7 +1109,7 @@ const TopNav={
     // 상단 버튼 active
     document.querySelectorAll('.tb-mod').forEach(b=>b.classList.remove('on'));
     if(btn) btn.classList.add('on');
-    // [v2.399] Magic Indicator 이동
+    // [v2.399.2] Magic Indicator 이동
     TopNav._moveIndicator(btn);
     // 서브탭 렌더링
     this._renderSubs(mod);
@@ -1120,8 +1120,8 @@ const TopNav={
     if(subs.length>0) Nav.go(subs[0].page);
   },
 
-  /* [v2.399] Magic Indicator 위치 계산 + 이동 */
-  /* [v2.399] Magic Indicator pill 이동 — container 기준 left/width만 제어 */
+  /* [v2.399.2] Magic Indicator 위치 계산 + 이동 */
+  /* [v2.399.2] Magic Indicator pill 이동 — container 기준 left/width만 제어 */
   _moveIndicator(btn){
     const ind=document.getElementById('tbIndicator');
     if(!ind||!btn) return;
@@ -1136,9 +1136,9 @@ const TopNav={
     ind.style.width=width+'px';
   },
 
-  /* [v2.399] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
+  /* [v2.399.2] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
   _initIndicator(){
-    /* [v2.399] getBoundingClientRect가 0이면 재시도 (DOM 렌더 대기) */
+    /* [v2.399.2] getBoundingClientRect가 0이면 재시도 (DOM 렌더 대기) */
     const _try=(attempt)=>{
       const activeBtn=document.querySelector('.tb-mod.on');
       if(!activeBtn) return;
@@ -1284,7 +1284,7 @@ const Nav={
 
 /* ══ 페이지 ══ */
 /* ════════════════════════════════════════════════════════════
-   QnA — Q&A 팝업 컨트롤러 [v2.399]
+   QnA — Q&A 팝업 컨트롤러 [v2.399.2]
    위치: topbar tb-right 날짜 오른쪽 ❓ 버튼
    기능: 매뉴얼/Q&A/팁 3탭 + 등록/답변/상태변경
    ════════════════════════════════════════════════════════════ */
@@ -1307,12 +1307,9 @@ const QnA = {
       this._kw  = '';
       const searchEl = document.getElementById('qnaSearch');
       if (searchEl) searchEl.value = '';
-      /* 관리자/매니저만 등록 버튼 표시 */
+      /* [v2.399.2] 전체 사용자 등록 가능 */
       const addBtn = document.getElementById('qnaAddBtn');
-      if (addBtn) {
-        const role = Auth._u?.role;
-        addBtn.style.display = (role === 'admin' || role === 'manager') ? '' : 'none';
-      }
+      if (addBtn) addBtn.style.display = '';
       this.load();
     }
   },
@@ -1542,7 +1539,7 @@ const QnA = {
           <select class="fc" id="qfCat">
             <option value="qna"    ${(!edit||edit.category==='qna')   ?'selected':''}>❓ Q&A / 오류 접수</option>
             <option value="tip"    ${edit?.category==='tip'   ?'selected':''}>💡 팁 & 기타</option>
-            ${isAdmin ? `<option value="manual" ${edit?.category==='manual'?'selected':''}>📖 매뉴얼</option>` : ''}
+            <option value="manual" ${edit?.category==='manual'?'selected':''}>📖 매뉴얼</option>
           </select>
         </div>
         <div class="fgroup"><label class="fl">관련 메뉴</label>
@@ -1556,12 +1553,12 @@ const QnA = {
         <div class="fgroup ff"><label class="fl req">내용</label>
           <textarea class="fc" id="qfBody" rows="5" placeholder="내용을 입력하세요">${H.e(edit?.body||'')}</textarea>
         </div>
-        ${isAdmin ? `<div class="fgroup"><label class="fl">고정글</label>
+        <div class="fgroup"><label class="fl">고정글</label>
           <select class="fc" id="qfPin">
             <option value="0">일반</option>
-            <option value="1"${edit?.is_pinned?' selected':''}>📌 고정</option>
+            ${isAdmin ? `<option value="1"${edit?.is_pinned?' selected':''}>📌 고정</option>` : ''}
           </select>
-        </div>` : ''}
+        </div>
       </div>`,
       foot: `<button class="btn bout" onclick="Modal.close()">취소</button>
              <button class="btn bpri" onclick="QnA.saveForm(${editId||'null'})">저장</button>`,
@@ -1599,3 +1596,5 @@ const QnA = {
     }
   },
 };
+/* [v2.399.2] QnA 전역 노출 */
+window.QnA = QnA;
