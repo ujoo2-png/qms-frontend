@@ -5151,7 +5151,7 @@ _qnaDetail:async function(id){
   var me=Auth._u?(Auth._u.name||Auth._u.username):'';
   var replies=r.replies||[];
 
-  Modal.open({title:'Q&A 상세',size:'xlg',body:
+  Modal.open({title:'Q&A 상세',size:'mlg',body:
     '<div style="padding:4px 0">'+
       /* 헤더 */
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+
