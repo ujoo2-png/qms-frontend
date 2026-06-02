@@ -1460,12 +1460,12 @@ SB.sendReviewAlerts=async function(days){
 };
 
 /* ════════════════════════════════════════════════════════════
-   공지사항 SB 함수 [v2.398.6 신규]
+   공지사항 SB 함수 [v2.399 신규]
    테이블: notices (id, title, body, author, date, expire, show, file_url, file_name, created_at)
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.398.6] 공지사항 전체 조회
+ * [v2.399] 공지사항 전체 조회
  * @returns {Array} created_at 내림차순 (최신순)
  *
  * [문제 배경] 기존 App.notices는 qms-core.js 하드코딩 배열
@@ -1485,7 +1485,7 @@ SB.getNotices = async function() {
 };
 
 /**
- * [v2.398.6] 공지사항 등록
+ * [v2.399] 공지사항 등록
  * @param {object} row - { title, body, author, date, expire, show, file_url, file_name }
  */
 SB.addNotice = async function(row) {
@@ -1513,7 +1513,7 @@ SB.addNotice = async function(row) {
 };
 
 /**
- * [v2.398.6] 공지사항 수정
+ * [v2.399] 공지사항 수정
  * @param {number} id  - notices.id
  * @param {object} patch - 변경할 필드
  */
@@ -1531,7 +1531,7 @@ SB.updateNotice = async function(id, patch) {
 };
 
 /**
- * [v2.398.6] 공지사항 삭제
+ * [v2.399] 공지사항 삭제
  * @param {number} id - notices.id
  */
 SB.deleteNotice = async function(id) {
@@ -1542,6 +1542,117 @@ SB.deleteNotice = async function(id) {
   try {
     var res = await _sb.from('notices').delete().eq('id', id);
     if (res.error) { Toast.show('공지 삭제 실패: ' + res.error.message, 'err'); return { ok: false }; }
+    return { ok: true };
+  } catch(e) { return { ok: false }; }
+};
+
+/* ════════════════════════════════════════════════════════════
+   Q&A SB 함수 [v2.399 신규]
+   테이블: qna + qna_replies
+   ════════════════════════════════════════════════════════════ */
+
+/**
+ * [v2.399] Q&A 목록 조회
+ * @param {object} filter - { category, menu_ref, status }
+ * @returns {Array} created_at 내림차순, 고정글 상단
+ */
+SB.getQna = async function(filter) {
+  filter = filter || {};
+  if (!_sb) return [];
+  try {
+    var q = _sb.from('qna')
+      .select('*, replies:qna_replies(count)')
+      .order('is_pinned', { ascending: false })
+      .order('created_at',  { ascending: false });
+    if (filter.category) q = q.eq('category', filter.category);
+    if (filter.menu_ref)  q = q.eq('menu_ref',  filter.menu_ref);
+    if (filter.status)    q = q.eq('status',     filter.status);
+    var res = await q;
+    if (res.error) { console.warn('[SB] getQna:', res.error.message); return []; }
+    return res.data || [];
+  } catch(e) { console.warn('[SB] getQna:', e.message); return []; }
+};
+
+/**
+ * [v2.399] Q&A 단건 조회 (답변 포함)
+ * @param {number} id
+ */
+SB.getQnaById = async function(id) {
+  if (!_sb) return null;
+  try {
+    var res = await _sb.from('qna')
+      .select('*, replies:qna_replies(*)')
+      .eq('id', id)
+      .single();
+    if (res.error) return null;
+    /* 조회수 증가 */
+    _sb.from('qna').update({ view_count: (res.data.view_count||0)+1 }).eq('id', id).then(()=>{});
+    return res.data;
+  } catch(e) { return null; }
+};
+
+/** [v2.399] Q&A 등록 */
+SB.addQna = async function(row) {
+  if (!_sb) return { ok: false };
+  try {
+    var res = await _sb.from('qna').insert({
+      category:  row.category  || 'qna',
+      menu_ref:  row.menu_ref  || null,
+      title:     row.title     || '',
+      body:      row.body      || '',
+      author:    row.author    || '관리자',
+      status:    row.status    || 'open',
+      is_pinned: row.is_pinned || false,
+    });
+    if (res.error) { Toast.show('Q&A 저장 실패: ' + res.error.message, 'err'); return { ok: false }; }
+    return { ok: true };
+  } catch(e) { return { ok: false }; }
+};
+
+/** [v2.399] Q&A 수정 */
+SB.updateQna = async function(id, patch) {
+  if (!_sb) return { ok: false };
+  try {
+    patch.updated_at = new Date().toISOString();
+    var res = await _sb.from('qna').update(patch).eq('id', id);
+    if (res.error) { Toast.show('Q&A 수정 실패: ' + res.error.message, 'err'); return { ok: false }; }
+    return { ok: true };
+  } catch(e) { return { ok: false }; }
+};
+
+/** [v2.399] Q&A 삭제 */
+SB.deleteQna = async function(id) {
+  if (!_sb) return { ok: false };
+  try {
+    var res = await _sb.from('qna').delete().eq('id', id);
+    if (res.error) { Toast.show('Q&A 삭제 실패: ' + res.error.message, 'err'); return { ok: false }; }
+    return { ok: true };
+  } catch(e) { return { ok: false }; }
+};
+
+/** [v2.399] 답변 등록 */
+SB.addQnaReply = async function(qna_id, body, author, is_answer) {
+  if (!_sb) return { ok: false };
+  try {
+    var res = await _sb.from('qna_replies').insert({
+      qna_id:    qna_id,
+      body:      body || '',
+      author:    author || '관리자',
+      is_answer: is_answer || false,
+    });
+    if (res.error) { Toast.show('답변 저장 실패: ' + res.error.message, 'err'); return { ok: false }; }
+    /* 상태 자동 변경: 공식 답변이면 resolved */
+    if (is_answer) await SB.updateQna(qna_id, { status: 'resolved' });
+    return { ok: true };
+  } catch(e) { return { ok: false }; }
+};
+
+/** [v2.399] 답변 삭제 */
+SB.deleteQnaReply = async function(id) {
+  if (!_sb) return { ok: false };
+  try {
+    var res = await _sb.from('qna_replies').delete().eq('id', id);
+    if (res.error) { Toast.show('답변 삭제 실패: ' + res.error.message, 'err'); return { ok: false }; }
     return { ok: true };
   } catch(e) { return { ok: false }; }
 };

@@ -635,3 +635,128 @@ textarea.fc{resize:vertical;min-height:68px}
 .doc-tab.on .doc-cnt{background:#dbeafe;color:#1e40af;}
 .badge.bred{background:#fee2e2;color:#991b1b;}
 .btn.bxs{padding:3px 7px;font-size:11px;min-width:0;}
+
+/* ════════════════════════════════════════════════════
+   Q&A 팝업 [v2.399]
+   ════════════════════════════════════════════════════ */
+
+/* Q&A 팝업 컨테이너 */
+.qna-pop{
+  position:fixed;top:58px;right:54px;
+  width:360px;max-height:calc(100vh - 80px);
+  background:var(--sur);border:1px solid var(--bd);
+  border-radius:var(--rl);box-shadow:var(--shl);
+  z-index:160;display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* 헤더: 탭 + 닫기 */
+.qna-pop-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 10px 0;border-bottom:1px solid var(--bd);
+  flex-shrink:0;background:var(--sur);
+}
+.qna-pop-tabs{display:flex;gap:2px;flex:1;}
+.qna-tab{
+  padding:5px 10px;font-size:11px;font-weight:600;
+  color:var(--tm);background:transparent;border:none;
+  border-radius:var(--r) var(--r) 0 0;cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+.qna-tab:hover{color:var(--tx);background:var(--bg)}
+.qna-tab.on{color:var(--pri);background:var(--bg);border-bottom:2px solid var(--pri)}
+.qna-close{
+  padding:4px 8px;font-size:14px;color:var(--tm);
+  background:transparent;border:none;cursor:pointer;
+  border-radius:var(--r);flex-shrink:0;
+}
+.qna-close:hover{color:var(--tx);background:var(--bg)}
+
+/* 툴바: 검색 + 등록 */
+.qna-pop-toolbar{
+  display:flex;gap:6px;padding:8px 10px;
+  flex-shrink:0;border-bottom:1px solid var(--bd);
+}
+.qna-pop-toolbar input{
+  flex:1;padding:5px 8px;font-size:12px;
+  border:1px solid var(--bd);border-radius:var(--r);
+  background:var(--bg);color:var(--tx);
+}
+.qna-add-btn{
+  padding:5px 10px;font-size:11px;font-weight:600;
+  background:var(--pri);color:#fff;border:none;
+  border-radius:var(--r);cursor:pointer;white-space:nowrap;
+}
+.qna-add-btn:hover{opacity:.88}
+
+/* 목록 영역 */
+.qna-pop-body{
+  flex:1;overflow-y:auto;padding:6px;
+  scrollbar-width:thin;
+}
+.qna-item{
+  padding:9px 11px;border-radius:var(--r);
+  cursor:pointer;transition:background .12s;
+  border-bottom:1px solid var(--bd);
+}
+.qna-item:last-child{border-bottom:none}
+.qna-item:hover{background:var(--bg)}
+
+.qna-item-top{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.qna-cat-badge{
+  font-size:10px;font-weight:600;padding:1px 6px;
+  border-radius:999px;flex-shrink:0;
+}
+.qna-cat-manual{background:#dbeafe;color:#1d4ed8}
+.qna-cat-qna{background:#fef3c7;color:#92400e}
+.qna-cat-tip{background:#d1fae5;color:#065f46}
+
+.qna-status-badge{
+  font-size:10px;font-weight:600;padding:1px 5px;
+  border-radius:3px;flex-shrink:0;
+}
+.qna-st-open{background:#fef3c7;color:#92400e}
+.qna-st-in_progress{background:#dbeafe;color:#1d4ed8}
+.qna-st-resolved{background:#d1fae5;color:#065f46}
+.qna-st-closed{background:#f1f5f9;color:#64748b}
+
+.qna-item-title{
+  font-size:12px;font-weight:600;color:var(--tx);
+  flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.qna-pin{color:#f59e0b;font-size:11px;flex-shrink:0}
+.qna-item-meta{
+  font-size:11px;color:var(--tm);
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+}
+.qna-reply-cnt{
+  font-size:10px;color:var(--pri);font-weight:600;
+  background:#eff6ff;padding:1px 5px;border-radius:3px;
+}
+.qna-empty{
+  text-align:center;padding:32px 16px;
+  color:var(--tm);font-size:13px;
+}
+
+/* Q&A 상세 (전체화면 오버레이) */
+.qna-detail{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.45);z-index:200;
+  display:flex;align-items:center;justify-content:center;
+}
+.qna-detail.hidden{display:none}
+.qna-detail-inner{
+  background:var(--sur);border-radius:var(--rl);
+  width:min(700px,94vw);max-height:88vh;
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+.qna-detail-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid var(--bd);
+  flex-shrink:0;
+}
+.qna-detail-hdr button:first-child{
+  font-size:12px;color:var(--tm);background:none;border:none;cursor:pointer;
+}
+.qna-detail-hdr button:first-child:hover{color:var(--tx)}

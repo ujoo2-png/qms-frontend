@@ -325,7 +325,7 @@ const Auth={
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
       Toast.show('로그인되었습니다.','ok');
-      /* [v2.398.6] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
+      /* [v2.399] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
       setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 150);
       /* [v2.394] 로그인 시 keepalive 자동 실행 */
       setTimeout(async()=>{
@@ -1109,7 +1109,7 @@ const TopNav={
     // 상단 버튼 active
     document.querySelectorAll('.tb-mod').forEach(b=>b.classList.remove('on'));
     if(btn) btn.classList.add('on');
-    // [v2.398.6] Magic Indicator 이동
+    // [v2.399] Magic Indicator 이동
     TopNav._moveIndicator(btn);
     // 서브탭 렌더링
     this._renderSubs(mod);
@@ -1120,8 +1120,8 @@ const TopNav={
     if(subs.length>0) Nav.go(subs[0].page);
   },
 
-  /* [v2.398.6] Magic Indicator 위치 계산 + 이동 */
-  /* [v2.398.6] Magic Indicator pill 이동 — container 기준 left/width만 제어 */
+  /* [v2.399] Magic Indicator 위치 계산 + 이동 */
+  /* [v2.399] Magic Indicator pill 이동 — container 기준 left/width만 제어 */
   _moveIndicator(btn){
     const ind=document.getElementById('tbIndicator');
     if(!ind||!btn) return;
@@ -1136,9 +1136,9 @@ const TopNav={
     ind.style.width=width+'px';
   },
 
-  /* [v2.398.6] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
+  /* [v2.399] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
   _initIndicator(){
-    /* [v2.398.6] getBoundingClientRect가 0이면 재시도 (DOM 렌더 대기) */
+    /* [v2.399] getBoundingClientRect가 0이면 재시도 (DOM 렌더 대기) */
     const _try=(attempt)=>{
       const activeBtn=document.querySelector('.tb-mod.on');
       if(!activeBtn) return;
@@ -1283,3 +1283,319 @@ const Nav={
 };
 
 /* ══ 페이지 ══ */
+/* ════════════════════════════════════════════════════════════
+   QnA — Q&A 팝업 컨트롤러 [v2.399]
+   위치: topbar tb-right 날짜 오른쪽 ❓ 버튼
+   기능: 매뉴얼/Q&A/팁 3탭 + 등록/답변/상태변경
+   ════════════════════════════════════════════════════════════ */
+const QnA = {
+
+  _cat: 'all',       // 현재 탭
+  _kw:  '',          // 검색어
+  _rows: [],         // 전체 로드된 목록
+
+  /* ── 팝업 열기/닫기 ── */
+  toggle(){
+    const pop = document.getElementById('qnaPop');
+    if (!pop) return;
+    const isHidden = pop.classList.contains('hidden');
+    /* 다른 팝업 닫기 */
+    document.getElementById('mpop')?.classList.add('hidden');
+    pop.classList.toggle('hidden');
+    if (isHidden) {
+      this._cat = 'all';
+      this._kw  = '';
+      const searchEl = document.getElementById('qnaSearch');
+      if (searchEl) searchEl.value = '';
+      /* 관리자/매니저만 등록 버튼 표시 */
+      const addBtn = document.getElementById('qnaAddBtn');
+      if (addBtn) {
+        const role = Auth._u?.role;
+        addBtn.style.display = (role === 'admin' || role === 'manager') ? '' : 'none';
+      }
+      this.load();
+    }
+  },
+
+  /* ── 목록 로드 ── */
+  async load(){
+    const el = document.getElementById('qnaList');
+    if (!el) return;
+    el.innerHTML = '<div class="qna-empty">⏳ 로딩 중...</div>';
+    this._rows = await SB.getQna({ category: this._cat === 'all' ? null : this._cat });
+    this.render();
+  },
+
+  /* ── 탭 전환 ── */
+  setTab(btn, cat){
+    document.querySelectorAll('.qna-tab').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    this._cat = cat;
+    this._kw  = '';
+    const searchEl = document.getElementById('qnaSearch');
+    if (searchEl) searchEl.value = '';
+    this.load();
+  },
+
+  /* ── 검색 ── */
+  search(kw){
+    this._kw = kw.toLowerCase();
+    this.render();
+  },
+
+  /* ── 목록 렌더 ── */
+  render(){
+    const el = document.getElementById('qnaList');
+    if (!el) return;
+
+    let rows = this._rows || [];
+    if (this._kw) {
+      rows = rows.filter(r =>
+        (r.title || '').toLowerCase().includes(this._kw) ||
+        (r.body  || '').toLowerCase().includes(this._kw)
+      );
+    }
+
+    if (!rows.length) {
+      el.innerHTML = '<div class="qna-empty"><div style="font-size:28px;margin-bottom:6px">📭</div>등록된 항목이 없습니다.</div>';
+      return;
+    }
+
+    const catLabel = { manual:'📖 매뉴얼', qna:'❓ Q&A', tip:'💡 팁' };
+    const stLabel  = { open:'접수', in_progress:'처리중', resolved:'해결됨', closed:'닫힘' };
+    const menuMap  = {
+      docs:'문서관리', items:'품목', vendors:'거래처', insp_in:'수입검사',
+      nc:'부적합', car:'시정조치', equip:'계측기', quality_dash:'품질현황'
+    };
+
+    el.innerHTML = rows.map(r => {
+      const replyCnt = r.replies?.[0]?.count || 0;
+      const menuStr  = r.menu_ref ? (menuMap[r.menu_ref] || r.menu_ref) : '';
+      return `<div class="qna-item" onclick="QnA.openDetail(${r.id})">
+        <div class="qna-item-top">
+          <span class="qna-cat-badge qna-cat-${r.category}">${catLabel[r.category] || r.category}</span>
+          ${r.is_pinned ? '<span class="qna-pin">📌</span>' : ''}
+          <span class="qna-item-title">${H.e(r.title)}</span>
+          <span class="qna-status-badge qna-st-${r.status}">${stLabel[r.status] || r.status}</span>
+        </div>
+        <div class="qna-item-meta">
+          ${menuStr ? `<span>📂 ${H.e(menuStr)}</span>` : ''}
+          <span>✍️ ${H.e(r.author)}</span>
+          <span>${r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : ''}</span>
+          <span>👁️ ${r.view_count || 0}</span>
+          ${replyCnt > 0 ? `<span class="qna-reply-cnt">💬 ${replyCnt}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  /* ── 상세 보기 ── */
+  async openDetail(id){
+    const detail = document.getElementById('qnaDetail');
+    const bodyEl  = document.getElementById('qnaDetailBody');
+    const actEl   = document.getElementById('qnaDetailActions');
+    if (!detail || !bodyEl) return;
+
+    detail.classList.remove('hidden');
+    bodyEl.innerHTML = '<div class="qna-empty">⏳ 로딩 중...</div>';
+    actEl.innerHTML  = '';
+
+    const r = await SB.getQnaById(id);
+    if (!r) { bodyEl.innerHTML = '<div class="qna-empty">항목을 불러올 수 없습니다.</div>'; return; }
+
+    const catLabel  = { manual:'📖 매뉴얼', qna:'❓ Q&A', tip:'💡 팁' };
+    const stLabel   = { open:'접수됨', in_progress:'처리중', resolved:'해결됨', closed:'닫힘' };
+    const stCls     = { open:'qna-st-open', in_progress:'qna-st-in_progress', resolved:'qna-st-resolved', closed:'qna-st-closed' };
+    const role      = Auth._u?.role;
+    const isAdmin   = role === 'admin' || role === 'manager';
+    const me        = Auth._u?.name || Auth._u?.username || '관리자';
+    const replies   = r.replies || [];
+
+    /* 관리자 액션 버튼 */
+    if (isAdmin) {
+      actEl.innerHTML =
+        `<select class="fsel" style="font-size:11px;padding:3px 6px" onchange="QnA.updateStatus(${r.id},this.value)">
+          <option value="open"        ${r.status==='open'?'selected':''}>접수됨</option>
+          <option value="in_progress" ${r.status==='in_progress'?'selected':''}>처리중</option>
+          <option value="resolved"    ${r.status==='resolved'?'selected':''}>해결됨</option>
+          <option value="closed"      ${r.status==='closed'?'selected':''}>닫힘</option>
+        </select>
+        <button class="btn bout bsm" onclick="QnA.openForm(${r.id})">✏️ 수정</button>
+        <button class="btn bred bsm" onclick="QnA.deleteItem(${r.id})">🗑️ 삭제</button>`;
+    }
+
+    /* 본문 */
+    bodyEl.innerHTML =
+      `<div style="padding:18px 20px;overflow-y:auto;flex:1">
+        <!-- 헤더 -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <span class="qna-cat-badge qna-cat-${r.category}">${catLabel[r.category]||r.category}</span>
+          <span class="qna-status-badge ${stCls[r.status]||'qna-st-open'}">${stLabel[r.status]||r.status}</span>
+          ${r.is_pinned ? '<span style="color:#f59e0b;font-size:12px">📌 고정</span>' : ''}
+        </div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">${H.e(r.title)}</div>
+        <div style="font-size:12px;color:var(--tm);margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <span>✍️ ${H.e(r.author)}</span>
+          <span>${r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : ''}</span>
+          <span>👁️ ${r.view_count||0} 조회</span>
+        </div>
+        <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;padding:14px;background:var(--bg2);border-radius:var(--r);margin-bottom:18px">${H.e(r.body||'')}</div>
+
+        <!-- 답변 목록 -->
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">
+          💬 답변 ${replies.length}건
+        </div>
+        <div id="qnaReplies" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+          ${replies.map(rep =>
+            `<div style="background:${rep.is_answer?'#f0fdf4':'var(--bg2)'};border:1px solid ${rep.is_answer?'#86efac':'var(--bd)'};border-radius:var(--r);padding:10px 14px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+                ${rep.is_answer ? '<span style="font-size:10px;font-weight:700;background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:3px">✅ 공식 답변</span>' : ''}
+                <span style="font-size:12px;font-weight:600">${H.e(rep.author)}</span>
+                <span style="font-size:11px;color:var(--tm)">${rep.created_at ? new Date(rep.created_at).toLocaleDateString('ko-KR') : ''}</span>
+                ${isAdmin ? `<button class="btn bxs berr" style="margin-left:auto" onclick="QnA.deleteReply(${rep.id},${r.id})">삭제</button>` : ''}
+              </div>
+              <div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${H.e(rep.body)}</div>
+            </div>`
+          ).join('')}
+          ${!replies.length ? '<div style="text-align:center;padding:16px;color:var(--tm);font-size:13px">아직 답변이 없습니다.</div>' : ''}
+        </div>
+
+        <!-- 답변 작성 -->
+        <div style="border-top:1px solid var(--bd);padding-top:14px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px">답변 작성</div>
+          <textarea id="qnaReplyText" rows="3" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--tx);resize:vertical" placeholder="답변 내용을 입력하세요..."></textarea>
+          <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px">
+            ${isAdmin ? `<button class="btn bgrn bsm" onclick="QnA.submitReply(${r.id},true)">✅ 공식 답변으로 등록</button>` : ''}
+            <button class="btn bpri bsm" onclick="QnA.submitReply(${r.id},false)">📝 답변 등록</button>
+          </div>
+        </div>
+      </div>`;
+  },
+
+  closeDetail(){
+    document.getElementById('qnaDetail')?.classList.add('hidden');
+  },
+
+  /* ── 답변 제출 ── */
+  async submitReply(qnaId, isAnswer){
+    const text = document.getElementById('qnaReplyText')?.value?.trim();
+    if (!text) { Toast.show('답변 내용을 입력하세요.', 'warn'); return; }
+    const me = Auth._u?.name || Auth._u?.username || '관리자';
+    const r = await SB.addQnaReply(qnaId, text, me, isAnswer);
+    if (r.ok) {
+      Toast.show(isAnswer ? '✅ 공식 답변이 등록되었습니다.' : '답변이 등록되었습니다.', 'ok');
+      this.openDetail(qnaId);
+      this.load();
+    }
+  },
+
+  /* ── 답변 삭제 ── */
+  async deleteReply(replyId, qnaId){
+    Modal.confirm({ title:'답변 삭제', msg:'답변을 삭제하시겠습니까?', danger:true,
+      onOk: async () => {
+        const r = await SB.deleteQnaReply(replyId);
+        if (r.ok) { Toast.show('삭제되었습니다.','ok'); this.openDetail(qnaId); this.load(); }
+      }
+    });
+  },
+
+  /* ── 상태 변경 ── */
+  async updateStatus(id, status){
+    const r = await SB.updateQna(id, { status });
+    if (r.ok) { Toast.show('상태가 변경되었습니다.','ok'); this.load(); }
+  },
+
+  /* ── 항목 삭제 ── */
+  async deleteItem(id){
+    Modal.confirm({ title:'Q&A 삭제', msg:'이 항목을 삭제하시겠습니까?', danger:true,
+      onOk: async () => {
+        const r = await SB.deleteQna(id);
+        if (r.ok) {
+          Toast.show('삭제되었습니다.','ok');
+          this.closeDetail();
+          this.load();
+        }
+      }
+    });
+  },
+
+  /* ── 등록/수정 폼 ── */
+  openForm(editId){
+    const menuOptions = [
+      {v:'',       l:'— 메뉴 선택 안함 —'},
+      {v:'docs',   l:'문서관리'},
+      {v:'items',  l:'품목 등록'},
+      {v:'vendors',l:'거래처 등록'},
+      {v:'insp_in',l:'수입검사'},
+      {v:'nc',     l:'부적합'},
+      {v:'car',    l:'시정조치'},
+      {v:'equip',  l:'계측기'},
+      {v:'quality_dash',l:'품질 대시보드'},
+    ];
+
+    const edit = editId ? (this._rows.find(r => r.id === editId) || null) : null;
+    const isAdmin = Auth._u?.role === 'admin' || Auth._u?.role === 'manager';
+
+    Modal.open({ title: edit ? 'Q&A 수정' : 'Q&A 등록', size:'mlg', body:
+      `<div class="fg2">
+        <div class="fgroup"><label class="fl req">분류</label>
+          <select class="fc" id="qfCat">
+            <option value="qna"    ${(!edit||edit.category==='qna')   ?'selected':''}>❓ Q&A / 오류 접수</option>
+            <option value="tip"    ${edit?.category==='tip'   ?'selected':''}>💡 팁 & 기타</option>
+            ${isAdmin ? `<option value="manual" ${edit?.category==='manual'?'selected':''}>📖 매뉴얼</option>` : ''}
+          </select>
+        </div>
+        <div class="fgroup"><label class="fl">관련 메뉴</label>
+          <select class="fc" id="qfMenu">
+            ${menuOptions.map(o => `<option value="${o.v}"${edit?.menu_ref===o.v?' selected':''}>${o.l}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fgroup ff"><label class="fl req">제목</label>
+          <input class="fc" id="qfTitle" placeholder="제목을 입력하세요" value="${H.e(edit?.title||'')}">
+        </div>
+        <div class="fgroup ff"><label class="fl req">내용</label>
+          <textarea class="fc" id="qfBody" rows="5" placeholder="내용을 입력하세요">${H.e(edit?.body||'')}</textarea>
+        </div>
+        ${isAdmin ? `<div class="fgroup"><label class="fl">고정글</label>
+          <select class="fc" id="qfPin">
+            <option value="0">일반</option>
+            <option value="1"${edit?.is_pinned?' selected':''}>📌 고정</option>
+          </select>
+        </div>` : ''}
+      </div>`,
+      foot: `<button class="btn bout" onclick="Modal.close()">취소</button>
+             <button class="btn bpri" onclick="QnA.saveForm(${editId||'null'})">저장</button>`,
+    });
+  },
+
+  /* ── 등록/수정 저장 ── */
+  async saveForm(editId){
+    const title = document.getElementById('qfTitle')?.value?.trim();
+    const body  = document.getElementById('qfBody')?.value?.trim();
+    if (!title) { Toast.show('제목을 입력하세요.','warn'); return; }
+    if (!body)  { Toast.show('내용을 입력하세요.','warn'); return; }
+
+    const me = Auth._u?.name || Auth._u?.username || '관리자';
+    const row = {
+      category:  document.getElementById('qfCat')?.value  || 'qna',
+      menu_ref:  document.getElementById('qfMenu')?.value || null,
+      title, body,
+      author:    me,
+      is_pinned: document.getElementById('qfPin')?.value === '1',
+    };
+
+    let r;
+    if (editId) {
+      r = await SB.updateQna(editId, row);
+    } else {
+      row.status = 'open';
+      r = await SB.addQna(row);
+    }
+
+    if (r.ok) {
+      Toast.show(editId ? '수정되었습니다.' : '등록되었습니다.', 'ok');
+      Modal.close();
+      this.load();
+    }
+  },
+};
