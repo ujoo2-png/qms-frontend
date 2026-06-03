@@ -8302,6 +8302,40 @@ async eq_dept(){
   });
   var depts=Object.values(deptMap).sort(function(a,b){return b.total-a.total;});
 
+  /* [v2.44] 빈 화면 처리 — 설비 미등록 시 안내 */
+  var deptGridHTML;
+  if(!depts.length){
+    deptGridHTML=
+      '<div style="margin-top:40px;text-align:center;color:var(--tm)">'+
+        '<div style="font-size:48px;margin-bottom:12px">🏭</div>'+
+        '<div style="font-size:15px;font-weight:600;margin-bottom:6px">등록된 설비가 없습니다</div>'+
+        '<div style="font-size:13px">설비 등록 관리에서 설비를 먼저 등록해 주세요.</div>'+
+        '<button class="btn bpri" style="margin-top:16px" onclick="Nav.go(\'eq_mgmt\')">→ 설비 등록하러 가기</button>'+
+      '</div>';
+  } else {
+    deptGridHTML=
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:14px">'+
+      depts.map(function(d){
+        var rate=d.total?Math.round(d.active/d.total*100):0;
+        var cls=rate>=90?'#059669':rate>=70?'#d97706':'#dc2626';
+        return'<div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;box-shadow:var(--sh)">'+
+          '<div style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--pri)">🏢 '+H.e(d.dept)+'</div>'+
+          '<div style="display:flex;gap:12px;margin-bottom:10px">'+
+            '<div style="text-align:center"><div style="font-size:20px;font-weight:700">'+d.total+'</div><div style="font-size:10px;color:var(--tm)">전체</div></div>'+
+            '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#059669">'+d.active+'</div><div style="font-size:10px;color:var(--tm)">정상</div></div>'+
+            '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#dc2626">'+d.repair+'</div><div style="font-size:10px;color:var(--tm)">수리중</div></div>'+
+            '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#d97706">'+d.old+'</div><div style="font-size:10px;color:var(--tm)">10년↑</div></div>'+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--tm);margin-bottom:4px">가동률 '+rate+'%</div>'+
+          '<div style="background:var(--bg2);border-radius:999px;height:6px;overflow:hidden">'+
+            '<div style="background:'+cls+';width:'+rate+'%;height:100%;transition:width .3s"></div>'+
+          '</div>'+
+          '<button class="btn bout bsm" style="margin-top:10px;width:100%" onclick="Pages._deptDetail(\''+H.e(d.dept)+'\')">설비 목록 보기</button>'+
+        '</div>';
+      }).join('')+
+      '</div>';
+  }
+
   w.innerHTML=
     '<div class="ph"><div>'+
       '<div class="ptit">🗂️ 부서별 설비 보유현황</div>'+
@@ -8309,30 +8343,9 @@ async eq_dept(){
     '</div><div class="pac">'+
       '<button class="btn bout bsm" onclick="Pages._deptExcel()">📥 엑셀 다운로드</button>'+
     '</div></div>'+
-
-    /* 부서별 카드 */
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:14px">'+
-    depts.map(function(d){
-      var rate=d.total?Math.round(d.active/d.total*100):0;
-      var cls=rate>=90?'#059669':rate>=70?'#d97706':'#dc2626';
-      return'<div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;box-shadow:var(--sh)">'+
-        '<div style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--pri)">🏢 '+H.e(d.dept)+'</div>'+
-        '<div style="display:flex;gap:12px;margin-bottom:10px">'+
-          '<div style="text-align:center"><div style="font-size:20px;font-weight:700">'+d.total+'</div><div style="font-size:10px;color:var(--muted)">전체</div></div>'+
-          '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#059669">'+d.active+'</div><div style="font-size:10px;color:var(--muted)">정상</div></div>'+
-          '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#dc2626">'+d.repair+'</div><div style="font-size:10px;color:var(--muted)">수리중</div></div>'+
-          '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#d97706">'+d.old+'</div><div style="font-size:10px;color:var(--muted)">10년↑</div></div>'+
-        '</div>'+
-        /* 가동률 바 */
-        '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">가동률 '+rate+'%</div>'+
-        '<div style="background:var(--bg2);border-radius:999px;height:6px;overflow:hidden">'+
-          '<div style="background:'+cls+';width:'+rate+'%;height:100%;transition:width .3s"></div>'+
-        '</div>'+
-        '<button class="btn bout bsm" style="margin-top:10px;width:100%" onclick="Pages._deptDetail(\''+H.e(d.dept)+'\')">설비 목록 보기</button>'+
-      '</div>';
-    }).join('')+
-    '</div>';
+    deptGridHTML;
 },
+
 _deptDetail:function(dept){
   var eqs=(window._eqRows||[]).filter(function(e){return e.dept===dept;});
   Modal.open({title:'🏢 '+dept+' — 설비 목록',size:'mlg',body:
