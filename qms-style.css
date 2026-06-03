@@ -814,3 +814,78 @@ textarea.fc{resize:vertical;min-height:68px}
   transition: opacity .2s;
 }
 .mc-card:hover::after{ opacity: 1; }
+
+/* ── [v2.43] EMS 공통 UI ─────────────────────────────────── */
+
+/* 읽기 전용 필드 */
+.fc-readonly{
+  padding:7px 10px;
+  background:var(--bg2);
+  border:1px solid var(--bd);
+  border-radius:var(--r);
+  font-size:13px;
+  color:var(--tx);
+  min-height:34px;
+  word-break:break-all;
+}
+
+/* 설비 사진 갤러리 */
+.eq-gallery{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.eq-gallery img{
+  width:72px;
+  height:72px;
+  object-fit:cover;
+  border-radius:6px;
+  cursor:pointer;
+  border:2px solid var(--bd);
+  transition:border-color .15s, transform .15s;
+}
+.eq-gallery img:hover{
+  border-color:var(--pri);
+  transform:scale(1.05);
+}
+
+/* OEE 미리보기 박스 */
+.oee-preview{
+  background:#eff6ff;
+  border:1px solid #bfdbfe;
+  border-radius:6px;
+  padding:10px 14px;
+  margin-top:8px;
+  font-size:13px;
+}
+
+/* 설비 상태 뱃지 */
+.eq-status-정상    { background:#d1fae5; color:#065f46; }
+.eq-status-수리중  { background:#fee2e2; color:#991b1b; }
+.eq-status-점검중  { background:#fef3c7; color:#92400e; }
+.eq-status-폐기예정{ background:#f1f5f9; color:#475569; }
+.eq-status-폐기    { background:#e2e8f0; color:#64748b; }
+
+/* 마이머신카드 그리드 */
+.mc-card-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+  gap:14px;
+  margin-top:14px;
+}
+
+/* AS 워크플로우 단계 */
+.as-step{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:600;
+  padding:4px 10px;
+  border-radius:999px;
+}
+.as-step-접수    { background:#fee2e2; color:#dc2626; }
+.as-step-처리중  { background:#dbeafe; color:#1d4ed8; }
+.as-step-부품대기{ background:#fef3c7; color:#d97706; }
+.as-step-완료    { background:#d1fae5; color:#059669; }

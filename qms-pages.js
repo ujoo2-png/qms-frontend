@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.42]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.43]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -9,9 +9,13 @@ const Pages={
    레이아웃: hw(flex row) = hw-main(카드그리드) + hw-side(멘션/공지)
    카드 클릭: mc-card-sub onclick → Nav.go(page) 직접 이동
    v2.394: C안 우측 패널 고정, 카드 높이 5배, stopPropagation 제거 */
-home(){
+async home(){
   const w=document.getElementById('pw');
   w.classList.add('home-mode');
+  /* [v2.43] EMS 설비 데이터 캐싱 (홈 패널용) */
+  if(!window._eqRows || !window._eqRows.length){
+    try{ window._eqRows=await SB.getEquipment(); }catch(e){ window._eqRows=[]; }
+  }
   const ncO=DB.nc.filter(n=>n.status!=='완료').length;
   const eqE=DB.equip.filter(e=>e.status==='교정만료').length;
   const carO=DB.cars.filter(c=>c.status!=='완료').length;
@@ -36,7 +40,7 @@ home(){
      subs:[{icon:'📄',label:'문서 목록',page:'docs'},{icon:'✍️',label:'결재함',page:'doc_approval'},{icon:'🕐',label:'개정 이력',page:'doc_history_home'},{icon:'🔍',label:'지식 검색',page:'doc_search'},{icon:'📋',label:'기록 관리',page:'rec'}]},
     {c:'mc-c8',icon:'🔧',name:'개선활동',badge:carO,
      subs:[{icon:'🔧',label:'시정조치(CAR)',page:'car'},{icon:'🔎',label:'내부심사',page:'audit'}]},
-    /* [v2.42] 제조설비관리(EMS) 9번째 카드 */
+    /* [v2.43] 제조설비관리(EMS) 9번째 카드 */
     {c:'mc-c9',icon:'🏭',name:'제조설비관리',badge:0,
      subs:[
        {icon:'🏭',label:'설비 등록',    page:'eq_mgmt'},
@@ -219,11 +223,38 @@ home(){
         </div>
       </div>
     </div>
+
+    <!-- [v2.43] EMS 설비 현황 패널 -->
+    ${(()=>{
+      /* 제조설비관리 간략 현황 — 수리중/PM예정 설비 */
+      const _eqWarn=(window._eqRows||[]).filter(function(e){
+        return e.status==='수리중'||e.status==='점검중';
+      });
+      if(!_eqWarn.length) return '';
+      return `<div class="hw-panel" style="border-left:3px solid #6366f1">
+        <div class="hw-panel-head">
+          <div class="hw-panel-title">🏭 설비 주의 현황
+            <span class="badge bblu" style="margin-left:6px;font-size:10px">${_eqWarn.length}</span>
+          </div>
+          <span class="hw-panel-more" onclick="Nav.go('eq_mgmt')">설비관리 →</span>
+        </div>
+        <div class="hw-panel-body">
+          ${_eqWarn.slice(0,4).map(e=>`<div class="hw-mention" onclick="Nav.go('eq_mgmt')" style="cursor:pointer">
+            <span style="color:#6366f1;font-size:15px">🏭</span>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600">${H.e(e.name)}</div>
+              <div style="font-size:11px;color:var(--tm)">${H.e(e.dept||'')} · <span style="color:#dc2626;font-weight:600">${H.e(e.status)}</span></div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    })()}
+  </div>
   </div>`;
 
-  /* [v2.42] 카드 순서 복원 (localStorage) */
+  /* [v2.43] 카드 순서 복원 (localStorage) */
   Pages._homeApplyCardOrder();
-  /* [v2.42] 드래그앤드롭 초기화 */
+  /* [v2.43] 드래그앤드롭 초기화 */
   Pages._homeInitDrag();
 },
 
@@ -3599,7 +3630,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.42]
+   문서관리 고도화 페이지 함수 [v2.43]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3630,7 +3661,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.42]
+   D1: 문서 목록 [v2.43]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3804,7 +3835,7 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.42] ── */
+/* ── 칸반 보드 [v2.43] ── */
 /* ── 칸반 보드 [v2.397.2 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
@@ -3860,7 +3891,7 @@ _docKanban:function(){
     '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.42] ── */
+/* ── 문서 상세 팝업 [v2.43] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3880,7 +3911,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.42] ── */
+/* ── D2: 문서 등록 [v2.43] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3954,7 +3985,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.42] ── */
+/* ── D2-B: 개정 기안 [v2.43] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -4010,7 +4041,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.42]
+   D3: 내 결재함 [v2.43]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -4028,12 +4059,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.42] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.43] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.42] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.43] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4135,9 +4166,9 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.42]
+   D4: 개정 이력 타임라인 [v2.43]
    ══════════════════════════════════════════════════ */
-/* [v2.42] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+/* [v2.43] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
 doc_history_home:async function(){
   await Pages.docs();
   /* 문서 목록 로드 완료 후 상단에 안내 배너 삽입 */
@@ -4172,7 +4203,7 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.42] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.43] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
     /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
@@ -4279,7 +4310,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.42]
+   지식 검색 허브 [v2.43]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4600,12 +4631,12 @@ _rcSendAlert:async function(days){
   }finally{if(btn){btn.disabled=false;btn.textContent=days===7?'🚨 D-7 긴급알림':'🔔 D-30 알림발송';}}
 },
 /* ══════════════════════════════════════════════════
-   D7: 연관 문서 추천 [v2.42 Phase 3]
+   D7: 연관 문서 추천 [v2.43 Phase 3]
    동일 태그 기반 연관 문서 패널 + 유사 문서 추천
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.42] D7: 연관 문서 추천 페이지
+ * [v2.43] D7: 연관 문서 추천 페이지
  * [UI 구성]
  *  ① 문서 선택 → 해당 문서의 태그 표시
  *  ② 동일 태그를 가진 연관 문서 목록 (태그 일치도순 정렬)
@@ -4806,12 +4837,12 @@ _rcTagFilter:function(tag){
 },
 
 /* ══════════════════════════════════════════════════
-   D8: 문서 현황 대시보드 [v2.42 Phase 4]
+   D8: 문서 현황 대시보드 [v2.43 Phase 4]
    KPI 카드 · 유형 분포 · 상태 현황 · 심사 준비율 게이지
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.42] D8: 문서 현황 대시보드
+ * [v2.43] D8: 문서 현황 대시보드
  * [UI 구성]
  *  ① KPI 카드 4종 (전체/유효/검토중/만료임박)
  *  ② 유형별 분포 — 바 차트 (Canvas)
@@ -5010,7 +5041,7 @@ _dashRefresh:async function(){
   await Pages.doc_dashboard();
 },
 /* ══════════════════════════════════════════════════
-   Q&A 페이지 [v2.42]
+   Q&A 페이지 [v2.43]
    사이드바 메인 4번째 메뉴 — 매뉴얼/Q&A/팁 통합
    ══════════════════════════════════════════════════ */
 async qna(){
@@ -6616,7 +6647,7 @@ async settings(){
     if(fresh&&fresh.length>0) DB.users=fresh;
   }
   const isAdmin=Auth._u?.role==='admin';
-  /* [v2.42] 공지사항 최신 로드 — Supabase 영속화
+  /* [v2.43] 공지사항 최신 로드 — Supabase 영속화
      [버그수정] RLS 오류/네트워크 오류 시 App.notices(더미) 유지
      [버그수정] notices 테이블 미생성 시 빈 배열 대신 기존 목록 유지 */
   try{
@@ -6717,7 +6748,7 @@ async settings(){
               +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
               +'<td>'+H.e(u.department||'-')+'</td>'
               +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
-              /* [v2.42 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
+              /* [v2.43 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
               +'<td style="font-size:11px">'+(u.email?'<a href="mailto:'+H.e(u.email)+'" style="color:var(--acc)">'+H.e(u.email)+'</a>':'-')+'</td>'
               +'<td style="white-space:nowrap">'
               +(function(){
@@ -6808,7 +6839,7 @@ async settings(){
           <th style="width:88px;text-align:center">관리</th>
         </tr></thead>
         <tbody>${(()=>{
-          /* [v2.42] 최신순 정렬: created_at 없으면 date 기준 */
+          /* [v2.43] 최신순 정렬: created_at 없으면 date 기준 */
           const sorted=[...notices].sort((a,b)=>{
             const da=a.created_at||a.date||''; const db=b.created_at||b.date||'';
             return db.localeCompare(da);
@@ -6818,10 +6849,10 @@ async settings(){
             const today=H.today();
             /* 게시중 = show:true + 오늘이 date~expire 범위 내 */
             const active=n.show&&(!n.expire||n.expire>=today)&&(!n.date||n.date<=today);
-            /* [v2.42] 게시중 행 음영 */
+            /* [v2.43] 게시중 행 음영 */
             const rowBg=active?'background:#f0fdf4;':'';
             const expiredCls=n.expire&&n.expire<today?"color:#ef4444":"";
-            return '<tr style="'+rowBg+'">'  /* [v2.42] 게시중 행 음영 */
+            return '<tr style="'+rowBg+'">'  /* [v2.43] 게시중 행 음영 */
               +'<td><input type="checkbox" class="notice-chk" value="'+(n.id||i)+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
               +'<td style="font-weight:600;cursor:pointer" onclick="Pages._editNoticeById(n)">'+H.e(n.title)+'</td>'
@@ -6908,7 +6939,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.42] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.43] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
@@ -7135,7 +7166,7 @@ async _sbKeepAlive(){
 },
 
 /* ══════════════════════════════════════════════════════════════
-   제조설비관리 (EMS — Equipment Management System) [v2.42]
+   제조설비관리 (EMS — Equipment Management System) [v2.43]
    ══════════════════════════════════════════════════════════════
    M1. eq_mgmt        설비 등록 관리
    M2. eq_pm          예방정비(PM) 점검표
@@ -7268,7 +7299,7 @@ _eqDetail:async function(id){
   /* 사진 갤러리 */
   var photos=row.photo_urls||[];
   var gallery=photos.length
-    ?'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'+
+    ?'<div class="eq-gallery">'+
       photos.map(function(url,i){
         return'<img src="'+H.e(url)+'" style="width:80px;height:80px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid var(--brd)" onclick="Pages._eqPhotoView('+JSON.stringify(photos)+','+i+')">';
       }).join('')+'</div>'
@@ -7953,8 +7984,8 @@ _cardRender:function(eqs){
 _cardPrint:function(eqId){
   var e=(window._cardEqs||[]).find(function(x){return x.id===eqId;});
   if(!e){Toast.show('설비 정보를 찾을 수 없습니다.','err');return;}
-  /* QR 코드 생성 — qrcode.js CDN 필요 */
-  var qrUrl='https://innodis-qms.vercel.app/?eq='+eqId;
+  /* [v2.43] QR 코드 생성 — qrcode.js CDN 활용 */
+  var qrUrl='https://innodis-qms.vercel.app/?page=eq_mgmt&eq='+eqId;
   var html='<html><head><title>마이머신카드 — '+H.e(e.name)+'</title>'+
     '<style>@page{size:A5;margin:8mm}body{font-family:Arial,sans-serif;padding:0;margin:0}'+
     '.card{border:2px solid #1e3a5f;border-radius:8px;padding:12px;page-break-inside:avoid}'+
@@ -7974,13 +8005,22 @@ _cardPrint:function(eqId){
       '<div class="row"><span class="lbl">담당자</span><span class="val">'+H.e(e.manager||'-')+'</span></div>'+
       '<div class="row"><span class="lbl">도입일</span><span class="val">'+H.e(e.install_date||'-')+'</span></div>'+
       '<div class="row"><span class="lbl">제조사</span><span class="val">'+H.e(e.maker||'-')+(e.model?' / '+H.e(e.model):'')+'</span></div>'+
-      '<div class="footer">'+
-        '<span>INNODIS QMS — 마이머신카드</span>'+
-        '<span>'+new Date().toLocaleDateString('ko-KR')+' 출력</span>'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px">'+
+        '<div class="footer" style="flex:1">'+
+          '<span>INNODIS QMS — 마이머신카드</span><br>'+
+          '<span>'+new Date().toLocaleDateString('ko-KR')+' 출력</span>'+
+        '</div>'+
+        '<div id="qr-'+eqId+'" style="width:60px;height:60px"></div>'+
       '</div>'+
-    '</div></body></html>';
+    '</div>'+
+    '<script>'+
+      'try{new QRCode(document.getElementById("qr-'+eqId+'"),{text:"'+qrUrl+'",width:60,height:60,correctLevel:QRCode.CorrectLevel.M});}'+
+      'catch(e){document.getElementById("qr-'+eqId+'").innerHTML="<small style=color:#999>QR</small>";}'+
+    '<\/script>'+
+    '</body></html>';
   var win=window.open('','_blank','width=600,height=800');
-  win.document.write(html); win.document.close(); win.print();
+  win.document.write(html); win.document.close();
+  setTimeout(function(){win.print();},400);
 },
 _cardPrintAll:function(){
   Toast.show('일괄출력: 설비 목록에서 체크박스 선택 후 진행하세요.','info',3000);
@@ -8252,7 +8292,7 @@ _deptExcel:function(){
 
 
 
-/* ── [v2.42] 홈 카드 드래그앤드롭 ─────────────────────────────
+/* ── [v2.43] 홈 카드 드래그앤드롭 ─────────────────────────────
    규칙: 위치 교환(swap)만 허용 / 중복 불허 / 순서 localStorage 저장
    ─────────────────────────────────────────────────────────── */
 _homeInitDrag(){
@@ -8398,7 +8438,7 @@ const Cfg={
         +'<div class="fgroup"><label class="fl">등록자</label>'+
         '<select class="fc" id="na">'+
           (function(){
-            /* [v2.42] 관리자+매니저 권한 사용자만 표시 */
+            /* [v2.43] 관리자+매니저 권한 사용자만 표시 */
             var admins=(DB.users||[]).filter(function(u){
               return u.active!==0&&u.active!==false&&!u.pending&&
                      (u.role==='admin'||u.role==='manager');
@@ -8473,7 +8513,7 @@ const Cfg={
         /* 기존 파일 유지 */
         obj.file=existFile;
       }
-      /* [v2.42] Supabase 영속화 저장
+      /* [v2.43] Supabase 영속화 저장
          기존: App.notices.push() → 메모리만, 새로고침/배포 시 초기화
          수정: SB.addNotice/updateNotice → DB 저장 → SB.getNotices로 재로드 */
       var saveRes;
@@ -8493,7 +8533,7 @@ const Cfg={
   },
   noticeToggle(i){App.notices[i].show=!App.notices[i].show;Toast.show('변경되었습니다.','ok');Pages.settings()},
 
-  /* [v2.42] id 기반 공지 토글 */
+  /* [v2.43] id 기반 공지 토글 */
   async _noticeToggleById(n){
     var newShow=!n.show;
     var r=await SB.updateNotice(n.id,{show:newShow});
@@ -8503,7 +8543,7 @@ const Cfg={
     }
   },
 
-  /* [v2.42] id 기반 공지 삭제 */
+  /* [v2.43] id 기반 공지 삭제 */
   async _noticeDelById(n){
     Modal.confirm({title:'공지 삭제',msg:'<b>'+H.e(n.title)+'</b> 공지사항을 삭제하시겠습니까?',danger:true,
       onOk:async function(){
@@ -8513,13 +8553,13 @@ const Cfg={
     });
   },
 
-  /* [v2.42] id 기반 공지 수정 — _addNotice에 객체 전달 */
+  /* [v2.43] id 기반 공지 수정 — _addNotice에 객체 전달 */
   _editNoticeById(n){
     /* n 객체를 전달하여 수정 모달 오픈 */
     var idx=App.notices.findIndex(function(x){return x.id===n.id;});
     Pages._addNotice(idx>=0?idx:null, n);
   },
-  /* [v2.42] 공지 삭제 — Supabase 연동 */
+  /* [v2.43] 공지 삭제 — Supabase 연동 */
   noticeDel(i){
     var notice=App.notices[i];
     if(!notice){Toast.show('공지를 찾을 수 없습니다.','warn');return;}
