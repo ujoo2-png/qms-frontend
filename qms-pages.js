@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.44]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.45]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -12,7 +12,7 @@ const Pages={
 async home(){
   const w=document.getElementById('pw');
   w.classList.add('home-mode');
-  /* [v2.44] EMS 설비 데이터 캐싱 (홈 패널용) */
+  /* [v2.45] EMS 설비 데이터 캐싱 (홈 패널용) */
   if(!window._eqRows || !window._eqRows.length){
     try{ window._eqRows=await SB.getEquipment(); }catch(e){ window._eqRows=[]; }
   }
@@ -40,7 +40,7 @@ async home(){
      subs:[{icon:'📄',label:'문서 목록',page:'docs'},{icon:'✍️',label:'결재함',page:'doc_approval'},{icon:'🕐',label:'개정 이력',page:'doc_history_home'},{icon:'🔍',label:'지식 검색',page:'doc_search'},{icon:'📋',label:'기록 관리',page:'rec'}]},
     {c:'mc-c8',icon:'🔧',name:'개선활동',badge:carO,
      subs:[{icon:'🔧',label:'시정조치(CAR)',page:'car'},{icon:'🔎',label:'내부심사',page:'audit'}]},
-    /* [v2.44] 제조설비관리(EMS) 9번째 카드 */
+    /* [v2.45] 제조설비관리(EMS) 9번째 카드 */
     {c:'mc-c9',icon:'🏭',name:'제조설비관리',badge:0,
      subs:[
        {icon:'🏭',label:'설비 등록',    page:'eq_mgmt'},
@@ -224,7 +224,7 @@ async home(){
       </div>
     </div>
 
-    <!-- [v2.44] EMS 설비 현황 패널 -->
+    <!-- [v2.45] EMS 설비 현황 패널 -->
     ${(()=>{
       /* 제조설비관리 간략 현황 — 수리중/PM예정 설비 */
       const _eqWarn=(window._eqRows||[]).filter(function(e){
@@ -252,9 +252,9 @@ async home(){
   </div>
   </div>`;
 
-  /* [v2.44] 카드 순서 복원 (localStorage) */
+  /* [v2.45] 카드 순서 복원 (localStorage) */
   Pages._homeApplyCardOrder();
-  /* [v2.44] 드래그앤드롭 초기화 */
+  /* [v2.45] 드래그앤드롭 초기화 */
   Pages._homeInitDrag();
 },
 
@@ -3630,7 +3630,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.44]
+   문서관리 고도화 페이지 함수 [v2.45]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3661,7 +3661,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.44]
+   D1: 문서 목록 [v2.45]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3835,7 +3835,7 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.44] ── */
+/* ── 칸반 보드 [v2.45] ── */
 /* ── 칸반 보드 [v2.397.2 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
@@ -3891,7 +3891,7 @@ _docKanban:function(){
     '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.44] ── */
+/* ── 문서 상세 팝업 [v2.45] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3911,7 +3911,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.44] ── */
+/* ── D2: 문서 등록 [v2.45] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3985,7 +3985,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.44] ── */
+/* ── D2-B: 개정 기안 [v2.45] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -4041,7 +4041,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.44]
+   D3: 내 결재함 [v2.45]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -4059,12 +4059,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.44] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.45] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.44] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.45] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4166,9 +4166,9 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.44]
+   D4: 개정 이력 타임라인 [v2.45]
    ══════════════════════════════════════════════════ */
-/* [v2.44] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+/* [v2.45] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
 doc_history_home:async function(){
   await Pages.docs();
   /* 문서 목록 로드 완료 후 상단에 안내 배너 삽입 */
@@ -4203,7 +4203,7 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.44] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.45] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
     /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
@@ -4310,7 +4310,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.44]
+   지식 검색 허브 [v2.45]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4631,12 +4631,12 @@ _rcSendAlert:async function(days){
   }finally{if(btn){btn.disabled=false;btn.textContent=days===7?'🚨 D-7 긴급알림':'🔔 D-30 알림발송';}}
 },
 /* ══════════════════════════════════════════════════
-   D7: 연관 문서 추천 [v2.44 Phase 3]
+   D7: 연관 문서 추천 [v2.45 Phase 3]
    동일 태그 기반 연관 문서 패널 + 유사 문서 추천
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.44] D7: 연관 문서 추천 페이지
+ * [v2.45] D7: 연관 문서 추천 페이지
  * [UI 구성]
  *  ① 문서 선택 → 해당 문서의 태그 표시
  *  ② 동일 태그를 가진 연관 문서 목록 (태그 일치도순 정렬)
@@ -4837,12 +4837,12 @@ _rcTagFilter:function(tag){
 },
 
 /* ══════════════════════════════════════════════════
-   D8: 문서 현황 대시보드 [v2.44 Phase 4]
+   D8: 문서 현황 대시보드 [v2.45 Phase 4]
    KPI 카드 · 유형 분포 · 상태 현황 · 심사 준비율 게이지
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.44] D8: 문서 현황 대시보드
+ * [v2.45] D8: 문서 현황 대시보드
  * [UI 구성]
  *  ① KPI 카드 4종 (전체/유효/검토중/만료임박)
  *  ② 유형별 분포 — 바 차트 (Canvas)
@@ -5041,7 +5041,7 @@ _dashRefresh:async function(){
   await Pages.doc_dashboard();
 },
 /* ══════════════════════════════════════════════════
-   Q&A 페이지 [v2.44]
+   Q&A 페이지 [v2.45]
    사이드바 메인 4번째 메뉴 — 매뉴얼/Q&A/팁 통합
    ══════════════════════════════════════════════════ */
 async qna(){
@@ -6647,7 +6647,7 @@ async settings(){
     if(fresh&&fresh.length>0) DB.users=fresh;
   }
   const isAdmin=Auth._u?.role==='admin';
-  /* [v2.44] 공지사항 최신 로드 — Supabase 영속화
+  /* [v2.45] 공지사항 최신 로드 — Supabase 영속화
      [버그수정] RLS 오류/네트워크 오류 시 App.notices(더미) 유지
      [버그수정] notices 테이블 미생성 시 빈 배열 대신 기존 목록 유지 */
   try{
@@ -6748,7 +6748,7 @@ async settings(){
               +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
               +'<td>'+H.e(u.department||'-')+'</td>'
               +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
-              /* [v2.44 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
+              /* [v2.45 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
               +'<td style="font-size:11px">'+(u.email?'<a href="mailto:'+H.e(u.email)+'" style="color:var(--acc)">'+H.e(u.email)+'</a>':'-')+'</td>'
               +'<td style="white-space:nowrap">'
               +(function(){
@@ -6839,7 +6839,7 @@ async settings(){
           <th style="width:88px;text-align:center">관리</th>
         </tr></thead>
         <tbody>${(()=>{
-          /* [v2.44] 최신순 정렬: created_at 없으면 date 기준 */
+          /* [v2.45] 최신순 정렬: created_at 없으면 date 기준 */
           const sorted=[...notices].sort((a,b)=>{
             const da=a.created_at||a.date||''; const db=b.created_at||b.date||'';
             return db.localeCompare(da);
@@ -6849,10 +6849,10 @@ async settings(){
             const today=H.today();
             /* 게시중 = show:true + 오늘이 date~expire 범위 내 */
             const active=n.show&&(!n.expire||n.expire>=today)&&(!n.date||n.date<=today);
-            /* [v2.44] 게시중 행 음영 */
+            /* [v2.45] 게시중 행 음영 */
             const rowBg=active?'background:#f0fdf4;':'';
             const expiredCls=n.expire&&n.expire<today?"color:#ef4444":"";
-            return '<tr style="'+rowBg+'">'  /* [v2.44] 게시중 행 음영 */
+            return '<tr style="'+rowBg+'">'  /* [v2.45] 게시중 행 음영 */
               +'<td><input type="checkbox" class="notice-chk" value="'+(n.id||i)+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
               +'<td style="font-weight:600;cursor:pointer" onclick="Pages._editNoticeById(n)">'+H.e(n.title)+'</td>'
@@ -6939,7 +6939,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.44] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.45] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
@@ -7166,7 +7166,7 @@ async _sbKeepAlive(){
 },
 
 /* ══════════════════════════════════════════════════════════════
-   제조설비관리 (EMS — Equipment Management System) [v2.44]
+   제조설비관리 (EMS — Equipment Management System) [v2.45]
    ══════════════════════════════════════════════════════════════
    M1. eq_mgmt        설비 등록 관리
    M2. eq_pm          예방정비(PM) 점검표
@@ -7220,7 +7220,8 @@ async eq_mgmt(){
       '<button class="btn bpri btn-f2" onclick="Pages._eqForm()">+ 설비 등록 <span class="kbd">F2</span></button>'+
     '</div></div>'+
     '<div class="tbar">'+
-      '<div class="sw2"><input type="text" id="eqKw" placeholder="설비명, 설비번호, 부서 검색..." oninput="Pages._eqKwFilter(this.value)"></div>'+
+      '<input type="text" id="eqNoF" placeholder="🔢 설비번호 검색..." style="width:160px" oninput="Pages._eqNoFilter(this.value)">'+
+      '<div class="sw2"><input type="text" id="eqKw" placeholder="🔍 설비명, 부서 검색..." oninput="Pages._eqKwFilter(this.value)"></div>'+
       '<select class="fsel" id="eqTypeF" onchange="Pages._eqTypeFilter(this.value)">'+
         '<option value="">전체 유형</option>'+
         '<option value="생산설비">생산설비</option><option value="검사설비">검사설비</option>'+
@@ -7243,14 +7244,19 @@ _eqFilter:function(st){ window._eqStatus=st; Pages._eqApply(); },
 _eqTypeFilter:function(v){ window._eqType=v; Pages._eqApply(); },
 _eqDeptFilter:function(v){ window._eqDept=v; Pages._eqApply(); },
 _eqKwFilter:function(v){ window._eqKw=v; Pages._eqApply(); },
+/* [v2.45] 설비번호 전용 필터 */
+_eqNoFilter:function(v){ window._eqNo=v; Pages._eqApply(); },
 _eqApply:function(){
   var rows=window._eqRows||[];
-  var st=window._eqStatus||''; var tp=window._eqType||''; var dp=window._eqDept||''; var kw=(window._eqKw||'').toLowerCase();
+  var st=window._eqStatus||''; var tp=window._eqType||''; var dp=window._eqDept||'';
+  var kw=(window._eqKw||'').toLowerCase(); var no=(window._eqNo||'').toLowerCase();
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(tp) rows=rows.filter(function(r){return r.type===tp;});
   if(dp) rows=rows.filter(function(r){return r.dept===dp;});
+  /* [v2.45] 설비번호 전용 필터 */
+  if(no) rows=rows.filter(function(r){return (r.eq_no||'').toLowerCase().includes(no);});
   if(kw) rows=rows.filter(function(r){
-    return (r.name||'').toLowerCase().includes(kw)||(r.eq_no||'').toLowerCase().includes(kw)||(r.dept||'').toLowerCase().includes(kw);
+    return (r.name||'').toLowerCase().includes(kw)||(r.dept||'').toLowerCase().includes(kw);
   });
   Pages._eqRender(rows);
 },
@@ -7341,6 +7347,11 @@ _eqForm:async function(editId){
   var row=editId?(window._eqRows||[]).find(function(r){return r.id===editId;}):null;
   Modal.open({title:row?'설비 수정':'설비 등록',size:'mlg',body:
     '<div class="fg2">'+
+    /* [v2.45] 설비번호 직접 입력 필드 (빈칸이면 자동생성) */
+    '<div class="fgroup"><label class="fl">설비번호</label>'+
+      '<input class="fc" id="efNo" placeholder="직접 입력 (비우면 EQ-YYYY-NNN 자동생성)" value="'+H.e(row?row.eq_no:'')+'">'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:3px">📌 비워두면 EQ-연도-순번 형식으로 자동 생성됩니다.</div>'+
+    '</div>'+
     '<div class="fgroup"><label class="fl req">설비명</label><input class="fc" id="efName" placeholder="설비 정식 명칭" value="'+H.e(row?row.name:'')+'"></div>'+
     '<div class="fgroup"><label class="fl req">유형</label><select class="fc" id="efType">'+
       ['생산설비','검사설비','유틸리티','운반설비','기타'].map(function(t){return'<option value="'+t+'"'+(row&&row.type===t?' selected':'')+'>'+t+'</option>';}).join('')+
@@ -7379,6 +7390,8 @@ _eqSave:async function(editId){
   var dept=document.getElementById('efDept')?.value?.trim();
   if(!name){Toast.show('설비명을 입력하세요.','warn');return;}
   if(!dept){Toast.show('담당부서를 입력하세요.','warn');return;}
+  /* [v2.45] 설비번호: 입력값 우선, 없으면 DB에서 자동생성 */
+  var inputNo = document.getElementById('efNo')?.value?.trim();
   var row={
     name:name, type:document.getElementById('efType')?.value||'생산설비',
     dept:dept, location:document.getElementById('efLoc')?.value||null,
@@ -7390,6 +7403,8 @@ _eqSave:async function(editId){
     lifespan:parseInt(document.getElementById('efLifespan')?.value)||null,
     cost:parseFloat(document.getElementById('efCost')?.value)||null,
     memo:document.getElementById('efMemo')?.value||null,
+    /* [v2.45] 직접 입력한 번호가 있으면 포함, 없으면 DB 자동생성 */
+    eq_no: inputNo || null,
   };
   /* 사진 업로드 */
   var fileInp=document.getElementById('efPhoto');
@@ -7420,7 +7435,7 @@ async eq_pm(){
   var overdue=logs.filter(function(l){return l.status==='미완료'&&new Date(l.check_date)<today;}).length;
   var done=logs.filter(function(l){return l.status==='완료';}).length;
   var planned=logs.filter(function(l){return l.status==='예정';}).length;
-  /* [v2.44] PM 준수율 계산 */
+  /* [v2.45] PM 준수율 계산 */
   var pmRate2=logs.length?Math.round(done/logs.length*100):0;
   var pmRateColor2=pmRate2>=90?'#059669':pmRate2>=70?'#d97706':'#dc2626';
 
@@ -7445,6 +7460,7 @@ async eq_pm(){
       '<button class="btn bpri btn-f2" onclick="Pages._pmForm()">+ 점검 등록 <span class="kbd">F2</span></button>'+
     '</div></div>'+
     '<div class="tbar">'+
+      '<input type="text" id="pmNoF" placeholder="🔢 설비번호 검색..." style="width:160px" oninput="Pages._pmNoFilter(this.value)">'+
       '<select class="fsel" id="pmEqF" onchange="Pages._pmEqFilter(this.value)">'+
         '<option value="">전체 설비</option>'+
         eqs.map(function(e){return'<option value="'+e.id+'">'+H.e(e.name)+'</option>';}).join('')+
@@ -7464,14 +7480,19 @@ async eq_pm(){
   Pages._pmRender(logs);
 },
 _pmEqFilter:function(v){window._pmEqF=v;Pages._pmApply();},
+/* [v2.45] PM 설비번호 필터 */
+_pmNoFilter:function(v){window._pmNo=v;Pages._pmApply();},
 _pmCycleFilter:function(v){window._pmCycle=v;Pages._pmApply();},
 _pmStatusFilter:function(v){window._pmSt=v;var s=document.getElementById('pmStF');if(s)s.value=v;Pages._pmApply();},
 _pmApply:function(){
   var rows=window._pmRows||[];
   var ef=window._pmEqF||''; var cy=window._pmCycle||''; var st=window._pmSt||'';
+  var pmNo=(window._pmNo||'').toLowerCase();
   if(ef) rows=rows.filter(function(r){return String(r.eq_id)===String(ef);});
   if(cy) rows=rows.filter(function(r){return r.cycle===cy;});
   if(st) rows=rows.filter(function(r){return r.status===st;});
+  /* [v2.45] 설비번호 필터 */
+  if(pmNo){ var eqs=window._pmEqs||[]; rows=rows.filter(function(r){var eq=eqs.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(pmNo);}); }
   Pages._pmRender(rows);
 },
 _pmRender:function(rows){
@@ -7484,6 +7505,8 @@ _pmRender:function(rows){
     {key:'eq_id',      label:'설비명',   render:function(v){
       var eq=(eqs||[]).find(function(e){return e.id===v;});
       return eq?'<span style="font-weight:600">'+H.e(eq.name)+'</span>':'-';}},
+    /* [v2.45] 설비번호 컬럼 추가 */
+    {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'cycle',      label:'주기',     w:'60px',  align:'center',
       render:function(v){return'<span class="badge '+(cycCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
     {key:'checker',    label:'점검자',   w:'70px',  align:'center'},
@@ -7587,7 +7610,7 @@ async eq_as(){
     else if(r.status==='완료')cnt.done++;
   });
 
-  /* [v2.44] 반복고장 감지 — 동일 설비 + 동일 유형 3회 이상 */
+  /* [v2.45] 반복고장 감지 — 동일 설비 + 동일 유형 3회 이상 */
   var repeatMap={};
   rows.forEach(function(r){
     var key=r.eq_id+'_'+r.fault_type;
@@ -7605,7 +7628,7 @@ async eq_as(){
   });
 
   w.innerHTML=
-    /* [v2.44] 반복고장 경고 배너 */
+    /* [v2.45] 반복고장 경고 배너 */
     (repeatAlerts.length?
       '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
         '<span style="font-size:18px">⚠️</span>'+
@@ -7630,7 +7653,8 @@ async eq_as(){
       '<button class="btn bpri btn-f2" onclick="Pages._asForm()">+ AS 접수 <span class="kbd">F2</span></button>'+
     '</div></div>'+
     '<div class="tbar">'+
-      '<div class="sw2"><input type="text" id="asKw" placeholder="설비명, 증상 검색..." oninput="Pages._asKwFilter(this.value)"></div>'+
+      '<input type="text" id="asNoF" placeholder="🔢 설비번호 검색..." style="width:160px" oninput="Pages._asNoFilter(this.value)">'+
+      '<div class="sw2"><input type="text" id="asKw" placeholder="🔍 설비명, 증상 검색..." oninput="Pages._asKwFilter(this.value)"></div>'+
       '<select class="fsel" id="asStF" onchange="Pages._asStatusFilter(this.value)">'+
         '<option value="">전체 상태</option>'+
         '<option value="접수">🔴 접수</option><option value="처리중">🔵 처리중</option>'+
@@ -7648,14 +7672,19 @@ async eq_as(){
   window._asRows=rows; window._asEqs=eqs; window._asSt=''; window._asSrc=''; window._asKw='';
   Pages._asRender(rows);
 },
+/* [v2.45] AS 설비번호 필터 */
+_asNoFilter:function(v){window._asNo=v;Pages._asApply();},
 _asStatusFilter:function(v){window._asSt=v;var s=document.getElementById('asStF');if(s)s.value=v;Pages._asApply();},
 _asSrcFilter:function(v){window._asSrc=v;Pages._asApply();},
 _asKwFilter:function(v){window._asKw=v;Pages._asApply();},
 _asApply:function(){
   var rows=window._asRows||[];
   var st=window._asSt||''; var src=window._asSrc||''; var kw=(window._asKw||'').toLowerCase();
+  var asNo=(window._asNo||'').toLowerCase();
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(src) rows=rows.filter(function(r){return r.source===src;});
+  /* [v2.45] 설비번호 필터 */
+  if(asNo){ var eqsN=window._asEqs||[]; rows=rows.filter(function(r){var eq=eqsN.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(asNo);}); }
   if(kw){
     var eqs=window._asEqs||[];
     rows=rows.filter(function(r){
@@ -7672,6 +7701,8 @@ _asRender:function(rows){
   var urgCls={긴급:'bred',높음:'bamb',보통:'bgry',낮음:'bgry'};
   Tbl.render({el:'#asTbl',cols:[
     {key:'eq_id',     label:'설비명',  render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return'<span style="font-weight:600">'+H.e(eq.name||'-')+'</span>';}},
+    /* [v2.45] 설비번호 컬럼 */
+    {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'fault_type',label:'고장유형',w:'80px',align:'center'},
     {key:'symptom',   label:'증상',    render:function(v){return'<span style="font-size:12px">'+H.e(v||'-')+'</span>';}},
     {key:'urgency',   label:'긴급도',  w:'60px',align:'center',render:function(v){return'<span class="badge '+(urgCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
@@ -7767,6 +7798,7 @@ async eq_cost(){
       '<button class="btn bpri btn-f2" onclick="Pages._costForm()">+ 비용 등록</button>'+
     '</div></div>'+
     '<div class="tbar">'+
+      '<input type="text" id="costNoF" placeholder="🔢 설비번호 검색..." style="width:160px" oninput="Pages._costNoFilter(this.value)">'+
       '<select class="fsel" id="costYM" onchange="Pages._costLoad()">'+
         (function(){
           var opts=''; var now=new Date();
@@ -7802,11 +7834,13 @@ _costLoad:async function(){
   Tbl.render({el:'#costTbl',cols:[
     {key:'date',      label:'날짜',     w:'90px'},
     {key:'eq_id',     label:'설비명',   render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
+    /* [v2.45] 설비번호 컬럼 */
+    {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'cost_type', label:'비용유형', w:'90px',align:'center',render:function(v){return'<span class="badge '+(typCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
     {key:'amount',    label:'금액(원)', w:'100px',align:'right',render:function(v){return'<b>'+Number(v||0).toLocaleString()+'</b>';}},
     {key:'vendor',    label:'업체/공급사',w:'100px'},
     {key:'note',      label:'비고',     render:function(v){return H.e(v||'-');}},
-    /* [v2.44] 수정 버튼 컬럼 추가 */
+    /* [v2.45] 수정 버튼 컬럼 추가 */
     {key:'id',        label:'',         w:'60px', align:'center',
       render:function(v,row){return'<button class="btn bxs bout" onclick="Pages._costEdit('+v+')">✏️</button>';}},
   ],data:rows,onDel:async function(ids){
@@ -7854,7 +7888,7 @@ _costSave:async function(){
   if(r.ok){Toast.show('등록됨','ok');Modal.close();await Pages._costLoad();}
 },
 
-/* [v2.44] 비용 수정 폼 */
+/* [v2.45] 비용 수정 폼 */
 _costEdit:function(id){
   var row=(window._costRows||[]).find(function(r){return r.id===id;});
   if(!row){Toast.show('항목을 찾을 수 없습니다.','err');return;}
@@ -7889,6 +7923,29 @@ _costEditSave:async function(id){
   if(r.ok){Toast.show('수정됨','ok');Modal.close();await Pages._costLoad();}
 },
 
+/* [v2.45] 비용 목록 설비번호 필터 */
+_costNoFilter:function(v){
+  window._costNo=v;
+  var rows=window._costRows||[];
+  var no=(v||'').toLowerCase();
+  var eqs=window._costEqs||[];
+  if(no) rows=rows.filter(function(r){var eq=eqs.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(no);});
+  var typCls={'AS수리비':'bred','부품비':'bamb','인건비':'bblu','예방정비비':'bgrn','기타':'bgry'};
+  Tbl.render({el:'#costTbl',cols:[
+    {key:'date',label:'날짜',w:'90px'},
+    {key:'eq_id',label:'설비명',render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
+    {key:'eq_id',label:'설비번호',w:'110px',render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
+    {key:'cost_type',label:'비용유형',w:'90px',align:'center',render:function(v){return'<span class="badge '+(typCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
+    {key:'amount',label:'금액(원)',w:'100px',align:'right',render:function(v){return'<b>'+Number(v||0).toLocaleString()+'</b>';}},
+    {key:'vendor',label:'업체/공급사',w:'100px'},
+    {key:'note',label:'비고',render:function(v){return H.e(v||'-');}},
+    {key:'id',label:'',w:'60px',align:'center',render:function(v){return'<button class="btn bxs bout" onclick="Pages._costEdit('+v+')">✏️</button>';}},
+  ],data:rows,onDel:async function(ids){
+    for(var i=0;i<ids.length;i++) await SB.deleteEqCost(ids[i]);
+    await Pages._costLoad(); Toast.show('삭제됨','ok');
+  }});
+},
+
 /* ──────────────────────────────────────────────────────────────
    M5. 설비 매뉴얼
    ─────────────────────────────────────────────────────────────- */
@@ -7905,7 +7962,8 @@ async eq_manual(){
       '<button class="btn bpri btn-f2" onclick="Pages._manualForm()">+ 매뉴얼 등록</button>'+
     '</div></div>'+
     '<div class="tbar">'+
-      '<div class="sw2"><input type="text" id="manKw" placeholder="설비명, 제목 검색..." oninput="Pages._manualKw(this.value)"></div>'+
+      '<input type="text" id="manNoF" placeholder="🔢 설비번호 검색..." style="width:160px" oninput="Pages._manualNoFilter(this.value)">'+
+      '<div class="sw2"><input type="text" id="manKw" placeholder="🔍 설비명, 제목 검색..." oninput="Pages._manualKw(this.value)"></div>'+
       '<select class="fsel" id="manEqF" onchange="Pages._manualEqFilter(this.value)">'+
         '<option value="">전체 설비</option>'+
         eqs.map(function(e){return'<option value="'+e.id+'">'+H.e(e.name)+'</option>';}).join('')+
@@ -7916,12 +7974,17 @@ async eq_manual(){
   Pages._manualRender(rows);
 },
 _manualKw:function(v){window._manKw=v;Pages._manualApply();},
+/* [v2.45] 매뉴얼 설비번호 필터 */
+_manualNoFilter:function(v){window._manNo=v;Pages._manualApply();},
 _manualEqFilter:function(v){window._manEqF=v;Pages._manualApply();},
 _manualApply:function(){
   var rows=window._manRows||[];
   var kw=(window._manKw||'').toLowerCase(); var ef=window._manEqF||'';
+  var manNo=(window._manNo||'').toLowerCase();
   var eqs=window._manEqs||[];
   if(ef) rows=rows.filter(function(r){return String(r.eq_id)===String(ef);});
+  /* [v2.45] 설비번호 필터 */
+  if(manNo) rows=rows.filter(function(r){var eq=eqs.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(manNo);});
   if(kw) rows=rows.filter(function(r){
     var eq=(eqs||[]).find(function(e){return e.id===r.eq_id;})||{};
     return (eq.name||'').toLowerCase().includes(kw)||(r.title||'').toLowerCase().includes(kw);
@@ -7932,6 +7995,8 @@ _manualRender:function(rows){
   var eqs=window._manEqs||[];
   Tbl.render({el:'#manTbl',cols:[
     {key:'eq_id',    label:'설비명', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
+    /* [v2.45] 설비번호 컬럼 */
+    {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'title',    label:'매뉴얼 제목', render:function(v,row){
       return row.file_url
         ?'<a href="'+H.e(row.file_url)+'" target="_blank" style="color:var(--pri);font-weight:600">📎 '+H.e(v||'-')+'</a>'
@@ -8052,7 +8117,7 @@ _cardRender:function(eqs){
 _cardPrint:function(eqId){
   var e=(window._cardEqs||[]).find(function(x){return x.id===eqId;});
   if(!e){Toast.show('설비 정보를 찾을 수 없습니다.','err');return;}
-  /* [v2.44] QR 코드 생성 — qrcode.js CDN 활용 */
+  /* [v2.45] QR 코드 생성 — qrcode.js CDN 활용 */
   var qrUrl='https://innodis-qms.vercel.app/?page=eq_mgmt&eq='+eqId;
   var html='<html><head><title>마이머신카드 — '+H.e(e.name)+'</title>'+
     '<style>@page{size:A5;margin:8mm}body{font-family:Arial,sans-serif;padding:0;margin:0}'+
@@ -8188,6 +8253,8 @@ _oeeLoad:async function(){
   Tbl.render({el:'#oeeTbl',cols:[
     {key:'date',         label:'일자',      w:'90px'},
     {key:'eq_id',        label:'설비명',    render:function(v){var e=(eqs||[]).find(function(x){return x.id===v;})||{};return H.e(e.name||'-');}},
+    /* [v2.45] 설비번호 컬럼 */
+    {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(x){return x.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'plan_time',    label:'계획가동(h)',w:'90px',align:'center'},
     {key:'actual_time',  label:'실가동(h)', w:'90px',align:'center'},
     {key:'plan_qty',     label:'계획수량',  w:'80px',align:'right'},
@@ -8302,7 +8369,7 @@ async eq_dept(){
   });
   var depts=Object.values(deptMap).sort(function(a,b){return b.total-a.total;});
 
-  /* [v2.44] 빈 화면 처리 — 설비 미등록 시 안내 */
+  /* [v2.45] 빈 화면 처리 — 설비 미등록 시 안내 */
   var deptGridHTML;
   if(!depts.length){
     deptGridHTML=
@@ -8373,7 +8440,7 @@ _deptExcel:function(){
 
 
 
-/* ── [v2.44] 홈 카드 드래그앤드롭 ─────────────────────────────
+/* ── [v2.45] 홈 카드 드래그앤드롭 ─────────────────────────────
    규칙: 위치 교환(swap)만 허용 / 중복 불허 / 순서 localStorage 저장
    ─────────────────────────────────────────────────────────── */
 _homeInitDrag(){
@@ -8519,7 +8586,7 @@ const Cfg={
         +'<div class="fgroup"><label class="fl">등록자</label>'+
         '<select class="fc" id="na">'+
           (function(){
-            /* [v2.44] 관리자+매니저 권한 사용자만 표시 */
+            /* [v2.45] 관리자+매니저 권한 사용자만 표시 */
             var admins=(DB.users||[]).filter(function(u){
               return u.active!==0&&u.active!==false&&!u.pending&&
                      (u.role==='admin'||u.role==='manager');
@@ -8594,7 +8661,7 @@ const Cfg={
         /* 기존 파일 유지 */
         obj.file=existFile;
       }
-      /* [v2.44] Supabase 영속화 저장
+      /* [v2.45] Supabase 영속화 저장
          기존: App.notices.push() → 메모리만, 새로고침/배포 시 초기화
          수정: SB.addNotice/updateNotice → DB 저장 → SB.getNotices로 재로드 */
       var saveRes;
@@ -8614,7 +8681,7 @@ const Cfg={
   },
   noticeToggle(i){App.notices[i].show=!App.notices[i].show;Toast.show('변경되었습니다.','ok');Pages.settings()},
 
-  /* [v2.44] id 기반 공지 토글 */
+  /* [v2.45] id 기반 공지 토글 */
   async _noticeToggleById(n){
     var newShow=!n.show;
     var r=await SB.updateNotice(n.id,{show:newShow});
@@ -8624,7 +8691,7 @@ const Cfg={
     }
   },
 
-  /* [v2.44] id 기반 공지 삭제 */
+  /* [v2.45] id 기반 공지 삭제 */
   async _noticeDelById(n){
     Modal.confirm({title:'공지 삭제',msg:'<b>'+H.e(n.title)+'</b> 공지사항을 삭제하시겠습니까?',danger:true,
       onOk:async function(){
@@ -8634,13 +8701,13 @@ const Cfg={
     });
   },
 
-  /* [v2.44] id 기반 공지 수정 — _addNotice에 객체 전달 */
+  /* [v2.45] id 기반 공지 수정 — _addNotice에 객체 전달 */
   _editNoticeById(n){
     /* n 객체를 전달하여 수정 모달 오픈 */
     var idx=App.notices.findIndex(function(x){return x.id===n.id;});
     Pages._addNotice(idx>=0?idx:null, n);
   },
-  /* [v2.44] 공지 삭제 — Supabase 연동 */
+  /* [v2.45] 공지 삭제 — Supabase 연동 */
   noticeDel(i){
     var notice=App.notices[i];
     if(!notice){Toast.show('공지를 찾을 수 없습니다.','warn');return;}
