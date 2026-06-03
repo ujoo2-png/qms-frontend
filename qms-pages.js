@@ -4357,14 +4357,6 @@ async doc_distribution(){
   try{docs=await SB.getDocMaster();summary=await SB.getDistLogSummary();}catch(e){}
   var ba=summary.byAction||{};var totalCnt=summary.total||0;
   w.innerHTML=
-    /* [v2.44] 반복고장 경고 배너 */
-    (repeatAlerts.length?
-      '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
-        '<span style="font-size:18px">⚠️</span>'+
-        '<div><div style="font-size:13px;font-weight:600;color:#92400e">반복 고장 감지 — '+repeatAlerts.length+'건</div>'+
-        '<div style="font-size:11px;color:#92400e;margin-top:3px">'+
-          repeatAlerts.map(function(a){return'<span style="margin-right:10px">🏭 '+H.e(a.name)+' · '+H.e(a.ftype)+' · <b>'+a.cnt+'회</b></span>';}).join('')+
-        '</div></div></div>':'') +
     '<div class="stat-dash">'+
     '<div class="sd-card" style="cursor:pointer" onclick="Pages._distFilter(\'all\')">'+
       '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📊</div>'+
@@ -4540,14 +4532,6 @@ async doc_review_cycle(){
     if(d<0)expired.push(r);else if(d<=7)d7.push(r);else if(d<=30)d30.push(r);
   });
   w.innerHTML=
-    /* [v2.44] 반복고장 경고 배너 */
-    (repeatAlerts.length?
-      '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
-        '<span style="font-size:18px">⚠️</span>'+
-        '<div><div style="font-size:13px;font-weight:600;color:#92400e">반복 고장 감지 — '+repeatAlerts.length+'건</div>'+
-        '<div style="font-size:11px;color:#92400e;margin-top:3px">'+
-          repeatAlerts.map(function(a){return'<span style="margin-right:10px">🏭 '+H.e(a.name)+' · '+H.e(a.ftype)+' · <b>'+a.cnt+'회</b></span>';}).join('')+
-        '</div></div></div>':'') +
     '<div class="stat-dash">'+
     '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'expired\')">'+
       '<div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚨</div>'+
@@ -5384,14 +5368,6 @@ async rec(){
   rows.forEach(function(r){if(r.status==='active')cnt.active++;if(r.status==='draft')cnt.draft++;});
 
   w.innerHTML=
-    /* [v2.44] 반복고장 경고 배너 */
-    (repeatAlerts.length?
-      '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
-        '<span style="font-size:18px">⚠️</span>'+
-        '<div><div style="font-size:13px;font-weight:600;color:#92400e">반복 고장 감지 — '+repeatAlerts.length+'건</div>'+
-        '<div style="font-size:11px;color:#92400e;margin-top:3px">'+
-          repeatAlerts.map(function(a){return'<span style="margin-right:10px">🏭 '+H.e(a.name)+' · '+H.e(a.ftype)+' · <b>'+a.cnt+'회</b></span>';}).join('')+
-        '</div></div></div>':'') +
     '<div class="stat-dash">'+
       '<div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>'+
         '<div><div class="sd-val">'+cnt.all+'</div><div class="sd-lbl">전체 기록</div></div></div>'+
@@ -7220,14 +7196,6 @@ async eq_mgmt(){
   });
 
   w.innerHTML=
-    /* [v2.44] 반복고장 경고 배너 */
-    (repeatAlerts.length?
-      '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
-        '<span style="font-size:18px">⚠️</span>'+
-        '<div><div style="font-size:13px;font-weight:600;color:#92400e">반복 고장 감지 — '+repeatAlerts.length+'건</div>'+
-        '<div style="font-size:11px;color:#92400e;margin-top:3px">'+
-          repeatAlerts.map(function(a){return'<span style="margin-right:10px">🏭 '+H.e(a.name)+' · '+H.e(a.ftype)+' · <b>'+a.cnt+'회</b></span>';}).join('')+
-        '</div></div></div>':'') +
     '<div class="stat-dash">'+
       '<div class="sd-card" style="cursor:pointer" onclick="Pages._eqFilter(\'\')">'+
         '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">🏭</div>'+
@@ -7457,14 +7425,6 @@ async eq_pm(){
   var pmRateColor2=pmRate2>=90?'#059669':pmRate2>=70?'#d97706':'#dc2626';
 
   w.innerHTML=
-    /* [v2.44] 반복고장 경고 배너 */
-    (repeatAlerts.length?
-      '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
-        '<span style="font-size:18px">⚠️</span>'+
-        '<div><div style="font-size:13px;font-weight:600;color:#92400e">반복 고장 감지 — '+repeatAlerts.length+'건</div>'+
-        '<div style="font-size:11px;color:#92400e;margin-top:3px">'+
-          repeatAlerts.map(function(a){return'<span style="margin-right:10px">🏭 '+H.e(a.name)+' · '+H.e(a.ftype)+' · <b>'+a.cnt+'회</b></span>';}).join('')+
-        '</div></div></div>':'') +
     '<div class="stat-dash">'+
       '<div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>'+
         '<div><div class="sd-val">'+eqs.length+'</div><div class="sd-lbl">관리 설비</div></div></div>'+
