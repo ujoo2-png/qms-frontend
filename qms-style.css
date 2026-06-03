@@ -193,9 +193,8 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .mc-c7{background:#ede9fe;border-color:#ddd6fe}  /* 라벤더  — 문서관리    */
 .mc-c8{background:#ffedd5;border-color:#fed7aa}  /* 피치    — 개선활동    */
 /* [v2.41] 제조설비관리 카드 */
-.mc-c9{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);color:#fff}
-.mc-c9 .mc-ci{background:rgba(255,255,255,.18)}
-.mc-c9 .mc-subs a:hover{background:rgba(255,255,255,.15)}
+/* [v2.42] mc-c9 파스텔 슬레이트 — 기존 카드와 동일 톤 */
+.mc-c9{background:#f0fdf4;border-color:#bbf7d0}  /* 연초록 계열 — 제조설비관리 */
 
 /* 카드 헤더 (모듈명 + 뱃지) */
 .mc-card-hd{
@@ -777,3 +776,41 @@ textarea.fc{resize:vertical;min-height:68px}
   font-size:12px;color:var(--tm);background:none;border:none;cursor:pointer;
 }
 .qna-detail-hdr button:first-child:hover{color:var(--tx)}
+
+/* ── [v2.42] 카드 드래그앤드롭 효과 ── */
+.mc-card{
+  /* 기존 속성 유지 + 드래그 커서 */
+  cursor: grab;
+  user-select: none;
+  transition: transform .15s, box-shadow .15s, opacity .15s;
+}
+.mc-card:active{ cursor: grabbing; }
+
+/* 드래그 중인 카드 */
+.mc-dragging{
+  opacity: .45;
+  transform: scale(.97);
+  box-shadow: none !important;
+}
+
+/* 드롭 대상 카드 hover */
+.mc-drag-over{
+  transform: scale(1.03);
+  box-shadow: 0 0 0 3px var(--pri), 0 8px 24px rgba(99,102,241,.25) !important;
+  z-index: 10;
+}
+
+/* 드래그 힌트 — 카드 우상단 아이콘 */
+/* mc-card::after는 position:relative 필요 */
+.mc-card{ position:relative; }
+.mc-card::after{
+  content: '⠿';
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 13px;
+  color: rgba(0,0,0,.18);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.mc-card:hover::after{ opacity: 1; }
