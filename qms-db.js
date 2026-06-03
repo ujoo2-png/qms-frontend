@@ -1460,12 +1460,12 @@ SB.sendReviewAlerts=async function(days){
 };
 
 /* ════════════════════════════════════════════════════════════
-   공지사항 SB 함수 [v2.399.4 신규]
+   공지사항 SB 함수 [v2.41 신규]
    테이블: notices (id, title, body, author, date, expire, show, file_url, file_name, created_at)
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.399.4] 공지사항 전체 조회
+ * [v2.41] 공지사항 전체 조회
  * @returns {Array} created_at 내림차순 (최신순)
  *
  * [문제 배경] 기존 App.notices는 qms-core.js 하드코딩 배열
@@ -1485,7 +1485,7 @@ SB.getNotices = async function() {
 };
 
 /**
- * [v2.399.4] 공지사항 등록
+ * [v2.41] 공지사항 등록
  * @param {object} row - { title, body, author, date, expire, show, file_url, file_name }
  */
 SB.addNotice = async function(row) {
@@ -1513,7 +1513,7 @@ SB.addNotice = async function(row) {
 };
 
 /**
- * [v2.399.4] 공지사항 수정
+ * [v2.41] 공지사항 수정
  * @param {number} id  - notices.id
  * @param {object} patch - 변경할 필드
  */
@@ -1531,7 +1531,7 @@ SB.updateNotice = async function(id, patch) {
 };
 
 /**
- * [v2.399.4] 공지사항 삭제
+ * [v2.41] 공지사항 삭제
  * @param {number} id - notices.id
  */
 SB.deleteNotice = async function(id) {
@@ -1547,12 +1547,12 @@ SB.deleteNotice = async function(id) {
 };
 
 /* ════════════════════════════════════════════════════════════
-   Q&A SB 함수 [v2.399.4 신규]
+   Q&A SB 함수 [v2.41 신규]
    테이블: qna + qna_replies
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.399.4] Q&A 목록 조회
+ * [v2.41] Q&A 목록 조회
  * @param {object} filter - { category, menu_ref, status }
  * @returns {Array} created_at 내림차순, 고정글 상단
  */
@@ -1574,7 +1574,7 @@ SB.getQna = async function(filter) {
 };
 
 /**
- * [v2.399.4] Q&A 단건 조회 (답변 포함)
+ * [v2.41] Q&A 단건 조회 (답변 포함)
  * @param {number} id
  */
 SB.getQnaById = async function(id) {
@@ -1591,7 +1591,7 @@ SB.getQnaById = async function(id) {
   } catch(e) { return null; }
 };
 
-/** [v2.399.4] Q&A 등록 */
+/** [v2.41] Q&A 등록 */
 SB.addQna = async function(row) {
   if (!_sb) return { ok: false };
   try {
@@ -1611,7 +1611,7 @@ SB.addQna = async function(row) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.399.4] Q&A 수정 */
+/** [v2.41] Q&A 수정 */
 SB.updateQna = async function(id, patch) {
   if (!_sb) return { ok: false };
   try {
@@ -1622,7 +1622,7 @@ SB.updateQna = async function(id, patch) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.399.4] Q&A 삭제 */
+/** [v2.41] Q&A 삭제 */
 SB.deleteQna = async function(id) {
   if (!_sb) return { ok: false };
   try {
@@ -1632,7 +1632,7 @@ SB.deleteQna = async function(id) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.399.4] 답변 등록 */
+/** [v2.41] 답변 등록 */
 SB.addQnaReply = async function(qna_id, body, author, is_answer) {
   if (!_sb) return { ok: false };
   try {
@@ -1649,7 +1649,7 @@ SB.addQnaReply = async function(qna_id, body, author, is_answer) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.399.4] 답변 삭제 */
+/** [v2.41] 답변 삭제 */
 SB.deleteQnaReply = async function(id) {
   if (!_sb) return { ok: false };
   try {
@@ -1657,4 +1657,188 @@ SB.deleteQnaReply = async function(id) {
     if (res.error) { Toast.show('답변 삭제 실패: ' + res.error.message, 'err'); return { ok: false }; }
     return { ok: true };
   } catch(e) { return { ok: false }; }
+};
+
+/* ════════════════════════════════════════════════════════════
+   제조설비관리 (EMS) SB 함수 [v2.41]
+   테이블: equipment / eq_pm_log / eq_as / eq_cost / eq_manual / eq_oee
+   ════════════════════════════════════════════════════════════ */
+
+/* 설비 마스터 */
+SB.getEquipment = async function(filter) {
+  if (!_sb) return [];
+  try {
+    var q = _sb.from('equipment').select('*').order('eq_no', {ascending:true});
+    if (filter && filter.dept) q = q.eq('dept', filter.dept);
+    var res = await q;
+    if (res.error) { console.warn('[SB] getEquipment:', res.error.message); return []; }
+    return res.data || [];
+  } catch(e) { console.warn('[SB] getEquipment:', e.message); return []; }
+};
+SB.addEquipment = async function(row) {
+  if (!_sb) return { ok: false };
+  try {
+    // eq_no 자동생성: EQ-YYYY-NNN
+    var year = new Date().getFullYear();
+    var existing = await SB.getEquipment();
+    var yearSeq = existing.filter(function(e){ return (e.eq_no||'').startsWith('EQ-'+year); }).length + 1;
+    row.eq_no = 'EQ-' + year + '-' + String(yearSeq).padStart(3,'0');
+    var res = await _sb.from('equipment').insert(row);
+    if (res.error) { Toast.show('설비 저장 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.updateEquipment = async function(id, patch) {
+  if (!_sb) return { ok:false };
+  try {
+    patch.updated_at = new Date().toISOString();
+    var res = await _sb.from('equipment').update(patch).eq('id', id);
+    if (res.error) { Toast.show('설비 수정 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.deleteEquipment = async function(id) {
+  if (!_sb) return { ok:false };
+  try {
+    var res = await _sb.from('equipment').delete().eq('id', id);
+    if (res.error) { Toast.show('설비 삭제 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+
+/* PM 점검 이력 */
+SB.getEqPmLogs = async function(eq_id) {
+  if (!_sb) return [];
+  try {
+    var q = _sb.from('eq_pm_log').select('*').order('check_date', {ascending:false});
+    if (eq_id) q = q.eq('eq_id', eq_id);
+    var res = await q;
+    return res.data || [];
+  } catch(e) { return []; }
+};
+SB.addEqPmLog = async function(row) {
+  if (!_sb) return { ok:false };
+  try {
+    var res = await _sb.from('eq_pm_log').insert(row);
+    if (res.error) { Toast.show('PM 저장 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.updateEqPmLog = async function(id, patch) {
+  if (!_sb) return { ok:false };
+  try {
+    var res = await _sb.from('eq_pm_log').update(patch).eq('id', id);
+    if (res.error) { Toast.show('PM 수정 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.deleteEqPmLog = async function(id) {
+  if (!_sb) return { ok:false };
+  try { await _sb.from('eq_pm_log').delete().eq('id', id); return { ok:true }; }
+  catch(e) { return { ok:false }; }
+};
+
+/* AS/고장 관리 */
+SB.getEqAs = async function(eq_id) {
+  if (!_sb) return [];
+  try {
+    var q = _sb.from('eq_as').select('*').order('created_at', {ascending:false});
+    if (eq_id) q = q.eq('eq_id', eq_id);
+    var res = await q;
+    return res.data || [];
+  } catch(e) { return []; }
+};
+SB.addEqAs = async function(row) {
+  if (!_sb) return { ok:false };
+  try {
+    var res = await _sb.from('eq_as').insert(row);
+    if (res.error) { Toast.show('AS 저장 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.updateEqAs = async function(id, patch) {
+  if (!_sb) return { ok:false };
+  try {
+    patch.updated_at = new Date().toISOString();
+    var res = await _sb.from('eq_as').update(patch).eq('id', id);
+    if (res.error) { Toast.show('AS 수정 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.deleteEqAs = async function(id) {
+  if (!_sb) return { ok:false };
+  try { await _sb.from('eq_as').delete().eq('id', id); return { ok:true }; }
+  catch(e) { return { ok:false }; }
+};
+
+/* 유지보수 비용 */
+SB.getEqCost = async function(ym) {
+  if (!_sb) return [];
+  try {
+    var q = _sb.from('eq_cost').select('*').order('date', {ascending:false});
+    if (ym) { q = q.gte('date', ym+'-01').lte('date', ym+'-31'); }
+    var res = await q;
+    return res.data || [];
+  } catch(e) { return []; }
+};
+SB.addEqCost = async function(row) {
+  if (!_sb) return { ok:false };
+  try {
+    var res = await _sb.from('eq_cost').insert(row);
+    if (res.error) { Toast.show('비용 저장 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.deleteEqCost = async function(id) {
+  if (!_sb) return { ok:false };
+  try { await _sb.from('eq_cost').delete().eq('id', id); return { ok:true }; }
+  catch(e) { return { ok:false }; }
+};
+
+/* 설비 매뉴얼 */
+SB.getEqManuals = async function(eq_id) {
+  if (!_sb) return [];
+  try {
+    var q = _sb.from('eq_manual').select('*').order('created_at', {ascending:false});
+    if (eq_id) q = q.eq('eq_id', eq_id);
+    var res = await q;
+    return res.data || [];
+  } catch(e) { return []; }
+};
+SB.addEqManual = async function(row) {
+  if (!_sb) return { ok:false };
+  try {
+    var res = await _sb.from('eq_manual').insert(row);
+    if (res.error) { Toast.show('매뉴얼 저장 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.deleteEqManual = async function(id) {
+  if (!_sb) return { ok:false };
+  try { await _sb.from('eq_manual').delete().eq('id', id); return { ok:true }; }
+  catch(e) { return { ok:false }; }
+};
+
+/* OEE 일보 */
+SB.getEqOee = async function(eq_id) {
+  if (!_sb) return [];
+  try {
+    var q = _sb.from('eq_oee').select('*').order('date', {ascending:false}).limit(60);
+    if (eq_id) q = q.eq('eq_id', eq_id);
+    var res = await q;
+    return res.data || [];
+  } catch(e) { return []; }
+};
+SB.addEqOee = async function(row) {
+  if (!_sb) return { ok:false };
+  try {
+    var res = await _sb.from('eq_oee').insert(row);
+    if (res.error) { Toast.show('OEE 저장 실패: '+res.error.message,'err'); return { ok:false }; }
+    return { ok:true };
+  } catch(e) { return { ok:false }; }
+};
+SB.deleteEqOee = async function(id) {
+  if (!_sb) return { ok:false };
+  try { await _sb.from('eq_oee').delete().eq('id', id); return { ok:true }; }
+  catch(e) { return { ok:false }; }
 };

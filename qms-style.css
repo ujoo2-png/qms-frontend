@@ -156,11 +156,12 @@ input,select,textarea{font-family:inherit;font-size:13px}
 /* .mc-grid — 2×4 카드 그리드
    flex:1+min-height:0: hw-main 남은 높이 전부 사용
    overflow:hidden: grid 셀 경계 강제 (overflow:visible은 카드 중첩 유발) */
+/* [v2.41] 카드 2×5 (9장 기준) */
 .mc-grid{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(5,1fr);
   grid-template-rows:repeat(2,1fr);
-  gap:14px;
+  gap:12px;
   flex:1;
   min-height:0;
   overflow:hidden;
@@ -168,9 +169,10 @@ input,select,textarea{font-family:inherit;font-size:13px}
 
 /* .mc-card — 개별 카드
    grid 셀 안에서 flex column으로 헤더+서브메뉴 배치 */
+/* [v2.41] 5열 레이아웃에 맞춰 패딩 축소 */
 .mc-card{
-  border-radius:16px;
-  padding:18px 16px 14px;
+  border-radius:14px;
+  padding:14px 12px 11px;
   cursor:default;       /* 카드 자체는 default, 서브메뉴가 pointer */
   display:flex;
   flex-direction:column;
@@ -190,6 +192,10 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .mc-c6{background:#ccfbf1;border-color:#99f6e4}  /* 민트    — 계측기관리  */
 .mc-c7{background:#ede9fe;border-color:#ddd6fe}  /* 라벤더  — 문서관리    */
 .mc-c8{background:#ffedd5;border-color:#fed7aa}  /* 피치    — 개선활동    */
+/* [v2.41] 제조설비관리 카드 */
+.mc-c9{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);color:#fff}
+.mc-c9 .mc-ci{background:rgba(255,255,255,.18)}
+.mc-c9 .mc-subs a:hover{background:rgba(255,255,255,.15)}
 
 /* 카드 헤더 (모듈명 + 뱃지) */
 .mc-card-hd{
