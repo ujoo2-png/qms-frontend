@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.46]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.47]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -12,7 +12,7 @@ const Pages={
 async home(){
   const w=document.getElementById('pw');
   w.classList.add('home-mode');
-  /* [v2.46] EMS 설비 데이터 캐싱 (홈 패널용) */
+  /* [v2.47] EMS 설비 데이터 캐싱 (홈 패널용) */
   if(!window._eqRows || !window._eqRows.length){
     try{ window._eqRows=await SB.getEquipment(); }catch(e){ window._eqRows=[]; }
   }
@@ -40,7 +40,7 @@ async home(){
      subs:[{icon:'📄',label:'문서 목록',page:'docs'},{icon:'✍️',label:'결재함',page:'doc_approval'},{icon:'🕐',label:'개정 이력',page:'doc_history_home'},{icon:'🔍',label:'지식 검색',page:'doc_search'},{icon:'📋',label:'기록 관리',page:'rec'}]},
     {c:'mc-c8',icon:'🔧',name:'개선활동',badge:carO,
      subs:[{icon:'🔧',label:'시정조치(CAR)',page:'car'},{icon:'🔎',label:'내부심사',page:'audit'}]},
-    /* [v2.46] 제조설비관리(EMS) 9번째 카드 */
+    /* [v2.47] 제조설비관리(EMS) 9번째 카드 */
     {c:'mc-c9',icon:'🏭',name:'제조설비관리',badge:0,
      subs:[
        {icon:'🏭',label:'설비 등록',    page:'eq_mgmt'},
@@ -224,7 +224,7 @@ async home(){
       </div>
     </div>
 
-    <!-- [v2.46] EMS 설비 현황 패널 -->
+    <!-- [v2.47] EMS 설비 현황 패널 -->
     ${(()=>{
       /* 제조설비관리 간략 현황 — 수리중/PM예정 설비 */
       const _eqWarn=(window._eqRows||[]).filter(function(e){
@@ -252,9 +252,9 @@ async home(){
   </div>
   </div>`;
 
-  /* [v2.46] 카드 순서 복원 (localStorage) */
+  /* [v2.47] 카드 순서 복원 (localStorage) */
   Pages._homeApplyCardOrder();
-  /* [v2.46] 드래그앤드롭 초기화 */
+  /* [v2.47] 드래그앤드롭 초기화 */
   Pages._homeInitDrag();
 },
 
@@ -3630,7 +3630,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.46]
+   문서관리 고도화 페이지 함수 [v2.47]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3661,7 +3661,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.46]
+   D1: 문서 목록 [v2.47]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3835,7 +3835,7 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.46] ── */
+/* ── 칸반 보드 [v2.47] ── */
 /* ── 칸반 보드 [v2.397.2 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
@@ -3891,7 +3891,7 @@ _docKanban:function(){
     '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.46] ── */
+/* ── 문서 상세 팝업 [v2.47] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3911,7 +3911,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.46] ── */
+/* ── D2: 문서 등록 [v2.47] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3985,7 +3985,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.46] ── */
+/* ── D2-B: 개정 기안 [v2.47] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -4041,7 +4041,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.46]
+   D3: 내 결재함 [v2.47]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -4059,12 +4059,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.46] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.47] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.46] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.47] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4166,9 +4166,9 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.46]
+   D4: 개정 이력 타임라인 [v2.47]
    ══════════════════════════════════════════════════ */
-/* [v2.46] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+/* [v2.47] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
 doc_history_home:async function(){
   await Pages.docs();
   /* 문서 목록 로드 완료 후 상단에 안내 배너 삽입 */
@@ -4203,7 +4203,7 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.46] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.47] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
     /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
@@ -4310,7 +4310,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.46]
+   지식 검색 허브 [v2.47]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4631,12 +4631,12 @@ _rcSendAlert:async function(days){
   }finally{if(btn){btn.disabled=false;btn.textContent=days===7?'🚨 D-7 긴급알림':'🔔 D-30 알림발송';}}
 },
 /* ══════════════════════════════════════════════════
-   D7: 연관 문서 추천 [v2.46 Phase 3]
+   D7: 연관 문서 추천 [v2.47 Phase 3]
    동일 태그 기반 연관 문서 패널 + 유사 문서 추천
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.46] D7: 연관 문서 추천 페이지
+ * [v2.47] D7: 연관 문서 추천 페이지
  * [UI 구성]
  *  ① 문서 선택 → 해당 문서의 태그 표시
  *  ② 동일 태그를 가진 연관 문서 목록 (태그 일치도순 정렬)
@@ -4837,12 +4837,12 @@ _rcTagFilter:function(tag){
 },
 
 /* ══════════════════════════════════════════════════
-   D8: 문서 현황 대시보드 [v2.46 Phase 4]
+   D8: 문서 현황 대시보드 [v2.47 Phase 4]
    KPI 카드 · 유형 분포 · 상태 현황 · 심사 준비율 게이지
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.46] D8: 문서 현황 대시보드
+ * [v2.47] D8: 문서 현황 대시보드
  * [UI 구성]
  *  ① KPI 카드 4종 (전체/유효/검토중/만료임박)
  *  ② 유형별 분포 — 바 차트 (Canvas)
@@ -5041,7 +5041,7 @@ _dashRefresh:async function(){
   await Pages.doc_dashboard();
 },
 /* ══════════════════════════════════════════════════
-   Q&A 페이지 [v2.46]
+   Q&A 페이지 [v2.47]
    사이드바 메인 4번째 메뉴 — 매뉴얼/Q&A/팁 통합
    ══════════════════════════════════════════════════ */
 async qna(){
@@ -6647,7 +6647,7 @@ async settings(){
     if(fresh&&fresh.length>0) DB.users=fresh;
   }
   const isAdmin=Auth._u?.role==='admin';
-  /* [v2.46] 공지사항 최신 로드 — Supabase 영속화
+  /* [v2.47] 공지사항 최신 로드 — Supabase 영속화
      [버그수정] RLS 오류/네트워크 오류 시 App.notices(더미) 유지
      [버그수정] notices 테이블 미생성 시 빈 배열 대신 기존 목록 유지 */
   try{
@@ -6748,7 +6748,7 @@ async settings(){
               +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
               +'<td>'+H.e(u.department||'-')+'</td>'
               +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
-              /* [v2.46 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
+              /* [v2.47 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
               +'<td style="font-size:11px">'+(u.email?'<a href="mailto:'+H.e(u.email)+'" style="color:var(--acc)">'+H.e(u.email)+'</a>':'-')+'</td>'
               +'<td style="white-space:nowrap">'
               +(function(){
@@ -6839,7 +6839,7 @@ async settings(){
           <th style="width:88px;text-align:center">관리</th>
         </tr></thead>
         <tbody>${(()=>{
-          /* [v2.46] 최신순 정렬: created_at 없으면 date 기준 */
+          /* [v2.47] 최신순 정렬: created_at 없으면 date 기준 */
           const sorted=[...notices].sort((a,b)=>{
             const da=a.created_at||a.date||''; const db=b.created_at||b.date||'';
             return db.localeCompare(da);
@@ -6849,10 +6849,10 @@ async settings(){
             const today=H.today();
             /* 게시중 = show:true + 오늘이 date~expire 범위 내 */
             const active=n.show&&(!n.expire||n.expire>=today)&&(!n.date||n.date<=today);
-            /* [v2.46] 게시중 행 음영 */
+            /* [v2.47] 게시중 행 음영 */
             const rowBg=active?'background:#f0fdf4;':'';
             const expiredCls=n.expire&&n.expire<today?"color:#ef4444":"";
-            return '<tr style="'+rowBg+'">'  /* [v2.46] 게시중 행 음영 */
+            return '<tr style="'+rowBg+'">'  /* [v2.47] 게시중 행 음영 */
               +'<td><input type="checkbox" class="notice-chk" value="'+(n.id||i)+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
               +'<td style="font-weight:600;cursor:pointer" onclick="Pages._editNoticeById(n)">'+H.e(n.title)+'</td>'
@@ -6939,7 +6939,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.46] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.47] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
@@ -7166,7 +7166,7 @@ async _sbKeepAlive(){
 },
 
 /* ══════════════════════════════════════════════════════════════
-   제조설비관리 (EMS — Equipment Management System) [v2.46]
+   제조설비관리 (EMS — Equipment Management System) [v2.47]
    ══════════════════════════════════════════════════════════════
    M1. eq_mgmt        설비 등록 관리
    M2. eq_pm          예방정비(PM) 점검표
@@ -7217,7 +7217,7 @@ async eq_mgmt(){
       '<div class="ptit">🏭 설비 등록 관리</div>'+
       '<div style="font-size:12px;color:var(--muted)">설비 기본정보 · 사양 · 관리대장 일괄 업로드</div>'+
     '</div><div class="pac">'+
-      /* [v2.46] Excel 일괄 업로드 버튼 */
+      /* [v2.47] Excel 일괄 업로드 버튼 */
       '<label class="btn bout bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px">'+
         '📥 Excel 일괄 업로드'+
         '<input type="file" id="eqExcelFile" accept=".xlsx,.xls" style="display:none" onchange="Pages._eqBulkUpload(this)">'+
@@ -7250,10 +7250,10 @@ _eqFilter:function(st){ window._eqStatus=st; Pages._eqApply(); },
 _eqTypeFilter:function(v){ window._eqType=v; Pages._eqApply(); },
 _eqDeptFilter:function(v){ window._eqDept=v; Pages._eqApply(); },
 _eqKwFilter:function(v){ window._eqKw=v; Pages._eqApply(); },
-/* [v2.46] 설비번호 전용 필터 */
+/* [v2.47] 설비번호 전용 필터 */
 _eqNoFilter:function(v){ window._eqNo=v; Pages._eqApply(); },
 
-/* [v2.46] Excel 일괄 업로드 ─────────────────────────────────────
+/* [v2.47] Excel 일괄 업로드 ─────────────────────────────────────
    컬럼 매핑 (관리대장 1행 헤더 기준):
    일련번호 | 유형* | 설비번호* | 설비명* | 모델명* | S/N | 제조사* |
    제작일자 | 도입일* | 취득원가 | 담당부서 | 담당자(정)* | 관리자(부)* |
@@ -7410,7 +7410,7 @@ _parseDate:function(v){
   return null;
 },
 
-/* [v2.46] Excel 다운로드 */
+/* [v2.47] Excel 다운로드 */
 _eqExportExcel:function(){
   var rows=window._eqRows||[];
   if(!rows.length){Toast.show('다운로드할 데이터가 없습니다.','warn');return;}
@@ -7446,7 +7446,7 @@ _eqApply:function(){
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(tp) rows=rows.filter(function(r){return r.type===tp;});
   if(dp) rows=rows.filter(function(r){return r.dept===dp;});
-  /* [v2.46] 설비번호 전용 필터 */
+  /* [v2.47] 설비번호 전용 필터 */
   if(no) rows=rows.filter(function(r){return (r.eq_no||'').toLowerCase().includes(no);});
   if(kw) rows=rows.filter(function(r){
     return (r.name||'').toLowerCase().includes(kw)||(r.dept||'').toLowerCase().includes(kw);
@@ -7455,7 +7455,7 @@ _eqApply:function(){
 },
 _eqRender:function(rows){
   var stCls={정상:'bgrn',수리중:'bred',점검중:'bamb',폐기:'bgry',폐기예정:'bgry'};
-  /* [v2.46] 관리대장 기준 컬럼 순서 */
+  /* [v2.47] 관리대장 기준 컬럼 순서 */
   Tbl.render({el:'#eqTbl',cols:[
     {key:'eq_no',           label:'설비번호',    w:'110px',
       render:function(v,row){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Pages._eqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
@@ -7514,7 +7514,7 @@ _eqDetail:async function(id){
 
   Modal.open({title:'🏭 설비 상세 — '+H.e(row.name||''),size:'mlg',body:
     gallery+
-    /* [v2.46] 관리대장 기준 전체 필드 표시 */
+    /* [v2.47] 관리대장 기준 전체 필드 표시 */
     '<div class="fg2">'+
     '<div class="fgroup"><label class="fl">설비번호</label><div class="fc-readonly">'+H.e(row.eq_no||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">유형</label><div class="fc-readonly">'+H.e(row.type||'-')+'</div></div>'+
@@ -7555,7 +7555,7 @@ _eqPhotoView:function(urls,idx){
   Modal.open({title:'📷 설비 사진',size:'mlg',body:html,foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'});
 },
 _eqForm:async function(editId){
-  /* [v2.46] 관리대장 기준 전체 필드 */
+  /* [v2.47] 관리대장 기준 전체 필드 */
   var row=editId?(window._eqRows||[]).find(function(r){return r.id===editId;}):null;
   Modal.open({title:row?'✏️ 설비 수정':'🏭 설비 등록',size:'mlg',body:
     '<div class="fg2">'+
@@ -7633,9 +7633,9 @@ _eqSave:async function(editId){
   var dept=document.getElementById('efDept')?.value?.trim();
   if(!name){Toast.show('설비명을 입력하세요.','warn');return;}
   if(!dept){Toast.show('담당부서를 입력하세요.','warn');return;}
-  /* [v2.46] 설비번호: 입력값 우선, 없으면 DB에서 자동생성 */
+  /* [v2.47] 설비번호: 입력값 우선, 없으면 DB에서 자동생성 */
   var inputNo = document.getElementById('efNo')?.value?.trim();
-  /* [v2.46] 관리대장 기준 전체 필드 저장 */
+  /* [v2.47] 관리대장 기준 전체 필드 저장 */
   var row={
     name:name,
     type:document.getElementById('efType')?.value||'생산설비',
@@ -7687,7 +7687,7 @@ async eq_pm(){
   var overdue=logs.filter(function(l){return l.status==='미완료'&&new Date(l.check_date)<today;}).length;
   var done=logs.filter(function(l){return l.status==='완료';}).length;
   var planned=logs.filter(function(l){return l.status==='예정';}).length;
-  /* [v2.46] PM 준수율 계산 */
+  /* [v2.47] PM 준수율 계산 */
   var pmRate2=logs.length?Math.round(done/logs.length*100):0;
   var pmRateColor2=pmRate2>=90?'#059669':pmRate2>=70?'#d97706':'#dc2626';
 
@@ -7732,7 +7732,7 @@ async eq_pm(){
   Pages._pmRender(logs);
 },
 _pmEqFilter:function(v){window._pmEqF=v;Pages._pmApply();},
-/* [v2.46] PM 설비번호 필터 */
+/* [v2.47] PM 설비번호 필터 */
 _pmNoFilter:function(v){window._pmNo=v;Pages._pmApply();},
 _pmCycleFilter:function(v){window._pmCycle=v;Pages._pmApply();},
 _pmStatusFilter:function(v){window._pmSt=v;var s=document.getElementById('pmStF');if(s)s.value=v;Pages._pmApply();},
@@ -7743,7 +7743,7 @@ _pmApply:function(){
   if(ef) rows=rows.filter(function(r){return String(r.eq_id)===String(ef);});
   if(cy) rows=rows.filter(function(r){return r.cycle===cy;});
   if(st) rows=rows.filter(function(r){return r.status===st;});
-  /* [v2.46] 설비번호 필터 */
+  /* [v2.47] 설비번호 필터 */
   if(pmNo){ var eqs=window._pmEqs||[]; rows=rows.filter(function(r){var eq=eqs.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(pmNo);}); }
   Pages._pmRender(rows);
 },
@@ -7757,7 +7757,7 @@ _pmRender:function(rows){
     {key:'eq_id',      label:'설비명',   render:function(v){
       var eq=(eqs||[]).find(function(e){return e.id===v;});
       return eq?'<span style="font-weight:600">'+H.e(eq.name)+'</span>':'-';}},
-    /* [v2.46] 설비번호 컬럼 추가 */
+    /* [v2.47] 설비번호 컬럼 추가 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'cycle',      label:'주기',     w:'60px',  align:'center',
       render:function(v){return'<span class="badge '+(cycCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
@@ -7820,7 +7820,7 @@ _pmSave:async function(editId){
   };
   var r=editId?await SB.updateEqPmLog(editId,row):await SB.addEqPmLog(row);
   if(r.ok){
-    /* [v2.46 fix] PM 완료 저장 시 equipment.next_pm_date 자동 계산 */
+    /* [v2.47 fix] PM 완료 저장 시 equipment.next_pm_date 자동 계산 */
     if(row.status==='완료'&&row.check_date&&row.eq_id){
       var CYCLE_DAYS={일일:1,주간:7,월간:30,반기:180,연간:365};
       var days=CYCLE_DAYS[row.cycle]||30;
@@ -7839,7 +7839,13 @@ _pmDetail:function(row){
   var eq=(eqs||[]).find(function(e){return e.id===row.eq_id;})||{};
   Modal.open({title:'📋 PM 상세',size:'sm',body:
     '<div class="fg2">'+
+    /* [v2.47] 설비 기본정보 */
+    '<div class="fgroup"><label class="fl">설비번호</label><div class="fc-readonly">'+H.e(eq.eq_no||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">설비명</label><div class="fc-readonly">'+H.e(eq.name||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">담당부서</label><div class="fc-readonly">'+H.e(eq.dept||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">담당자</label><div class="fc-readonly">'+H.e(eq.manager||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">제조사/모델</label><div class="fc-readonly">'+H.e(eq.maker||'-')+(eq.model?' / '+H.e(eq.model):'')+'</div></div>'+
+    '<div style="height:1px;background:var(--brd);margin:8px 0"></div>'+
     '<div class="fgroup"><label class="fl">점검 주기</label><div class="fc-readonly">'+H.e(row.cycle||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">점검일자</label><div class="fc-readonly">'+H.e(row.check_date||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">점검자</label><div class="fc-readonly">'+H.e(row.checker||'-')+'</div></div>'+
@@ -7851,7 +7857,160 @@ _pmDetail:function(row){
   });
 },
 _pmPrint:function(){
-  Toast.show('📌 점검표 출력: 양식 등록 후 활성화됩니다.','info',3000);
+  /* [v2.47] 설비점검표 출력 — IDP-602-03 양식 기반 달력형 A4 */
+  var eqs=window._pmEqs||[];
+  var logs=window._pmRows||[];
+  if(!eqs.length){Toast.show('설비가 없습니다.','warn');return;}
+
+  /* 설비 선택 팝업 */
+  Modal.open({title:'🖨️ 설비점검표 출력',size:'sm',body:
+    '<div class="fg2">'+
+    '<div class="fgroup"><label class="fl req">설비 선택</label>'+
+      '<select class="fc" id="pmPrintEq">'+
+        eqs.map(function(e){return'<option value="'+e.id+'">'+H.e(e.eq_no?'['+e.eq_no+'] ':'')+H.e(e.name)+'</option>';}).join('')+
+      '</select></div>'+
+    '<div class="fgroup"><label class="fl req">적용 연월</label>'+
+      '<input type="month" class="fc" id="pmPrintYM" value="'+new Date().toISOString().slice(0,7)+'"></div>'+
+    '<div class="fgroup"><label class="fl">점검 주기</label>'+
+      '<select class="fc" id="pmPrintCycle">'+
+        ['일일','주간','월간','반기','연간'].map(function(c){return'<option>'+c+'</option>';}).join('')+
+      '</select></div>'+
+    '</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+         '<button class="btn bpri" onclick="Pages._pmPrintDo()">🖨️ 출력</button>',
+  });
+},
+
+_pmPrintDo:function(){
+  var eqs=window._pmEqs||[];
+  var logs=window._pmRows||[];
+  var eqId=parseInt(document.getElementById('pmPrintEq')?.value);
+  var ym=document.getElementById('pmPrintYM')?.value||new Date().toISOString().slice(0,7);
+  var cycle=document.getElementById('pmPrintCycle')?.value||'일일';
+  var eq=eqs.find(function(e){return e.id===eqId;})||{};
+
+  Modal.close();
+
+  /* 해당 월 일수 계산 */
+  var year=parseInt(ym.slice(0,4)); var month=parseInt(ym.slice(5,7));
+  var daysInMonth=new Date(year,month,0).getDate();
+
+  /* 해당 기간 PM 로그 매핑 (날짜 → 결과) */
+  var logMap={};
+  logs.filter(function(l){
+    return l.eq_id===eqId && l.cycle===cycle &&
+           l.check_date && l.check_date.startsWith(ym);
+  }).forEach(function(l){
+    var day=parseInt(l.check_date.slice(8,10));
+    logMap[day]=l.status||'';
+  });
+
+  /* 기본 점검 항목 (설비유형별) */
+  var dailyItems = [
+    '전원 ON/OFF 상태',
+    'Air 압력 상태 (기계 Air 압력 알람 확인)',
+    '축(X,Y) 이동 시 소음 및 작동 상태',
+    'OIL 급유 및 누유 상태 (급유통 게이지 확인)',
+    '각종 BUTTON & S/W 작동 상태',
+    '터렛 작동 상태 (시운전 터렛 회전 확인)',
+    '안전 장치 작동 상태 (비상 버튼 확인)',
+    '설비 작동 기압 값 상태 (0.5MPa)',
+    '절삭유 농도 측정 (5~15%)',
+  ];
+  var monthlyItems=[
+    'PCB 오염(먼지) 상태',
+    '냉각수 상태 (보충여부)',
+    'BATTERY 점검 상태 (전극상태)',
+  ];
+
+  /* 달력형 셀 생성 */
+  var dayHeaders='';
+  for(var d=1;d<=daysInMonth;d++) dayHeaders+='<th style="min-width:18px;font-size:8px">'+d+'</th>';
+
+  var dailyRows='';
+  dailyItems.forEach(function(item,idx){
+    var cells='';
+    for(var d=1;d<=daysInMonth;d++){
+      var v=logMap[d]||'';
+      var mark=v==='완료'?'○':v==='미완료'?'△':v==='접수'?'X':'';
+      cells+='<td style="text-align:center;font-size:9px;color:'+(mark==='○'?'#059669':mark==='X'?'#dc2626':'#d97706')+'">'+mark+'</td>';
+    }
+    dailyRows+='<tr><td style="padding:3px 4px;font-size:9px;border:1px solid #ccc;white-space:nowrap">'+
+      (idx+1)+'. '+(item.length>22?item.slice(0,22)+'…':item)+
+      '</td>'+cells+'</tr>';
+  });
+
+  /* 월간 점검 행 */
+  var months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  var monthHeaders=months.map(function(m){return'<th style="min-width:22px;font-size:8px">'+m+'</th>';}).join('');
+  var monthRows=monthlyItems.map(function(item,idx){
+    return'<tr><td style="padding:3px 4px;font-size:9px;border:1px solid #ccc">'+
+      (idx+1)+'. '+item+'</td>'+
+      months.map(function(){return'<td></td>';}).join('')+
+      '</tr>';
+  }).join('');
+
+  var html='<html><head><title>설비점검표 — '+H.e(eq.name||'')+'</title>'+
+  '<style>'+
+  '@page{size:A4 landscape;margin:8mm}'+
+  'body{font-family:"맑은 고딕","Apple SD Gothic Neo",Arial;font-size:10px;margin:0}'+
+  'table{border-collapse:collapse;width:100%}'+
+  'th,td{border:1px solid #aaa;padding:2px 3px}'+
+  'th{background:#e8edf4;font-weight:700;text-align:center}'+
+  '.title{font-size:16px;font-weight:700;text-align:center;padding:8px;letter-spacing:3px}'+
+  '.meta td{border:none;padding:2px 6px;font-size:9px}'+
+  '.legend{font-size:9px;color:#64748b;text-align:right;padding:2px 4px}'+
+  '.section-hdr td{background:#1e3a5f;color:#fff;font-weight:700;padding:4px 6px;font-size:10px}'+
+  '</style></head><body>'+
+  /* 제목 */
+  '<table><tr><td class="title" colspan="'+(daysInMonth+2)+'">설 비 점 검 표</td></tr></table>'+
+  /* 메타 정보 */
+  '<table class="meta" style="margin-bottom:6px">'+
+  '<tr>'+
+    '<td style="width:100px">관리번호</td><td style="font-weight:700;font-family:monospace">'+H.e(eq.eq_no||'-')+'</td>'+
+    '<td style="width:70px">설비명</td><td style="font-weight:700">'+H.e(eq.name||'-')+'</td>'+
+    '<td style="width:70px">담당부서</td><td>'+H.e(eq.dept||'-')+'</td>'+
+    '<td style="width:70px">담당자</td><td>'+H.e(eq.manager||'-')+'</td>'+
+    '<td style="width:40px;text-align:right;border:1px solid #ccc">담 당</td>'+
+    '<td style="width:40px;border:1px solid #ccc"></td>'+
+    '<td style="width:40px;text-align:right;border:1px solid #ccc">검 토</td>'+
+    '<td style="width:40px;border:1px solid #ccc"></td>'+
+    '<td style="width:40px;text-align:right;border:1px solid #ccc">승 인</td>'+
+    '<td style="width:40px;border:1px solid #ccc"></td>'+
+  '</tr>'+
+  '<tr>'+
+    '<td>설비점검자</td><td></td>'+
+    '<td>개정번호</td><td>1</td>'+
+    '<td>적용월</td><td style="font-weight:700">'+year+'년 '+month+'월</td>'+
+    '<td>점검시간</td><td>08:30 ~ 08:40</td>'+
+    '<td colspan="6" class="legend">범례 : ○정상  △점검요  X고장</td>'+
+  '</tr>'+
+  '</table>'+
+  /* 일일점검 */
+  '<table><tr class="section-hdr"><td colspan="'+(daysInMonth+2)+'">일일점검 (1회/1일) — '+cycle+' 점검</td></tr>'+
+  '<tr><th style="width:180px">점 검 항 목</th>'+dayHeaders+'</tr>'+
+  dailyRows+
+  '</table>'+
+  /* 월간점검 */
+  '<table style="margin-top:8px">'+
+  '<tr class="section-hdr"><td colspan="14">월간점검</td></tr>'+
+  '<tr><th style="width:180px">점 검 항 목</th>'+monthHeaders+'<th style="width:40px">비고</th></tr>'+
+  monthRows+
+  '</table>'+
+  /* 문제발생조치이력 */
+  '<table style="margin-top:8px">'+
+  '<tr class="section-hdr"><td colspan="7">문제발생 조치이력</td></tr>'+
+  '<tr><th style="width:70px">점검일</th><th style="width:140px">고장내역</th><th>원인</th><th>대책</th><th style="width:70px">완료일</th><th style="width:50px">담당</th><th style="width:50px">확인</th></tr>'+
+  '<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'+
+  '<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'+
+  '<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'+
+  '</table>'+
+  '<div style="font-size:8px;color:#64748b;text-align:right;margin-top:4px">INDS-QP-005-03 | 출력: '+new Date().toLocaleDateString('ko-KR')+'</div>'+
+  '</body></html>';
+
+  var win=window.open('','_blank','width=1100,height=800');
+  win.document.write(html); win.document.close();
+  setTimeout(function(){win.print();},500);
 },
 
 /* ──────────────────────────────────────────────────────────────
@@ -7875,7 +8034,7 @@ async eq_as(){
     else if(r.status==='완료')cnt.done++;
   });
 
-  /* [v2.46] 반복고장 감지 — 동일 설비 + 동일 유형 3회 이상 */
+  /* [v2.47] 반복고장 감지 — 동일 설비 + 동일 유형 3회 이상 */
   var repeatMap={};
   rows.forEach(function(r){
     var key=r.eq_id+'_'+r.fault_type;
@@ -7893,7 +8052,7 @@ async eq_as(){
   });
 
   w.innerHTML=
-    /* [v2.46] 반복고장 경고 배너 */
+    /* [v2.47] 반복고장 경고 배너 */
     (repeatAlerts.length?
       '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
         '<span style="font-size:18px">⚠️</span>'+
@@ -7937,7 +8096,7 @@ async eq_as(){
   window._asRows=rows; window._asEqs=eqs; window._asSt=''; window._asSrc=''; window._asKw='';
   Pages._asRender(rows);
 },
-/* [v2.46] AS 설비번호 필터 */
+/* [v2.47] AS 설비번호 필터 */
 _asNoFilter:function(v){window._asNo=v;Pages._asApply();},
 _asStatusFilter:function(v){window._asSt=v;var s=document.getElementById('asStF');if(s)s.value=v;Pages._asApply();},
 _asSrcFilter:function(v){window._asSrc=v;Pages._asApply();},
@@ -7948,7 +8107,7 @@ _asApply:function(){
   var asNo=(window._asNo||'').toLowerCase();
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(src) rows=rows.filter(function(r){return r.source===src;});
-  /* [v2.46] 설비번호 필터 */
+  /* [v2.47] 설비번호 필터 */
   if(asNo){ var eqsN=window._asEqs||[]; rows=rows.filter(function(r){var eq=eqsN.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(asNo);}); }
   if(kw){
     var eqs=window._asEqs||[];
@@ -7966,7 +8125,7 @@ _asRender:function(rows){
   var urgCls={긴급:'bred',높음:'bamb',보통:'bgry',낮음:'bgry'};
   Tbl.render({el:'#asTbl',cols:[
     {key:'eq_id',     label:'설비명',  render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return'<span style="font-weight:600">'+H.e(eq.name||'-')+'</span>';}},
-    /* [v2.46] 설비번호 컬럼 */
+    /* [v2.47] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'fault_type',label:'고장유형',w:'80px',align:'center'},
     {key:'symptom',   label:'증상',    render:function(v){return'<span style="font-size:12px">'+H.e(v||'-')+'</span>';}},
@@ -8046,8 +8205,33 @@ _asSave:async function(editId){
   if(r.ok){Toast.show(editId?'수정됨':'접수됨','ok');Modal.close();await Pages.eq_as();}
 },
 _asDetail:function(row){
-  Modal.close();
-  Pages._asForm(row);
+  /* [v2.47] AS 상세보기 (읽기전용) → 수정 버튼으로 _asForm 진입 */
+  var eqs=window._asEqs||[];
+  var eq=(eqs||[]).find(function(e){return e.id===row.eq_id;})||{};
+  var stCls={접수:'bred',처리중:'bblu',부품대기:'bamb',완료:'bgrn'};
+  var srcLbl={직접입력:'직접입력',NC연동:'NC 연동',PM발견:'PM 점검 중 발견'};
+  Modal.open({title:'🔧 AS 상세',size:'mlg',body:
+    '<div class="fg2">'+
+    /* 설비 기본정보 */
+    '<div class="fgroup"><label class="fl">설비번호</label><div class="fc-readonly">'+H.e(eq.eq_no||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">설비명</label><div class="fc-readonly">'+H.e(eq.name||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">담당부서</label><div class="fc-readonly">'+H.e(eq.dept||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">담당자</label><div class="fc-readonly">'+H.e(eq.manager||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">제조사/모델</label><div class="fc-readonly">'+H.e(eq.maker||'-')+(eq.model?' / '+H.e(eq.model):'')+'</div></div>'+
+    '<div style="height:1px;background:var(--brd);margin:8px 0"></div>'+
+    /* AS 내용 */
+    '<div class="fgroup"><label class="fl">고장 유형</label><div class="fc-readonly">'+H.e(row.fault_type||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">긴급도</label><div class="fc-readonly">'+H.e(row.urgency||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">상태</label><div class="fc-readonly"><span class="badge '+(stCls[row.status]||'bgry')+'" style="font-size:11px">'+H.e(row.status||'-')+'</span></div></div>'+
+    '<div class="fgroup"><label class="fl">접수경로</label><div class="fc-readonly">'+H.e(srcLbl[row.source]||row.source||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">담당 기술자</label><div class="fc-readonly">'+H.e(row.assignee||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">AS 비용</label><div class="fc-readonly">'+(row.cost?Number(row.cost).toLocaleString()+'원':'-')+'</div></div>'+
+    '<div class="fgroup ff"><label class="fl">증상/고장내용</label><div class="fc-readonly" style="min-height:50px;white-space:pre-wrap">'+H.e(row.symptom||'-')+'</div></div>'+
+    '<div class="fgroup ff"><label class="fl">조치 내용</label><div class="fc-readonly" style="min-height:50px;white-space:pre-wrap">'+H.e(row.action_note||'-')+'</div></div>'+
+    '</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+         '<button class="btn bpri" onclick="Modal.close();Pages._asForm('+JSON.stringify(row).replace(/"/g,"'").replace(/'/g,"\'").replace(/\\/g,"\\")+'  )">✏️ 수정</button>',
+  });
 },
 
 /* ──────────────────────────────────────────────────────────────
@@ -8099,13 +8283,13 @@ _costLoad:async function(){
   Tbl.render({el:'#costTbl',cols:[
     {key:'date',      label:'날짜',     w:'90px'},
     {key:'eq_id',     label:'설비명',   render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
-    /* [v2.46] 설비번호 컬럼 */
+    /* [v2.47] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'cost_type', label:'비용유형', w:'90px',align:'center',render:function(v){return'<span class="badge '+(typCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
     {key:'amount',    label:'금액(원)', w:'100px',align:'right',render:function(v){return'<b>'+Number(v||0).toLocaleString()+'</b>';}},
     {key:'vendor',    label:'업체/공급사',w:'100px'},
     {key:'note',      label:'비고',     render:function(v){return H.e(v||'-');}},
-    /* [v2.46] 수정 버튼 컬럼 추가 */
+    /* [v2.47] 수정 버튼 컬럼 추가 */
     {key:'id',        label:'',         w:'60px', align:'center',
       render:function(v,row){return'<button class="btn bxs bout" onclick="Pages._costEdit('+v+')">✏️</button>';}},
   ],data:rows,onDel:async function(ids){
@@ -8127,7 +8311,8 @@ _costForm:function(){
   Modal.open({title:'💰 비용 등록',size:'sm',body:
     '<div class="fg2">'+
     '<div class="fgroup"><label class="fl req">설비</label>'+
-      '<select class="fc" id="cfEq">'+eqs.map(function(e){return'<option value="'+e.id+'">'+H.e(e.name)+'</option>';}).join('')+'</select></div>'+
+      '<select class="fc" id="cfEq" onchange="Pages._costFormEqInfo(this)">'+eqs.map(function(e){return'<option value="'+e.id+'">'+H.e(e.eq_no?'['+e.eq_no+'] ':'')+H.e(e.name)+'</option>';}).join('')+'</select></div>'+
+    '<div id="cfEqInfo" style="font-size:11px;color:var(--muted);background:var(--bg2);border-radius:6px;padding:6px 10px;margin:-4px 0 8px"></div>'+
     '<div class="fgroup"><label class="fl req">비용 유형</label>'+
       '<select class="fc" id="cfType">'+['AS수리비','부품비','인건비','예방정비비','기타'].map(function(t){return'<option>'+t+'</option>';}).join('')+'</select></div>'+
     '<div class="fgroup"><label class="fl req">금액(원)</label><input type="number" class="fc" id="cfAmt" min="0" placeholder="0"></div>'+
@@ -8153,7 +8338,7 @@ _costSave:async function(){
   if(r.ok){Toast.show('등록됨','ok');Modal.close();await Pages._costLoad();}
 },
 
-/* [v2.46] 비용 수정 폼 */
+/* [v2.47] 비용 수정 폼 */
 _costEdit:function(id){
   var row=(window._costRows||[]).find(function(r){return r.id===id;});
   if(!row){Toast.show('항목을 찾을 수 없습니다.','err');return;}
@@ -8188,7 +8373,16 @@ _costEditSave:async function(id){
   if(r.ok){Toast.show('수정됨','ok');Modal.close();await Pages._costLoad();}
 },
 
-/* [v2.46] 비용 목록 설비번호 필터 */
+/* [v2.47] 비용 목록 설비번호 필터 */
+/* [v2.47] 비용등록 폼 — 설비 선택 시 정보 표시 */
+_costFormEqInfo:function(sel){
+  var eqs=window._costEqs||[];
+  var eq=eqs.find(function(e){return String(e.id)===String(sel.value);})||{};
+  var el=document.getElementById('cfEqInfo');
+  if(el) el.innerHTML=eq.name
+    ?'설비번호: <b>'+H.e(eq.eq_no||'-')+'</b> | 부서: <b>'+H.e(eq.dept||'-')+'</b> | 담당자: <b>'+H.e(eq.manager||'-')+'</b> | 제조사: '+H.e(eq.maker||'-')
+    :'';
+},
 _costNoFilter:function(v){
   window._costNo=v;
   var rows=window._costRows||[];
@@ -8239,7 +8433,7 @@ async eq_manual(){
   Pages._manualRender(rows);
 },
 _manualKw:function(v){window._manKw=v;Pages._manualApply();},
-/* [v2.46] 매뉴얼 설비번호 필터 */
+/* [v2.47] 매뉴얼 설비번호 필터 */
 _manualNoFilter:function(v){window._manNo=v;Pages._manualApply();},
 _manualEqFilter:function(v){window._manEqF=v;Pages._manualApply();},
 _manualApply:function(){
@@ -8248,7 +8442,7 @@ _manualApply:function(){
   var manNo=(window._manNo||'').toLowerCase();
   var eqs=window._manEqs||[];
   if(ef) rows=rows.filter(function(r){return String(r.eq_id)===String(ef);});
-  /* [v2.46] 설비번호 필터 */
+  /* [v2.47] 설비번호 필터 */
   if(manNo) rows=rows.filter(function(r){var eq=eqs.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(manNo);});
   if(kw) rows=rows.filter(function(r){
     var eq=(eqs||[]).find(function(e){return e.id===r.eq_id;})||{};
@@ -8260,7 +8454,7 @@ _manualRender:function(rows){
   var eqs=window._manEqs||[];
   Tbl.render({el:'#manTbl',cols:[
     {key:'eq_id',    label:'설비명', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
-    /* [v2.46] 설비번호 컬럼 */
+    /* [v2.47] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'title',    label:'매뉴얼 제목', render:function(v,row){
       return row.file_url
@@ -8281,7 +8475,7 @@ _manualForm:function(){
   Modal.open({title:'📖 매뉴얼 등록',size:'sm',body:
     '<div class="fg2">'+
     '<div class="fgroup"><label class="fl req">설비</label>'+
-      '<select class="fc" id="mfEq">'+eqs.map(function(e){return'<option value="'+e.id+'">'+H.e(e.name)+'</option>';}).join('')+'</select></div>'+
+      '<select class="fc" id="mfEq">'+eqs.map(function(e){return'<option value="'+e.id+'">'+H.e(e.eq_no?'['+e.eq_no+'] ':'')+H.e(e.name)+'</option>';}).join('')+'</select></div>'+
     '<div class="fgroup"><label class="fl req">제목</label><input class="fc" id="mfTitle" placeholder="매뉴얼 제목"></div>'+
     '<div class="fgroup"><label class="fl">버전</label><input class="fc" id="mfVer" value="v1.0" placeholder="v1.0"></div>'+
     '<div class="fgroup ff"><label class="fl">파일</label>'+
@@ -8355,9 +8549,10 @@ _cardRender:function(eqs){
       /* 카드 헤더 */
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
         '<div>'+
-          '<div style="font-size:10px;color:var(--muted);font-family:monospace">'+H.e(e.eq_no||'EQ-???')+'</div>'+
+          '<div style="font-size:10px;color:var(--muted);font-family:monospace;font-weight:700">'+H.e(e.eq_no||'EQ-???')+'</div>'+
           '<div style="font-size:14px;font-weight:700;margin-top:2px">'+H.e(e.name||'설비명')+'</div>'+
-          '<div style="font-size:11px;color:var(--muted)">'+H.e(e.dept||'-')+' · '+H.e(e.location||'-')+'</div>'+
+          '<div style="font-size:11px;color:var(--muted)">'+H.e(e.model||'-')+'</div>'+
+          '<div style="font-size:11px;color:var(--muted)">'+H.e(e.dept||'-')+'</div>'+
         '</div>'+
         '<span style="font-size:10px;font-weight:700;background:'+(stCls[e.status]||'#64748b')+'20;color:'+(stCls[e.status]||'#64748b')+';padding:2px 8px;border-radius:999px;border:1px solid '+(stCls[e.status]||'#64748b')+'40">'+H.e(e.status||'-')+'</span>'+
       '</div>'+
@@ -8382,43 +8577,104 @@ _cardRender:function(eqs){
 _cardPrint:function(eqId){
   var e=(window._cardEqs||[]).find(function(x){return x.id===eqId;});
   if(!e){Toast.show('설비 정보를 찾을 수 없습니다.','err');return;}
-  /* [v2.46] QR 코드 생성 — qrcode.js CDN 활용 */
   var qrUrl='https://innodis-qms.vercel.app/?page=eq_mgmt&eq='+eqId;
-  var html='<html><head><title>마이머신카드 — '+H.e(e.name)+'</title>'+
-    '<style>@page{size:A5;margin:8mm}body{font-family:Arial,sans-serif;padding:0;margin:0}'+
-    '.card{border:2px solid #1e3a5f;border-radius:8px;padding:12px;page-break-inside:avoid}'+
-    '.eq-no{font-family:monospace;font-size:10px;color:#64748b}.eq-name{font-size:20px;font-weight:700;color:#1e3a5f;margin:4px 0}'+
-    '.row{display:flex;gap:8px;margin-bottom:4px;font-size:11px}.lbl{color:#64748b;width:60px;flex-shrink:0}.val{font-weight:600}'+
-    '.status{display:inline-block;padding:2px 10px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid #059669;color:#059669;margin-bottom:8px}'+
-    'img.photo{width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:8px}'+
-    '.footer{margin-top:10px;padding-top:8px;border-top:1px dashed #cbd5e1;font-size:10px;color:#64748b;display:flex;justify-content:space-between}'+
-    '</style></head><body>'+
-    '<div class="card">'+
-      '<div class="eq-no">'+H.e(e.eq_no||'EQ-???')+'</div>'+
-      '<div class="eq-name">'+H.e(e.name)+'</div>'+
-      '<span class="status">'+H.e(e.status||'정상')+'</span>'+
-      (e.photo_urls&&e.photo_urls[0]?'<img class="photo" src="'+H.e(e.photo_urls[0])+'">':'')+
-      '<div class="row"><span class="lbl">부서</span><span class="val">'+H.e(e.dept||'-')+'</span></div>'+
-      '<div class="row"><span class="lbl">위치</span><span class="val">'+H.e(e.location||'-')+'</span></div>'+
-      '<div class="row"><span class="lbl">담당자</span><span class="val">'+H.e(e.manager||'-')+'</span></div>'+
-      '<div class="row"><span class="lbl">도입일</span><span class="val">'+H.e(e.install_date||'-')+'</span></div>'+
-      '<div class="row"><span class="lbl">제조사</span><span class="val">'+H.e(e.maker||'-')+(e.model?' / '+H.e(e.model):'')+'</span></div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px">'+
-        '<div class="footer" style="flex:1">'+
-          '<span>INNODIS QMS — 마이머신카드</span><br>'+
-          '<span>'+new Date().toLocaleDateString('ko-KR')+' 출력</span>'+
-        '</div>'+
-        '<div id="qr-'+eqId+'" style="width:60px;height:60px"></div>'+
-      '</div>'+
-    '</div>'+
-    '<script>'+
-      'try{new QRCode(document.getElementById("qr-'+eqId+'"),{text:"'+qrUrl+'",width:60,height:60,correctLevel:QRCode.CorrectLevel.M});}'+
-      'catch(e){document.getElementById("qr-'+eqId+'").innerHTML="<small style=color:#999>QR</small>";}'+
-    '<\/script>'+
-    '</body></html>';
-  var win=window.open('','_blank','width=600,height=800');
+  var photo=e.photo_urls&&e.photo_urls[0]?'<img src="'+H.e(e.photo_urls[0])+'" style="width:100%;height:140px;object-fit:cover;border:1px solid #ccc;">':'<div style="width:100%;height:140px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:32px;border:1px solid #ccc">🏭</div>';
+
+  /* [v2.47] 실제 MY MACHINE CARD 양식과 동일한 레이아웃 */
+  var html='<html><head><title>MY MACHINE CARD — '+H.e(e.name)+'</title>'+
+  '<style>'+
+  '@page{size:A4;margin:10mm}'+
+  'body{font-family:"맑은 고딕","Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;font-size:11px;color:#1a1a1a;padding:0;margin:0}'+
+  '.card{border:2px solid #1e3a5f;width:100%;border-collapse:collapse}'+
+  '.title-row td{background:#1e3a5f;color:#fff;text-align:center;padding:8px 4px}'+
+  '.title-main{font-size:18px;font-weight:700;letter-spacing:2px}'+
+  '.title-sub{font-size:11px;font-weight:400;opacity:.85}'+
+  '.section{border-collapse:collapse;width:100%}'+
+  '.section td,.section th{border:1px solid #aaa;padding:4px 7px;vertical-align:middle}'+
+  '.lbl{background:#e8edf4;font-weight:600;width:90px;color:#1e3a5f;white-space:nowrap}'+
+  '.lbl2{background:#e8edf4;font-weight:600;width:72px;color:#1e3a5f;white-space:nowrap;font-size:10px}'+
+  '.val{font-weight:500}'+
+  '.req{color:#dc2626}'+
+  '.photo-cell{width:180px;border:1px solid #aaa;padding:0;vertical-align:top}'+
+  '.info-cell{vertical-align:top;padding:0}'+
+  '.sep{height:4px;background:#1e3a5f}'+
+  '.pm-tbl{border-collapse:collapse;width:100%;font-size:10px}'+
+  '.pm-tbl td,.pm-tbl th{border:1px solid #aaa;padding:3px 5px;text-align:center}'+
+  '.pm-tbl .pm-lbl{background:#e8edf4;font-weight:600;text-align:left}'+
+  '.footer-row td{background:#f1f5f9;font-size:10px;color:#64748b;padding:4px 7px;text-align:center}'+
+  '.qr-cell{text-align:center;padding:6px;vertical-align:middle}'+
+  '</style></head><body>'+
+  '<table class="card">'+
+    /* 헤더 */
+    '<tr class="title-row"><td colspan="3">'+
+      '<div class="title-main">MY MACHINE CARD · 설비 명세표</div>'+
+      '<div class="title-sub">INNODIS Quality Management System</div>'+
+    '</td></tr>'+
+    /* 관리번호 + 사진 */
+    '<tr>'+
+      '<td class="photo-cell" rowspan="10">'+photo+'</td>'+
+      '<td class="lbl">관리번호</td>'+
+      '<td class="val"><b style="font-family:monospace;color:#1e3a5f">'+H.e(e.eq_no||'INE-???')+'</b></td>'+
+    '</tr>'+
+    '<tr><td class="lbl">설비명</td><td class="val"><b style="font-size:13px">'+H.e(e.name||'-')+'</b></td></tr>'+
+    '<tr><td class="lbl">모델명</td><td class="val">'+H.e(e.model||'-')+'</td></tr>'+
+    '<tr><td class="lbl">제조번호</td><td class="val">'+H.e(e.serial_no||'-')+'</td></tr>'+
+    '<tr><td class="lbl">제조사</td><td class="val">'+H.e(e.maker||'-')+'</td></tr>'+
+    '<tr><td class="lbl">제조일자</td><td class="val">'+H.e(e.manufacture_date||'-')+'</td></tr>'+
+    '<tr><td class="lbl">구입일자</td><td class="val">'+H.e(e.install_date||'-')+'</td></tr>'+
+    '<tr><td class="lbl">정격전압/용량</td><td class="val">'+H.e(e.rated_voltage||'-')+(e.rated_capacity?' / '+H.e(e.rated_capacity):'')+'</td></tr>'+
+    '<tr><td class="lbl">소비전력</td><td class="val">'+H.e(e.power_consumption||'-')+'</td></tr>'+
+    '<tr><td class="lbl">설비크기</td><td class="val">'+H.e(e.size_spec||'-')+'</td></tr>'+
+    /* 담당자 */
+    '<tr class="sep"><td colspan="3"></td></tr>'+
+    '<tr>'+
+      '<td class="lbl" style="background:#d1fae5;color:#065f46">담당자(정)</td>'+
+      '<td class="val" colspan="2">'+H.e(e.manager||'-')+'</td>'+
+    '</tr>'+
+    '<tr>'+
+      '<td class="lbl" style="background:#d1fae5;color:#065f46">관리자(부)</td>'+
+      '<td class="val" colspan="2">'+H.e(e.backup_manager2||'-')+'</td>'+
+    '</tr>'+
+    '<tr>'+
+      '<td class="lbl">담당부서</td>'+
+      '<td class="val">'+H.e(e.dept||'-')+'</td>'+
+      '<td class="val" style="color:#059669;font-weight:700">'+H.e(e.status||'정상')+'</td>'+
+    '</tr>'+
+    '<tr>'+
+      '<td class="lbl">설치위치</td>'+
+      '<td class="val" colspan="2">'+H.e(e.location||'-')+'</td>'+
+    '</tr>'+
+    /* 사전점검사항 */
+    '<tr class="sep"><td colspan="3"></td></tr>'+
+    '<tr><td colspan="3" style="background:#e8edf4;font-weight:700;color:#1e3a5f;padding:5px 7px">📋 사전점검사항</td></tr>'+
+    '<tr><td colspan="3" style="padding:0">'+
+      '<table class="pm-tbl">'+
+        '<tr><th class="pm-lbl" style="width:35%">점검항목</th><th>관리기준</th><th style="width:60px">관리주기</th><th style="width:50px">관리자</th></tr>'+
+        '<tr><td class="pm-lbl">전원상태</td><td>전원이 ON상태 유무</td><td>작업 전</td><td>작업자</td></tr>'+
+        '<tr><td class="pm-lbl">기계이상유무</td><td>공회전 10~15분 실시</td><td>작업 전</td><td>작업자</td></tr>'+
+        '<tr><td class="pm-lbl">안전비상장치</td><td>작동상태 일치</td><td>작업 전</td><td>작업자</td></tr>'+
+        '<tr><td class="pm-lbl">비고</td><td colspan="3">'+H.e(e.memo||'')+'</td></tr>'+
+      '</table>'+
+    '</td></tr>'+
+    /* QR + 출력일 */
+    '<tr class="sep"><td colspan="3"></td></tr>'+
+    '<tr>'+
+      '<td class="qr-cell" style="width:80px"><div id="qr-'+eqId+'" style="width:72px;height:72px"></div><div style="font-size:9px;color:#64748b;margin-top:2px">QR 스캔 → 설비상세</div></td>'+
+      '<td colspan="2" style="vertical-align:middle;padding:8px">'+
+        '<div style="font-size:10px;color:#64748b">문서번호: INDS-EQ-MMC-'+H.e(e.eq_no||'???')+'</div>'+
+        '<div style="font-size:10px;color:#64748b">출력일: '+new Date().toLocaleDateString('ko-KR')+'</div>'+
+        '<div style="font-size:10px;color:#64748b">INNODIS QMS — MY MACHINE CARD</div>'+
+      '</td>'+
+    '</tr>'+
+  '</table>'+
+  '<script>'+
+    'try{new QRCode(document.getElementById("qr-'+eqId+'"),{text:"'+qrUrl+'",width:72,height:72,correctLevel:QRCode.CorrectLevel.M});}'+
+    'catch(ex){document.getElementById("qr-'+eqId+'").innerHTML="<small>QR</small>";}'+
+  '<\/script>'+
+  '</body></html>';
+  var win=window.open('','_blank','width=700,height:1000');
   win.document.write(html); win.document.close();
-  setTimeout(function(){win.print();},400);
+  setTimeout(function(){win.print();},600);
 },
 _cardPrintAll:function(){
   Toast.show('일괄출력: 설비 목록에서 체크박스 선택 후 진행하세요.','info',3000);
@@ -8518,7 +8774,7 @@ _oeeLoad:async function(){
   Tbl.render({el:'#oeeTbl',cols:[
     {key:'date',         label:'일자',      w:'90px'},
     {key:'eq_id',        label:'설비명',    render:function(v){var e=(eqs||[]).find(function(x){return x.id===v;})||{};return H.e(e.name||'-');}},
-    /* [v2.46] 설비번호 컬럼 */
+    /* [v2.47] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(x){return x.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'plan_time',    label:'계획가동(h)',w:'90px',align:'center'},
     {key:'actual_time',  label:'실가동(h)', w:'90px',align:'center'},
@@ -8634,7 +8890,7 @@ async eq_dept(){
   });
   var depts=Object.values(deptMap).sort(function(a,b){return b.total-a.total;});
 
-  /* [v2.46] 빈 화면 처리 — 설비 미등록 시 안내 */
+  /* [v2.47] 빈 화면 처리 — 설비 미등록 시 안내 */
   var deptGridHTML;
   if(!depts.length){
     deptGridHTML=
@@ -8705,7 +8961,7 @@ _deptExcel:function(){
 
 
 
-/* ── [v2.46] 홈 카드 드래그앤드롭 ─────────────────────────────
+/* ── [v2.47] 홈 카드 드래그앤드롭 ─────────────────────────────
    규칙: 위치 교환(swap)만 허용 / 중복 불허 / 순서 localStorage 저장
    ─────────────────────────────────────────────────────────── */
 _homeInitDrag(){
@@ -8851,7 +9107,7 @@ const Cfg={
         +'<div class="fgroup"><label class="fl">등록자</label>'+
         '<select class="fc" id="na">'+
           (function(){
-            /* [v2.46] 관리자+매니저 권한 사용자만 표시 */
+            /* [v2.47] 관리자+매니저 권한 사용자만 표시 */
             var admins=(DB.users||[]).filter(function(u){
               return u.active!==0&&u.active!==false&&!u.pending&&
                      (u.role==='admin'||u.role==='manager');
@@ -8926,7 +9182,7 @@ const Cfg={
         /* 기존 파일 유지 */
         obj.file=existFile;
       }
-      /* [v2.46] Supabase 영속화 저장
+      /* [v2.47] Supabase 영속화 저장
          기존: App.notices.push() → 메모리만, 새로고침/배포 시 초기화
          수정: SB.addNotice/updateNotice → DB 저장 → SB.getNotices로 재로드 */
       var saveRes;
@@ -8946,7 +9202,7 @@ const Cfg={
   },
   noticeToggle(i){App.notices[i].show=!App.notices[i].show;Toast.show('변경되었습니다.','ok');Pages.settings()},
 
-  /* [v2.46] id 기반 공지 토글 */
+  /* [v2.47] id 기반 공지 토글 */
   async _noticeToggleById(n){
     var newShow=!n.show;
     var r=await SB.updateNotice(n.id,{show:newShow});
@@ -8956,7 +9212,7 @@ const Cfg={
     }
   },
 
-  /* [v2.46] id 기반 공지 삭제 */
+  /* [v2.47] id 기반 공지 삭제 */
   async _noticeDelById(n){
     Modal.confirm({title:'공지 삭제',msg:'<b>'+H.e(n.title)+'</b> 공지사항을 삭제하시겠습니까?',danger:true,
       onOk:async function(){
@@ -8966,13 +9222,13 @@ const Cfg={
     });
   },
 
-  /* [v2.46] id 기반 공지 수정 — _addNotice에 객체 전달 */
+  /* [v2.47] id 기반 공지 수정 — _addNotice에 객체 전달 */
   _editNoticeById(n){
     /* n 객체를 전달하여 수정 모달 오픈 */
     var idx=App.notices.findIndex(function(x){return x.id===n.id;});
     Pages._addNotice(idx>=0?idx:null, n);
   },
-  /* [v2.46] 공지 삭제 — Supabase 연동 */
+  /* [v2.47] 공지 삭제 — Supabase 연동 */
   noticeDel(i){
     var notice=App.notices[i];
     if(!notice){Toast.show('공지를 찾을 수 없습니다.','warn');return;}
