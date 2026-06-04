@@ -1668,7 +1668,7 @@ SB.deleteQnaReply = async function(id) {
 SB.getEquipment = async function(filter) {
   if (!_sb) return [];
   try {
-    var q = _sb.from('equipment').select('*').order('eq_no', {ascending:true});
+    var q = _sb.from('ems_equipment').select('*').order('eq_no', {ascending:true});
     if (filter && filter.dept) q = q.eq('dept', filter.dept);
     var res = await q;
     if (res.error) { console.warn('[SB] getEquipment:', res.error.message); return []; }
@@ -1702,7 +1702,7 @@ SB.addEquipment = async function(row) {
       }
       clean[k] = v;
     });
-    var res = await _sb.from('equipment').insert(clean);
+    var res = await _sb.from('ems_equipment').insert(clean);
     if (res.error) { Toast.show('설비 저장 실패: '+res.error.message,'err'); return { ok:false }; }
     return { ok:true };
   } catch(e) { Toast.show('설비 저장 오류: '+e.message,'err'); return { ok:false }; }
@@ -1724,7 +1724,7 @@ SB.updateEquipment = async function(id, patch) {
       }
       clean[k] = v;
     });
-    var res = await _sb.from('equipment').update(clean).eq('id', id);
+    var res = await _sb.from('ems_equipment').update(clean).eq('id', id);
     if (res.error) { Toast.show('설비 수정 실패: '+res.error.message,'err'); return { ok:false }; }
     return { ok:true };
   } catch(e) { return { ok:false }; }
@@ -1732,7 +1732,7 @@ SB.updateEquipment = async function(id, patch) {
 SB.deleteEquipment = async function(id) {
   if (!_sb) return { ok:false };
   try {
-    var res = await _sb.from('equipment').delete().eq('id', id);
+    var res = await _sb.from('ems_equipment').delete().eq('id', id);
     if (res.error) { Toast.show('설비 삭제 실패: '+res.error.message,'err'); return { ok:false }; }
     return { ok:true };
   } catch(e) { return { ok:false }; }
