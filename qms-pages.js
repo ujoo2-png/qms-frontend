@@ -7539,7 +7539,7 @@ _eqDetail:async function(id){
     '</div>',
     foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
       '<button class="btn bout" onclick="Modal.close();Nav.go(\'eq_pm\')">📋 PM 점검</button>'+
-      '<button class="btn bout" onclick="Modal.close();Pages._eqAsForm('+row.id+')">🔧 AS 접수</button>'+
+      '<button class="btn bout" onclick="Modal.close();Nav.go(\'eq_as\')">🔧 AS 접수</button>'+
       (isAdmin?'<button class="btn bpri" onclick="Modal.close();Pages._eqForm('+row.id+')">✏️ 수정</button>':''),
   });
 },
@@ -7819,7 +7819,20 @@ _pmSave:async function(editId){
     note:document.getElementById('pmfNote')?.value||null,
   };
   var r=editId?await SB.updateEqPmLog(editId,row):await SB.addEqPmLog(row);
-  if(r.ok){Toast.show(editId?'수정됨':'등록됨','ok');Modal.close();await Pages.eq_pm();}
+  if(r.ok){
+    /* [v2.46 fix] PM 완료 저장 시 equipment.next_pm_date 자동 계산 */
+    if(row.status==='완료'&&row.check_date&&row.eq_id){
+      var CYCLE_DAYS={일일:1,주간:7,월간:30,반기:180,연간:365};
+      var days=CYCLE_DAYS[row.cycle]||30;
+      var next=new Date(row.check_date);
+      next.setDate(next.getDate()+days);
+      var nextStr=next.toISOString().slice(0,10);
+      await SB.updateEquipment(row.eq_id,{next_pm_date:nextStr});
+    }
+    Toast.show(editId?'수정됨':'등록됨','ok');
+    Modal.close();
+    await Pages.eq_pm();
+  }
 },
 _pmDetail:function(row){
   var eqs=window._pmEqs||[];
