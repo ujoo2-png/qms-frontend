@@ -1678,23 +1678,53 @@ SB.getEquipment = async function(filter) {
 SB.addEquipment = async function(row) {
   if (!_sb) return { ok: false };
   try {
-    // [v2.46] eq_no: 직접 입력값 우선, 없으면 자동생성 EQ-YYYY-NNN
+    /* [v2.46] eq_no 자동생성 */
     if (!row.eq_no) {
       var year = new Date().getFullYear();
       var existing = await SB.getEquipment();
       var yearSeq = existing.filter(function(e){ return (e.eq_no||'').startsWith('EQ-'+year); }).length + 1;
       row.eq_no = 'EQ-' + year + '-' + String(yearSeq).padStart(3,'0');
     }
-    var res = await _sb.from('equipment').insert(row);
+    /* [v2.46] 타입 정제 — 빈 문자열·undefined → null, numeric 컬럼 변환
+       Supabase PostgREST는 빈 문자열('')을 numeric에 insert하면
+       "schema cache" 오류를 발생시킴 */
+    var NUMERIC_COLS = ['cost','lifespan'];
+    var clean = {};
+    Object.keys(row).forEach(function(k) {
+      var v = row[k];
+      /* 빈 문자열 → null */
+      if (v === '' || v === undefined) { clean[k] = null; return; }
+      /* numeric 컬럼 — 문자열이면 숫자로 변환, 변환 실패 시 null */
+      if (NUMERIC_COLS.includes(k)) {
+        var n = parseFloat(v);
+        clean[k] = isNaN(n) ? null : n;
+        return;
+      }
+      clean[k] = v;
+    });
+    var res = await _sb.from('equipment').insert(clean);
     if (res.error) { Toast.show('설비 저장 실패: '+res.error.message,'err'); return { ok:false }; }
     return { ok:true };
-  } catch(e) { return { ok:false }; }
+  } catch(e) { Toast.show('설비 저장 오류: '+e.message,'err'); return { ok:false }; }
 };
 SB.updateEquipment = async function(id, patch) {
   if (!_sb) return { ok:false };
   try {
     patch.updated_at = new Date().toISOString();
-    var res = await _sb.from('equipment').update(patch).eq('id', id);
+    /* [v2.46] 빈 문자열 → null 정제 */
+    var NUMERIC_COLS = ['cost','lifespan'];
+    var clean = {};
+    Object.keys(patch).forEach(function(k) {
+      var v = patch[k];
+      if (v === '' || v === undefined) { clean[k] = null; return; }
+      if (NUMERIC_COLS.includes(k)) {
+        var n = parseFloat(v);
+        clean[k] = isNaN(n) ? null : n;
+        return;
+      }
+      clean[k] = v;
+    });
+    var res = await _sb.from('equipment').update(clean).eq('id', id);
     if (res.error) { Toast.show('설비 수정 실패: '+res.error.message,'err'); return { ok:false }; }
     return { ok:true };
   } catch(e) { return { ok:false }; }
