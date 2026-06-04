@@ -1,4 +1,4 @@
-/* qms-pages.js — Pages 페이지 렌더러 [v2.45]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.46]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -12,7 +12,7 @@ const Pages={
 async home(){
   const w=document.getElementById('pw');
   w.classList.add('home-mode');
-  /* [v2.45] EMS 설비 데이터 캐싱 (홈 패널용) */
+  /* [v2.46] EMS 설비 데이터 캐싱 (홈 패널용) */
   if(!window._eqRows || !window._eqRows.length){
     try{ window._eqRows=await SB.getEquipment(); }catch(e){ window._eqRows=[]; }
   }
@@ -40,7 +40,7 @@ async home(){
      subs:[{icon:'📄',label:'문서 목록',page:'docs'},{icon:'✍️',label:'결재함',page:'doc_approval'},{icon:'🕐',label:'개정 이력',page:'doc_history_home'},{icon:'🔍',label:'지식 검색',page:'doc_search'},{icon:'📋',label:'기록 관리',page:'rec'}]},
     {c:'mc-c8',icon:'🔧',name:'개선활동',badge:carO,
      subs:[{icon:'🔧',label:'시정조치(CAR)',page:'car'},{icon:'🔎',label:'내부심사',page:'audit'}]},
-    /* [v2.45] 제조설비관리(EMS) 9번째 카드 */
+    /* [v2.46] 제조설비관리(EMS) 9번째 카드 */
     {c:'mc-c9',icon:'🏭',name:'제조설비관리',badge:0,
      subs:[
        {icon:'🏭',label:'설비 등록',    page:'eq_mgmt'},
@@ -224,7 +224,7 @@ async home(){
       </div>
     </div>
 
-    <!-- [v2.45] EMS 설비 현황 패널 -->
+    <!-- [v2.46] EMS 설비 현황 패널 -->
     ${(()=>{
       /* 제조설비관리 간략 현황 — 수리중/PM예정 설비 */
       const _eqWarn=(window._eqRows||[]).filter(function(e){
@@ -252,9 +252,9 @@ async home(){
   </div>
   </div>`;
 
-  /* [v2.45] 카드 순서 복원 (localStorage) */
+  /* [v2.46] 카드 순서 복원 (localStorage) */
   Pages._homeApplyCardOrder();
-  /* [v2.45] 드래그앤드롭 초기화 */
+  /* [v2.46] 드래그앤드롭 초기화 */
   Pages._homeInitDrag();
 },
 
@@ -3630,7 +3630,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.45]
+   문서관리 고도화 페이지 함수 [v2.46]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3661,7 +3661,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.45]
+   D1: 문서 목록 [v2.46]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -3835,7 +3835,7 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.45] ── */
+/* ── 칸반 보드 [v2.46] ── */
 /* ── 칸반 보드 [v2.397.2 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
@@ -3891,7 +3891,7 @@ _docKanban:function(){
     '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.45] ── */
+/* ── 문서 상세 팝업 [v2.46] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -3911,7 +3911,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.45] ── */
+/* ── D2: 문서 등록 [v2.46] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -3985,7 +3985,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.45] ── */
+/* ── D2-B: 개정 기안 [v2.46] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -4041,7 +4041,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.45]
+   D3: 내 결재함 [v2.46]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -4059,12 +4059,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.45] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.46] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.45] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.46] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4166,9 +4166,9 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.45]
+   D4: 개정 이력 타임라인 [v2.46]
    ══════════════════════════════════════════════════ */
-/* [v2.45] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+/* [v2.46] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
 doc_history_home:async function(){
   await Pages.docs();
   /* 문서 목록 로드 완료 후 상단에 안내 배너 삽입 */
@@ -4203,7 +4203,7 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.45] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.46] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
     /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
@@ -4310,7 +4310,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.45]
+   지식 검색 허브 [v2.46]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -4631,12 +4631,12 @@ _rcSendAlert:async function(days){
   }finally{if(btn){btn.disabled=false;btn.textContent=days===7?'🚨 D-7 긴급알림':'🔔 D-30 알림발송';}}
 },
 /* ══════════════════════════════════════════════════
-   D7: 연관 문서 추천 [v2.45 Phase 3]
+   D7: 연관 문서 추천 [v2.46 Phase 3]
    동일 태그 기반 연관 문서 패널 + 유사 문서 추천
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.45] D7: 연관 문서 추천 페이지
+ * [v2.46] D7: 연관 문서 추천 페이지
  * [UI 구성]
  *  ① 문서 선택 → 해당 문서의 태그 표시
  *  ② 동일 태그를 가진 연관 문서 목록 (태그 일치도순 정렬)
@@ -4837,12 +4837,12 @@ _rcTagFilter:function(tag){
 },
 
 /* ══════════════════════════════════════════════════
-   D8: 문서 현황 대시보드 [v2.45 Phase 4]
+   D8: 문서 현황 대시보드 [v2.46 Phase 4]
    KPI 카드 · 유형 분포 · 상태 현황 · 심사 준비율 게이지
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.45] D8: 문서 현황 대시보드
+ * [v2.46] D8: 문서 현황 대시보드
  * [UI 구성]
  *  ① KPI 카드 4종 (전체/유효/검토중/만료임박)
  *  ② 유형별 분포 — 바 차트 (Canvas)
@@ -5041,7 +5041,7 @@ _dashRefresh:async function(){
   await Pages.doc_dashboard();
 },
 /* ══════════════════════════════════════════════════
-   Q&A 페이지 [v2.45]
+   Q&A 페이지 [v2.46]
    사이드바 메인 4번째 메뉴 — 매뉴얼/Q&A/팁 통합
    ══════════════════════════════════════════════════ */
 async qna(){
@@ -6647,7 +6647,7 @@ async settings(){
     if(fresh&&fresh.length>0) DB.users=fresh;
   }
   const isAdmin=Auth._u?.role==='admin';
-  /* [v2.45] 공지사항 최신 로드 — Supabase 영속화
+  /* [v2.46] 공지사항 최신 로드 — Supabase 영속화
      [버그수정] RLS 오류/네트워크 오류 시 App.notices(더미) 유지
      [버그수정] notices 테이블 미생성 시 빈 배열 대신 기존 목록 유지 */
   try{
@@ -6748,7 +6748,7 @@ async settings(){
               +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
               +'<td>'+H.e(u.department||'-')+'</td>'
               +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
-              /* [v2.45 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
+              /* [v2.46 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
               +'<td style="font-size:11px">'+(u.email?'<a href="mailto:'+H.e(u.email)+'" style="color:var(--acc)">'+H.e(u.email)+'</a>':'-')+'</td>'
               +'<td style="white-space:nowrap">'
               +(function(){
@@ -6839,7 +6839,7 @@ async settings(){
           <th style="width:88px;text-align:center">관리</th>
         </tr></thead>
         <tbody>${(()=>{
-          /* [v2.45] 최신순 정렬: created_at 없으면 date 기준 */
+          /* [v2.46] 최신순 정렬: created_at 없으면 date 기준 */
           const sorted=[...notices].sort((a,b)=>{
             const da=a.created_at||a.date||''; const db=b.created_at||b.date||'';
             return db.localeCompare(da);
@@ -6849,10 +6849,10 @@ async settings(){
             const today=H.today();
             /* 게시중 = show:true + 오늘이 date~expire 범위 내 */
             const active=n.show&&(!n.expire||n.expire>=today)&&(!n.date||n.date<=today);
-            /* [v2.45] 게시중 행 음영 */
+            /* [v2.46] 게시중 행 음영 */
             const rowBg=active?'background:#f0fdf4;':'';
             const expiredCls=n.expire&&n.expire<today?"color:#ef4444":"";
-            return '<tr style="'+rowBg+'">'  /* [v2.45] 게시중 행 음영 */
+            return '<tr style="'+rowBg+'">'  /* [v2.46] 게시중 행 음영 */
               +'<td><input type="checkbox" class="notice-chk" value="'+(n.id||i)+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
               +'<td style="font-weight:600;cursor:pointer" onclick="Pages._editNoticeById(n)">'+H.e(n.title)+'</td>'
@@ -6939,7 +6939,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.45] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.46] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
@@ -7166,7 +7166,7 @@ async _sbKeepAlive(){
 },
 
 /* ══════════════════════════════════════════════════════════════
-   제조설비관리 (EMS — Equipment Management System) [v2.45]
+   제조설비관리 (EMS — Equipment Management System) [v2.46]
    ══════════════════════════════════════════════════════════════
    M1. eq_mgmt        설비 등록 관리
    M2. eq_pm          예방정비(PM) 점검표
@@ -7215,8 +7215,14 @@ async eq_mgmt(){
     '</div>'+
     '<div class="ph" style="margin-top:14px"><div>'+
       '<div class="ptit">🏭 설비 등록 관리</div>'+
-      '<div style="font-size:12px;color:var(--muted)">설비 기본정보 · 사진 · 사양 · 계층구조</div>'+
+      '<div style="font-size:12px;color:var(--muted)">설비 기본정보 · 사양 · 관리대장 일괄 업로드</div>'+
     '</div><div class="pac">'+
+      /* [v2.46] Excel 일괄 업로드 버튼 */
+      '<label class="btn bout bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px">'+
+        '📥 Excel 일괄 업로드'+
+        '<input type="file" id="eqExcelFile" accept=".xlsx,.xls" style="display:none" onchange="Pages._eqBulkUpload(this)">'+
+      '</label>'+
+      '<button class="btn bout bsm" onclick="Pages._eqExportExcel()">📤 Excel 다운로드</button>'+
       '<button class="btn bpri btn-f2" onclick="Pages._eqForm()">+ 설비 등록 <span class="kbd">F2</span></button>'+
     '</div></div>'+
     '<div class="tbar">'+
@@ -7244,8 +7250,195 @@ _eqFilter:function(st){ window._eqStatus=st; Pages._eqApply(); },
 _eqTypeFilter:function(v){ window._eqType=v; Pages._eqApply(); },
 _eqDeptFilter:function(v){ window._eqDept=v; Pages._eqApply(); },
 _eqKwFilter:function(v){ window._eqKw=v; Pages._eqApply(); },
-/* [v2.45] 설비번호 전용 필터 */
+/* [v2.46] 설비번호 전용 필터 */
 _eqNoFilter:function(v){ window._eqNo=v; Pages._eqApply(); },
+
+/* [v2.46] Excel 일괄 업로드 ─────────────────────────────────────
+   컬럼 매핑 (관리대장 1행 헤더 기준):
+   일련번호 | 유형* | 설비번호* | 설비명* | 모델명* | S/N | 제조사* |
+   제작일자 | 도입일* | 취득원가 | 담당부서 | 담당자(정)* | 관리자(부)* |
+   장비Size | 정격전압(V) | 정격용량(KW) | 소비전력(W) | 사용작동유 |
+   상태 | 비고
+   ────────────────────────────────────────────────────────────── */
+_eqBulkUpload:async function(inp){
+  var file=inp.files&&inp.files[0];
+  if(!file){return;}
+  inp.value=''; /* 같은 파일 재선택 허용 */
+
+  if(typeof XLSX==='undefined'){
+    Toast.show('XLSX 라이브러리가 로드되지 않았습니다.','err'); return;
+  }
+
+  Toast.show('📊 엑셀 파일 분석 중...','info',2000);
+
+  var reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      if(!raw||raw.length<2){Toast.show('데이터가 없습니다.','warn');return;}
+
+      /* 헤더 행 파악 (1행) */
+      var headers=raw[0].map(function(h){return String(h).trim();});
+
+      /* 관리대장 헤더 → DB 컬럼 매핑 */
+      var COL_MAP={
+        '일련번호':       null,           /* 무시 */
+        '유형*':          'type',
+        '설비번호*':      'eq_no',
+        '설비명*':        'name',
+        '모델명*':        'model',
+        'S/N':            'serial_no',
+        '제조사*':        'maker',
+        '제작일자':       'manufacture_date',
+        '도입일*':        'install_date',
+        '취득원가':       'cost',
+        '담당부서':       'dept',
+        '담당자(정)*':    'manager',
+        '관리자(부)*':    'backup_manager2',
+        '장비Size':       'size_spec',
+        '정격전압(V)':    'rated_voltage',
+        '정격용량(KW)':   'rated_capacity',
+        '소비전력(W)':    'power_consumption',
+        '사용작동유':     'hydraulic_oil',
+        '상태':           'status',
+        '비고':           'memo',
+      };
+
+      /* 컬럼 인덱스 매핑 */
+      var colIdx={};
+      headers.forEach(function(h,i){ if(COL_MAP[h]!==undefined) colIdx[COL_MAP[h]]=i; });
+
+      /* 필수 컬럼 확인 */
+      var required=['type','name','eq_no'];
+      var missing=required.filter(function(c){return colIdx[c]===undefined;});
+      if(missing.length){
+        Toast.show('필수 컬럼 누락: '+missing.join(', '),'err',4000); return;
+      }
+
+      /* 데이터 행 파싱 */
+      var rows=[];
+      var errors=[];
+      for(var i=1;i<raw.length;i++){
+        var r=raw[i];
+        if(!r||r.every(function(v){return v===''||v===null;})) continue;
+
+        var name=String(r[colIdx['name']]||'').trim();
+        var type=String(r[colIdx['type']]||'').trim();
+        if(!name||!type){errors.push('행'+(i+1)+': 설비명/유형 필수'); continue;}
+
+        var row={
+          name:name,
+          type:type,
+          eq_no:    colIdx['eq_no']!==undefined?String(r[colIdx['eq_no']]||'').trim()||null:null,
+          model:    colIdx['model']!==undefined?String(r[colIdx['model']]||'').trim()||null:null,
+          serial_no:colIdx['serial_no']!==undefined?String(r[colIdx['serial_no']]||'').trim()||null:null,
+          maker:    colIdx['maker']!==undefined?String(r[colIdx['maker']]||'').trim()||null:null,
+          manufacture_date: colIdx['manufacture_date']!==undefined?Pages._parseDate(r[colIdx['manufacture_date']]):null,
+          install_date:     colIdx['install_date']!==undefined?Pages._parseDate(r[colIdx['install_date']]):null,
+          cost:     colIdx['cost']!==undefined&&r[colIdx['cost']]!==''?parseFloat(r[colIdx['cost']])||null:null,
+          dept:     colIdx['dept']!==undefined?String(r[colIdx['dept']]||'').trim()||null:null,
+          manager:  colIdx['manager']!==undefined?String(r[colIdx['manager']]||'').trim()||null:null,
+          backup_manager2: colIdx['backup_manager2']!==undefined?String(r[colIdx['backup_manager2']]||'').trim()||null:null,
+          size_spec: colIdx['size_spec']!==undefined?String(r[colIdx['size_spec']]||'').trim()||null:null,
+          rated_voltage:    colIdx['rated_voltage']!==undefined?String(r[colIdx['rated_voltage']]||'').trim()||null:null,
+          rated_capacity:   colIdx['rated_capacity']!==undefined?String(r[colIdx['rated_capacity']]||'').trim()||null:null,
+          power_consumption:colIdx['power_consumption']!==undefined?String(r[colIdx['power_consumption']]||'').trim()||null:null,
+          hydraulic_oil:    colIdx['hydraulic_oil']!==undefined?String(r[colIdx['hydraulic_oil']]||'').trim()||null:null,
+          status:   colIdx['status']!==undefined?String(r[colIdx['status']]||'정상').trim()||'정상':'정상',
+          memo:     colIdx['memo']!==undefined?String(r[colIdx['memo']]||'').trim()||null:null,
+        };
+        rows.push(row);
+      }
+
+      if(!rows.length){Toast.show('파싱된 데이터가 없습니다.','warn');return;}
+
+      /* 미리보기 확인 팝업 */
+      var existNos=(window._eqRows||[]).map(function(e){return e.eq_no;});
+      var dupes=rows.filter(function(r){return r.eq_no&&existNos.includes(r.eq_no);});
+      var news=rows.filter(function(r){return !r.eq_no||!existNos.includes(r.eq_no);});
+
+      Modal.confirm({
+        title:'📥 설비 일괄 등록 확인',
+        msg:'<div style="text-align:center">'+
+            '<div style="font-size:14px;margin-bottom:8px">총 <b>'+rows.length+'건</b> 파싱 완료</div>'+
+            '<div style="display:flex;justify-content:center;gap:20px;font-size:13px">'+
+              '<span>🆕 신규: <b style="color:#059669">'+news.length+'건</b></span>'+
+              '<span>⚠️ 중복(eq_no): <b style="color:#d97706">'+dupes.length+'건</b></span>'+
+              (errors.length?'<span>❌ 오류: <b style="color:#dc2626">'+errors.length+'건</b></span>':'')+'</div>'+
+            (dupes.length?'<div style="font-size:11px;color:var(--muted);margin-top:6px">중복 설비번호는 건너뜁니다.</div>':'')+
+          '</div>',
+        onOk:async function(){
+          var ok=0; var fail=0;
+          for(var i=0;i<rows.length;i++){
+            /* 중복 eq_no 스킵 */
+            if(rows[i].eq_no&&existNos.includes(rows[i].eq_no)){continue;}
+            var r=await SB.addEquipment(rows[i]);
+            if(r.ok) ok++; else fail++;
+          }
+          Toast.show('✅ 등록 완료: '+ok+'건'+(fail?' / 실패:'+fail+'건':''),'ok',4000);
+          await Pages.eq_mgmt();
+        }
+      });
+
+    }catch(ex){
+      Toast.show('파일 읽기 오류: '+ex.message,'err',4000);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+},
+
+/* 날짜 파싱 헬퍼 */
+_parseDate:function(v){
+  if(!v) return null;
+  var s=String(v).trim();
+  if(!s||s===''||s==='null') return null;
+  /* YYYY-MM-DD 형식 */
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  /* Excel 숫자 날짜 */
+  var n=parseFloat(s);
+  if(!isNaN(n)&&n>10000){
+    var d=new Date((n-25569)*86400000);
+    if(!isNaN(d.getTime()))
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  /* YYYY.MM.DD 또는 YYYY년MM월DD일 */
+  var m=s.match(/(\d{4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/);
+  if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  return null;
+},
+
+/* [v2.46] Excel 다운로드 */
+_eqExportExcel:function(){
+  var rows=window._eqRows||[];
+  if(!rows.length){Toast.show('다운로드할 데이터가 없습니다.','warn');return;}
+  var headers=['일련번호','유형*','설비번호*','설비명*','모델명*','S/N','제조사*',
+               '제작일자','도입일*','취득원가','담당부서','담당자(정)*','관리자(부)*',
+               '장비Size','정격전압(V)','정격용량(KW)','소비전력(W)','사용작동유','상태','비고'];
+  var data=rows.map(function(r,i){return[
+    i+1, r.type||'', r.eq_no||'', r.name||'', r.model||'', r.serial_no||'',
+    r.maker||'', r.manufacture_date||'', r.install_date||'', r.cost||'',
+    r.dept||'', r.manager||'', r.backup_manager2||'', r.size_spec||'',
+    r.rated_voltage||'', r.rated_capacity||'', r.power_consumption||'',
+    r.hydraulic_oil||'', r.status||'', r.memo||'',
+  ];});
+  if(typeof XLSX!=='undefined'){
+    var wb=XLSX.utils.book_new();
+    var ws=XLSX.utils.aoa_to_sheet([headers,...data]);
+    /* 컬럼 너비 설정 */
+    ws['!cols']=[
+      {wch:6},{wch:8},{wch:12},{wch:14},{wch:10},{wch:10},{wch:10},
+      {wch:10},{wch:10},{wch:10},{wch:8},{wch:8},{wch:8},
+      {wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:6},{wch:14}
+    ];
+    XLSX.utils.book_append_sheet(wb,'설비관리대장',ws);
+    XLSX.writeFile(wb,'제조설비관리대장_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  } else {
+    Toast.show('XLSX 라이브러리가 로드되지 않았습니다.','err');
+  }
+},
 _eqApply:function(){
   var rows=window._eqRows||[];
   var st=window._eqStatus||''; var tp=window._eqType||''; var dp=window._eqDept||'';
@@ -7253,7 +7446,7 @@ _eqApply:function(){
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(tp) rows=rows.filter(function(r){return r.type===tp;});
   if(dp) rows=rows.filter(function(r){return r.dept===dp;});
-  /* [v2.45] 설비번호 전용 필터 */
+  /* [v2.46] 설비번호 전용 필터 */
   if(no) rows=rows.filter(function(r){return (r.eq_no||'').toLowerCase().includes(no);});
   if(kw) rows=rows.filter(function(r){
     return (r.name||'').toLowerCase().includes(kw)||(r.dept||'').toLowerCase().includes(kw);
@@ -7262,25 +7455,33 @@ _eqApply:function(){
 },
 _eqRender:function(rows){
   var stCls={정상:'bgrn',수리중:'bred',점검중:'bamb',폐기:'bgry',폐기예정:'bgry'};
+  /* [v2.46] 관리대장 기준 컬럼 순서 */
   Tbl.render({el:'#eqTbl',cols:[
-    {key:'eq_no',      label:'설비번호',  w:'110px', render:function(v,row){
-      return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Pages._eqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
-    {key:'name',       label:'설비명',    render:function(v,row){
-      var img=row.photo_urls&&row.photo_urls[0]?'<img src="'+H.e(row.photo_urls[0])+'" style="width:28px;height:28px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle">':'';
-      return img+'<span style="font-weight:600;cursor:pointer" onclick="Pages._eqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
-    {key:'type',       label:'유형',      w:'80px',  align:'center'},
-    {key:'dept',       label:'담당부서',  w:'80px',  align:'center'},
-    {key:'status',     label:'상태',      w:'72px',  align:'center',
+    {key:'eq_no',           label:'설비번호',    w:'110px',
+      render:function(v,row){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Pages._eqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
+    {key:'type',            label:'유형',        w:'70px',  align:'center'},
+    {key:'name',            label:'설비명',
+      render:function(v,row){
+        var img=row.photo_urls&&row.photo_urls[0]?'<img src="'+H.e(row.photo_urls[0])+'" style="width:24px;height:24px;border-radius:3px;object-fit:cover;margin-right:5px;vertical-align:middle">':'';
+        return img+'<span style="font-weight:600;cursor:pointer" onclick="Pages._eqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
+    {key:'model',           label:'모델명',      w:'90px'},
+    {key:'serial_no',       label:'S/N',         w:'90px',  render:function(v){return v?'<span style="font-size:11px;font-family:monospace">'+H.e(v)+'</span>':'-';}},
+    {key:'maker',           label:'제조사',      w:'70px'},
+    {key:'manufacture_date',label:'제작일자',    w:'85px',  render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
+    {key:'install_date',    label:'도입일',      w:'85px',  render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
+    {key:'cost',            label:'취득원가',    w:'85px',  align:'right',
+      render:function(v){return v?'<span style="font-size:11px">'+Number(v).toLocaleString()+'</span>':'-';}},
+    {key:'dept',            label:'담당부서',    w:'70px',  align:'center'},
+    {key:'manager',         label:'담당자(정)',  w:'70px',  align:'center'},
+    {key:'backup_manager2', label:'관리자(부)',  w:'70px',  align:'center'},
+    {key:'size_spec',       label:'장비Size',    w:'90px'},
+    {key:'rated_voltage',   label:'정격전압',    w:'70px',  align:'center'},
+    {key:'rated_capacity',  label:'정격용량',    w:'70px',  align:'center'},
+    {key:'power_consumption',label:'소비전력',   w:'70px',  align:'center'},
+    {key:'hydraulic_oil',   label:'사용작동유',  w:'80px'},
+    {key:'status',          label:'상태',        w:'68px',  align:'center',
       render:function(v){return'<span class="badge '+(stCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
-    {key:'install_date',label:'도입일',   w:'90px',
-      render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
-    {key:'manager',    label:'담당자',    w:'70px',  align:'center'},
-    {key:'next_pm_date',label:'다음PM일', w:'90px',
-      render:function(v){
-        if(!v) return'-';
-        var d=Math.ceil((new Date(v)-new Date())/86400000);
-        var cls=d<0?'color:#dc2626;font-weight:700':d<=7?'color:#d97706;font-weight:600':'color:var(--muted)';
-        return'<span style="font-size:11px;'+cls+'">'+H.e(v)+(d<=7&&d>=0?' (D-'+d+')':d<0?' (만료)':'')+'</span>';}},
+    {key:'memo',            label:'비고',        render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
   ],
   data:rows,
   onDel:async function(ids){
@@ -7313,18 +7514,28 @@ _eqDetail:async function(id){
 
   Modal.open({title:'🏭 설비 상세 — '+H.e(row.name||''),size:'mlg',body:
     gallery+
+    /* [v2.46] 관리대장 기준 전체 필드 표시 */
     '<div class="fg2">'+
     '<div class="fgroup"><label class="fl">설비번호</label><div class="fc-readonly">'+H.e(row.eq_no||'-')+'</div></div>'+
-    '<div class="fgroup"><label class="fl">설비명</label><div class="fc-readonly">'+H.e(row.name||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">유형</label><div class="fc-readonly">'+H.e(row.type||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">설비명</label><div class="fc-readonly">'+H.e(row.name||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">모델명</label><div class="fc-readonly">'+H.e(row.model||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">S/N</label><div class="fc-readonly">'+H.e(row.serial_no||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">제조사</label><div class="fc-readonly">'+H.e(row.maker||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">제작일자</label><div class="fc-readonly">'+H.e(row.manufacture_date||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">도입일</label><div class="fc-readonly">'+H.e(row.install_date||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">취득원가</label><div class="fc-readonly">'+(row.cost?Number(row.cost).toLocaleString()+'원':'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">담당부서</label><div class="fc-readonly">'+H.e(row.dept||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">담당자(정)</label><div class="fc-readonly">'+H.e(row.manager||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">관리자(부)</label><div class="fc-readonly">'+H.e(row.backup_manager2||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">장비 Size</label><div class="fc-readonly">'+H.e(row.size_spec||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">정격전압(V)</label><div class="fc-readonly">'+H.e(row.rated_voltage||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">정격용량(KW)</label><div class="fc-readonly">'+H.e(row.rated_capacity||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">소비전력(W)</label><div class="fc-readonly">'+H.e(row.power_consumption||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">사용작동유</label><div class="fc-readonly">'+H.e(row.hydraulic_oil||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">설치위치</label><div class="fc-readonly">'+H.e(row.location||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">상태</label><div class="fc-readonly">'+H.e(row.status||'-')+'</div></div>'+
-    '<div class="fgroup"><label class="fl">도입일</label><div class="fc-readonly">'+H.e(row.install_date||'-')+'</div></div>'+
-    '<div class="fgroup"><label class="fl">제조사/모델</label><div class="fc-readonly">'+H.e((row.maker||'')+(row.model?' / '+row.model:''))+'</div></div>'+
-    '<div class="fgroup"><label class="fl">담당자</label><div class="fc-readonly">'+H.e(row.manager||'-')+'</div></div>'+
-    '<div class="fgroup"><label class="fl">내용연수</label><div class="fc-readonly">'+(row.lifespan?row.lifespan+'년':'-')+'</div></div>'+
-    '<div class="fgroup ff"><label class="fl">특이사항</label><div class="fc-readonly">'+H.e(row.memo||'-')+'</div></div>'+
+    '<div class="fgroup ff"><label class="fl">비고</label><div class="fc-readonly">'+H.e(row.memo||'-')+'</div></div>'+
     '</div>',
     foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
       '<button class="btn bout" onclick="Modal.close();Nav.go(\'eq_pm\')">📋 PM 점검</button>'+
@@ -7344,29 +7555,60 @@ _eqPhotoView:function(urls,idx){
   Modal.open({title:'📷 설비 사진',size:'mlg',body:html,foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'});
 },
 _eqForm:async function(editId){
+  /* [v2.46] 관리대장 기준 전체 필드 */
   var row=editId?(window._eqRows||[]).find(function(r){return r.id===editId;}):null;
-  Modal.open({title:row?'설비 수정':'설비 등록',size:'mlg',body:
+  Modal.open({title:row?'✏️ 설비 수정':'🏭 설비 등록',size:'mlg',body:
     '<div class="fg2">'+
-    /* [v2.45] 설비번호 직접 입력 필드 (빈칸이면 자동생성) */
+    /* 설비번호 */
     '<div class="fgroup"><label class="fl">설비번호</label>'+
-      '<input class="fc" id="efNo" placeholder="직접 입력 (비우면 EQ-YYYY-NNN 자동생성)" value="'+H.e(row?row.eq_no:'')+'">'+
-      '<div style="font-size:11px;color:var(--muted);margin-top:3px">📌 비워두면 EQ-연도-순번 형식으로 자동 생성됩니다.</div>'+
+      '<input class="fc" id="efNo" placeholder="직접 입력 (비우면 EQ-YYYY-NNN 자동생성)" value="'+H.e(row?row.eq_no||'':'')+'">'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:3px">📌 비워두면 자동 생성됩니다.</div>'+
     '</div>'+
-    '<div class="fgroup"><label class="fl req">설비명</label><input class="fc" id="efName" placeholder="설비 정식 명칭" value="'+H.e(row?row.name:'')+'"></div>'+
-    '<div class="fgroup"><label class="fl req">유형</label><select class="fc" id="efType">'+
-      ['생산설비','검사설비','유틸리티','운반설비','기타'].map(function(t){return'<option value="'+t+'"'+(row&&row.type===t?' selected':'')+'>'+t+'</option>';}).join('')+
-    '</select></div>'+
-    '<div class="fgroup req"><label class="fl req">담당부서</label><input class="fc" id="efDept" placeholder="부서명" value="'+H.e(row?row.dept:'')+'"></div>'+
-    '<div class="fgroup"><label class="fl">설치위치</label><input class="fc" id="efLoc" placeholder="라인/공정 위치" value="'+H.e(row?row.location:'')+'"></div>'+
-    '<div class="fgroup"><label class="fl req">상태</label><select class="fc" id="efStatus">'+
-      ['정상','수리중','점검중','폐기예정','폐기'].map(function(s){return'<option value="'+s+'"'+(row&&row.status===s?' selected':'')+'>'+s+'</option>';}).join('')+
-    '</select></div>'+
-    '<div class="fgroup"><label class="fl">도입일</label><input type="date" class="fc" id="efInstall" value="'+H.e(row?row.install_date:'')+'"></div>'+
-    '<div class="fgroup"><label class="fl">제조사</label><input class="fc" id="efMaker" placeholder="메이커명" value="'+H.e(row?row.maker:'')+'"></div>'+
-    '<div class="fgroup"><label class="fl">모델명</label><input class="fc" id="efModel" placeholder="모델번호" value="'+H.e(row?row.model:'')+'"></div>'+
-    '<div class="fgroup"><label class="fl">담당자</label><input class="fc" id="efManager" placeholder="유지관리 담당자" value="'+H.e(row?row.manager:'')+'"></div>'+
-    '<div class="fgroup"><label class="fl">내용연수(년)</label><input type="number" class="fc" id="efLifespan" min="1" max="50" value="'+(row?row.lifespan||'':'')+'"></div>'+
-    '<div class="fgroup"><label class="fl">취득원가</label><input type="number" class="fc" id="efCost" placeholder="0" value="'+(row?row.cost||'':'')+'"></div>'+
+    /* 유형 + 상태 */
+    '<div class="fgroup"><label class="fl req">유형</label>'+
+      '<select class="fc" id="efType">'+
+        ['생산설비','검사설비','유틸리티','운반설비','기타'].map(function(t){
+          return'<option value="'+t+'"'+(row&&row.type===t?' selected':'')+'>'+t+'</option>';
+        }).join('')+
+      '</select></div>'+
+    '<div class="fgroup"><label class="fl req">설비명</label>'+
+      '<input class="fc" id="efName" placeholder="설비 정식 명칭" value="'+H.e(row?row.name||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl req">모델명</label>'+
+      '<input class="fc" id="efModel" placeholder="모델명" value="'+H.e(row?row.model||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">S/N (시리얼번호)</label>'+
+      '<input class="fc" id="efSerial" placeholder="시리얼번호" value="'+H.e(row?row.serial_no||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl req">제조사</label>'+
+      '<input class="fc" id="efMaker" placeholder="제조사명" value="'+H.e(row?row.maker||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">제작일자</label>'+
+      '<input type="date" class="fc" id="efMfDate" value="'+H.e(row?row.manufacture_date||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl req">도입일</label>'+
+      '<input type="date" class="fc" id="efInstall" value="'+H.e(row?row.install_date||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">취득원가</label>'+
+      '<input type="number" class="fc" id="efCost" placeholder="0" value="'+(row?row.cost||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl req">담당부서</label>'+
+      '<input class="fc" id="efDept" placeholder="부서명" value="'+H.e(row?row.dept||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl req">담당자(정)</label>'+
+      '<input class="fc" id="efManager" placeholder="담당자 이름" value="'+H.e(row?row.manager||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl req">관리자(부)</label>'+
+      '<input class="fc" id="efManager2" placeholder="부 관리자" value="'+H.e(row?row.backup_manager2||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">장비 Size</label>'+
+      '<input class="fc" id="efSize" placeholder="예) 1020*510 (L*W)" value="'+H.e(row?row.size_spec||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">정격전압(V)</label>'+
+      '<input class="fc" id="efVoltage" placeholder="예) 380V / 3상 380V" value="'+H.e(row?row.rated_voltage||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">정격용량(KW)</label>'+
+      '<input class="fc" id="efCapacity" placeholder="예) 7.5KW" value="'+H.e(row?row.rated_capacity||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">소비전력(W)</label>'+
+      '<input class="fc" id="efPower" placeholder="예) 3.7KW" value="'+H.e(row?row.power_consumption||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">사용작동유</label>'+
+      '<input class="fc" id="efOil" placeholder="예) ISO VG 68" value="'+H.e(row?row.hydraulic_oil||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">설치위치</label>'+
+      '<input class="fc" id="efLoc" placeholder="라인/공정 위치" value="'+H.e(row?row.location||'':'')+'"></div>'+
+    '<div class="fgroup"><label class="fl req">상태</label>'+
+      '<select class="fc" id="efStatus">'+
+        ['정상','수리중','점검중','폐기예정','폐기'].map(function(s){
+          var sel=(row&&row.status===s)||(!row&&s==='정상');return'<option value="'+s+'"'+(sel?' selected':'')+'>'+s+'</option>';
+        }).join('')+
+      '</select></div>'+
     '<div class="fgroup ff"><label class="fl">설비 사진</label>'+
       '<div style="display:flex;align-items:center;gap:8px">'+
         '<label style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1.5px dashed var(--brd);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--muted)">'+
@@ -7375,7 +7617,8 @@ _eqForm:async function(editId){
         '</label>'+
         '<span id="efPhotoName" style="font-size:11px;color:var(--muted)">선택된 파일 없음</span>'+
       '</div></div>'+
-    '<div class="fgroup ff"><label class="fl">특이사항</label><textarea class="fc" id="efMemo" rows="2" placeholder="설비 관련 특이사항">'+H.e(row?row.memo:'')+'</textarea></div>'+
+    '<div class="fgroup ff"><label class="fl">비고</label>'+
+      '<textarea class="fc" id="efMemo" rows="2" placeholder="특이사항">'+H.e(row?row.memo||'':'')+'</textarea></div>'+
     '</div>',
     foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
          '<button class="btn bpri" onclick="Pages._eqSave('+(editId||'null')+')">저장</button>',
@@ -7390,20 +7633,29 @@ _eqSave:async function(editId){
   var dept=document.getElementById('efDept')?.value?.trim();
   if(!name){Toast.show('설비명을 입력하세요.','warn');return;}
   if(!dept){Toast.show('담당부서를 입력하세요.','warn');return;}
-  /* [v2.45] 설비번호: 입력값 우선, 없으면 DB에서 자동생성 */
+  /* [v2.46] 설비번호: 입력값 우선, 없으면 DB에서 자동생성 */
   var inputNo = document.getElementById('efNo')?.value?.trim();
+  /* [v2.46] 관리대장 기준 전체 필드 저장 */
   var row={
-    name:name, type:document.getElementById('efType')?.value||'생산설비',
-    dept:dept, location:document.getElementById('efLoc')?.value||null,
+    name:name,
+    type:document.getElementById('efType')?.value||'생산설비',
+    dept:dept,
+    location:document.getElementById('efLoc')?.value||null,
     status:document.getElementById('efStatus')?.value||'정상',
-    install_date:document.getElementById('efInstall')?.value||null,
-    maker:document.getElementById('efMaker')?.value||null,
     model:document.getElementById('efModel')?.value||null,
-    manager:document.getElementById('efManager')?.value||null,
-    lifespan:parseInt(document.getElementById('efLifespan')?.value)||null,
+    serial_no:document.getElementById('efSerial')?.value||null,
+    maker:document.getElementById('efMaker')?.value||null,
+    manufacture_date:document.getElementById('efMfDate')?.value||null,
+    install_date:document.getElementById('efInstall')?.value||null,
     cost:parseFloat(document.getElementById('efCost')?.value)||null,
+    manager:document.getElementById('efManager')?.value||null,
+    backup_manager2:document.getElementById('efManager2')?.value||null,
+    size_spec:document.getElementById('efSize')?.value||null,
+    rated_voltage:document.getElementById('efVoltage')?.value||null,
+    rated_capacity:document.getElementById('efCapacity')?.value||null,
+    power_consumption:document.getElementById('efPower')?.value||null,
+    hydraulic_oil:document.getElementById('efOil')?.value||null,
     memo:document.getElementById('efMemo')?.value||null,
-    /* [v2.45] 직접 입력한 번호가 있으면 포함, 없으면 DB 자동생성 */
     eq_no: inputNo || null,
   };
   /* 사진 업로드 */
@@ -7435,7 +7687,7 @@ async eq_pm(){
   var overdue=logs.filter(function(l){return l.status==='미완료'&&new Date(l.check_date)<today;}).length;
   var done=logs.filter(function(l){return l.status==='완료';}).length;
   var planned=logs.filter(function(l){return l.status==='예정';}).length;
-  /* [v2.45] PM 준수율 계산 */
+  /* [v2.46] PM 준수율 계산 */
   var pmRate2=logs.length?Math.round(done/logs.length*100):0;
   var pmRateColor2=pmRate2>=90?'#059669':pmRate2>=70?'#d97706':'#dc2626';
 
@@ -7480,7 +7732,7 @@ async eq_pm(){
   Pages._pmRender(logs);
 },
 _pmEqFilter:function(v){window._pmEqF=v;Pages._pmApply();},
-/* [v2.45] PM 설비번호 필터 */
+/* [v2.46] PM 설비번호 필터 */
 _pmNoFilter:function(v){window._pmNo=v;Pages._pmApply();},
 _pmCycleFilter:function(v){window._pmCycle=v;Pages._pmApply();},
 _pmStatusFilter:function(v){window._pmSt=v;var s=document.getElementById('pmStF');if(s)s.value=v;Pages._pmApply();},
@@ -7491,7 +7743,7 @@ _pmApply:function(){
   if(ef) rows=rows.filter(function(r){return String(r.eq_id)===String(ef);});
   if(cy) rows=rows.filter(function(r){return r.cycle===cy;});
   if(st) rows=rows.filter(function(r){return r.status===st;});
-  /* [v2.45] 설비번호 필터 */
+  /* [v2.46] 설비번호 필터 */
   if(pmNo){ var eqs=window._pmEqs||[]; rows=rows.filter(function(r){var eq=eqs.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(pmNo);}); }
   Pages._pmRender(rows);
 },
@@ -7505,7 +7757,7 @@ _pmRender:function(rows){
     {key:'eq_id',      label:'설비명',   render:function(v){
       var eq=(eqs||[]).find(function(e){return e.id===v;});
       return eq?'<span style="font-weight:600">'+H.e(eq.name)+'</span>':'-';}},
-    /* [v2.45] 설비번호 컬럼 추가 */
+    /* [v2.46] 설비번호 컬럼 추가 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'cycle',      label:'주기',     w:'60px',  align:'center',
       render:function(v){return'<span class="badge '+(cycCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
@@ -7610,7 +7862,7 @@ async eq_as(){
     else if(r.status==='완료')cnt.done++;
   });
 
-  /* [v2.45] 반복고장 감지 — 동일 설비 + 동일 유형 3회 이상 */
+  /* [v2.46] 반복고장 감지 — 동일 설비 + 동일 유형 3회 이상 */
   var repeatMap={};
   rows.forEach(function(r){
     var key=r.eq_id+'_'+r.fault_type;
@@ -7628,7 +7880,7 @@ async eq_as(){
   });
 
   w.innerHTML=
-    /* [v2.45] 반복고장 경고 배너 */
+    /* [v2.46] 반복고장 경고 배너 */
     (repeatAlerts.length?
       '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
         '<span style="font-size:18px">⚠️</span>'+
@@ -7672,7 +7924,7 @@ async eq_as(){
   window._asRows=rows; window._asEqs=eqs; window._asSt=''; window._asSrc=''; window._asKw='';
   Pages._asRender(rows);
 },
-/* [v2.45] AS 설비번호 필터 */
+/* [v2.46] AS 설비번호 필터 */
 _asNoFilter:function(v){window._asNo=v;Pages._asApply();},
 _asStatusFilter:function(v){window._asSt=v;var s=document.getElementById('asStF');if(s)s.value=v;Pages._asApply();},
 _asSrcFilter:function(v){window._asSrc=v;Pages._asApply();},
@@ -7683,7 +7935,7 @@ _asApply:function(){
   var asNo=(window._asNo||'').toLowerCase();
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(src) rows=rows.filter(function(r){return r.source===src;});
-  /* [v2.45] 설비번호 필터 */
+  /* [v2.46] 설비번호 필터 */
   if(asNo){ var eqsN=window._asEqs||[]; rows=rows.filter(function(r){var eq=eqsN.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(asNo);}); }
   if(kw){
     var eqs=window._asEqs||[];
@@ -7701,7 +7953,7 @@ _asRender:function(rows){
   var urgCls={긴급:'bred',높음:'bamb',보통:'bgry',낮음:'bgry'};
   Tbl.render({el:'#asTbl',cols:[
     {key:'eq_id',     label:'설비명',  render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return'<span style="font-weight:600">'+H.e(eq.name||'-')+'</span>';}},
-    /* [v2.45] 설비번호 컬럼 */
+    /* [v2.46] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'fault_type',label:'고장유형',w:'80px',align:'center'},
     {key:'symptom',   label:'증상',    render:function(v){return'<span style="font-size:12px">'+H.e(v||'-')+'</span>';}},
@@ -7834,13 +8086,13 @@ _costLoad:async function(){
   Tbl.render({el:'#costTbl',cols:[
     {key:'date',      label:'날짜',     w:'90px'},
     {key:'eq_id',     label:'설비명',   render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
-    /* [v2.45] 설비번호 컬럼 */
+    /* [v2.46] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'cost_type', label:'비용유형', w:'90px',align:'center',render:function(v){return'<span class="badge '+(typCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
     {key:'amount',    label:'금액(원)', w:'100px',align:'right',render:function(v){return'<b>'+Number(v||0).toLocaleString()+'</b>';}},
     {key:'vendor',    label:'업체/공급사',w:'100px'},
     {key:'note',      label:'비고',     render:function(v){return H.e(v||'-');}},
-    /* [v2.45] 수정 버튼 컬럼 추가 */
+    /* [v2.46] 수정 버튼 컬럼 추가 */
     {key:'id',        label:'',         w:'60px', align:'center',
       render:function(v,row){return'<button class="btn bxs bout" onclick="Pages._costEdit('+v+')">✏️</button>';}},
   ],data:rows,onDel:async function(ids){
@@ -7888,7 +8140,7 @@ _costSave:async function(){
   if(r.ok){Toast.show('등록됨','ok');Modal.close();await Pages._costLoad();}
 },
 
-/* [v2.45] 비용 수정 폼 */
+/* [v2.46] 비용 수정 폼 */
 _costEdit:function(id){
   var row=(window._costRows||[]).find(function(r){return r.id===id;});
   if(!row){Toast.show('항목을 찾을 수 없습니다.','err');return;}
@@ -7923,7 +8175,7 @@ _costEditSave:async function(id){
   if(r.ok){Toast.show('수정됨','ok');Modal.close();await Pages._costLoad();}
 },
 
-/* [v2.45] 비용 목록 설비번호 필터 */
+/* [v2.46] 비용 목록 설비번호 필터 */
 _costNoFilter:function(v){
   window._costNo=v;
   var rows=window._costRows||[];
@@ -7974,7 +8226,7 @@ async eq_manual(){
   Pages._manualRender(rows);
 },
 _manualKw:function(v){window._manKw=v;Pages._manualApply();},
-/* [v2.45] 매뉴얼 설비번호 필터 */
+/* [v2.46] 매뉴얼 설비번호 필터 */
 _manualNoFilter:function(v){window._manNo=v;Pages._manualApply();},
 _manualEqFilter:function(v){window._manEqF=v;Pages._manualApply();},
 _manualApply:function(){
@@ -7983,7 +8235,7 @@ _manualApply:function(){
   var manNo=(window._manNo||'').toLowerCase();
   var eqs=window._manEqs||[];
   if(ef) rows=rows.filter(function(r){return String(r.eq_id)===String(ef);});
-  /* [v2.45] 설비번호 필터 */
+  /* [v2.46] 설비번호 필터 */
   if(manNo) rows=rows.filter(function(r){var eq=eqs.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(manNo);});
   if(kw) rows=rows.filter(function(r){
     var eq=(eqs||[]).find(function(e){return e.id===r.eq_id;})||{};
@@ -7995,7 +8247,7 @@ _manualRender:function(rows){
   var eqs=window._manEqs||[];
   Tbl.render({el:'#manTbl',cols:[
     {key:'eq_id',    label:'설비명', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
-    /* [v2.45] 설비번호 컬럼 */
+    /* [v2.46] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'title',    label:'매뉴얼 제목', render:function(v,row){
       return row.file_url
@@ -8117,7 +8369,7 @@ _cardRender:function(eqs){
 _cardPrint:function(eqId){
   var e=(window._cardEqs||[]).find(function(x){return x.id===eqId;});
   if(!e){Toast.show('설비 정보를 찾을 수 없습니다.','err');return;}
-  /* [v2.45] QR 코드 생성 — qrcode.js CDN 활용 */
+  /* [v2.46] QR 코드 생성 — qrcode.js CDN 활용 */
   var qrUrl='https://innodis-qms.vercel.app/?page=eq_mgmt&eq='+eqId;
   var html='<html><head><title>마이머신카드 — '+H.e(e.name)+'</title>'+
     '<style>@page{size:A5;margin:8mm}body{font-family:Arial,sans-serif;padding:0;margin:0}'+
@@ -8253,7 +8505,7 @@ _oeeLoad:async function(){
   Tbl.render({el:'#oeeTbl',cols:[
     {key:'date',         label:'일자',      w:'90px'},
     {key:'eq_id',        label:'설비명',    render:function(v){var e=(eqs||[]).find(function(x){return x.id===v;})||{};return H.e(e.name||'-');}},
-    /* [v2.45] 설비번호 컬럼 */
+    /* [v2.46] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(x){return x.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'plan_time',    label:'계획가동(h)',w:'90px',align:'center'},
     {key:'actual_time',  label:'실가동(h)', w:'90px',align:'center'},
@@ -8369,7 +8621,7 @@ async eq_dept(){
   });
   var depts=Object.values(deptMap).sort(function(a,b){return b.total-a.total;});
 
-  /* [v2.45] 빈 화면 처리 — 설비 미등록 시 안내 */
+  /* [v2.46] 빈 화면 처리 — 설비 미등록 시 안내 */
   var deptGridHTML;
   if(!depts.length){
     deptGridHTML=
@@ -8440,7 +8692,7 @@ _deptExcel:function(){
 
 
 
-/* ── [v2.45] 홈 카드 드래그앤드롭 ─────────────────────────────
+/* ── [v2.46] 홈 카드 드래그앤드롭 ─────────────────────────────
    규칙: 위치 교환(swap)만 허용 / 중복 불허 / 순서 localStorage 저장
    ─────────────────────────────────────────────────────────── */
 _homeInitDrag(){
@@ -8586,7 +8838,7 @@ const Cfg={
         +'<div class="fgroup"><label class="fl">등록자</label>'+
         '<select class="fc" id="na">'+
           (function(){
-            /* [v2.45] 관리자+매니저 권한 사용자만 표시 */
+            /* [v2.46] 관리자+매니저 권한 사용자만 표시 */
             var admins=(DB.users||[]).filter(function(u){
               return u.active!==0&&u.active!==false&&!u.pending&&
                      (u.role==='admin'||u.role==='manager');
@@ -8661,7 +8913,7 @@ const Cfg={
         /* 기존 파일 유지 */
         obj.file=existFile;
       }
-      /* [v2.45] Supabase 영속화 저장
+      /* [v2.46] Supabase 영속화 저장
          기존: App.notices.push() → 메모리만, 새로고침/배포 시 초기화
          수정: SB.addNotice/updateNotice → DB 저장 → SB.getNotices로 재로드 */
       var saveRes;
@@ -8681,7 +8933,7 @@ const Cfg={
   },
   noticeToggle(i){App.notices[i].show=!App.notices[i].show;Toast.show('변경되었습니다.','ok');Pages.settings()},
 
-  /* [v2.45] id 기반 공지 토글 */
+  /* [v2.46] id 기반 공지 토글 */
   async _noticeToggleById(n){
     var newShow=!n.show;
     var r=await SB.updateNotice(n.id,{show:newShow});
@@ -8691,7 +8943,7 @@ const Cfg={
     }
   },
 
-  /* [v2.45] id 기반 공지 삭제 */
+  /* [v2.46] id 기반 공지 삭제 */
   async _noticeDelById(n){
     Modal.confirm({title:'공지 삭제',msg:'<b>'+H.e(n.title)+'</b> 공지사항을 삭제하시겠습니까?',danger:true,
       onOk:async function(){
@@ -8701,13 +8953,13 @@ const Cfg={
     });
   },
 
-  /* [v2.45] id 기반 공지 수정 — _addNotice에 객체 전달 */
+  /* [v2.46] id 기반 공지 수정 — _addNotice에 객체 전달 */
   _editNoticeById(n){
     /* n 객체를 전달하여 수정 모달 오픈 */
     var idx=App.notices.findIndex(function(x){return x.id===n.id;});
     Pages._addNotice(idx>=0?idx:null, n);
   },
-  /* [v2.45] 공지 삭제 — Supabase 연동 */
+  /* [v2.46] 공지 삭제 — Supabase 연동 */
   noticeDel(i){
     var notice=App.notices[i];
     if(!notice){Toast.show('공지를 찾을 수 없습니다.','warn');return;}

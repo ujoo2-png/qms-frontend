@@ -1460,12 +1460,12 @@ SB.sendReviewAlerts=async function(days){
 };
 
 /* ════════════════════════════════════════════════════════════
-   공지사항 SB 함수 [v2.45 신규]
+   공지사항 SB 함수 [v2.46 신규]
    테이블: notices (id, title, body, author, date, expire, show, file_url, file_name, created_at)
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.45] 공지사항 전체 조회
+ * [v2.46] 공지사항 전체 조회
  * @returns {Array} created_at 내림차순 (최신순)
  *
  * [문제 배경] 기존 App.notices는 qms-core.js 하드코딩 배열
@@ -1485,7 +1485,7 @@ SB.getNotices = async function() {
 };
 
 /**
- * [v2.45] 공지사항 등록
+ * [v2.46] 공지사항 등록
  * @param {object} row - { title, body, author, date, expire, show, file_url, file_name }
  */
 SB.addNotice = async function(row) {
@@ -1513,7 +1513,7 @@ SB.addNotice = async function(row) {
 };
 
 /**
- * [v2.45] 공지사항 수정
+ * [v2.46] 공지사항 수정
  * @param {number} id  - notices.id
  * @param {object} patch - 변경할 필드
  */
@@ -1531,7 +1531,7 @@ SB.updateNotice = async function(id, patch) {
 };
 
 /**
- * [v2.45] 공지사항 삭제
+ * [v2.46] 공지사항 삭제
  * @param {number} id - notices.id
  */
 SB.deleteNotice = async function(id) {
@@ -1547,12 +1547,12 @@ SB.deleteNotice = async function(id) {
 };
 
 /* ════════════════════════════════════════════════════════════
-   Q&A SB 함수 [v2.45 신규]
+   Q&A SB 함수 [v2.46 신규]
    테이블: qna + qna_replies
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.45] Q&A 목록 조회
+ * [v2.46] Q&A 목록 조회
  * @param {object} filter - { category, menu_ref, status }
  * @returns {Array} created_at 내림차순, 고정글 상단
  */
@@ -1574,7 +1574,7 @@ SB.getQna = async function(filter) {
 };
 
 /**
- * [v2.45] Q&A 단건 조회 (답변 포함)
+ * [v2.46] Q&A 단건 조회 (답변 포함)
  * @param {number} id
  */
 SB.getQnaById = async function(id) {
@@ -1591,7 +1591,7 @@ SB.getQnaById = async function(id) {
   } catch(e) { return null; }
 };
 
-/** [v2.45] Q&A 등록 */
+/** [v2.46] Q&A 등록 */
 SB.addQna = async function(row) {
   if (!_sb) return { ok: false };
   try {
@@ -1611,7 +1611,7 @@ SB.addQna = async function(row) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.45] Q&A 수정 */
+/** [v2.46] Q&A 수정 */
 SB.updateQna = async function(id, patch) {
   if (!_sb) return { ok: false };
   try {
@@ -1622,7 +1622,7 @@ SB.updateQna = async function(id, patch) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.45] Q&A 삭제 */
+/** [v2.46] Q&A 삭제 */
 SB.deleteQna = async function(id) {
   if (!_sb) return { ok: false };
   try {
@@ -1632,7 +1632,7 @@ SB.deleteQna = async function(id) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.45] 답변 등록 */
+/** [v2.46] 답변 등록 */
 SB.addQnaReply = async function(qna_id, body, author, is_answer) {
   if (!_sb) return { ok: false };
   try {
@@ -1649,7 +1649,7 @@ SB.addQnaReply = async function(qna_id, body, author, is_answer) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.45] 답변 삭제 */
+/** [v2.46] 답변 삭제 */
 SB.deleteQnaReply = async function(id) {
   if (!_sb) return { ok: false };
   try {
@@ -1660,7 +1660,7 @@ SB.deleteQnaReply = async function(id) {
 };
 
 /* ════════════════════════════════════════════════════════════
-   제조설비관리 (EMS) SB 함수 [v2.45]
+   제조설비관리 (EMS) SB 함수 [v2.46]
    테이블: equipment / eq_pm_log / eq_as / eq_cost / eq_manual / eq_oee
    ════════════════════════════════════════════════════════════ */
 
@@ -1678,7 +1678,7 @@ SB.getEquipment = async function(filter) {
 SB.addEquipment = async function(row) {
   if (!_sb) return { ok: false };
   try {
-    // [v2.45] eq_no: 직접 입력값 우선, 없으면 자동생성 EQ-YYYY-NNN
+    // [v2.46] eq_no: 직접 입력값 우선, 없으면 자동생성 EQ-YYYY-NNN
     if (!row.eq_no) {
       var year = new Date().getFullYear();
       var existing = await SB.getEquipment();
@@ -1845,7 +1845,7 @@ SB.deleteEqOee = async function(id) {
   catch(e) { return { ok:false }; }
 };
 
-/* [v2.45] SB.updateEqCost — 비용 수정 */
+/* [v2.46] SB.updateEqCost — 비용 수정 */
 SB.updateEqCost = async function(id, patch) {
   if (!_sb) return { ok: false };
   try {
