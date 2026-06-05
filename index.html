@@ -6,19 +6,19 @@
   ╠══════════════════════════════════════════════════════════╣
   ║  v2.39  기준 — Q&A·문서관리 DMS·Magic Indicator 완료      ║
   ║  v2.40  2026-06-03  제조설비관리(EMS) M1~M8 골격 구현      ║
-  ║  v2.52  2026-06-03  버전규칙 변경(*.**) / 홈카드 2×5       ║
+  ║  v2.53  2026-06-03  버전규칙 변경(*.**) / 홈카드 2×5       ║
   ╚══════════════════════════════════════════════════════════╝
 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.52</title>
+<title>QMS - 품질경영시스템 v2.53</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- [v2.52] QR 코드 생성 — 마이머신카드 출력용 -->
+<!-- [v2.53] QR 코드 생성 — 마이머신카드 출력용 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<link rel="stylesheet" href="qms-style.css?v=2.52">
+<link rel="stylesheet" href="qms-style.css?v=2.53">
 <!-- Supabase JS SDK CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -78,7 +78,7 @@
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.52</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.53</div>
         </div>
       </div>
     </div>
@@ -228,7 +228,7 @@
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.52</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.53</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
   </div>
 </div>
 
@@ -239,7 +239,7 @@
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.52</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.53</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -295,7 +295,7 @@
         <div class="ni" data-p="cal" onclick="Nav.go('cal')"><span class="nii">📐</span><span class="nt">교정 관리</span></div>
         <div class="ni" data-p="msa" onclick="Nav.go('msa')"><span class="nii">📈</span><span class="nt">MSA 분석</span></div>
       </div>
-      <!-- [v2.52] 제조설비관리 (EMS) -->
+      <!-- [v2.53] 제조설비관리 (EMS) -->
       <div class="ns" id="ns-eq" style="display:none">
         <div class="nst">제조설비관리</div>
         <div class="ni" data-p="eq_mgmt"         onclick="Nav.go('eq_mgmt')"><span class="nii">🏭</span><span class="nt">설비 등록 관리</span></div>
@@ -354,7 +354,7 @@
         <div class="tb-mod tb-mod-mention" data-mod="멘션함" onclick="TopNav.selectMention()" id="tbMentionBtn" style="position:relative">💬 멘션함<span id="tbMentionBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;display:flex;align-items:center;justify-content:center"></span></div>
       </div>
       <div class="tb-right">
-        <!-- [v2.52] Q&A 버튼: tbd 왼쪽 배치 / 이름 Q&A -->
+        <!-- [v2.53] Q&A 버튼: tbd 왼쪽 배치 / 이름 Q&A -->
         <button class="qna-topbar-btn" id="qnaBtn" onclick="Nav.go('qna')" title="Q&A / 매뉴얼 / 팁">Q&amp;A</button>
         <div class="tbd" id="tbd"></div>
         <button class="ib" onclick="UI.toggleMpop()" title="멘션">🔔<span class="bdot" id="bdot"></span></button>
@@ -405,11 +405,11 @@
 
 
 <!-- QMS 분리 파일 로드 순서: db → core → pages → excel → init -->
-<script src="qms-db.js?v=2.52"></script>
-<script src="qms-core.js?v=2.52"></script>
-<script src="qms-pages.js?v=2.52"></script>
-<script src="qms-excel.js?v=2.52"></script>
-<script src="qms-init.js?v=2.52"></script>
+<script src="qms-db.js?v=2.53"></script>
+<script src="qms-core.js?v=2.53"></script>
+<script src="qms-pages.js?v=2.53"></script>
+<script src="qms-excel.js?v=2.53"></script>
+<script src="qms-init.js?v=2.53"></script>
 
 </body>
 </html>
