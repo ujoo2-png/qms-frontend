@@ -1310,39 +1310,90 @@ _uForm(row=null){
   const e=!!row;
   const today=H.today();
   Modal.open({title:e?'👤 사용자 수정':'👤 사용자 등록',size:'mlg',
-    body:`<div class="fg2">
-      <!-- 1열: 아이디, 이름 -->
-      <div class="fgroup"><label class="fl req">아이디</label>
-        <input class="fc" id="uf_id" value="${H.e(row?.username||'')}" ${e?'readonly':''} placeholder="영문/숫자 조합"></div>
-      <div class="fgroup"><label class="fl req">이름</label>
-        <input class="fc" id="uf_name" value="${H.e(row?.name||'')}"></div>
-      <!-- 2열: 비밀번호 -->
-      <div class="fgroup"><label class="fl ${!e?'req':''}">비밀번호</label>
-        <input class="fc" id="uf_pw" type="password" placeholder="${e?'변경 시만 입력 (8자 이상)':'8자 이상 입력'}"></div>
-      <div class="fgroup"><label class="fl ${!e?'req':''}">비밀번호 확인</label>
-        <input class="fc" id="uf_pw2" type="password" placeholder="${e?'변경 시만 입력':''}"></div>
-      <!-- 3열: 부서, 연락처 -->
-      <div class="fgroup"><label class="fl">부서</label>
-        <input class="fc" id="uf_dept" value="${H.e(row?.department||'')}" placeholder="예) 품질팀"></div>
-      <div class="fgroup"><label class="fl">연락처</label>
-        <input class="fc" id="uf_tel" value="${H.e(row?.tel||'')}" placeholder="010-0000-0000"></div>
-      <!-- 4열: E-MAIL, 권한 -->
-      <div class="fgroup"><label class="fl">E-MAIL</label>
-        <input class="fc" id="uf_email" type="email" value="${H.e(row?.email||'')}" placeholder="user@company.com"></div>
-      <!-- [v2.394] 권한 설정은 설정 > 사용자 관리로 이동 -->
-      <div class="fgroup"><label class="fl">권한</label>
-        <select class="fc" id="uf_role">
-          ${['admin','manager','user','viewer'].map(r=>`<option value="${r}"${(row?.role||'user')===r?' selected':''}>${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[r]}</option>`).join('')}
-        </select>
-      <!-- 5열: 상태, (수정 시) 날짜 -->
-      <div class="fgroup"><label class="fl">상태</label>
-        <select class="fc" id="uf_active"><option value="1" ${!row||row.active?'selected':''}>활성</option><option value="0" ${row&&!row.active?'selected':''}>비활성</option></select></div>
-      <div class="fgroup"></div>
-      ${e?`<div class="fgroup"><label class="fl">등록일</label><input class="fc" value="${H.e(row?.created_at||today)}" readonly></div>
-           <div class="fgroup"><label class="fl">수정일</label><input class="fc" value="${today}" readonly></div>`:''}
+    body:`
+    <div style="padding:4px 0">
+      <!-- 아이디 / 이름 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">
+            <b style="color:#e11d48">아이디 *</b>
+          </label>
+          <input class="fc" id="uf_id" value="${H.e(row?.username||'')}" ${e?'readonly':''} placeholder="영문/숫자 조합" style="background:${e?'var(--bg2)':''}">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">
+            <b style="color:#e11d48">이름 *</b>
+          </label>
+          <input class="fc" id="uf_name" value="${H.e(row?.name||'')}">
+        </div>
+      </div>
+      <!-- 비밀번호 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">
+            ${!e?'<b style="color:#e11d48">비밀번호 *</b>':'<span>비밀번호</span>'}
+          </label>
+          <input class="fc" id="uf_pw" type="password" placeholder="${e?'변경 시만 입력 (8자 이상)':'8자 이상 입력'}">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">
+            ${!e?'<b style="color:#e11d48">비밀번호 확인 *</b>':'<span>비밀번호 확인</span>'}
+          </label>
+          <input class="fc" id="uf_pw2" type="password" placeholder="${e?'변경 시만 입력':''}">
+        </div>
+      </div>
+      <!-- 부서 / 연락처 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">부서</label>
+          <input class="fc" id="uf_dept" value="${H.e(row?.department||'')}" placeholder="예) 품질팀">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">연락처</label>
+          <input class="fc" id="uf_tel" value="${H.e(row?.tel||'')}" placeholder="010-0000-0000">
+        </div>
+      </div>
+      <!-- E-MAIL / 권한 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">E-MAIL</label>
+          <input class="fc" id="uf_email" type="email" value="${H.e(row?.email||'')}" placeholder="example@company.com">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">
+            <b style="color:#e11d48">권한 *</b>
+          </label>
+          <select class="fc" id="uf_role">
+            ${['admin','manager','user','viewer'].map(r=>`<option value="${r}"${(row?.role||'user')===r?' selected':''}>${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[r]}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <!-- 상태 (수정 시만) -->
+      ${e?`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">상태</label>
+          <select class="fc" id="uf_active">
+            <option value="1" ${!row||row.active?'selected':''}>활성</option>
+            <option value="0" ${row&&!row.active?'selected':''}>비활성</option>
+          </select>
+        </div>
+        <div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">등록일</label>
+          <input class="fc" value="${H.e(row?.created_at||today)}" readonly style="background:var(--bg2)">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">수정일</label>
+          <input class="fc" value="${today}" readonly style="background:var(--bg2)">
+        </div>
+      </div>`:''}
+      <div style="font-size:11px;color:#94a3b8;margin-top:10px"><b style="color:#e11d48">*</b> 표시는 필수 항목입니다.</div>
     </div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
-          ${e&&Auth._u?.role==='admin'?`<button class="btn bamb bsm" onclick="Pages._uResetPw(${row.id},'${H.e(row.username)}')" title="비밀번호 랜덤 초기화 (관리자 전용)">🔑 비밀번호 초기화</button> <button class="btn berr bsm" onclick="Modal.close();Pages._uDelete(${row.id})" title="사용자 삭제 (사유 입력 필수)">🗑️ 삭제</button>`:''}
+        foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+          ${e&&Auth._u?.role==='admin'?`<button class="btn bamb bsm" onclick="Pages._uResetPw(${row.id},'${H.e(row.username)}')" title="비밀번호 랜덤 초기화 (관리자 전용)">🔑 비밀번호 초기화</button> <button class="btn berr bsm" onclick="Modal.close();Pages._uDelete(${row.id})" title="사용자 삭제">🗑️ 삭제</button>`:''}
           <button class="btn bpri btn-f8" onclick="Pages._uSave(${row?.id||'null'})">${e?'저장':'등록'} <span class="kbd">F8</span></button>`
   });
 },
@@ -1371,11 +1422,8 @@ async _uSave(id){
   const row={
     username:uid, name,
     department:g('uf_dept'), tel:g('uf_tel'), email,
-    /* [v2.53 S3] role을 수정 폼에서 직접 변경 가능 */
-    ...(roleVal ? {role: roleVal} : {}),
-    /* [v2.394] role은 설정 > 사용자 관리에서 변경
-       신규 등록 시 기본값 'user', 수정 시 기존 role 유지 */
-    role: id ? (DB.users.find(u=>u.id===id)?.role||'user') : 'user',
+    /* [v2.53 fix S3] roleVal 우선 적용, 기존값 fallback */
+    role: roleVal || (id ? (DB.users.find(u=>u.id===id)?.role||'user') : 'user'),
     active:Number(document.getElementById('uf_active')?.value||1),
   };
   // password 해시 포함 (신규 등록 시 필수, 수정 시 입력한 경우만)
@@ -3673,7 +3721,7 @@ async docs(){
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   window._docRows=[];
-  try{ window._docRows=await SB.getDocMaster(); }catch(e){ Toast.show('문서 조회 실패: '+e.message,'err'); }
+  try{ window._docRows=await SB.getDocs(); }catch(e){ Toast.show('문서 조회 실패: '+e.message,'err'); }
 
   var rows=window._docRows;
   var cnt={all:rows.length,active:0,in_review:0,draft:0,obsolete:0};
@@ -3958,7 +4006,7 @@ _docSave:async function(editId){
            dept:document.getElementById('fnDept')?.value?.trim()||null,
            tags:tags,status:'draft',current_ver:'v1.0'};
   var r=await SB.addDocMaster(row); if(!r.ok)return;
-  var allDocs=await SB.getDocMaster();
+  var allDocs=await SB.getDocs();
   var newDoc=allDocs.find(function(d){return d.doc_no===docNo;});
   if(newDoc){
     var vr=await SB.addDocVersion({doc_id:newDoc.id,ver_no:'v1.0',
@@ -3973,17 +4021,14 @@ _docSave:async function(editId){
         text:'[문서 결재 요청] '+title+' (v1.0) 결재를 요청드립니다.',ref:'doc_approval'});
     }
   }
-  /* [v2.53 D1] SB Storage 실제 업로드 */
+  /* [v2.53 fix D1] 파일 업로드 → doc_master.file_url 직접 저장 */
   if(newDoc){
     var fInp=document.getElementById('fnDocFile');
     if(fInp&&fInp.files&&fInp.files[0]){
       try{
         var up=await SB.uploadFile('documents',fInp.files[0]);
         if(up&&up.url){
-          await SB.updateDocVersion(
-            (await SB.getDocVersions(newDoc.id)).slice(-1)[0]?.id,
-            {file_url:up.url, file_name:fInp.files[0].name}
-          );
+          await SB.updateDoc(newDoc.id,{file_url:up.url,file_name:fInp.files[0].name});
         }
       }catch(e){console.warn('[docSave] 파일 업로드 실패:',e.message);}
     }
@@ -3993,7 +4038,7 @@ _docSave:async function(editId){
     }
   }
   Toast.show('문서가 등록되었습니다.','ok'); Modal.close();
-  window._docRows=await SB.getDocMaster(); Pages._docRender(); Pages._docKanban();
+  var fresh=await SB.getDocs(); if(fresh) window._docRows=fresh; Pages._docRender(); Pages._docKanban();
 },
 _docExcelDown:function(){
   var rows=Pages._docFiltered();
@@ -4056,7 +4101,7 @@ _docRevSave:async function(docId){
     delete App.files[revKey];
   }
   Toast.show('개정 기안이 제출되었습니다.','ok'); Modal.close();
-  window._docRows=await SB.getDocMaster(); Pages._docRender(); Pages._docKanban();
+  var fresh=await SB.getDocs(); if(fresh) window._docRows=fresh; Pages._docRender(); Pages._docKanban();
 },
 
 /* ══════════════════════════════════════════════════
@@ -4338,7 +4383,7 @@ async doc_search(){
     '<div style="font-size:12px;color:var(--muted)">문서번호 · 제목 · 태그 통합 실시간 검색</div></div></div>'+
     '<div style="margin-bottom:16px"><input type="text" id="dsKw" style="width:100%;padding:12px 16px;border:2px solid var(--brd);border-radius:10px;font-size:15px;background:var(--bg);color:var(--text);box-sizing:border-box" placeholder="🔍 문서 제목, 번호, 태그를 입력하세요..." oninput="Pages._dsSearch(this.value)" autofocus></div>'+
     '<div id="dsResult"><div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px">🔍</div><div>검색어를 입력하면 바로 결과가 표시됩니다.</div></div></div>';
-  if(!window._docRows||!window._docRows.length) window._docRows=await SB.getDocMaster();
+  if(!window._docRows||!window._docRows.length) window._docRows=await SB.getDocs();
 },
 _dsSearch:function(kw){
   var el=document.getElementById('dsResult');
@@ -4373,7 +4418,7 @@ async doc_distribution(){
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   var docs=[];var summary={byAction:{},byDoc:[],total:0};
-  try{docs=await SB.getDocMaster();summary=await SB.getDistLogSummary();}catch(e){}
+  try{docs=await SB.getDocs();summary=await SB.getDistLogSummary();}catch(e){}
   var ba=summary.byAction||{};var totalCnt=summary.total||0;
   w.innerHTML=
     '<div class="stat-dash">'+
@@ -4542,7 +4587,7 @@ async doc_review_cycle(){
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   var rows=[];
-  try{rows=await SB.getDocMaster();}catch(e){}
+  try{rows=await SB.getDocs();}catch(e){}
   var today=new Date();
   var expired=[],d7=[],d30=[];
   rows.forEach(function(r){
@@ -4667,7 +4712,7 @@ async doc_recommend(){
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
 
   var rows=[];
-  try{ rows=await SB.getDocMaster(); }catch(e){}
+  try{ rows=await SB.getDocs(); }catch(e){}
 
   /* 태그 빈도 집계 */
   var tagMap={};
@@ -4874,7 +4919,7 @@ async doc_dashboard(){
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>대시보드 로딩 중...</div></div>';
 
   var rows=[];
-  try{ rows=await SB.getDocMaster(); }catch(e){}
+  try{ rows=await SB.getDocs(); }catch(e){}
 
   /* ── 집계 ── */
   var total=rows.length;
@@ -9660,12 +9705,13 @@ const Cfg={
     });
   },
   /* [v2.53 S2] index 기반 수정 */
+  /* [v2.53 fix S2] Cfg.noticeForm(idx) 직접 호출 — Pages._addNotice는 인자 무시 */
   _editNoticeById(i){
     var notices=App.notices||[];
     var sorted=[...notices].sort(function(a,b){return (b.created_at||b.date||'').localeCompare(a.created_at||a.date||'');});
     var n=sorted[i]; if(!n) return;
     var idx=App.notices.findIndex(function(x){return x.id===n.id;});
-    Pages._addNotice(idx>=0?idx:null, n);
+    Cfg.noticeForm(idx>=0?idx:null);
   },
   /* [v2.53 S2] index 기반 삭제 */
   _noticeDelByIdx(i){

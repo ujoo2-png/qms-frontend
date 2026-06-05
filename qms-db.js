@@ -808,6 +808,28 @@ const SB={
     if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
     const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
   },
+
+  /* [v2.53 fix D1] DMS 지원 함수 */
+  async getDocMaster(filter){
+    if(!_sb) return window._docRows||[];
+    var q=_sb.from('doc_master').select('*').order('created_at',{ascending:false});
+    if(filter?.doc_type) q=q.eq('doc_type',filter.doc_type);
+    const {data,error}=await q;
+    if(error){console.warn('getDocMaster:',error.message);return[];}
+    return data||[];
+  },
+  async getDocMasterById(id){
+    if(!_sb) return (window._docRows||[]).find(d=>d.id===id)||null;
+    const {data,error}=await _sb.from('doc_master').select('*').eq('id',id).single();
+    if(error) return null;
+    return data;
+  },
+  async getDocVersions(docId){
+    if(!_sb) return [];
+    const {data,error}=await _sb.from('doc_versions').select('*').eq('doc_id',docId).order('ver',{ascending:false});
+    if(error) return [];
+    return data||[];
+  },
 };
 
 /* ══ 전역 상태 ══ *//* ══ DB ══ */
