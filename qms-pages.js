@@ -7226,7 +7226,7 @@ async eq_mgmt(){
       '<button class="btn bpri btn-f2" onclick="Pages._eqForm()">+ 설비 등록 <span class="kbd">F2</span></button>'+
     '</div></div>'+
     '<div class="tbar">'+
-      '<button class="btn bout bsm btn-f3" onclick="SearchPop.open(\'ems_eq\')" title="설비 검색 (F3)">🔎 F3</button>'+
+      '<button class="btn bout bsm btn-f3" onclick="Pages._emsSearch()" title="설비 검색 (F3)">🔎 F3</button>'+
       '<input type="text" id="eqNoF" placeholder="설비번호..." style="width:130px" oninput="Pages._eqNoFilter(this.value)">'+
       '<div class="sw2"><input type="text" id="eqKw" placeholder="🔍 설비명, 부서 검색..." oninput="Pages._eqKwFilter(this.value)"></div>'+
       '<select class="fsel" id="eqTypeF" onchange="Pages._eqTypeFilter(this.value)">'+
@@ -7731,7 +7731,7 @@ async eq_pm(){
       '<div class="ptit">📋 예방정비(PM) 점검표</div>'+
       '<div style="font-size:12px;color:var(--muted)">설비별 점검 현황 · 일일·주간·월간·반기·연간</div>'+
     '</div><div class="pac">'+
-      '<button class="btn bout bsm btn-f3" onclick="SearchPop.open(\'ems_eq\')" title="설비 검색 (F3)">🔎 F3</button>'+
+      '<button class="btn bout bsm btn-f3" onclick="Pages._emsSearch()" title="설비 검색 (F3)">🔎 F3</button>'+
       '<button class="btn bpri bsm" onclick="Pages._pmPrint()">🖨️ 점검표 출력</button>'+
       '<button class="btn bpri btn-f2" onclick="Pages._pmForm()">+ 점검 등록 <span class="kbd">F2</span></button>'+
     '</div></div>'+
@@ -8107,7 +8107,7 @@ async eq_as(){
       '<button class="btn bpri btn-f2" onclick="Pages._asForm()">+ AS 접수 <span class="kbd">F2</span></button>'+
     '</div></div>'+
     '<div class="tbar">'+
-      '<button class="btn bout bsm btn-f3" onclick="SearchPop.open(\'ems_eq\')" title="설비 검색 (F3)">🔎 F3</button>'+
+      '<button class="btn bout bsm btn-f3" onclick="Pages._emsSearch()" title="설비 검색 (F3)">🔎 F3</button>'+
       '<input type="text" id="asNoF" placeholder="설비번호..." style="width:110px" oninput="Pages._asNoFilter(this.value)">'+
       '<input type="text" id="asKw" placeholder="설비명/증상..." style="width:130px" oninput="Pages._asKwFilter(this.value)">'+
       '<select class="fsel" id="asStF" onchange="Pages._asStatusFilter(this.value)">'+
@@ -8278,7 +8278,7 @@ async eq_cost(){
       '<button class="btn bpri btn-f2" onclick="Pages._costForm()">+ 비용 등록</button>'+
     '</div></div>'+
     '<div class="tbar">'+
-      '<button class="btn bout bsm btn-f3" onclick="SearchPop.open(\'ems_eq\')" title="설비 검색 (F3)">🔎 F3</button>'+
+      '<button class="btn bout bsm btn-f3" onclick="Pages._emsSearch()" title="설비 검색 (F3)">🔎 F3</button>'+
       '<input type="text" id="costNoF" placeholder="설비번호..." style="width:120px" oninput="Pages._costNoFilter(this.value)">'+
       '<select class="fsel" id="costYM" onchange="Pages._costLoad()">'+
         (function(){
@@ -8453,7 +8453,7 @@ async eq_manual(){
       '<button class="btn bpri btn-f2" onclick="Pages._manualForm()">+ 매뉴얼 등록</button>'+
     '</div></div>'+
     '<div class="tbar">'+
-      '<button class="btn bout bsm btn-f3" onclick="SearchPop.open(\'ems_eq\')" title="설비 검색 (F3)">🔎 F3</button>'+
+      '<button class="btn bout bsm btn-f3" onclick="Pages._emsSearch()" title="설비 검색 (F3)">🔎 F3</button>'+
       '<input type="text" id="manNoF" placeholder="설비번호..." style="width:110px" oninput="Pages._manualNoFilter(this.value)">'+
       '<input type="text" id="manKw" placeholder="설비명/제목..." style="width:120px" oninput="Pages._manualKw(this.value)">'+
       '<select class="fsel" id="manEqF" onchange="Pages._manualEqFilter(this.value)">'+
@@ -9236,16 +9236,16 @@ _pmPrintDo:function(){
       '<tr>'+
         '<td class="mlbl">설비명</td>'+
         '<td style="font-weight:700;font-size:8px">'+H.e(eq.name||'-')+'</td>'+
-        '<td colspan="2" style="height:28px"></td>'+
-        '<td colspan="2" style="height:28px"></td>'+
-        '<td colspan="2" style="height:28px"></td>'+
+        '<td colspan="2" style="height:28px"><div style="height:28px"></div></td>'+
+        '<td colspan="2" style="height:28px"><div style="height:28px"></div></td>'+
+        '<td colspan="2" style="height:28px"><div style="height:28px"></div></td>'+
       '</tr>'+
       '<tr>'+
         '<td class="mlbl">사용부서</td>'+
         '<td style="font-size:8px">'+H.e(eq.dept||'-')+'</td>'+
-        '<td colspan="2" style="height:20px"></td>'+
-        '<td colspan="2" style="height:20px"></td>'+
-        '<td colspan="2" style="height:20px"></td>'+
+        '<td colspan="2" style="height:20px"><div style="height:20px"></div></td>'+
+        '<td colspan="2" style="height:20px"><div style="height:20px"></div></td>'+
+        '<td colspan="2" style="height:20px"><div style="height:20px"></div></td>'+
       '</tr>'+
       '<tr>'+
         '<td class="mlbl">설비점검자</td><td></td>'+
@@ -9398,6 +9398,72 @@ _cardPrintAll:function(){
   setTimeout(printNext,200);
 },
 
+
+/* [v2.52] EMS 설비 검색 — F3 전용 자체 모달 */
+_emsSearch:function(){
+  var eqs=window._eqRows||window._pmEqs||window._cardEqs||[];
+  if(!eqs.length){Toast.show('설비 목록을 먼저 불러오세요.','warn');return;}
+  var rows=eqs.map(function(e,i){
+    return'<tr style="cursor:pointer;border-bottom:1px solid var(--brd)" onclick="Pages._emsSearchPick('+e.id+')">'+
+      '<td style="padding:6px 8px;font-family:monospace;font-size:11px;color:var(--pri)">'+H.e(e.eq_no||'-')+'</td>'+
+      '<td style="padding:6px 8px;font-weight:600">'+H.e(e.name||'-')+'</td>'+
+      '<td style="padding:6px 8px;font-size:11px">'+H.e(e.type||'-')+'</td>'+
+      '<td style="padding:6px 8px;font-size:11px">'+H.e(e.dept||'-')+'</td>'+
+      '<td style="padding:6px 8px;font-size:11px">'+H.e(e.status||'-')+'</td>'+
+    '</tr>';
+  }).join('');
+  Modal.open({title:'🔎 설비 검색 (F3)',size:'mlg',body:
+    '<div style="margin-bottom:8px;display:flex;gap:6px">'+
+      '<input id="emsSrchKw" class="fc" style="flex:1" placeholder="설비번호·설비명·부서 검색..." oninput="Pages._emsSearchFilter(this.value)">'+
+    '</div>'+
+    '<div style="max-height:360px;overflow-y:auto">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+        '<thead><tr style="background:var(--bg2);font-size:11px">'+
+          '<th style="padding:5px 8px;text-align:left">설비번호</th>'+
+          '<th style="padding:5px 8px;text-align:left">설비명</th>'+
+          '<th style="padding:5px 8px;text-align:left">유형</th>'+
+          '<th style="padding:5px 8px;text-align:left">담당부서</th>'+
+          '<th style="padding:5px 8px;text-align:left">상태</th>'+
+        '</tr></thead>'+
+        '<tbody id="emsSrchBody">'+rows+'</tbody>'+
+      '</table>'+
+    '</div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>',
+  });
+  setTimeout(function(){document.getElementById('emsSrchKw')?.focus();},100);
+},
+_emsSearchFilter:function(kw){
+  var eqs=window._eqRows||window._pmEqs||window._cardEqs||[];
+  var kl=(kw||'').toLowerCase();
+  var filtered=kl?eqs.filter(function(e){
+    return(e.eq_no||'').toLowerCase().includes(kl)||
+           (e.name||'').toLowerCase().includes(kl)||
+           (e.dept||'').toLowerCase().includes(kl);
+  }):eqs;
+  var el=document.getElementById('emsSrchBody');
+  if(!el) return;
+  el.innerHTML=filtered.map(function(e){
+    return'<tr style="cursor:pointer;border-bottom:1px solid var(--brd)" onclick="Pages._emsSearchPick('+e.id+')">'+
+      '<td style="padding:6px 8px;font-family:monospace;font-size:11px;color:var(--pri)">'+H.e(e.eq_no||'-')+'</td>'+
+      '<td style="padding:6px 8px;font-weight:600">'+H.e(e.name||'-')+'</td>'+
+      '<td style="padding:6px 8px;font-size:11px">'+H.e(e.type||'-')+'</td>'+
+      '<td style="padding:6px 8px;font-size:11px">'+H.e(e.dept||'-')+'</td>'+
+      '<td style="padding:6px 8px;font-size:11px">'+H.e(e.status||'-')+'</td>'+
+    '</tr>';
+  }).join('');
+},
+_emsSearchPick:function(eqId){
+  Modal.close();
+  /* 현재 페이지에서 해당 설비 상세 열기 */
+  var page=Nav._cur||sessionStorage.getItem('qms_page')||'';
+  var eqs=window._eqRows||window._pmEqs||window._cardEqs||[];
+  var eq=eqs.find(function(e){return e.id===eqId;});
+  if(!eq) return;
+  if(page==='eq_mgmt'&&Pages._eqDetail) Pages._eqDetail(eq);
+  else if(page==='eq_pm'&&Pages._pmEqDetail) Pages._pmEqDetail(eqId);
+  else if(page==='eq_machine_card'&&Pages._cardPrint) Pages._cardPrint(eqId);
+  else Toast.show('['+H.e(eq.eq_no||'')+'] '+H.e(eq.name||''),'info',2000);
+},
 }; /* Pages 객체 끝 */
 /* SQL 복사 헬퍼 */
 Pages._copySql=function(){
