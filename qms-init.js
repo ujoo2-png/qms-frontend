@@ -14,7 +14,11 @@ function setupHotkeys(){
       const spOpen=!document.getElementById('spOverlay').classList.contains('hidden');
       if(spOpen){SearchPop.search();return}
       const page=document.querySelector('.ni.active')?.dataset?.p;
-      if(page)SearchPop.open(page);
+      /* [v2.49] EMS 페이지는 ems_eq 검색으로 리다이렉트 */
+      const EMS_PAGES=['eq_mgmt','eq_pm','eq_as','eq_cost','eq_manual',
+                       'eq_machine_card','eq_dashboard','eq_dept'];
+      const spPage=EMS_PAGES.includes(page)?'ems_eq':page;
+      if(spPage)SearchPop.open(spPage);
       else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
     }
     else if(ev.key==='F5'){
@@ -99,7 +103,7 @@ function setupHotkeys(){
           }
         }catch(e){ console.warn('[세션복원] DB 로드 오류:', e); }
         Nav.go(savedPage);
-        /* [v2.48] 세션 복원 후 Magic Indicator 초기화 */
+        /* [v2.49] 세션 복원 후 Magic Indicator 초기화 */
         setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 200);
         if(savedPage !== 'home'){
           Toast.show('마지막 화면으로 돌아왔습니다.','info',2000);
@@ -111,4 +115,4 @@ function setupHotkeys(){
     }
   }
 })();
-/* [v2.48] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
+/* [v2.49] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
