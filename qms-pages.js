@@ -9169,9 +9169,8 @@ _pmPrint:function(){
   });
 },
 _pmPrintDo:function(){
-  /* [v2.51] 설비점검표 — 승인된 미리보기 기준 A4 가로 1장
-     헤드: 설비번호|설비명|사용부서 + 결재란(담당/검토/승인) 높이 확보
-     항목칸: 넓게(190px) / 날짜(1~31): 좁게 / 월간 / 이력 4줄 */
+  /* [v2.51 fix] 설비점검표 — A4 가로 1장 강제
+     결재란: height 충분히 확보 / html/body overflow:hidden 1장 강제 */
   var eqs=window._pmEqs||[]; var logs=window._pmLogs||[];
   var eqId=parseInt(document.getElementById('pmPrintEq')?.value);
   var ym=document.getElementById('pmPrintYM')?.value||new Date().toISOString().slice(0,7);
@@ -9187,33 +9186,27 @@ _pmPrintDo:function(){
   var MONTHLY=['PCB 오염(먼지) 상태','냉각수 상태 (보충여부)','BATTERY 점검 상태 (전극상태)','비고'];
   var MONTHS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
-  /* 날짜 헤더 */
   var dayThs=''; for(var d=1;d<=dim;d++) dayThs+='<th>'+d+'</th>';
-
-  /* 일일점검 행 */
   var dailyRows='';
   DAILY.forEach(function(item,idx){
     var cells=''; for(var d=1;d<=dim;d++){var st=logMap[d]||'';var mk=st==='완료'?'○':st==='미완료'?'△':st==='접수'?'X':'';var col=mk==='○'?'#059669':mk==='X'?'#c00000':mk==='△'?'#d97706':'';cells+='<td style="text-align:center;font-weight:700;color:'+col+'">'+mk+'</td>';}
     var rs=idx===0?' rowspan="9"':'';
-    dailyRows+='<tr style="height:16px">'+(idx===0?'<td class="sect"'+rs+'>일<br>일<br>점<br>검</td>':'')+
+    dailyRows+='<tr>'+(idx===0?'<td class="sect"'+rs+'>일<br>일<br>점<br>검</td>':'')+
       '<td class="no">'+(idx+1)+'</td><td class="itm">'+item+'</td>'+cells+'</tr>';
   });
-
-  /* 월간점검 행 */
   var monThs=MONTHS.map(function(m2){return'<th>'+m2+'</th>';}).join('');
   var monRows=''; MONTHLY.forEach(function(item,idx){
     var rs=idx===0?' rowspan="4"':'';
-    monRows+='<tr style="height:16px">'+(idx===0?'<td class="sect"'+rs+'>월<br>간<br>점<br>검</td>':'')+
+    monRows+='<tr>'+(idx===0?'<td class="sect"'+rs+'>월<br>간<br>점<br>검</td>':'')+
       '<td class="no">'+(idx+1)+'</td><td class="itm">'+item+'</td>'+
       MONTHS.map(function(){return'<td></td>';}).join('')+'</tr>';
   });
+  var hist=''; for(var h=0;h<4;h++) hist+='<tr style="height:20px"><td></td><td colspan="2"></td><td colspan="3"></td><td colspan="3"></td><td></td><td></td><td></td></tr>';
 
-  /* 이력 4줄 */
-  var hist=''; for(var h=0;h<4;h++) hist+='<tr style="height:18px"><td></td><td colspan="2"></td><td colspan="3"></td><td colspan="3"></td><td></td><td></td><td></td></tr>';
-
-  var html='<html><head><title>설비점검표 — '+H.e(eq.name||'')+'</title><style>'+
+  var html='<html><head><title>설비점검표</title><style>'+
     '@page{size:297mm 230mm;margin:5mm 6mm}'+
-    'body{font-family:"맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:8px;color:#000;margin:0}'+
+    /* 1장 강제 */
+    'html,body{width:285mm;height:218mm;margin:0;padding:0;overflow:hidden;font-family:"맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:8px;color:#000}'+
     'table{border-collapse:collapse;width:100%;table-layout:fixed}'+
     'th,td{border:1px solid #777;padding:1px 2px;vertical-align:middle;text-align:center;font-size:7.5px}'+
     'th{background:#dce6f1;font-weight:700}'+
@@ -9223,41 +9216,37 @@ _pmPrintDo:function(){
     '.itm{text-align:left;padding:1px 4px;font-size:8px;white-space:nowrap;overflow:hidden}'+
     '</style></head><body>'+
 
-    /* 헤드 — 결재란 높이 확보 */
+    /* 헤드 — 결재란 높이 충분히 */
     '<table style="margin-bottom:1px">'+
       '<colgroup>'+
-        '<col style="width:52px"><col style="width:90px">'+
-        '<col>'+/* 타이틀 */
-        '<col style="width:32px"><col style="width:50px">'+
-        '<col style="width:32px"><col style="width:50px">'+
-        '<col style="width:32px"><col style="width:50px">'+
+        '<col style="width:52px"><col style="width:88px">'+
+        '<col>'+
+        '<col style="width:30px"><col style="width:48px">'+
+        '<col style="width:30px"><col style="width:48px">'+
+        '<col style="width:30px"><col style="width:48px">'+
       '</colgroup>'+
-      /* 1행: 설비번호 + 타이틀 + 결재 레이블 */
       '<tr>'+
         '<td class="mlbl">설비번호</td>'+
         '<td style="font-family:monospace;font-weight:700;font-size:8px">'+H.e(eq.eq_no||'-')+'</td>'+
-        '<td rowspan="3" style="text-align:center;font-size:16px;font-weight:700;letter-spacing:3px;border-left:2px solid #555;border-right:2px solid #555">설 비 점 검 표</td>'+
-        '<td class="mlbl" colspan="2" style="font-size:8px;height:14px">담 당</td>'+
-        '<td class="mlbl" colspan="2">검 토</td>'+
-        '<td class="mlbl" colspan="2">승 인</td>'+
+        '<td rowspan="3" style="text-align:center;font-size:15px;font-weight:700;letter-spacing:3px;border-left:2px solid #555;border-right:2px solid #555">설 비 점 검 표</td>'+
+        '<td class="mlbl" colspan="2" style="font-size:8px">담 당</td>'+
+        '<td class="mlbl" colspan="2" style="font-size:8px">검 토</td>'+
+        '<td class="mlbl" colspan="2" style="font-size:8px">승 인</td>'+
       '</tr>'+
-      /* 2행: 설비명 + 결재 서명칸(높이 확보) */
       '<tr>'+
         '<td class="mlbl">설비명</td>'+
         '<td style="font-weight:700;font-size:8px">'+H.e(eq.name||'-')+'</td>'+
-        '<td colspan="2" style="height:32px"></td>'+
-        '<td colspan="2" style="height:32px"></td>'+
-        '<td colspan="2" style="height:32px"></td>'+
+        '<td colspan="2" style="height:28px"></td>'+
+        '<td colspan="2" style="height:28px"></td>'+
+        '<td colspan="2" style="height:28px"></td>'+
       '</tr>'+
-      /* 3행: 사용부서 + 결재 서명칸(이어짐) */
       '<tr>'+
         '<td class="mlbl">사용부서</td>'+
         '<td style="font-size:8px">'+H.e(eq.dept||'-')+'</td>'+
-        '<td colspan="2" style="height:22px"></td>'+
-        '<td colspan="2" style="height:22px"></td>'+
-        '<td colspan="2" style="height:22px"></td>'+
+        '<td colspan="2" style="height:20px"></td>'+
+        '<td colspan="2" style="height:20px"></td>'+
+        '<td colspan="2" style="height:20px"></td>'+
       '</tr>'+
-      /* 4행: 점검자 + 개정/적용월/시간/범례 */
       '<tr>'+
         '<td class="mlbl">설비점검자</td><td></td>'+
         '<td style="text-align:left;padding:2px 5px;font-size:7.5px;border-left:2px solid #555;border-right:2px solid #555">'+
@@ -9267,7 +9256,7 @@ _pmPrintDo:function(){
       '</tr>'+
     '</table>'+
 
-    /* 일일점검 */
+    /* 일일점검 — 항목칸 충분히, 날짜칸 좁게 */
     '<table style="margin-bottom:1px">'+
       '<colgroup><col style="width:11px"><col style="width:13px"><col style="width:190px">'+
       Array(dim).fill('<col style="width:14px">').join('')+
@@ -9277,16 +9266,14 @@ _pmPrintDo:function(){
       dayThs+'</tr>'+
     dailyRows+'</table>'+
 
-    /* 월간점검 */
     '<table style="margin-bottom:1px">'+
       '<colgroup><col style="width:11px"><col style="width:13px"><col style="width:190px">'+
-      '<col span="12" style="width:31px"></colgroup>'+
+      '<col span="12" style="width:30px"></colgroup>'+
       '<tr><th></th><th class="no">NO.</th>'+
       '<th style="text-align:left;padding-left:4px">점 검 항 목</th>'+
       monThs+'</tr>'+
     monRows+'</table>'+
 
-    /* 문제이력 4줄 */
     '<table>'+
     '<tr><td class="mlbl" colspan="12" style="text-align:left;padding:2px 5px">문제발생조치이력</td></tr>'+
     '<tr><th style="width:44px">점검일</th><th colspan="2">고장내역</th><th colspan="3">원 인</th>'+
@@ -9296,102 +9283,102 @@ _pmPrintDo:function(){
     '<span>INDS-QP-005-03</span><span>㈜이노디스</span><span>A4(297*230)</span></div>'+
     '</body></html>';
 
-  var win=window.open('','_blank','width=1250,height:930');
+  var win=window.open('','_blank','width=1250,height:950');
   win.document.write(html); win.document.close();
   setTimeout(function(){win.print();},600);
 },
 
 _cardPrint:function(eqId){
-  /* [v2.51] MY MACHINE CARD — 승인된 미리보기 기준 A4 가로 1장
-     좌: MY MACHINE CARD (관리책임자 정/부 사진)
-     우: 설비명세표 (9행 등간격 + QR = 정격용량+크기 rowspan 2 우측) */
+  /* [v2.51 fix] MY MACHINE CARD — A4 가로 1장 강제
+     핵심: html/body height=210mm + overflow:hidden으로 2장 방지
+     컨펌된 레이아웃: 좌44%(정/부 flex:1) + 우56%(9행 등간격+QR rowspan2) */
   var e=(window._cardEqs||[]).find(function(x){return x.id===eqId;});
   if(!e){Toast.show('설비 정보를 찾을 수 없습니다.','err');return;}
   var qrUrl='https://innodis-qms.vercel.app/?page=eq_mgmt&eq='+eqId;
   var photoHtml=e.photo_urls&&e.photo_urls[0]
-    ?'<img src="'+H.e(e.photo_urls[0])+'" style="width:100%;height:100%;object-fit:cover">'
-    :'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:44px;color:#bbb;background:#f5f5f5">&#128100;</div>';
+    ?'<img src="'+H.e(e.photo_urls[0])+'" style="width:100%;height:100%;object-fit:cover;display:block">'
+    :'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#bbb;background:#f5f5f5">&#128100;</div>';
 
-  var html='<html><head><title>MY MACHINE CARD — '+H.e(e.name||'')+'</title><style>'+
-    '@page{size:A4 landscape;margin:12mm}'+
-    'body{font-family:"맑은 고딕","Apple SD Gothic Neo",Arial,sans-serif;font-size:13px;margin:0;color:#1a1a1a}'+
-    '.out{display:flex;border:2.5px solid #333;width:100%;height:calc(210mm - 24mm);box-sizing:border-box}'+
-    /* 좌측: MY MACHINE CARD */
-    '.lf{width:44%;border-right:2.5px solid #333;display:flex;flex-direction:column}'+
-    '.lt{text-align:center;font-size:18px;font-weight:700;padding:14px 8px;border-bottom:2.5px solid #333;letter-spacing:2px}'+
-    '.rh{text-align:center;font-size:13px;font-weight:700;padding:8px;background:#f0f0f0;border-bottom:1px solid #999;flex-shrink:0}'+
-    '.rows{display:flex;flex-direction:column;flex:1}'+
-    '.rr{display:flex;flex:1;border-bottom:1px solid #999}'+
+  var html='<html><head><title>MY MACHINE CARD</title><style>'+
+    '@page{size:A4 landscape;margin:8mm}'+
+    /* 1장 강제: html/body를 정확한 용지 크기로 고정 */
+    'html,body{width:281mm;height:194mm;margin:0;padding:0;overflow:hidden;font-family:"맑은 고딕","Apple SD Gothic Neo",Arial,sans-serif;color:#1a1a1a}'+
+    '.wrap{display:flex;flex-direction:column;height:194mm}'+
+    '.out{display:flex;border:2px solid #333;flex:1;overflow:hidden;min-height:0}'+
+    /* 좌측 */
+    '.lf{width:44%;border-right:2px solid #333;display:flex;flex-direction:column;overflow:hidden}'+
+    '.lt{text-align:center;font-size:16px;font-weight:700;padding:10px 6px;border-bottom:2px solid #333;letter-spacing:2px;flex-shrink:0}'+
+    '.rh{text-align:center;font-size:12px;font-weight:700;padding:6px;background:#f0f0f0;border-bottom:1px solid #999;flex-shrink:0}'+
+    '.rows{display:flex;flex-direction:column;flex:1;overflow:hidden}'+
+    '.rr{display:flex;flex:1;border-bottom:1px solid #999;min-height:0;overflow:hidden}'+
     '.rr:last-child{border-bottom:none}'+
-    '.rm{width:52px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;border-right:1px solid #999;background:#fafafa;flex-shrink:0}'+
-    '.rn{width:96px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;border-right:1px solid #999;flex-shrink:0}'+
-    '.rp{flex:1;overflow:hidden}'+
-    /* 우측: 설비명세표 */
-    '.rf{width:56%;display:flex;flex-direction:column}'+
-    '.rt{text-align:center;font-size:18px;font-weight:700;padding:14px 8px;border-bottom:2.5px solid #333;letter-spacing:2px;flex-shrink:0}'+
-    '.it{border-collapse:collapse;width:100%;flex:1;table-layout:fixed}'+
-    '.it td{border:1px solid #888;vertical-align:middle;font-size:14px;padding:0 10px}'+
-    '.lb{background:#f0f0f0;font-weight:700;width:90px;white-space:nowrap}'+
-    '.vl{font-size:15px;font-weight:500}'+
-    '.qr-td{width:90px;text-align:center;vertical-align:middle;background:#fafafa;padding:6px}'+
+    '.rm{width:48px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;border-right:1px solid #999;background:#fafafa;flex-shrink:0}'+
+    '.rn{width:90px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;border-right:1px solid #999;flex-shrink:0}'+
+    '.rp{flex:1;overflow:hidden;min-width:0}'+
+    /* 우측 */
+    '.rf{width:56%;display:flex;flex-direction:column;overflow:hidden}'+
+    '.rt{text-align:center;font-size:16px;font-weight:700;padding:10px 6px;border-bottom:2px solid #333;letter-spacing:2px;flex-shrink:0}'+
+    '.it{border-collapse:collapse;width:100%;table-layout:fixed;flex:1}'+
+    '.it td{border:1px solid #888;vertical-align:middle;font-size:13px;padding:0 10px;overflow:hidden}'+
+    '.lb{background:#f0f0f0;font-weight:700;width:86px;white-space:nowrap}'+
+    '.vl{font-size:14px;font-weight:500}'+
+    '.qr-td{width:88px;text-align:center;vertical-align:middle;background:#fafafa;padding:4px}'+
+    '.footer{font-size:8px;color:#888;text-align:right;padding:2px 0;flex-shrink:0}'+
     '</style></head><body>'+
-    '<div class="out">'+
-      /* 좌측 */
-      '<div class="lf">'+
-        '<div class="lt">MY MACHINE CARD</div>'+
-        '<div class="rh">관리책임자</div>'+
-        '<div class="rows">'+
-          '<div class="rr">'+
-            '<div class="rm">정</div>'+
-            '<div class="rn">'+H.e(e.manager||'-')+'</div>'+
-            '<div class="rp">'+photoHtml+'</div>'+
-          '</div>'+
-          '<div class="rr">'+
-            '<div class="rm">부</div>'+
-            '<div class="rn">'+H.e(e.backup_manager2||'-')+'</div>'+
-            '<div class="rp"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:44px;color:#bbb;background:#f5f5f5">&#128100;</div></div>'+
+    '<div class="wrap">'+
+      '<div class="out">'+
+        /* 좌측: MY MACHINE CARD */
+        '<div class="lf">'+
+          '<div class="lt">MY MACHINE CARD</div>'+
+          '<div class="rh">관리책임자</div>'+
+          '<div class="rows">'+
+            '<div class="rr">'+
+              '<div class="rm">정</div>'+
+              '<div class="rn">'+H.e(e.manager||'-')+'</div>'+
+              '<div class="rp">'+photoHtml+'</div>'+
+            '</div>'+
+            '<div class="rr">'+
+              '<div class="rm">부</div>'+
+              '<div class="rn">'+H.e(e.backup_manager2||'-')+'</div>'+
+              '<div class="rp"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#bbb;background:#f5f5f5">&#128100;</div></div>'+
+            '</div>'+
           '</div>'+
         '</div>'+
+        /* 우측: 설비명세표 */
+        '<div class="rf">'+
+          '<div class="rt">설 비 명 세 표</div>'+
+          '<table class="it">'+
+            '<tr><td class="lb">관리번호</td><td class="vl" colspan="2" style="font-family:monospace;font-weight:700;color:#1e3a5f">'+H.e(e.eq_no||'-')+'</td></tr>'+
+            '<tr><td class="lb">설비명</td><td class="vl" colspan="2" style="font-weight:700">'+H.e(e.name||'-')+'</td></tr>'+
+            '<tr><td class="lb">모델명</td><td class="vl" colspan="2">'+H.e(e.model||'')+'</td></tr>'+
+            '<tr><td class="lb">제조번호</td><td class="vl" colspan="2" style="font-family:monospace">'+H.e(e.serial_no||'')+'</td></tr>'+
+            '<tr><td class="lb">제조사</td><td class="vl" colspan="2">'+H.e(e.maker||'')+'</td></tr>'+
+            '<tr><td class="lb">구입일자</td><td class="vl" colspan="2">'+H.e(e.install_date||'')+'</td></tr>'+
+            '<tr><td class="lb">정격전압</td><td class="vl" colspan="2">'+H.e(e.rated_voltage||'')+'</td></tr>'+
+            /* 정격용량+크기 우측에 QR rowspan=2 */
+            '<tr>'+
+              '<td class="lb">정격용량</td>'+
+              '<td class="vl">'+H.e(e.rated_capacity||'')+'</td>'+
+              '<td class="qr-td" rowspan="2">'+
+                '<div id="qr-'+eqId+'" style="width:76px;height:76px;margin:0 auto"></div>'+
+                '<div style="font-size:8px;color:#888;margin-top:2px">QR → 설비상세</div>'+
+              '</td>'+
+            '</tr>'+
+            '<tr><td class="lb">크기</td><td class="vl">'+H.e(e.size_spec||'')+'</td></tr>'+
+          '</table>'+
+        '</div>'+
       '</div>'+
-      /* 우측: 설비명세표 */
-      '<div class="rf">'+
-        '<div class="rt">설 비 명 세 표</div>'+
-        '<table class="it">'+
-          '<tr><td class="lb">관리번호</td><td class="vl" colspan="2" style="font-family:monospace;font-weight:700;color:#1e3a5f;font-size:16px">'+H.e(e.eq_no||'-')+'</td></tr>'+
-          '<tr><td class="lb">설비명</td><td class="vl" colspan="2" style="font-weight:700;font-size:16px">'+H.e(e.name||'-')+'</td></tr>'+
-          '<tr><td class="lb">모델명</td><td class="vl" colspan="2">'+H.e(e.model||'')+'</td></tr>'+
-          '<tr><td class="lb">제조번호</td><td class="vl" colspan="2" style="font-family:monospace">'+H.e(e.serial_no||'')+'</td></tr>'+
-          '<tr><td class="lb">제조사</td><td class="vl" colspan="2">'+H.e(e.maker||'')+'</td></tr>'+
-          '<tr><td class="lb">구입일자</td><td class="vl" colspan="2">'+H.e(e.install_date||'')+'</td></tr>'+
-          '<tr><td class="lb">정격전압</td><td class="vl" colspan="2">'+H.e(e.rated_voltage||'')+'</td></tr>'+
-          /* 정격용량 + 크기 → 우측에 QR rowspan 2 */
-          '<tr>'+
-            '<td class="lb">정격용량</td>'+
-            '<td class="vl">'+H.e(e.rated_capacity||'')+'</td>'+
-            '<td class="qr-td" rowspan="2">'+
-              '<div id="qr-'+eqId+'" style="width:80px;height:80px;margin:0 auto"></div>'+
-              '<div style="font-size:9px;color:#888;margin-top:3px">QR → 설비상세</div>'+
-            '</td>'+
-          '</tr>'+
-          '<tr>'+
-            '<td class="lb">크기</td>'+
-            '<td class="vl">'+H.e(e.size_spec||'')+'</td>'+
-          '</tr>'+
-        '</table>'+
-      '</div>'+
-    '</div>'+
-    '<div style="font-size:9px;color:#888;text-align:right;margin-top:4px">'+
-      '출력일: '+new Date().toLocaleDateString('ko-KR')+'&nbsp;&nbsp;INNODIS QMS — MY MACHINE CARD'+
+      '<div class="footer">출력일: '+new Date().toLocaleDateString('ko-KR')+'&nbsp;&nbsp;INNODIS QMS — MY MACHINE CARD</div>'+
     '</div>'+
     '<script>'+
-      'try{new QRCode(document.getElementById("qr-'+eqId+'"),{text:"'+qrUrl+'",width:80,height:80,correctLevel:QRCode.CorrectLevel.M});}'+
-      'catch(ex){document.getElementById("qr-'+eqId+'").innerHTML="<div style=font-size:9px;padding:6px>QR</div>";}'+
+      'try{new QRCode(document.getElementById("qr-'+eqId+'"),{text:"'+qrUrl+'",width:76,height:76,correctLevel:QRCode.CorrectLevel.M});}'+
+      'catch(ex){document.getElementById("qr-'+eqId+'").innerHTML="<div style=\\"font-size:9px;padding:6px\\">QR</div>";}'+
     '<\/script>'+
     '</body></html>';
 
-  var win=window.open('','_blank','width=900,height:720');
+  var win=window.open('','_blank','width=950,height:760');
   win.document.write(html); win.document.close();
-  setTimeout(function(){win.print();},700);
+  setTimeout(function(){win.print();},800);
 },
 
 _cardPrintAll:function(){
@@ -13265,7 +13252,7 @@ const ExcelMgr={
 };
 
 /* ══ Search 팝업 (F3) ══ */
-const SearchPop={
+var SearchPop={
   _page:'',
   _cfg:{
     items:{title:'품목 검색',
