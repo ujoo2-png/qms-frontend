@@ -7458,29 +7458,29 @@ _eqRender:function(rows){
   var stCls={정상:'bgrn',수리중:'bred',점검중:'bamb',폐기:'bgry',폐기예정:'bgry'};
   /* [v2.49] 관리대장 기준 컬럼 순서 */
   Tbl.render({el:'#eqTbl',cols:[
-    {key:'eq_no',           label:'설비번호',    w:'110px',
+    {key:'eq_no',           label:'설비번호',
       render:function(v,row){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Pages._eqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
-    {key:'type',            label:'유형',        w:'70px',  align:'center'},
+    {key:'type',            label:'유형',  align:'center'},
     {key:'name',            label:'설비명',
       render:function(v,row){
         var img=row.photo_urls&&row.photo_urls[0]?'<img src="'+H.e(row.photo_urls[0])+'" style="width:24px;height:24px;border-radius:3px;object-fit:cover;margin-right:5px;vertical-align:middle">':'';
         return img+'<span style="font-weight:600;cursor:pointer" onclick="Pages._eqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
-    {key:'model',           label:'모델명',      w:'90px'},
-    {key:'serial_no',       label:'S/N',         w:'90px',  render:function(v){return v?'<span style="font-size:11px;font-family:monospace">'+H.e(v)+'</span>':'-';}},
-    {key:'maker',           label:'제조사',      w:'70px'},
-    {key:'manufacture_date',label:'제작일자',    w:'85px',  render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
-    {key:'install_date',    label:'도입일',      w:'85px',  render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
-    {key:'cost',            label:'취득원가',    w:'85px',  align:'right',
+    {key:'model',           label:'모델명'},
+    {key:'serial_no',       label:'S/N',  render:function(v){return v?'<span style="font-size:11px;font-family:monospace">'+H.e(v)+'</span>':'-';}},
+    {key:'maker',           label:'제조사'},
+    {key:'manufacture_date',label:'제작일자',  render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
+    {key:'install_date',    label:'도입일',  render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
+    {key:'cost',            label:'취득원가',  align:'right',
       render:function(v){return v?'<span style="font-size:11px">'+Number(v).toLocaleString()+'</span>':'-';}},
-    {key:'dept',            label:'담당부서',    w:'70px',  align:'center'},
-    {key:'manager',         label:'담당자(정)',  w:'70px',  align:'center'},
-    {key:'backup_manager2', label:'관리자(부)',  w:'70px',  align:'center'},
-    {key:'size_spec',       label:'장비Size',    w:'90px'},
-    {key:'rated_voltage',   label:'정격전압',    w:'70px',  align:'center'},
-    {key:'rated_capacity',  label:'정격용량',    w:'70px',  align:'center'},
-    {key:'power_consumption',label:'소비전력',   w:'70px',  align:'center'},
-    {key:'hydraulic_oil',   label:'사용작동유',  w:'80px'},
-    {key:'status',          label:'상태',        w:'68px',  align:'center',
+    {key:'dept',            label:'담당부서',  align:'center'},
+    {key:'manager',         label:'담당자(정)',  align:'center'},
+    {key:'backup_manager2', label:'관리자(부)',  align:'center'},
+    {key:'size_spec',       label:'장비Size'},
+    {key:'rated_voltage',   label:'정격전압',  align:'center'},
+    {key:'rated_capacity',  label:'정격용량',  align:'center'},
+    {key:'power_consumption',label:'소비전력',  align:'center'},
+    {key:'hydraulic_oil',   label:'사용작동유'},
+    {key:'status',          label:'상태',  align:'center',
       render:function(v){return'<span class="badge '+(stCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
     {key:'memo',            label:'비고',        render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
   ],
@@ -7758,17 +7758,17 @@ _pmEqRender:function(eqs){
   var stCls={완료:'bgrn',예정:'bamb',미완료:'bred'};
 
   Tbl.render({el:'#pmEqTbl',cols:[
-    {key:'eq_no',  label:'설비번호', w:'110px',
+    {key:'eq_no',  label:'설비번호',
       render:function(v){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri)">'+H.e(v||'-')+'</span>';}},
     {key:'name',   label:'설비명',   render:function(v,row){
       return'<span style="font-weight:600;cursor:pointer" onclick="Pages._pmEqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
-    {key:'dept',   label:'담당부서', w:'80px'},
-    {key:'status', label:'설비상태', w:'68px', align:'center',
+    {key:'dept',   label:'담당부서'},
+    {key:'status', label:'설비상태', align:'center',
       render:function(v){var c={정상:'bgrn',수리중:'bred',점검중:'bamb'};
         return'<span class="badge '+(c[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
     /* 주기별 최근 점검 상태 */
     ...CYCLES.map(function(cy){return{
-      key:'id', label:cy, w:'60px', align:'center',
+      key:'id', label:cy, align:'center',
       render:function(v,row){
         var pm=(eqPmMap[row.id]||{})[cy];
         if(!pm) return'<span style="color:var(--muted);font-size:11px">-</span>';
@@ -7777,7 +7777,7 @@ _pmEqRender:function(eqs){
         return'<span title="'+H.e(pm.check_date||'')+'" style="font-size:13px;cursor:pointer" onclick="Pages._pmLogDetail('+pm.id+')">'+mark+'</span>';
       }
     };}),
-    {key:'next_pm_date', label:'다음PM일', w:'90px',
+    {key:'next_pm_date', label:'다음PM일',
       render:function(v){
         if(!v) return'-';
         var d=Math.ceil((new Date(v)-new Date())/86400000);
@@ -7918,7 +7918,7 @@ _pmForm:function(editRow, preEqId){
     '<div class="fgroup"><label class="fl req">점검일자</label>'+
       '<input type="date" class="fc" id="pmfDate" value="'+(editRow?editRow.check_date||H.today():H.today())+'"></div>'+
     '<div class="fgroup"><label class="fl req">점검자</label>'+
-      '<input class="fc" id="pmfChecker" value="'+H.e(editRow?editRow.checker||'':(Auth._u?Auth._u.name||Auth._u.username:''))+'" placeholder="점검자 이름"></div>'+
+      '<input class="fc" id="pmfChecker" value="'+H.e(editRow?editRow.checker||'':'')+'" placeholder="점검자 이름"></div>'+
     '<div class="fgroup"><label class="fl req">상태</label>'+
       '<select class="fc" id="pmfStatus">'+
         ['완료','예정','미완료'].map(function(s){return'<option value="'+s+'"'+(editRow&&editRow.status===s?' selected':s==='완료'?' selected':'')+'>'+s+'</option>';}).join('')+
@@ -8157,15 +8157,15 @@ _asRender:function(rows){
   Tbl.render({el:'#asTbl',cols:[
     {key:'eq_id',     label:'설비명',  render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return'<span style="font-weight:600">'+H.e(eq.name||'-')+'</span>';}},
     /* [v2.49] 설비번호 컬럼 */
-    {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
-    {key:'fault_type',label:'고장유형',w:'80px',align:'center'},
+    {key:'eq_id', label:'설비번호', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
+    {key:'fault_type',label:'고장유형',align:'center'},
     {key:'symptom',   label:'증상',    render:function(v){return'<span style="font-size:12px">'+H.e(v||'-')+'</span>';}},
-    {key:'urgency',   label:'긴급도',  w:'60px',align:'center',render:function(v){return'<span class="badge '+(urgCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
-    {key:'status',    label:'상태',    w:'72px',align:'center',render:function(v){return'<span class="badge '+(stCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
-    {key:'source',    label:'접수경로',w:'72px',align:'center',render:function(v){return'<span class="badge '+(srcCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'직접입력')+'</span>';}},
-    {key:'assignee',  label:'담당기술자',w:'70px',align:'center'},
-    {key:'cost',      label:'AS비용',  w:'80px',align:'right',render:function(v){return v?'<span style="font-size:11px">'+Number(v).toLocaleString()+'원</span>':'-';}},
-    {key:'created_at',label:'접수일',  w:'90px',render:function(v){return v?'<span style="font-size:11px">'+new Date(v).toLocaleDateString('ko-KR')+'</span>':'-';}},
+    {key:'urgency',   label:'긴급도',align:'center',render:function(v){return'<span class="badge '+(urgCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
+    {key:'status',    label:'상태',align:'center',render:function(v){return'<span class="badge '+(stCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
+    {key:'source',    label:'접수경로',align:'center',render:function(v){return'<span class="badge '+(srcCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'직접입력')+'</span>';}},
+    {key:'assignee',  label:'담당기술자',align:'center'},
+    {key:'cost',      label:'AS비용',align:'right',render:function(v){return v?'<span style="font-size:11px">'+Number(v).toLocaleString()+'원</span>':'-';}},
+    {key:'created_at',label:'접수일',render:function(v){return v?'<span style="font-size:11px">'+new Date(v).toLocaleDateString('ko-KR')+'</span>':'-';}},
   ],data:rows,
   onDel:async function(ids){
     Modal.confirm({title:'AS 이력 삭제',msg:ids.length+'건 삭제합니까?',danger:true,
@@ -8313,16 +8313,16 @@ _costLoad:async function(){
   var totalAll=total.as+total.parts+total.labor+total.pm;
   var typCls={'AS수리비':'bred','부품비':'bamb','인건비':'bblu','예방정비비':'bgrn','기타':'bgry'};
   Tbl.render({el:'#costTbl',cols:[
-    {key:'date',      label:'날짜',     w:'90px'},
+    {key:'date',      label:'날짜'},
     {key:'eq_id',     label:'설비명',   render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
     /* [v2.49] 설비번호 컬럼 */
-    {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
-    {key:'cost_type', label:'비용유형', w:'90px',align:'center',render:function(v){return'<span class="badge '+(typCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
-    {key:'amount',    label:'금액(원)', w:'100px',align:'right',render:function(v){return'<b>'+Number(v||0).toLocaleString()+'</b>';}},
-    {key:'vendor',    label:'업체/공급사',w:'100px'},
+    {key:'eq_id', label:'설비번호', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
+    {key:'cost_type', label:'비용유형',align:'center',render:function(v){return'<span class="badge '+(typCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
+    {key:'amount',    label:'금액(원)',align:'right',render:function(v){return'<b>'+Number(v||0).toLocaleString()+'</b>';}},
+    {key:'vendor',    label:'업체/공급사'},
     {key:'note',      label:'비고',     render:function(v){return H.e(v||'-');}},
     /* [v2.49] 수정 버튼 컬럼 추가 */
-    {key:'id',        label:'',         w:'60px', align:'center',
+    {key:'id',        label:'', align:'center',
       render:function(v,row){return'<button class="btn bxs bout" onclick="Pages._costEdit('+v+')">✏️</button>';}},
   ],data:rows,onDel:async function(ids){
     for(var i=0;i<ids.length;i++) await SB.deleteEqCost(ids[i]);
@@ -8488,14 +8488,14 @@ _manualRender:function(rows){
   Tbl.render({el:'#manTbl',cols:[
     {key:'eq_id',    label:'설비명', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
     /* [v2.49] 설비번호 컬럼 */
-    {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
+    {key:'eq_id', label:'설비번호', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'title',    label:'매뉴얼 제목', render:function(v,row){
       return row.file_url
         ?'<a href="'+H.e(row.file_url)+'" target="_blank" style="color:var(--pri);font-weight:600">📎 '+H.e(v||'-')+'</a>'
         :'<span style="font-weight:600">'+H.e(v||'-')+'</span>';}},
-    {key:'version',  label:'버전',  w:'60px', align:'center'},
-    {key:'author',   label:'등록자',w:'70px', align:'center'},
-    {key:'created_at',label:'등록일',w:'90px',render:function(v){return v?new Date(v).toLocaleDateString('ko-KR'):'-';}},
+    {key:'version',  label:'버전', align:'center'},
+    {key:'author',   label:'등록자', align:'center'},
+    {key:'created_at',label:'등록일',render:function(v){return v?new Date(v).toLocaleDateString('ko-KR'):'-';}},
   ],data:rows,
   onDel:async function(ids){
     for(var i=0;i<ids.length;i++) await SB.deleteEqManual(ids[i]);
@@ -8550,7 +8550,7 @@ async eq_machine_card(){
       '<div class="ptit">🪪 마이머신카드</div>'+
       '<div style="font-size:12px;color:var(--muted)">설비별 현장 부착 카드 — QR코드 포함 PDF 출력</div>'+
     '</div><div class="pac">'+
-      '<button class="btn bout bsm" onclick="Pages._cardPrintAll()">🖨️ 선택 일괄출력</button>'+
+      '<span id="cardSelCount" style="font-size:12px;color:var(--pri);font-weight:600;margin-right:8px"></span>'+'<button class="btn bout bsm" onclick="window._cardSelected=new Set();Pages._cardRender(window._cardEqs||[]);var el=document.getElementById(\'cardSelCount\');if(el)el.textContent=\'\'">선택해제</button>'+'<button class="btn bpri bsm" onclick="Pages._cardPrintAll()">🖨️ 선택 일괄출력</button>'+
     '</div></div>'+
     '<div class="tbar">'+
       '<div class="sw2"><input type="text" id="cardKw" placeholder="설비명, 부서 검색..." oninput="Pages._cardKw(this.value)"></div>'+
@@ -8564,6 +8564,16 @@ async eq_machine_card(){
   window._cardEqs=eqs; window._cardKw=''; window._cardDept='';
   Pages._cardRender(eqs);
 },
+/* [v2.49 fix] 카드 선택 토글 */
+_cardToggle:function(eqId){
+  if(!window._cardSelected) window._cardSelected=new Set();
+  if(window._cardSelected.has(eqId)) window._cardSelected.delete(eqId);
+  else window._cardSelected.add(eqId);
+  Pages._cardRender(window._cardEqs||[]);
+  /* 선택 카운트 업데이트 */
+  var cnt=document.getElementById('cardSelCount');
+  if(cnt) cnt.textContent=window._cardSelected.size?'선택 '+window._cardSelected.size+'대':'';
+},
 _cardKw:function(v){window._cardKw=v;Pages._cardApply();},
 _cardDeptFilter:function(v){window._cardDept=v;Pages._cardApply();},
 _cardApply:function(){
@@ -8576,9 +8586,16 @@ _cardApply:function(){
 _cardRender:function(eqs){
   var grid=document.getElementById('cardGrid');
   if(!grid) return;
+  /* [v2.49 fix] 선택 상태 초기화 */
+  if(!window._cardSelected) window._cardSelected=new Set();
   var stCls={정상:'#059669',수리중:'#dc2626',점검중:'#d97706'};
   grid.innerHTML=(eqs||[]).map(function(e){
-    return'<div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;box-shadow:var(--sh)">'+
+    var sel=window._cardSelected.has(e.id);
+    return'<div id="card-'+e.id+'" onclick="Pages._cardToggle('+e.id+')" style="background:var(--sur);border:'+(sel?'2px solid var(--pri)':'1px solid var(--brd)')+';border-radius:10px;padding:14px;box-shadow:var(--sh);cursor:pointer;position:relative">'+
+      /* [v2.49 fix] 좌상단 체크박스 */
+      '<div style="position:absolute;top:8px;left:8px;width:20px;height:20px;border-radius:4px;border:2px solid '+(sel?'var(--pri)':'var(--brd)')+';background:'+(sel?'var(--pri)':'var(--sur)')+';display:flex;align-items:center;justify-content:center;z-index:1">'+
+        (sel?'<span style="color:#fff;font-size:12px;font-weight:700">✓</span>':'')+
+      '</div>'+
       /* 카드 헤더 */
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
         '<div>'+
@@ -9170,17 +9187,20 @@ _pmPrintDo:function(){
   DAILY.forEach(function(item,idx){
     var cells=''; for(var d=1;d<=dim;d++){var st=logMap[d]||'';var mk=st==='완료'?'○':st==='미완료'?'△':st==='접수'?'X':'';var col=mk==='○'?'#059669':mk==='X'?'#c00000':mk==='△'?'#d97706':'';cells+='<td style="text-align:center;font-weight:700;color:'+col+'">'+mk+'</td>';}
     var rs=idx===0?' rowspan="9"':'';
-    dailyRows+='<tr>'+(idx===0?'<td class="sect"'+rs+'>일<br>일<br>점<br>검</td>':'')+
+    /* 행 높이: 전체 출력 영역 균등 분배 */
+    var dh='height:calc((230mm - 55mm)/13)';
+    dailyRows+='<tr style="'+dh+'">'+(idx===0?'<td class="sect"'+rs+'>일<br>일<br>점<br>검</td>':'')+
       '<td class="no">'+(idx+1)+'</td><td class="itm">'+item+'</td>'+cells+'</tr>';
   });
   var monThs=MONTHS.map(function(m2){return'<th>'+m2+'</th>';}).join('');
   var monRows=''; MONTHLY.forEach(function(item,idx){
     var rs=idx===0?' rowspan="4"':'';
-    monRows+='<tr>'+(idx===0?'<td class="sect"'+rs+'>월<br>간<br>점<br>검</td>':'')+
+    var mh='height:calc((230mm - 55mm)/13)';
+    monRows+='<tr style="'+mh+'">'+(idx===0?'<td class="sect"'+rs+'>월<br>간<br>점<br>검</td>':'')+
       '<td class="no">'+(idx+1)+'</td><td class="itm">'+item+'</td>'+
       MONTHS.map(function(){return'<td></td>';}).join('')+'</tr>';
   });
-  var hist=''; for(var h=0;h<7;h++) hist+='<tr style="height:17px"><td></td><td colspan="2"></td><td colspan="3"></td><td colspan="3"></td><td></td><td></td><td></td></tr>';
+  var hist=''; for(var h=0;h<7;h++) hist+='<tr style="height:calc((230mm - 55mm)/13)"><td></td><td colspan="2"></td><td colspan="3"></td><td colspan="3"></td><td></td><td></td><td></td></tr>';
   var html='<html><head><title>설비점검표</title><style>'+
     '@page{size:297mm 230mm;margin:6mm 7mm}body{font-family:"맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:8px;color:#000;margin:0}'+
     'table{border-collapse:collapse;width:100%}th,td{border:1px solid #777;padding:1.5px 2px;vertical-align:middle;text-align:center;font-size:8px}th{background:#dce6f1;font-weight:700}'+
@@ -9239,20 +9259,20 @@ _cardPrint:function(eqId){
   var html='<html><head><title>MY MACHINE CARD</title><style>'+
     '@page{size:A4 landscape;margin:12mm}'+
     'body{font-family:"맑은 고딕","Apple SD Gothic Neo",Arial,sans-serif;font-size:11px;margin:0}'+
-    '.outer{display:flex;gap:0;border:2px solid #333;width:100%}'+
+    '.outer{display:flex;gap:0;border:2px solid #333;width:100%;height:calc(100vh - 30mm)}'+
     /* 좌측: MY MACHINE CARD */
-    '.left{width:50%;border-right:2px solid #333}'+
+    '.left{width:50%;border-right:2px solid #333;display:flex;flex-direction:column}'+
     '.left-title{text-align:center;font-size:22px;font-weight:700;padding:14px;border-bottom:2px solid #333;letter-spacing:1px}'+
     '.resp-title{text-align:center;font-size:13px;font-weight:700;padding:8px;background:#f0f0f0;border-bottom:1px solid #999}'+
-    '.resp-row{display:flex;border-bottom:1px solid #999;min-height:110px}'+
+    '.resp-row{display:flex;border-bottom:1px solid #999;flex:1;min-height:0}'+
     '.resp-mark{width:44px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;border-right:1px solid #999;background:#f9f9f9}'+
     '.resp-name{width:80px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;border-right:1px solid #999;padding:8px}'+
-    '.resp-photo{flex:1;padding:4px;display:flex;align-items:center;justify-content:center}'+
+    '.resp-photo{flex:1;padding:4px;display:flex;align-items:center;justify-content:center;overflow:hidden}'+
     /* 우측: 설비명세표 */
-    '.right{width:50%}'+
-    '.right-title{text-align:center;font-size:22px;font-weight:700;padding:14px;border-bottom:2px solid #333;letter-spacing:1px}'+
-    '.info-tbl{border-collapse:collapse;width:100%}'+
-    '.info-tbl td{border:1px solid #888;padding:7px 10px;font-size:12px;vertical-align:middle}'+
+    '.right{width:50%;display:flex;flex-direction:column}'+
+    '.right-title{text-align:center;font-size:22px;font-weight:700;padding:14px;border-bottom:2px solid #333;letter-spacing:1px;flex-shrink:0}'+
+    '.info-tbl{border-collapse:collapse;width:100%;flex:1}'+
+    '.info-tbl td{border:1px solid #888;padding:0 10px;font-size:12px;vertical-align:middle;height:calc((100vh - 28mm - 80px)/9)}'+
     '.info-tbl .lbl{background:#f0f0f0;font-weight:700;width:82px;text-align:left;white-space:nowrap}'+
     '.info-tbl .val{font-size:13px;font-weight:500}'+
     '</style></head><body>'+
@@ -9261,7 +9281,7 @@ _cardPrint:function(eqId){
       '<div class="left">'+
         '<div class="left-title">MY MACHINE CARD</div>'+
         '<div class="resp-title">관리책임자</div>'+
-        /* 정 */
+        '<div class="resp-rows">'+
         '<div class="resp-row">'+
           '<div class="resp-mark">정</div>'+
           '<div class="resp-name">'+H.e(e.manager||'')+'</div>'+
@@ -9299,7 +9319,20 @@ _cardPrint:function(eqId){
   setTimeout(function(){win.print();},500);
 },
 _cardPrintAll:function(){
-  Toast.show('일괄출력: 설비 목록에서 선택 후 진행하세요.','info',3000);
+  /* [v2.49 fix] 선택된 카드 일괄 출력 */
+  var selected=Array.from(window._cardSelected||new Set());
+  if(!selected.length){Toast.show('출력할 설비를 카드에서 선택하세요. (카드 클릭 시 체크)','info',3000);return;}
+  var eqs=window._cardEqs||[];
+  Toast.show('총 '+selected.length+'대 출력 준비 중...','info',2000);
+  /* 선택 순서대로 순차 출력 */
+  var idx=0;
+  function printNext(){
+    if(idx>=selected.length) return;
+    var eqId=selected[idx++];
+    Pages._cardPrint(eqId);
+    if(idx<selected.length) setTimeout(printNext,800);
+  }
+  setTimeout(printNext,200);
 },
 
 }; /* Pages 객체 끝 */
@@ -13574,6 +13607,7 @@ const SearchPop={
 
 
     /* [v2.49] EMS 설비 검색 */
+    /* [v2.49 fix] ems_eq — SearchPop 표준 형식 (get 함수 포함) */
     ems_eq:{title:'설비 검색',
       fields:[
         {id:'eq_sq_no',  label:'설비번호', type:'text', ph:'예) INE-B-002'},
@@ -13584,17 +13618,15 @@ const SearchPop={
         {id:'eq_sq_stat',label:'상태',     type:'select',
           opts:['','정상','수리중','점검중','폐기예정','폐기']},
       ],
-      getRows(){return window._eqRows||[];},
-      cols:[
-        {label:'설비번호',fn:r=>H.e(r.eq_no||'-')},
-        {label:'설비명',  fn:r=>H.e(r.name||'-')},
-        {label:'유형',    fn:r=>H.e(r.type||'-')},
-        {label:'담당부서',fn:r=>H.e(r.dept||'-')},
-        {label:'상태',    fn:r=>H.e(r.status||'-')},
-      ],
-      onSelect(row){
-        /* 호출한 페이지에 선택 결과 전달 */
-        if(window._spCallback) window._spCallback(row);
+      cols:['설비번호','설비명','유형','담당부서','담당자','상태'],
+      get(f){
+        var rows=window._eqRows||[];
+        if(f.eq_sq_no) rows=rows.filter(function(r){return(r.eq_no||'').toLowerCase().includes(f.eq_sq_no.toLowerCase());});
+        if(f.eq_sq_name) rows=rows.filter(function(r){return(r.name||'').toLowerCase().includes(f.eq_sq_name.toLowerCase());});
+        if(f.eq_sq_dept) rows=rows.filter(function(r){return(r.dept||'').toLowerCase().includes(f.eq_sq_dept.toLowerCase());});
+        if(f.eq_sq_type) rows=rows.filter(function(r){return r.type===f.eq_sq_type;});
+        if(f.eq_sq_stat) rows=rows.filter(function(r){return r.status===f.eq_sq_stat;});
+        return rows.map(function(r){return[H.e(r.eq_no||'-'),H.e(r.name||'-'),H.e(r.type||'-'),H.e(r.dept||'-'),H.e(r.manager||'-'),H.e(r.status||'-')];});
       },
     }}},
 

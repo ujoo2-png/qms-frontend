@@ -13,8 +13,9 @@ function setupHotkeys(){
       ev.preventDefault();
       const spOpen=!document.getElementById('spOverlay').classList.contains('hidden');
       if(spOpen){SearchPop.search();return}
-      const page=document.querySelector('.ni.active')?.dataset?.p;
-      /* [v2.49] EMS 페이지는 ems_eq 검색으로 리다이렉트 */
+      /* [v2.49 fix] .ni.active 없으면 sessionStorage 백업 사용 */
+      const page=document.querySelector('.ni.active')?.dataset?.p
+               ||sessionStorage.getItem('qms_page')||'';
       const EMS_PAGES=['eq_mgmt','eq_pm','eq_as','eq_cost','eq_manual',
                        'eq_machine_card','eq_dashboard','eq_dept'];
       const spPage=EMS_PAGES.includes(page)?'ems_eq':page;
