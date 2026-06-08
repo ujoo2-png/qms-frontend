@@ -13,7 +13,7 @@ function setupHotkeys(){
       ev.preventDefault();
       const spOpen=!document.getElementById('spOverlay').classList.contains('hidden');
       if(spOpen){SearchPop.search();return}
-      /* [v2.55 fix] .ni.active 없으면 sessionStorage 백업 사용 */
+      /* [v2.56 fix] .ni.active 없으면 sessionStorage 백업 사용 */
       const page=document.querySelector('.ni.active')?.dataset?.p
                ||sessionStorage.getItem('qms_page')||'';
       const EMS_PAGES=['eq_mgmt','eq_pm','eq_as','eq_cost','eq_manual',
@@ -104,7 +104,7 @@ function setupHotkeys(){
           }
         }catch(e){ console.warn('[세션복원] DB 로드 오류:', e); }
         Nav.go(savedPage);
-        /* [v2.55] 세션 복원 후 Magic Indicator 초기화 */
+        /* [v2.56] 세션 복원 후 Magic Indicator 초기화 */
         setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 200);
         if(savedPage !== 'home'){
           Toast.show('마지막 화면으로 돌아왔습니다.','info',2000);
@@ -116,4 +116,4 @@ function setupHotkeys(){
     }
   }
 })();
-/* [v2.55] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
+/* [v2.56] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
