@@ -809,7 +809,7 @@ const SB={
     const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
   },
 
-  /* [v2.54 fix D1] DMS 지원 함수 */
+  /* [v2.55 fix D1] DMS 지원 함수 */
   async getDocMaster(filter){
     if(!_sb) return window._docRows||[];
     var q=_sb.from('doc_master').select('*').order('created_at',{ascending:false});
@@ -831,7 +831,7 @@ const SB={
     return data||[];
   },
 
-  /* [v2.54 D1] SB 내부 이동 */
+  /* [v2.55 D1] SB 내부 이동 */
   async addDocMaster(row){
   if(!_sb)return{ok:false};
   var allowed={
@@ -848,7 +848,7 @@ const SB={
   return{ok:true};
 },
 
-  /* [v2.54 D1] SB 내부 이동 */
+  /* [v2.55 D1] SB 내부 이동 */
   async updateDocMaster(id,patch){
   if(!_sb)return{ok:false};
   patch.updated_at=new Date().toISOString();
@@ -857,7 +857,7 @@ const SB={
   return{ok:true};
 },
 
-  /* [v2.54 D1] SB 내부 이동 */
+  /* [v2.55 D1] SB 내부 이동 */
   async addDocVersion(row){
   if(!_sb)return{ok:false,id:null};
   var allowed={
@@ -871,7 +871,7 @@ const SB={
   return{ok:true,id:res.data?res.data.id:null};
 },
 
-  /* [v2.54 D1] SB 내부 이동 */
+  /* [v2.55 D1] SB 내부 이동 */
   async updateDocVersion(id,patch){
   if(!_sb)return{ok:false};
   var res=await _sb.from('doc_versions').update(patch).eq('id',id);
@@ -879,7 +879,7 @@ const SB={
   return{ok:true};
 },
 
-  /* [v2.54 D1] SB 내부 이동 */
+  /* [v2.55 D1] SB 내부 이동 */
   async addDocApprovals(rows){
   if(!_sb||!rows.length)return{ok:false};
   var res=await _sb.from('doc_approvals').insert(rows);
@@ -1523,12 +1523,12 @@ SB.sendReviewAlerts=async function(days){
 };
 
 /* ════════════════════════════════════════════════════════════
-   공지사항 SB 함수 [v2.54 신규]
+   공지사항 SB 함수 [v2.55 신규]
    테이블: notices (id, title, body, author, date, expire, show, file_url, file_name, created_at)
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.54] 공지사항 전체 조회
+ * [v2.55] 공지사항 전체 조회
  * @returns {Array} created_at 내림차순 (최신순)
  *
  * [문제 배경] 기존 App.notices는 qms-core.js 하드코딩 배열
@@ -1548,7 +1548,7 @@ SB.getNotices = async function() {
 };
 
 /**
- * [v2.54] 공지사항 등록
+ * [v2.55] 공지사항 등록
  * @param {object} row - { title, body, author, date, expire, show, file_url, file_name }
  */
 SB.addNotice = async function(row) {
@@ -1576,7 +1576,7 @@ SB.addNotice = async function(row) {
 };
 
 /**
- * [v2.54] 공지사항 수정
+ * [v2.55] 공지사항 수정
  * @param {number} id  - notices.id
  * @param {object} patch - 변경할 필드
  */
@@ -1594,7 +1594,7 @@ SB.updateNotice = async function(id, patch) {
 };
 
 /**
- * [v2.54] 공지사항 삭제
+ * [v2.55] 공지사항 삭제
  * @param {number} id - notices.id
  */
 SB.deleteNotice = async function(id) {
@@ -1610,12 +1610,12 @@ SB.deleteNotice = async function(id) {
 };
 
 /* ════════════════════════════════════════════════════════════
-   Q&A SB 함수 [v2.54 신규]
+   Q&A SB 함수 [v2.55 신규]
    테이블: qna + qna_replies
    ════════════════════════════════════════════════════════════ */
 
 /**
- * [v2.54] Q&A 목록 조회
+ * [v2.55] Q&A 목록 조회
  * @param {object} filter - { category, menu_ref, status }
  * @returns {Array} created_at 내림차순, 고정글 상단
  */
@@ -1637,7 +1637,7 @@ SB.getQna = async function(filter) {
 };
 
 /**
- * [v2.54] Q&A 단건 조회 (답변 포함)
+ * [v2.55] Q&A 단건 조회 (답변 포함)
  * @param {number} id
  */
 SB.getQnaById = async function(id) {
@@ -1654,7 +1654,7 @@ SB.getQnaById = async function(id) {
   } catch(e) { return null; }
 };
 
-/** [v2.54] Q&A 등록 */
+/** [v2.55] Q&A 등록 */
 SB.addQna = async function(row) {
   if (!_sb) return { ok: false };
   try {
@@ -1674,7 +1674,7 @@ SB.addQna = async function(row) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.54] Q&A 수정 */
+/** [v2.55] Q&A 수정 */
 SB.updateQna = async function(id, patch) {
   if (!_sb) return { ok: false };
   try {
@@ -1685,7 +1685,7 @@ SB.updateQna = async function(id, patch) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.54] Q&A 삭제 */
+/** [v2.55] Q&A 삭제 */
 SB.deleteQna = async function(id) {
   if (!_sb) return { ok: false };
   try {
@@ -1695,7 +1695,7 @@ SB.deleteQna = async function(id) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.54] 답변 등록 */
+/** [v2.55] 답변 등록 */
 SB.addQnaReply = async function(qna_id, body, author, is_answer) {
   if (!_sb) return { ok: false };
   try {
@@ -1712,7 +1712,7 @@ SB.addQnaReply = async function(qna_id, body, author, is_answer) {
   } catch(e) { return { ok: false }; }
 };
 
-/** [v2.54] 답변 삭제 */
+/** [v2.55] 답변 삭제 */
 SB.deleteQnaReply = async function(id) {
   if (!_sb) return { ok: false };
   try {
@@ -1723,7 +1723,7 @@ SB.deleteQnaReply = async function(id) {
 };
 
 /* ════════════════════════════════════════════════════════════
-   제조설비관리 (EMS) SB 함수 [v2.54]
+   제조설비관리 (EMS) SB 함수 [v2.55]
    테이블: equipment / eq_pm_log / eq_as / eq_cost / eq_manual / eq_oee
    ════════════════════════════════════════════════════════════ */
 
@@ -1741,14 +1741,14 @@ SB.getEquipment = async function(filter) {
 SB.addEquipment = async function(row) {
   if (!_sb) return { ok: false };
   try {
-    /* [v2.54] eq_no 자동생성 */
+    /* [v2.55] eq_no 자동생성 */
     if (!row.eq_no) {
       var year = new Date().getFullYear();
       var existing = await SB.getEquipment();
       var yearSeq = existing.filter(function(e){ return (e.eq_no||'').startsWith('EQ-'+year); }).length + 1;
       row.eq_no = 'EQ-' + year + '-' + String(yearSeq).padStart(3,'0');
     }
-    /* [v2.54] 타입 정제 — 빈 문자열·undefined → null, numeric 컬럼 변환
+    /* [v2.55] 타입 정제 — 빈 문자열·undefined → null, numeric 컬럼 변환
        Supabase PostgREST는 빈 문자열('')을 numeric에 insert하면
        "schema cache" 오류를 발생시킴 */
     var NUMERIC_COLS = ['cost','lifespan'];
@@ -1774,7 +1774,7 @@ SB.updateEquipment = async function(id, patch) {
   if (!_sb) return { ok:false };
   try {
     patch.updated_at = new Date().toISOString();
-    /* [v2.54] 빈 문자열 → null 정제 */
+    /* [v2.55] 빈 문자열 → null 정제 */
     var NUMERIC_COLS = ['cost','lifespan'];
     var clean = {};
     Object.keys(patch).forEach(function(k) {
@@ -1938,7 +1938,7 @@ SB.deleteEqOee = async function(id) {
   catch(e) { return { ok:false }; }
 };
 
-/* [v2.54] SB.updateEqCost — 비용 수정 */
+/* [v2.55] SB.updateEqCost — 비용 수정 */
 SB.updateEqCost = async function(id, patch) {
   if (!_sb) return { ok: false };
   try {
