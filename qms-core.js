@@ -325,7 +325,7 @@ const Auth={
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
       Toast.show('로그인되었습니다.','ok');
-      /* [v2.58] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
+      /* [v2.59] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
       setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 150);
       /* [v2.394] 로그인 시 keepalive 자동 실행 */
       setTimeout(async()=>{
@@ -1100,7 +1100,7 @@ const TopNav={
     '검사 고도화': [{label:'검사 기준서',page:'insp_std'},{label:'검사 성적서',page:'insp_cert'},{label:'LOT 추적성',page:'lot_trace'},{label:'Hold 관리',page:'hold_mgmt'},{label:'재검사 관리',page:'reinsp'}],
     '공급업체 품질':[{label:'업체 평가',page:'sqm_eval'},{label:'업체 심사',page:'sqm_audit'},{label:'SQM 대시보드',page:'sqm_dash'}],
     '계측기관리':  [{label:'계측기 등록',page:'equip'},{label:'교정 관리',page:'cal'},{label:'MSA 분석',page:'msa'}],
-    /* [v2.58] 제조설비관리 (EMS) */
+    /* [v2.59] 제조설비관리 (EMS) */
     '제조설비관리':[
       {label:'설비 등록 관리',  page:'eq_mgmt'},
       {label:'예방정비(PM)',    page:'eq_pm'},
@@ -1120,7 +1120,7 @@ const TopNav={
     // 상단 버튼 active
     document.querySelectorAll('.tb-mod').forEach(b=>b.classList.remove('on'));
     if(btn) btn.classList.add('on');
-    // [v2.58] Magic Indicator 이동
+    // [v2.59] Magic Indicator 이동
     TopNav._moveIndicator(btn);
     // 서브탭 렌더링
     this._renderSubs(mod);
@@ -1131,8 +1131,8 @@ const TopNav={
     if(subs.length>0) Nav.go(subs[0].page);
   },
 
-  /* [v2.58] Magic Indicator 위치 계산 + 이동 */
-  /* [v2.58] Magic Indicator pill 이동 — container 기준 left/width만 제어 */
+  /* [v2.59] Magic Indicator 위치 계산 + 이동 */
+  /* [v2.59] Magic Indicator pill 이동 — container 기준 left/width만 제어 */
   _moveIndicator(btn){
     const ind=document.getElementById('tbIndicator');
     if(!ind||!btn) return;
@@ -1147,9 +1147,9 @@ const TopNav={
     ind.style.width=width+'px';
   },
 
-  /* [v2.58] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
+  /* [v2.59] 초기 indicator 위치 설정 (DOM 로드 후 호출) */
   _initIndicator(){
-    /* [v2.58] getBoundingClientRect가 0이면 재시도 (DOM 렌더 대기) */
+    /* [v2.59] getBoundingClientRect가 0이면 재시도 (DOM 렌더 대기) */
     const _try=(attempt)=>{
       const activeBtn=document.querySelector('.tb-mod.on');
       if(!activeBtn) return;
@@ -1296,7 +1296,7 @@ const Nav={
 
 /* ══ 페이지 ══ */
 /* ════════════════════════════════════════════════════════════
-   QnA — Q&A 팝업 컨트롤러 [v2.58]
+   QnA — Q&A 팝업 컨트롤러 [v2.59]
    위치: topbar tb-right 날짜 오른쪽 ❓ 버튼
    기능: 매뉴얼/Q&A/팁 3탭 + 등록/답변/상태변경
    ════════════════════════════════════════════════════════════ */
@@ -1319,7 +1319,7 @@ const QnA = {
       this._kw  = '';
       const searchEl = document.getElementById('qnaSearch');
       if (searchEl) searchEl.value = '';
-      /* [v2.58] 전체 사용자 등록 가능 */
+      /* [v2.59] 전체 사용자 등록 가능 */
       const addBtn = document.getElementById('qnaAddBtn');
       if (addBtn) addBtn.style.display = '';
       this.load();
@@ -1608,5 +1608,5 @@ const QnA = {
     }
   },
 };
-/* [v2.58] QnA 전역 노출 */
+/* [v2.59] QnA 전역 노출 */
 window.QnA = QnA;
