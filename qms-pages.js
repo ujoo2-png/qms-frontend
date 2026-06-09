@@ -12959,7 +12959,8 @@ const ExcelMgr={
       ],
       dupKey:'no',
       dupLabel:'부적합번호',
-      dupOnly:true
+      dupOnly:true,
+      getData:()=>DB.nc||[]
     },
     equip:{
       title:'계측기등록',
