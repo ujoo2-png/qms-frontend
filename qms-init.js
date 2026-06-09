@@ -11,12 +11,12 @@ function setupHotkeys(){
     }
     else if(ev.key==='F3'){
       ev.preventDefault();
-      /* [v2.63] SearchPop 팝업 열림 여부 확인 → 열려있으면 Search 실행 */
+      /* [v2.64] SearchPop 팝업 열림 여부 확인 → 열려있으면 Search 실행 */
       const spOverlay=document.getElementById('spOverlay');
       if(spOverlay&&!spOverlay.classList.contains('hidden')){
         SearchPop.search(); return;
       }
-      /* [v2.63] 현재 활성 페이지 판별 — 3단계 fallback */
+      /* [v2.64] 현재 활성 페이지 판별 — 3단계 fallback */
       const page = document.querySelector('.ni.active')?.dataset?.p  // 1순위: 사이드바 active
                 || sessionStorage.getItem('qms_page')                // 2순위: sessionStorage
                 || document.querySelector('.ni[data-p]')?.dataset?.p  // 3순위: 첫 번째 메뉴
@@ -116,7 +116,7 @@ function setupHotkeys(){
           }
         }catch(e){ console.warn('[세션복원] DB 로드 오류:', e); }
         Nav.go(savedPage);
-        /* [v2.63] 세션 복원 후 Magic Indicator 초기화 */
+        /* [v2.64] 세션 복원 후 Magic Indicator 초기화 */
         setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 200);
         if(savedPage !== 'home'){
           Toast.show('마지막 화면으로 돌아왔습니다.','info',2000);
@@ -128,10 +128,10 @@ function setupHotkeys(){
     }
   }
 })();
-/* [v2.63] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
+/* [v2.64] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
 
 /* ════════════════════════════════════════════════════════════════
-   [v2.63] data-sp 이벤트 위임 — F3 버튼 안전한 클릭 처리
+   [v2.64] data-sp 이벤트 위임 — F3 버튼 안전한 클릭 처리
    ▶ onclick="SearchPop.open(...)" 대신 data-sp 속성으로 팝업 연결
    ▶ window.SearchPop 등록 여부와 무관하게 안전하게 처리
    ════════════════════════════════════════════════════════════════ */
