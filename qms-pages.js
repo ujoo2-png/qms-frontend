@@ -3048,7 +3048,7 @@ async equip(){
     </div>
     <div class="ph" style="margin-top:14px"><div><div class="ptit">🔬 계측기 등록</div></div>
     <div class="pac">
-      <button class="btn bpri btn-f2" onclick="Pages._eqForm()">+ 계측기 등록 <span class="kbd">F2</span></button>
+      <button class="btn bpri btn-f2" onclick="Pages._equipCalForm()">+ 계측기 등록 <span class="kbd">F2</span></button>
       <button class="btn btn-xl-up bpri" onclick="Pages._equipUploadOpen()" title="계측기 엑셀 일괄등록">📤 엑셀 일괄등록</button>
       <button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._eqPrint()" title="계측기 관리대장 인쇄">🖨️ 관리대장 인쇄</button>
     </div></div>
@@ -3112,7 +3112,8 @@ async equip(){
         onOk:_doDelete
       });
     },onRow:row=>Pages._eqDetail(row)});
-},
+}
+,
 /* [v2.394] 계측기 상세 팝업 — row 데이터 연결 */
 _eqDetail(row){
   if(!row) return;
@@ -10319,6 +10320,64 @@ _codeDelete:function(kind,key,label,cnt){
 
 
 }; /* Pages 객체 끝 */
+/* ════ 계측기 전용 등록/수정 폼 ════ */
+Object.assign(Pages,{
+  /* [v2.67] _equipCalForm — 계측기 F2 폼 (EMS _eqForm과 완전 분리)
+     equipment 테이블 저장: code/name/model/maker/range/res/loc/operator/last/next/active */
+  async _equipCalForm(editId){
+    var row=editId?(DB.equip||[]).find(function(r){return r.id===editId;}):null;
+    var e=!!row;
+    Modal.open({title:e?'🔬 계측기 수정':'🔬 계측기 등록',size:'mlg',
+      foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+           '<button class="btn bpri btn-f8" onclick="Pages._equipCalSave('+(e?editId:'null')+')">저장 <span class="kbd">F8</span></button>',
+      body:'<div class="fg2">'+
+        '<div class="fgroup"><label class="fl"><b style="color:#e11d48">계측기코드 *</b></label>'+
+          '<input class="fc" id="ecCode" placeholder="예) MC-001" value="'+H.e(row?row.code||'':'')+'" '+(e?'readonly':'')+' ></div>'+
+        '<div class="fgroup"><label class="fl"><b style="color:#e11d48">계측기명 *</b></label>'+
+          '<input class="fc" id="ecName" placeholder="예) 디지털 버니어 캘리퍼스" value="'+H.e(row?row.name||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">모델번호</label>'+
+          '<input class="fc" id="ecModel" placeholder="예) 500-151-20" value="'+H.e(row?row.model||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">제조사</label>'+
+          '<input class="fc" id="ecMaker" placeholder="예) Mitutoyo" value="'+H.e(row?row.maker||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">측정범위</label>'+
+          '<input class="fc" id="ecRange" placeholder="예) 0~150mm" value="'+H.e(row?row.range||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">분해능</label>'+
+          '<input class="fc" id="ecRes" placeholder="예) 0.01mm" value="'+H.e(row?row.res||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">보관위치</label>'+
+          '<input class="fc" id="ecLoc" placeholder="예) 품질실 선반A" value="'+H.e(row?row.loc||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">사용자</label>'+
+          '<input class="fc" id="ecOperator" placeholder="담당자명" value="'+H.e(row?row.operator||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">최근교정일</label>'+
+          '<input type="date" class="fc" id="ecLast" value="'+H.e(row?row.last||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl"><b style="color:#e11d48">차기교정일 *</b></label>'+
+          '<input type="date" class="fc" id="ecNext" value="'+H.e(row?row.next||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">사용여부</label>'+
+          '<select class="fc" id="ecActive">'+
+            '<option value="1"'+(!row||row.active!=0?' selected':'')+'>사용</option>'+
+            '<option value="0"'+(row&&row.active==0?' selected':'')+'>불용</option>'+
+          '</select></div>'+
+        '<div class="fgroup ff"><label class="fl">비고</label>'+
+          '<input class="fc" id="ecNote" value="'+H.e(row?row.note||'':'')+'"></div>'+
+      '</div>',
+    });
+  },
+  async _equipCalSave(editId){
+    var g=function(id){return (document.getElementById(id)?.value||'').trim();};
+    var code=g('ecCode'),name=g('ecName'),nxt=g('ecNext');
+    if(!code){Toast.show('계측기코드를 입력하세요.','warn');return;}
+    if(!name){Toast.show('계측기명을 입력하세요.','warn');return;}
+    if(!nxt){Toast.show('차기교정일을 입력하세요.','warn');return;}
+    var row={code,name,model:g('ecModel'),maker:g('ecMaker'),range:g('ecRange'),
+      res:g('ecRes'),loc:g('ecLoc'),operator:g('ecOperator'),
+      last:g('ecLast')||null,next:nxt,active:parseInt(g('ecActive'))||1,note:g('ecNote')};
+    var r=editId&&editId!=='null'
+      ? await SB.updateEquip(Number(editId),row)
+      : await SB.addEquip(row);
+    if(r?.ok){Toast.show(editId&&editId!=='null'?'수정되었습니다.':'등록되었습니다.','ok');Modal.close();Pages.equip();}
+  },
+});
+
+
 
 /* SQL 복사 헬퍼 */
 Pages._copySql=function(){
