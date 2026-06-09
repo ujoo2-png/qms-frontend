@@ -1,5 +1,5 @@
 
-/* qms-pages.js — Pages 페이지 렌더러 [v2.64]
+/* qms-pages.js — Pages 페이지 렌더러 [v2.65]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
 
@@ -13,7 +13,7 @@ const Pages={
 async home(){
   const w=document.getElementById('pw');
   w.classList.add('home-mode');
-  /* [v2.64] EMS 설비 데이터 캐싱 (홈 패널용) */
+  /* [v2.65] EMS 설비 데이터 캐싱 (홈 패널용) */
   if(!window._eqRows || !window._eqRows.length){
     try{ window._eqRows=await SB.getEquipment(); }catch(e){ window._eqRows=[]; }
   }
@@ -41,7 +41,7 @@ async home(){
      subs:[{icon:'📄',label:'문서 목록',page:'docs'},{icon:'✍️',label:'결재함',page:'doc_approval'},{icon:'🕐',label:'개정 이력',page:'doc_history_home'},{icon:'🔍',label:'지식 검색',page:'doc_search'},{icon:'📋',label:'기록 관리',page:'rec'},{icon:'💡',label:'연관 문서',page:'doc_recommend'},{icon:'📊',label:'현황 대시보드',page:'doc_dashboard'},{icon:'📤',label:'배포 관리',page:'doc_distribution'},{icon:'🔔',label:'검토 주기',page:'doc_review_cycle'}]},
     {c:'mc-c8',icon:'🔧',name:'개선활동',badge:carO,
      subs:[{icon:'🔧',label:'시정조치(CAR)',page:'car'},{icon:'🔎',label:'내부심사',page:'audit'}]},
-    /* [v2.64] 제조설비관리(EMS) 9번째 카드 */
+    /* [v2.65] 제조설비관리(EMS) 9번째 카드 */
     {c:'mc-c9',icon:'🏭',name:'제조설비관리',badge:0,
      subs:[
        {icon:'🏭',label:'설비 등록',    page:'eq_mgmt'},
@@ -225,7 +225,7 @@ async home(){
       </div>
     </div>
 
-    <!-- [v2.64] EMS 설비 현황 패널 -->
+    <!-- [v2.65] EMS 설비 현황 패널 -->
     ${(()=>{
       /* 제조설비관리 간략 현황 — 수리중/PM예정 설비 */
       const _eqWarn=(window._eqRows||[]).filter(function(e){
@@ -253,9 +253,9 @@ async home(){
   </div>
   </div>`;
 
-  /* [v2.64] 카드 순서 복원 (localStorage) */
+  /* [v2.65] 카드 순서 복원 (localStorage) */
   Pages._homeApplyCardOrder();
-  /* [v2.64] 드래그앤드롭 초기화 */
+  /* [v2.65] 드래그앤드롭 초기화 */
   Pages._homeInitDrag();
 },
 
@@ -368,7 +368,7 @@ _savePerms(){
     sessionStorage.setItem('qms_perms',permsStr);
     /* SB users 테이블에도 저장 (perms 컬럼) */
     if(typeof _sb!=='undefined'&&_sb&&Auth._u?.id){
-      /* [v2.64 S5] .eq('id','system') → Auth._u?.id 수정 */
+      /* [v2.65 S5] .eq('id','system') → Auth._u?.id 수정 */
       if(Auth._u?.id) _sb.from('users').update({perms:permsStr}).eq('id',Auth._u.id).then(()=>{});
     }
     Toast.show('권한 설정이 저장되었습니다.','ok');
@@ -1423,7 +1423,7 @@ async _uSave(id){
   const row={
     username:uid, name,
     department:g('uf_dept'), tel:g('uf_tel'), email,
-    /* [v2.64 fix S3] roleVal 우선 적용, 기존값 fallback */
+    /* [v2.65 fix S3] roleVal 우선 적용, 기존값 fallback */
     role: roleVal || (id ? (DB.users.find(u=>u.id===id)?.role||'user') : 'user'),
     active:Number(document.getElementById('uf_active')?.value||1),
   };
@@ -1913,7 +1913,7 @@ async _insp(type){
   /* 동적 렌더 함수 등록 */
   Pages[`_inspRender_${type}`]=render;
   render();
-  /* [v2.64] 날짜 범위 배지 — tbar 마지막에 직접 삽입 */
+  /* [v2.65] 날짜 범위 배지 — tbar 마지막에 직접 삽입 */
   var _dates=(rows||[]).map(function(r){return r.insp_date||r.date||'';}).filter(Boolean).sort();
   var _minD=_dates[0]||null, _maxD=_dates[_dates.length-1]||null;
   if(_minD&&_maxD){
@@ -2343,7 +2343,7 @@ _qdashDate(){
 
 /* 엑셀 내보내기 */
 _qdashExcel(){
-  /* [v2.64 Q7] SheetJS 실제 엑셀 생성 */
+  /* [v2.65 Q7] SheetJS 실제 엑셀 생성 */
   var rows=DB.inspections||[];
   if(!rows.length){Toast.show('내보낼 검사 데이터가 없습니다.','warn');return;}
   var header=['유형','LOT번호','품목코드','품목명','검사일','검사수량','합격수량','불량수량','불량률(%)','결과','검사자','비고'];
@@ -2459,7 +2459,7 @@ _ncRender(){
   Tbl.render({
     el:'#nctbl',
     cols:[
-      /* [v2.64 Q6] 컬럼 순서: 사내외→번호→발생일→검사자→유형→고객사→귀책처→작업지시→품목코드→품목명→검사수량→양품수량→불량수량→부적합률→내용→원인→조치→담당자→처리기한→상태→비고→파일 */
+      /* [v2.65 Q6] 컬럼 순서: 사내외→번호→발생일→검사자→유형→고객사→귀책처→작업지시→품목코드→품목명→검사수량→양품수량→불량수량→부적합률→내용→원인→조치→담당자→처리기한→상태→비고→파일 */
       {key:'in_out',        label:'사내외',     w:'56px',req:true,
         render:function(v){return'<span class="badge '+(v==='사외'?'bblu':'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
       {key:'no',            label:'부적합번호', w:'138px',req:true,
@@ -2521,7 +2521,7 @@ _ncRender(){
   });
 },
 _ncForm(row=null){
-  /* [v2.64 Q2+Q3+Q4] 담당자→DB.users select / 품목코드→datalist 자연어 검색 / 품목명 자동완성 */
+  /* [v2.65 Q2+Q3+Q4] 담당자→DB.users select / 품목코드→datalist 자연어 검색 / 품목명 자동완성 */
   const isEdit=!!row;
   const nextNo=Pages._ncNextNo?Pages._ncNextNo():'NC-'+H.today().replace(/-/g,'')+'-001';
   const userOpts=(DB.users||[]).filter(function(u){return u.active!==false;}).map(function(u){
@@ -3901,7 +3901,7 @@ _msaTab(btn,id){
 },
 
 /* ════════════════════════════════════════════════════════════
-   문서관리 고도화 페이지 함수 [v2.64]
+   문서관리 고도화 페이지 함수 [v2.65]
    ────────────────────────────────────────────────────────────
    v2.395   2026-06-01  최초 구현
    v2.395.1 2026-06-01  버그수정 — 버전표기/메뉴/결재함/이력빈화면
@@ -3918,7 +3918,7 @@ _msaTab(btn,id){
 /* ── 상수: 상태·유형 한글 레이블 ── */
 _DS:{draft:'초안',in_review:'검토중',pending:'승인대기',active:'유효',obsolete:'폐기',archived:'보관'},
 _DT:{procedure:'절차서',instruction:'작업지시서',form:'양식',record:'기록',other:'기타'},
-/* [v2.64 D1-3] 문서 분류 목록 — 코드관리 탭에서 추가/삭제 가능 */
+/* [v2.65 D1-3] 문서 분류 목록 — 코드관리 탭에서 추가/삭제 가능 */
 _DC:{경영:'경영',ESG:'ESG',품질:'품질',생산:'생산',구매:'구매',안전:'안전',환경:'환경',기타:'기타'},
 _dBadge:function(s){
   var m={draft:'bgry',in_review:'bblu',pending:'bamb',active:'bgrn',obsolete:'bred',archived:'bgry'};
@@ -3934,7 +3934,7 @@ _dDay:function(dt){
 },
 
 /* ══════════════════════════════════════════════════
-   D1: 문서 목록 [v2.64]
+   D1: 문서 목록 [v2.65]
    기존 QMS UI 규칙: stat-dash + Tbl.render + F3 + 칸반
    ══════════════════════════════════════════════════ */
 async docs(){
@@ -4099,7 +4099,7 @@ _docRender:function(){
             '<div style="font-size:12px;color:#64748b">연결된 버전 이력도 함께 삭제됩니다.</div></div>',
         danger:true,
         onOk:async function(){
-          /* [v2.64 D1-1] 소프트 삭제 — filter 제거 → status 마킹으로 통일 */
+          /* [v2.65 D1-1] 소프트 삭제 — filter 제거 → status 마킹으로 통일 */
           for(var i=0;i<ids.length;i++) await SB.deleteDocMaster(ids[i]);
           (window._docRows||[]).forEach(function(x){if(ids.includes(x.id)) x.status='deleted';});
           Pages._docRender(); Pages._docKanban();
@@ -4111,7 +4111,7 @@ _docRender:function(){
   });
 },
 
-/* ── 칸반 보드 [v2.64] ── */
+/* ── 칸반 보드 [v2.65] ── */
 /* ── 칸반 보드 [v2.397.2 UI개선] ── */
 _docKanban:function(){
   var el=document.getElementById('docKanban'); if(!el)return;
@@ -4167,7 +4167,7 @@ _docKanban:function(){
     '</div>';
 },
 
-/* ── 문서 상세 팝업 [v2.64] ── */
+/* ── 문서 상세 팝업 [v2.65] ── */
 _docDetail:function(row){
   Modal.open({title:'문서 상세 — '+H.e(row.doc_no||'-'),size:'mlg',
     body:
@@ -4187,7 +4187,7 @@ _docDetail:function(row){
   });
 },
 
-/* ── D2: 문서 등록 [v2.64] ── */
+/* ── D2: 문서 등록 [v2.65] ── */
 _docForm:function(editDoc){
   editDoc=editDoc||null;
   SB.getUsers().then(function(users){
@@ -4225,7 +4225,7 @@ _docSave:async function(editId){
            review_cycle:document.getElementById('fnCycle')?.value||'annual',
            dept:document.getElementById('fnDept')?.value?.trim()||null,
            tags:tags,status:'draft',current_ver:'v1.0'};
-  /* [v2.64 D1-2] r.id 직접 사용 — getDocMaster 타이밍 이슈 해소 */
+  /* [v2.65 D1-2] r.id 직접 사용 — getDocMaster 타이밍 이슈 해소 */
   var r=await SB.addDocMaster(row); if(!r.ok)return;
   var newDoc=r.id ? {id:r.id,doc_no:docNo} : (await SB.getDocMaster()).find(function(d){return d.doc_no===docNo;});
   if(newDoc){
@@ -4241,9 +4241,9 @@ _docSave:async function(editId){
         text:'[문서 결재 요청] '+title+' (v1.0) 결재를 요청드립니다.',ref:'doc_approval'});
     }
   }
-  /* [v2.64 fix D1] 파일 업로드 → doc_master.file_url 직접 저장 */
+  /* [v2.65 fix D1] 파일 업로드 → doc_master.file_url 직접 저장 */
   if(newDoc){
-    /* [v2.64 D1] 폼 파일 input id = fnFile */
+    /* [v2.65 D1] 폼 파일 input id = fnFile */
   var fInp=document.getElementById('fnFile');
     if(fInp&&fInp.files&&fInp.files[0]){
       try{
@@ -4270,7 +4270,7 @@ _docExcelDown:function(){
   else Toast.show('엑셀 기능을 찾을 수 없습니다.','warn');
 },
 
-/* ── D2-B: 개정 기안 [v2.64] ── */
+/* ── D2-B: 개정 기안 [v2.65] ── */
 _docRevForm:async function(docId){
   var doc=await SB.getDocMasterById(docId);
   if(!doc){Toast.show('문서 정보를 불러올 수 없습니다.','err');return;}
@@ -4326,7 +4326,7 @@ _docRevSave:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   D3: 내 결재함 [v2.64]
+   D3: 내 결재함 [v2.65]
    설정→사용자관리(users 테이블)와 직접 연동
    ══════════════════════════════════════════════════ */
 async doc_approval(){
@@ -4344,12 +4344,12 @@ async doc_approval(){
 
   var el=document.getElementById('approvalList');
   try{
-    /* [v2.64] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
+    /* [v2.65] users 테이블(설정→사용자관리)에서 현재 로그인 사용자 매칭
        Auth._u = users row 전체. id/name/username 순으로 매칭 */
     var users=await SB.getUsers();
     var meId=null;
 
-    /* [v2.64] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
+    /* [v2.65] 사용자 매칭 강화 — 설정→사용자관리 users 테이블과 연동
        Auth._u = 로그인 성공 시 DB.users 에서 찾은 row
        Auth._cur = 로그인 username 문자열 */
 
@@ -4451,10 +4451,10 @@ _doReject:async function(approvalId){
 },
 
 /* ══════════════════════════════════════════════════
-   D4: 개정 이력 타임라인 [v2.64]
+   D4: 개정 이력 타임라인 [v2.65]
    ══════════════════════════════════════════════════ */
-/* [v2.64] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
-/* [v2.64] ── 교정 계획 & 이력 ──────────────────────────── */
+/* [v2.65] 개정이력: 사이드바·탭 클릭 시 문서 목록으로 이동 + 안내 */
+/* [v2.65] ── 교정 계획 & 이력 ──────────────────────────── */
 async cal(){
   const w=document.getElementById('pw');
   if(_sb){const d=await SB.getCal();if(d)DB.cals=d;}
@@ -4604,7 +4604,7 @@ async _calSave(id){
   Pages.cal();
 },
 
-/* [v2.64] ── MSA 게이지 R&R ─────────────────────────────── */
+/* [v2.65] ── MSA 게이지 R&R ─────────────────────────────── */
 async msa(){
   const w=document.getElementById('pw');
   if(_sb){const d=await SB.getMsa();if(d)DB.msa=d;}
@@ -4782,7 +4782,7 @@ async _msaDelete(id){
   });
 },
 
-/* [v2.64] ── 개정 이력 전용 뷰 ─────────────────────────── */
+/* [v2.65] ── 개정 이력 전용 뷰 ─────────────────────────── */
 doc_history_home:async function(){
   var w=document.getElementById('pw');
   if(!w)return;
@@ -4911,7 +4911,7 @@ async doc_history(docId){
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
-    /* [v2.64] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
+    /* [v2.65] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     var filesBtnHtml=FM.btn('doc-'+docId);
     /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
@@ -5018,7 +5018,7 @@ _docHistExcel:async function(docId){
 },
 
 /* ══════════════════════════════════════════════════
-   지식 검색 허브 [v2.64]
+   지식 검색 허브 [v2.65]
    ══════════════════════════════════════════════════ */
 async doc_search(){
   var w=document.getElementById('pw');
@@ -5339,12 +5339,12 @@ _rcSendAlert:async function(days){
   }finally{if(btn){btn.disabled=false;btn.textContent=days===7?'🚨 D-7 긴급알림':'🔔 D-30 알림발송';}}
 },
 /* ══════════════════════════════════════════════════
-   D7: 연관 문서 추천 [v2.64 Phase 3]
+   D7: 연관 문서 추천 [v2.65 Phase 3]
    동일 태그 기반 연관 문서 패널 + 유사 문서 추천
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.64] D7: 연관 문서 추천 페이지
+ * [v2.65] D7: 연관 문서 추천 페이지
  * [UI 구성]
  *  ① 문서 선택 → 해당 문서의 태그 표시
  *  ② 동일 태그를 가진 연관 문서 목록 (태그 일치도순 정렬)
@@ -5545,12 +5545,12 @@ _rcTagFilter:function(tag){
 },
 
 /* ══════════════════════════════════════════════════
-   D8: 문서 현황 대시보드 [v2.64 Phase 4]
+   D8: 문서 현황 대시보드 [v2.65 Phase 4]
    KPI 카드 · 유형 분포 · 상태 현황 · 심사 준비율 게이지
    ══════════════════════════════════════════════════ */
 
 /**
- * [v2.64] D8: 문서 현황 대시보드
+ * [v2.65] D8: 문서 현황 대시보드
  * [UI 구성]
  *  ① KPI 카드 4종 (전체/유효/검토중/만료임박)
  *  ② 유형별 분포 — 바 차트 (Canvas)
@@ -5749,7 +5749,7 @@ _dashRefresh:async function(){
   await Pages.doc_dashboard();
 },
 /* ══════════════════════════════════════════════════
-   Q&A 페이지 [v2.64]
+   Q&A 페이지 [v2.65]
    사이드바 메인 4번째 메뉴 — 매뉴얼/Q&A/팁 통합
    ══════════════════════════════════════════════════ */
 async qna(){
@@ -7357,7 +7357,7 @@ async settings(){
     if(fresh&&fresh.length>0) DB.users=fresh;
   }
   const isAdmin=Auth._u?.role==='admin';
-  /* [v2.64] 공지사항 최신 로드 — Supabase 영속화
+  /* [v2.65] 공지사항 최신 로드 — Supabase 영속화
      [버그수정] RLS 오류/네트워크 오류 시 App.notices(더미) 유지
      [버그수정] notices 테이블 미생성 시 빈 배열 대신 기존 목록 유지 */
   try{
@@ -7459,7 +7459,7 @@ async settings(){
               +'<td style="color:var(--tm)">'+H.e(u.username)+'</td>'
               +'<td>'+H.e(u.department||'-')+'</td>'
               +'<td style="font-size:11px">'+H.e(u.tel||u.phone||'-')+'</td>'
-              /* [v2.64 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
+              /* [v2.65 버그수정] E-MAIL td 누락 — 헤더 순서와 불일치로 최근로그인/비번 컬럼 밀림 */
               +'<td style="font-size:11px">'+(u.email?'<a href="mailto:'+H.e(u.email)+'" style="color:var(--acc)">'+H.e(u.email)+'</a>':'-')+'</td>'
               +'<td style="white-space:nowrap">'
               +(function(){
@@ -7551,7 +7551,7 @@ async settings(){
           <th style="width:88px;text-align:center">관리</th>
         </tr></thead>
         <tbody>${(()=>{
-          /* [v2.64] 최신순 정렬: created_at 없으면 date 기준 */
+          /* [v2.65] 최신순 정렬: created_at 없으면 date 기준 */
           const sorted=[...notices].sort((a,b)=>{
             const da=a.created_at||a.date||''; const db=b.created_at||b.date||'';
             return db.localeCompare(da);
@@ -7561,10 +7561,10 @@ async settings(){
             const today=H.today();
             /* 게시중 = show:true + 오늘이 date~expire 범위 내 */
             const active=n.show&&(!n.expire||n.expire>=today)&&(!n.date||n.date<=today);
-            /* [v2.64] 게시중 행 음영 */
+            /* [v2.65] 게시중 행 음영 */
             const rowBg=active?'background:#f0fdf4;':'';
             const expiredCls=n.expire&&n.expire<today?"color:#ef4444":"";
-            return '<tr style="'+rowBg+'">'  /* [v2.64] 게시중 행 음영 */
+            return '<tr style="'+rowBg+'">'  /* [v2.65] 게시중 행 음영 */
               +'<td><input type="checkbox" class="notice-chk" value="'+(n.id||i)+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
               +'<td style="font-weight:600;cursor:pointer" onclick="Cfg._noticeDetail_id('+(n.id||i)+')">'+H.e(n.title)+'</td>'
@@ -7628,7 +7628,7 @@ async settings(){
     </div>
   </div>
 
-  <!-- 코드 관리 탭 [v2.64] -->
+  <!-- 코드 관리 탭 [v2.65] -->
   <div class="stab-pane" data-tab="codemgmt" style="display:none">
     <!-- 문서 유형 카드 -->
     <div class="card" style="margin-bottom:14px">
@@ -7641,7 +7641,7 @@ async settings(){
         <tbody id="codeTypeBody"></tbody>
       </table></div>
     </div>
-    <!-- 문서 분류 카드 [v2.64 D1-3] -->
+    <!-- 문서 분류 카드 [v2.65 D1-3] -->
     <div class="card">
       <div class="ch">
         <div class="ct">&#128194; 문서 분류 관리</div>
@@ -7676,7 +7676,7 @@ async _renderSbDash(){
   _pw.innerHTML='<div class="spin"></div>';
 
   /* ── 테이블 행 수 조회 ── */
-  /* [v2.64] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
+  /* [v2.65] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   const tables=['equipment','calibrations','users','mentions','items','vendors',
     'nonconformances','cars','doc_master'];
   const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
@@ -7903,7 +7903,7 @@ async _sbKeepAlive(){
 },
 
 /* ══════════════════════════════════════════════════════════════
-   제조설비관리 (EMS — Equipment Management System) [v2.64]
+   제조설비관리 (EMS — Equipment Management System) [v2.65]
    ══════════════════════════════════════════════════════════════
    M1. eq_mgmt        설비 등록 관리
    M2. eq_pm          예방정비(PM) 점검표
@@ -7954,7 +7954,7 @@ async eq_mgmt(){
       '<div class="ptit">🏭 설비 등록 관리</div>'+
       '<div style="font-size:12px;color:var(--muted)">설비 기본정보 · 사양 · 관리대장 일괄 업로드</div>'+
     '</div><div class="pac">'+
-      /* [v2.64] Excel 일괄 업로드 버튼 */
+      /* [v2.65] Excel 일괄 업로드 버튼 */
       '<label class="btn bout bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px">'+
         '📥 Excel 일괄 업로드'+
         '<input type="file" id="eqExcelFile" accept=".xlsx,.xls" style="display:none" onchange="Pages._eqBulkUpload(this)">'+
@@ -7988,10 +7988,10 @@ _eqFilter:function(st){ window._eqStatus=st; Pages._eqApply(); },
 _eqTypeFilter:function(v){ window._eqType=v; Pages._eqApply(); },
 _eqDeptFilter:function(v){ window._eqDept=v; Pages._eqApply(); },
 _eqKwFilter:function(v){ window._eqKw=v; Pages._eqApply(); },
-/* [v2.64] 설비번호 전용 필터 */
+/* [v2.65] 설비번호 전용 필터 */
 _eqNoFilter:function(v){ window._eqNo=v; Pages._eqApply(); },
 
-/* [v2.64] Excel 일괄 업로드 ─────────────────────────────────────
+/* [v2.65] Excel 일괄 업로드 ─────────────────────────────────────
    컬럼 매핑 (관리대장 1행 헤더 기준):
    일련번호 | 유형* | 설비번호* | 설비명* | 모델명* | S/N | 제조사* |
    제작일자 | 도입일* | 취득원가 | 담당부서 | 담당자(정)* | 관리자(부)* |
@@ -8148,7 +8148,7 @@ _parseDate:function(v){
   return null;
 },
 
-/* [v2.64] Excel 다운로드 */
+/* [v2.65] Excel 다운로드 */
 _eqExportExcel:function(){
   var rows=window._eqRows||[];
   if(!rows.length){Toast.show('다운로드할 데이터가 없습니다.','warn');return;}
@@ -8184,7 +8184,7 @@ _eqApply:function(){
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(tp) rows=rows.filter(function(r){return r.type===tp;});
   if(dp) rows=rows.filter(function(r){return r.dept===dp;});
-  /* [v2.64] 설비번호 전용 필터 */
+  /* [v2.65] 설비번호 전용 필터 */
   if(no) rows=rows.filter(function(r){return (r.eq_no||'').toLowerCase().includes(no);});
   if(kw) rows=rows.filter(function(r){
     return (r.name||'').toLowerCase().includes(kw)||(r.dept||'').toLowerCase().includes(kw);
@@ -8193,7 +8193,7 @@ _eqApply:function(){
 },
 _eqRender:function(rows){
   var stCls={정상:'bgrn',수리중:'bred',점검중:'bamb',폐기:'bgry',폐기예정:'bgry'};
-  /* [v2.64] 관리대장 기준 컬럼 순서 */
+  /* [v2.65] 관리대장 기준 컬럼 순서 */
   Tbl.render({el:'#eqTbl',cols:[
     {key:'eq_no',           label:'설비번호',
       render:function(v,row){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Pages._eqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
@@ -8252,7 +8252,7 @@ _eqDetail:async function(id){
 
   Modal.open({title:'🏭 설비 상세 — '+H.e(row.name||''),size:'mlg',body:
     gallery+
-    /* [v2.64] 관리대장 기준 전체 필드 표시 */
+    /* [v2.65] 관리대장 기준 전체 필드 표시 */
     '<div class="fg2">'+
     '<div class="fgroup"><label class="fl">설비번호</label><div class="fc-readonly">'+H.e(row.eq_no||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">유형</label><div class="fc-readonly">'+H.e(row.type||'-')+'</div></div>'+
@@ -8293,7 +8293,7 @@ _eqPhotoView:function(urls,idx){
   Modal.open({title:'📷 설비 사진',size:'mlg',body:html,foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'});
 },
 _eqForm:async function(editId){
-  /* [v2.64] 관리대장 기준 전체 필드 */
+  /* [v2.65] 관리대장 기준 전체 필드 */
   var row=editId?(window._eqRows||[]).find(function(r){return r.id===editId;}):null;
   Modal.open({title:row?'✏️ 설비 수정':'🏭 설비 등록',size:'mlg',body:
     '<div class="fg2">'+
@@ -8371,9 +8371,9 @@ _eqSave:async function(editId){
   var dept=document.getElementById('efDept')?.value?.trim();
   if(!name){Toast.show('설비명을 입력하세요.','warn');return;}
   if(!dept){Toast.show('담당부서를 입력하세요.','warn');return;}
-  /* [v2.64] 설비번호: 입력값 우선, 없으면 DB에서 자동생성 */
+  /* [v2.65] 설비번호: 입력값 우선, 없으면 DB에서 자동생성 */
   var inputNo = document.getElementById('efNo')?.value?.trim();
-  /* [v2.64] 관리대장 기준 전체 필드 저장 */
+  /* [v2.65] 관리대장 기준 전체 필드 저장 */
   var row={
     name:name,
     type:document.getElementById('efType')?.value||'생산설비',
@@ -8416,7 +8416,7 @@ _eqSave:async function(editId){
    M2. 예방정비(PM) 점검표
    ─────────────────────────────────────────────────────────────- */
 async eq_pm(){
-  /* [v2.64] PM 화면 — 설비 목록 기반 (PM 로그 없어도 설비 표시) */
+  /* [v2.65] PM 화면 — 설비 목록 기반 (PM 로그 없어도 설비 표시) */
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   var eqs=[]; var logs=[];
@@ -8596,7 +8596,7 @@ _pmApplyFilter:function(){
   Pages._pmEqRender(eqs);
 },
 
-/* ── [v2.64] PM 점검 등록 폼 — 항목별 체크박스 ── */
+/* ── [v2.65] PM 점검 등록 폼 — 항목별 체크박스 ── */
 _pmForm:function(editRow, preEqId){
   var eqs=window._pmEqs||[];
   var ITEMS={
@@ -8801,7 +8801,7 @@ async eq_as(){
     else if(r.status==='완료')cnt.done++;
   });
 
-  /* [v2.64] 반복고장 감지 — 동일 설비 + 동일 유형 3회 이상 */
+  /* [v2.65] 반복고장 감지 — 동일 설비 + 동일 유형 3회 이상 */
   var repeatMap={};
   rows.forEach(function(r){
     var key=r.eq_id+'_'+r.fault_type;
@@ -8819,7 +8819,7 @@ async eq_as(){
   });
 
   w.innerHTML=
-    /* [v2.64] 반복고장 경고 배너 */
+    /* [v2.65] 반복고장 경고 배너 */
     (repeatAlerts.length?
       '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'+
         '<span style="font-size:18px">⚠️</span>'+
@@ -8864,7 +8864,7 @@ async eq_as(){
   window._asRows=rows; window._asEqs=eqs; window._asSt=''; window._asSrc=''; window._asKw='';
   Pages._asRender(rows);
 },
-/* [v2.64] AS 설비번호 필터 */
+/* [v2.65] AS 설비번호 필터 */
 _asNoFilter:function(v){window._asNo=v;Pages._asApply();},
 _asStatusFilter:function(v){window._asSt=v;var s=document.getElementById('asStF');if(s)s.value=v;Pages._asApply();},
 _asSrcFilter:function(v){window._asSrc=v;Pages._asApply();},
@@ -8875,7 +8875,7 @@ _asApply:function(){
   var asNo=(window._asNo||'').toLowerCase();
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(src) rows=rows.filter(function(r){return r.source===src;});
-  /* [v2.64] 설비번호 필터 */
+  /* [v2.65] 설비번호 필터 */
   if(asNo){ var eqsN=window._asEqs||[]; rows=rows.filter(function(r){var eq=eqsN.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(asNo);}); }
   if(kw){
     var eqs=window._asEqs||[];
@@ -8893,7 +8893,7 @@ _asRender:function(rows){
   var urgCls={긴급:'bred',높음:'bamb',보통:'bgry',낮음:'bgry'};
   Tbl.render({el:'#asTbl',cols:[
     {key:'eq_id',     label:'설비명',  render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return'<span style="font-weight:600">'+H.e(eq.name||'-')+'</span>';}},
-    /* [v2.64] 설비번호 컬럼 */
+    /* [v2.65] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'fault_type',label:'고장유형',align:'center'},
     {key:'symptom',   label:'증상',    render:function(v){return'<span style="font-size:12px">'+H.e(v||'-')+'</span>';}},
@@ -8973,7 +8973,7 @@ _asSave:async function(editId){
   if(r.ok){Toast.show(editId?'수정됨':'접수됨','ok');Modal.close();await Pages.eq_as();}
 },
 _asDetail:function(row){
-  /* [v2.64] AS 상세보기 (읽기전용) → 수정 버튼으로 _asForm 진입 */
+  /* [v2.65] AS 상세보기 (읽기전용) → 수정 버튼으로 _asForm 진입 */
   var eqs=window._asEqs||[];
   var eq=(eqs||[]).find(function(e){return e.id===row.eq_id;})||{};
   var stCls={접수:'bred',처리중:'bblu',부품대기:'bamb',완료:'bgrn'};
@@ -9052,13 +9052,13 @@ _costLoad:async function(){
   Tbl.render({el:'#costTbl',cols:[
     {key:'date',      label:'날짜'},
     {key:'eq_id',     label:'설비명',   render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
-    /* [v2.64] 설비번호 컬럼 */
+    /* [v2.65] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'cost_type', label:'비용유형',align:'center',render:function(v){return'<span class="badge '+(typCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
     {key:'amount',    label:'금액(원)',align:'right',render:function(v){return'<b>'+Number(v||0).toLocaleString()+'</b>';}},
     {key:'vendor',    label:'업체/공급사'},
     {key:'note',      label:'비고',     render:function(v){return H.e(v||'-');}},
-    /* [v2.64] 수정 버튼 컬럼 추가 */
+    /* [v2.65] 수정 버튼 컬럼 추가 */
     {key:'id',        label:'', align:'center',
       render:function(v,row){return'<button class="btn bxs bout" onclick="Pages._costEdit('+v+')">✏️</button>';}},
   ],data:rows,onDel:async function(ids){
@@ -9107,7 +9107,7 @@ _costSave:async function(){
   if(r.ok){Toast.show('등록됨','ok');Modal.close();await Pages._costLoad();}
 },
 
-/* [v2.64] 비용 수정 폼 */
+/* [v2.65] 비용 수정 폼 */
 _costEdit:function(id){
   var row=(window._costRows||[]).find(function(r){return r.id===id;});
   if(!row){Toast.show('항목을 찾을 수 없습니다.','err');return;}
@@ -9142,8 +9142,8 @@ _costEditSave:async function(id){
   if(r.ok){Toast.show('수정됨','ok');Modal.close();await Pages._costLoad();}
 },
 
-/* [v2.64] 비용 목록 설비번호 필터 */
-/* [v2.64] 비용등록 폼 — 설비 선택 시 정보 표시 */
+/* [v2.65] 비용 목록 설비번호 필터 */
+/* [v2.65] 비용등록 폼 — 설비 선택 시 정보 표시 */
 _costFormEqInfo:function(sel){
   var eqs=window._costEqs||[];
   var eq=eqs.find(function(e){return String(e.id)===String(sel.value);})||{};
@@ -9203,7 +9203,7 @@ async eq_manual(){
   Pages._manualRender(rows);
 },
 _manualKw:function(v){window._manKw=v;Pages._manualApply();},
-/* [v2.64] 매뉴얼 설비번호 필터 */
+/* [v2.65] 매뉴얼 설비번호 필터 */
 _manualNoFilter:function(v){window._manNo=v;Pages._manualApply();},
 _manualEqFilter:function(v){window._manEqF=v;Pages._manualApply();},
 _manualApply:function(){
@@ -9212,7 +9212,7 @@ _manualApply:function(){
   var manNo=(window._manNo||'').toLowerCase();
   var eqs=window._manEqs||[];
   if(ef) rows=rows.filter(function(r){return String(r.eq_id)===String(ef);});
-  /* [v2.64] 설비번호 필터 */
+  /* [v2.65] 설비번호 필터 */
   if(manNo) rows=rows.filter(function(r){var eq=eqs.find(function(e){return e.id===r.eq_id;})||{};return (eq.eq_no||'').toLowerCase().includes(manNo);});
   if(kw) rows=rows.filter(function(r){
     var eq=(eqs||[]).find(function(e){return e.id===r.eq_id;})||{};
@@ -9224,7 +9224,7 @@ _manualRender:function(rows){
   var eqs=window._manEqs||[];
   Tbl.render({el:'#manTbl',cols:[
     {key:'eq_id',    label:'설비명', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return H.e(eq.name||'-');}},
-    /* [v2.64] 설비번호 컬럼 */
+    /* [v2.65] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', render:function(v){var eq=(eqs||[]).find(function(e){return e.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'title',    label:'매뉴얼 제목', render:function(v,row){
       return row.file_url
@@ -9301,7 +9301,7 @@ async eq_machine_card(){
   window._cardEqs=eqs; window._cardKw=''; window._cardDept='';
   Pages._cardRender(eqs);
 },
-/* [v2.64 fix] 카드 선택 토글 */
+/* [v2.65 fix] 카드 선택 토글 */
 _cardToggle:function(eqId){
   if(!window._cardSelected) window._cardSelected=new Set();
   if(window._cardSelected.has(eqId)) window._cardSelected.delete(eqId);
@@ -9323,13 +9323,13 @@ _cardApply:function(){
 _cardRender:function(eqs){
   var grid=document.getElementById('cardGrid');
   if(!grid) return;
-  /* [v2.64 fix] 선택 상태 초기화 */
+  /* [v2.65 fix] 선택 상태 초기화 */
   if(!window._cardSelected) window._cardSelected=new Set();
   var stCls={정상:'#059669',수리중:'#dc2626',점검중:'#d97706'};
   grid.innerHTML=(eqs||[]).map(function(e){
     var sel=window._cardSelected.has(e.id);
     return'<div id="card-'+e.id+'" onclick="Pages._cardToggle('+e.id+')" style="background:var(--sur);border:'+(sel?'2px solid var(--pri)':'1px solid var(--brd)')+';border-radius:10px;padding:14px;box-shadow:var(--sh);cursor:pointer;position:relative">'+
-      /* [v2.64 fix] 좌상단 체크박스 */
+      /* [v2.65 fix] 좌상단 체크박스 */
       '<div style="position:absolute;top:8px;left:8px;width:20px;height:20px;border-radius:4px;border:2px solid '+(sel?'var(--pri)':'var(--brd)')+';background:'+(sel?'var(--pri)':'var(--sur)')+';display:flex;align-items:center;justify-content:center;z-index:1">'+
         (sel?'<span style="color:#fff;font-size:12px;font-weight:700">✓</span>':'')+
       '</div>'+
@@ -9362,7 +9362,7 @@ _cardRender:function(eqs){
   }).join('');
 },
 _cardPrint:function(eqId){
-  /* [v2.64] MY MACHINE CARD — 설비명세표 양식 완전 동일 재현 */
+  /* [v2.65] MY MACHINE CARD — 설비명세표 양식 완전 동일 재현 */
   var e=(window._cardEqs||[]).find(function(x){return x.id===eqId;});
   if(!e){Toast.show('설비 정보를 찾을 수 없습니다.','err');return;}
   var qrUrl='https://innodis-qms.vercel.app/?page=eq_mgmt&eq='+eqId;
@@ -9590,7 +9590,7 @@ _oeeLoad:async function(){
   Tbl.render({el:'#oeeTbl',cols:[
     {key:'date',         label:'일자',      w:'90px'},
     {key:'eq_id',        label:'설비명',    render:function(v){var e=(eqs||[]).find(function(x){return x.id===v;})||{};return H.e(e.name||'-');}},
-    /* [v2.64] 설비번호 컬럼 */
+    /* [v2.65] 설비번호 컬럼 */
     {key:'eq_id', label:'설비번호', w:'110px', render:function(v){var eq=(eqs||[]).find(function(x){return x.id===v;})||{};return eq.eq_no?'<span style="font-size:11px;font-family:monospace;color:var(--pri);font-weight:600">'+H.e(eq.eq_no)+'</span>':'-';}},
     {key:'plan_time',    label:'계획가동(h)',w:'90px',align:'center'},
     {key:'actual_time',  label:'실가동(h)', w:'90px',align:'center'},
@@ -9706,7 +9706,7 @@ async eq_dept(){
   });
   var depts=Object.values(deptMap).sort(function(a,b){return b.total-a.total;});
 
-  /* [v2.64] 빈 화면 처리 — 설비 미등록 시 안내 */
+  /* [v2.65] 빈 화면 처리 — 설비 미등록 시 안내 */
   var deptGridHTML;
   if(!depts.length){
     deptGridHTML=
@@ -9777,7 +9777,7 @@ _deptExcel:function(){
 
 
 
-/* ── [v2.64] 홈 카드 드래그앤드롭 ─────────────────────────────
+/* ── [v2.65] 홈 카드 드래그앤드롭 ─────────────────────────────
    규칙: 위치 교환(swap)만 허용 / 중복 불허 / 순서 localStorage 저장
    ─────────────────────────────────────────────────────────── */
 _homeInitDrag(){
@@ -9888,7 +9888,7 @@ _homeApplyCardOrder(){
 },
 
 
-/* ── [v2.64] PM 점검표 출력 ── */
+/* ── [v2.65] PM 점검표 출력 ── */
 _pmPrint:function(){
   var eqs=window._pmEqs||[];
   if(!eqs.length){Toast.show('설비가 없습니다.','warn');return;}
@@ -9906,7 +9906,7 @@ _pmPrint:function(){
   });
 },
 _pmPrintDo:function(){
-  /* [v2.64 fix] 설비점검표 — A4 가로 1장 강제
+  /* [v2.65 fix] 설비점검표 — A4 가로 1장 강제
      결재란: height 충분히 확보 / html/body overflow:hidden 1장 강제 */
   var eqs=window._pmEqs||[]; var logs=window._pmLogs||[];
   var eqId=parseInt(document.getElementById('pmPrintEq')?.value);
@@ -10026,7 +10026,7 @@ _pmPrintDo:function(){
 },
 
 _cardPrint:function(eqId){
-  /* [v2.64 fix] MY MACHINE CARD — A4 가로 1장 강제
+  /* [v2.65 fix] MY MACHINE CARD — A4 가로 1장 강제
      핵심: html/body height=210mm + overflow:hidden으로 2장 방지
      컨펌된 레이아웃: 좌44%(정/부 flex:1) + 우56%(9행 등간격+QR rowspan2) */
   var e=(window._cardEqs||[]).find(function(x){return x.id===eqId;});
@@ -10119,7 +10119,7 @@ _cardPrint:function(eqId){
 },
 
 _cardPrintAll:function(){
-  /* [v2.64 fix] 선택된 카드 일괄 출력 */
+  /* [v2.65 fix] 선택된 카드 일괄 출력 */
   var selected=Array.from(window._cardSelected||new Set());
   if(!selected.length){Toast.show('출력할 설비를 카드에서 선택하세요. (카드 클릭 시 체크)','info',3000);return;}
   var eqs=window._cardEqs||[];
@@ -10136,7 +10136,7 @@ _cardPrintAll:function(){
 },
 
 
-/* [v2.64] EMS 설비 검색 — F3 전용 자체 모달 */
+/* [v2.65] EMS 설비 검색 — F3 전용 자체 모달 */
 _emsSearch:function(){
   var eqs=window._eqRows||window._pmEqs||window._cardEqs||[];
   if(!eqs.length){Toast.show('설비 목록을 먼저 불러오세요.','warn');return;}
@@ -10203,7 +10203,7 @@ _emsSearchPick:function(eqId){
 },
 
 _docBulkDelete:async function(){
-  /* [v2.64] 체크박스 선택된 문서 삭제 */
+  /* [v2.65] 체크박스 선택된 문서 삭제 */
   var ids=Tbl.getChecked('docTbl');
   if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
   var hasActive=(window._docRows||[]).some(function(r){return ids.includes(r.id)&&r.status==='active';});
@@ -10223,8 +10223,8 @@ _docBulkDelete:async function(){
 },
 
 
-/* [v2.64] 코드 관리 탭 렌더링 */
-/* [v2.64 D1-3] 코드관리 탭 렌더링 — 유형 + 분류 모두 처리 */
+/* [v2.65] 코드 관리 탭 렌더링 */
+/* [v2.65 D1-3] 코드관리 탭 렌더링 — 유형 + 분류 모두 처리 */
 _renderCodeMgmt:function(){
   var rows=(window._docRows||[]).filter(function(r){return r.status!=='deleted';});
   /* 유형 tbody */
@@ -10250,7 +10250,7 @@ _renderCodeMgmt:function(){
     '</tr>';
   }).join('');
 },
-/* [v2.64] 유형 추가 */
+/* [v2.65] 유형 추가 */
 _codeAdd:function(kind){
   var isDT=kind==='doc_type', isDC=kind==='doc_cat';
   if(!isDT&&!isDC) return;
@@ -10268,7 +10268,7 @@ _codeAddSave:function(){
   var v=(document.getElementById('codeVal')?.value||'').trim();
   if(!k){Toast.show('코드를 입력하세요.','warn');return;}
   if(!v){Toast.show('명칭을 입력하세요.','warn');return;}
-  /* [v2.64 D1-3] 종류에 따라 _DT 또는 _DC에 저장 */
+  /* [v2.65 D1-3] 종류에 따라 _DT 또는 _DC에 저장 */
   var kind=document.querySelector('#codeTypeBody')?'doc_type':'doc_type'; /* 모달에 data-kind 없으므로 _codeAddSave 직접 판단 */
   /* 유형 먼저 체크 */
   if(Pages._DT[k]||Pages._DC[k]){Toast.show('이미 존재하는 코드입니다.','warn');return;}
@@ -10280,7 +10280,7 @@ _codeAddSave:function(){
   Modal.close();
   Pages._renderCodeMgmt();
 },
-/* [v2.64] 유형 삭제 — 연결 문서 수 확인 후 진행 */
+/* [v2.65] 유형 삭제 — 연결 문서 수 확인 후 진행 */
 _codeDelete:function(kind,key,label,cnt){
   var isDT=kind==='doc_type', isDC=kind==='doc_cat';
   if(!isDT&&!isDC) return;
@@ -10294,7 +10294,7 @@ _codeDelete:function(kind,key,label,cnt){
            '<div style="font-size:12px;margin-top:8px;color:#64748b">삭제 시 해당 문서의 유형이 <b>기타(other)</b>로 변경됩니다.</div></div>',
       danger:true,
       onOk:async function(){
-        /* [v2.64] 연결 문서 → 기타로 일괄 변경 */
+        /* [v2.65] 연결 문서 → 기타로 일괄 변경 */
         var linked=(window._docRows||[]).filter(function(r){return r[targetField]===key&&r.status!=='deleted';});
         var patch={};patch[targetField]='기타';
         for(var i=0;i<linked.length;i++){
@@ -10355,7 +10355,7 @@ const Cfg={
         +'<div class="fgroup"><label class="fl">등록자</label>'+
         '<select class="fc" id="na">'+
           (function(){
-            /* [v2.64] 관리자+매니저 권한 사용자만 표시 */
+            /* [v2.65] 관리자+매니저 권한 사용자만 표시 */
             var admins=(DB.users||[]).filter(function(u){
               return u.active!==0&&u.active!==false&&!u.pending&&
                      (u.role==='admin'||u.role==='manager');
@@ -10383,7 +10383,7 @@ const Cfg={
     });
   },
   /* [v2.394] 공지 파일 미리보기 */
-  /* [v2.64 S1] 다중 파일 최대 5개 지원 */
+  /* [v2.65 S1] 다중 파일 최대 5개 지원 */
   _noticePreviewFile(inp){
     var files=Array.from(inp.files||[]);
     if(!files.length) return;
@@ -10410,7 +10410,7 @@ const Cfg={
     const fileInp=document.getElementById('nf');
     const existFile=idx!=null?App.notices[idx]?.file:null;
     const doSave=async()=>{
-      /* [v2.64 D1] 다중 파일 최대 5개 처리 */
+      /* [v2.65 D1] 다중 파일 최대 5개 처리 */
       const allFiles=fileInp?.files?Array.from(fileInp.files).slice(0,5):[];
       if(allFiles.length>0){
         var uploaded=[];
@@ -10432,7 +10432,7 @@ const Cfg={
       } else if(existFile&&fileInp?.value!==''){
         obj.file=existFile; obj.files=[existFile];
       }
-      /* [v2.64] Supabase 영속화 저장
+      /* [v2.65] Supabase 영속화 저장
          기존: App.notices.push() → 메모리만, 새로고침/배포 시 초기화
          수정: SB.addNotice/updateNotice → DB 저장 → SB.getNotices로 재로드 */
       var saveRes;
@@ -10452,7 +10452,7 @@ const Cfg={
   },
   noticeToggle(i){App.notices[i].show=!App.notices[i].show;Toast.show('변경되었습니다.','ok');Pages.settings()},
 
-  /* [v2.64] id 기반 공지 토글 */
+  /* [v2.65] id 기반 공지 토글 */
   async _noticeToggleById(n){
     var newShow=!n.show;
     var r=await SB.updateNotice(n.id,{show:newShow});
@@ -10462,7 +10462,7 @@ const Cfg={
     }
   },
 
-  /* [v2.64] id 기반 공지 삭제 */
+  /* [v2.65] id 기반 공지 삭제 */
   async _noticeDelById(n){
     Modal.confirm({title:'공지 삭제',msg:'<b>'+H.e(n.title)+'</b> 공지사항을 삭제하시겠습니까?',danger:true,
       onOk:async function(){
@@ -10472,8 +10472,8 @@ const Cfg={
     });
   },
 
-  /* [v2.64] id 기반 공지 수정 — _addNotice에 객체 전달 */
-  /* [v2.64 S2] _noticeDetail: 공지 상세 팝업 (읽기전용) */
+  /* [v2.65] id 기반 공지 수정 — _addNotice에 객체 전달 */
+  /* [v2.65 S2] _noticeDetail: 공지 상세 팝업 (읽기전용) */
   _noticeDetail(i){
     var notices=App.notices||[];
     var sorted=[...notices].sort(function(a,b){return (b.created_at||b.date||'').localeCompare(a.created_at||a.date||'');});
@@ -10495,8 +10495,8 @@ const Cfg={
                  '<button class="btn berr bsm" onclick="Pages._noticeDelByIdx('+i+')">🗑️ 삭제</button>':''),
     });
   },
-  /* [v2.64 S2] index 기반 수정 */
-  /* [v2.64 fix S2] id 기반 직접 조회 — App.notices 인덱스 의존성 제거 */
+  /* [v2.65 S2] index 기반 수정 */
+  /* [v2.65 fix S2] id 기반 직접 조회 — App.notices 인덱스 의존성 제거 */
   _noticeDetail_id(id){
     var n=(App.notices||[]).find(function(x){return x.id==id;});
     if(!n) return;
@@ -10519,14 +10519,14 @@ const Cfg={
     });
   },
   _editNoticeById_id(id){
-    /* [v2.64] id 기반 직접 조회 → Cfg.noticeForm */
+    /* [v2.65] id 기반 직접 조회 → Cfg.noticeForm */
     var notices=App.notices||[];
     var n=notices.find(function(x){return x.id==id;});
     if(!n){Toast.show('공지를 찾을 수 없습니다.','warn');return;}
     var idx=notices.indexOf(n);
     Cfg.noticeForm(idx>=0?idx:null);
   },
-  /* [v2.64 S2] _noticeDelById는 Cfg 내부 함수 — Cfg로 호출 */
+  /* [v2.65 S2] _noticeDelById는 Cfg 내부 함수 — Cfg로 호출 */
   _noticeDelById_id(id){
     var n=(App.notices||[]).find(function(x){return x.id==id;});
     if(n) Cfg._noticeDelById(n);
@@ -10537,14 +10537,14 @@ const Cfg={
     var n=notices[i]; if(!n) return;
     Cfg.noticeForm(i);
   },
-  /* [v2.64 S2] index 기반 삭제 */
+  /* [v2.65 S2] index 기반 삭제 */
   _noticeDelByIdx(i){
     var notices=App.notices||[];
     var sorted=[...notices].sort(function(a,b){return (b.created_at||b.date||'').localeCompare(a.created_at||a.date||'');});
     var n=sorted[i]; if(!n) return;
-    Cfg._noticeDelById(n);  /* [v2.64 S2] Cfg 내부 함수 */
+    Cfg._noticeDelById(n);  /* [v2.65 S2] Cfg 내부 함수 */
   },
-  /* [v2.64] 공지 삭제 — Supabase 연동 */
+  /* [v2.65] 공지 삭제 — Supabase 연동 */
   noticeDel(i){
     var notice=App.notices[i];
     if(!notice){Toast.show('공지를 찾을 수 없습니다.','warn');return;}
@@ -12933,30 +12933,33 @@ const ExcelMgr={
       },
     },
     nc:{
-      /* [v2.64 Q6.3] 부적합 스키마 — 엑셀 컬럼 순서 지시대로 재정의 */
+      /* [v2.65] 부적합 스키마 — 부적합률 추가 + dupKey/dupLabel 복구 */
       title:'부적합관리',
       cols:[
-        {key:'in_out',        label:'사내외',         req:true,  sample:'사내'},
-        {key:'no',            label:'부적합번호',     req:true,  sample:'NC-20260601-001'},
-        {key:'date',          label:'발생일',         req:true,  sample:'2026-06-01'},
-        {key:'inspector',     label:'검사자',         req:false, sample:'홍길동'},
-        {key:'type',          label:'유형',           req:true,  sample:'수입'},
-        {key:'customer',      label:'고객사',         req:false, sample:'㈜대한전자'},
-        {key:'responsible',   label:'귀책처',         req:false, sample:'㈜부품공급사'},
-        {key:'work_order_no', label:'작업지시번호',   req:false, sample:'WO-20260601-001'},
-        {key:'item_code',     label:'품목코드',       req:true,  sample:'ITM-001'},
-        {key:'item',          label:'품목명',         req:false, sample:'알루미늄 바'},
-        {key:'insp_qty',      label:'검사수량',       req:false, sample:'500'},
-        {key:'pass_qty',      label:'양품수량',       req:false, sample:'485'},
-        {key:'bad_qty',       label:'불량수량',       req:false, sample:'15'},
-        /* nc_rate: 계산 필드 — 엑셀 업로드에서 제외 (bad_qty/insp_qty 자동계산) */
-        {key:'desc',          label:'내용(불량유형)', req:true,  sample:'치수불량 — 직경 기준 초과'},
-        {key:'cause',         label:'원인(부적합 내용)',req:false,sample:'공급사 공정 이상'},
-        {key:'action',        label:'조치(처리내역)', req:false, sample:'반품처리'},
-        {key:'assignee',      label:'담당자',         req:false, sample:'김품질'},
-        {key:'due_date',      label:'처리기한',       req:false, sample:'2026-06-15'},
-        {key:'note',          label:'비고',           req:false, sample:''},
-      ]
+        {key:'in_out',        label:'사내외',           req:true,  sample:'사내'},
+        {key:'no',            label:'부적합번호',       req:true,  sample:'NC-20260601-001'},
+        {key:'date',          label:'발생일',           req:true,  sample:'2026-06-01'},
+        {key:'inspector',     label:'검사자',           req:false, sample:'홍길동'},
+        {key:'type',          label:'유형',             req:true,  sample:'수입'},
+        {key:'customer',      label:'고객사',           req:false, sample:'㈜대한전자'},
+        {key:'responsible',   label:'귀책처',           req:false, sample:'㈜부품공급사'},
+        {key:'work_order_no', label:'작업지시번호',     req:false, sample:'WO-20260601-001'},
+        {key:'item_code',     label:'품목코드',         req:true,  sample:'ITM-001'},
+        {key:'item',          label:'품목명',           req:false, sample:'알루미늄 바'},
+        {key:'insp_qty',      label:'검사수량',         req:false, sample:'500'},
+        {key:'pass_qty',      label:'양품수량',         req:false, sample:'485'},
+        {key:'bad_qty',       label:'불량수량',         req:false, sample:'15'},
+        {key:'nc_rate',       label:'부적합률',         req:false, sample:'3.0%'},
+        {key:'desc',          label:'내용(불량유형)',   req:true,  sample:'치수불량 — 직경 기준 초과'},
+        {key:'cause',         label:'원인(부적합 내용)',req:false, sample:'공급사 공정 이상'},
+        {key:'action',        label:'조치(처리내역)',   req:false, sample:'반품처리'},
+        {key:'assignee',      label:'담당자',           req:false, sample:'김품질'},
+        {key:'due_date',      label:'처리기한',         req:false, sample:'2026-06-15'},
+        {key:'note',          label:'비고',             req:false, sample:''},
+      ],
+      dupKey:'no',
+      dupLabel:'부적합번호',
+      dupOnly:true
     },
     equip:{
       title:'계측기등록',
@@ -14249,7 +14252,7 @@ const ExcelMgr={
 /* ══ Search 팝업 (F3) ══ */
 
 
-/* [v2.64] F3 근본 해결 — EMS 페이지명을 ems_eq 설정으로 직접 별칭 등록
+/* [v2.65] F3 근본 해결 — EMS 페이지명을 ems_eq 설정으로 직접 별칭 등록
    F3 핸들러가 page명 그대로 SearchPop.open(page) 호출해도 동작 */
 (function(){
   var EMS=['eq_mgmt','eq_pm','eq_as','eq_cost','eq_manual',
