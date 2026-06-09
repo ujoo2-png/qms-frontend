@@ -1,3 +1,4 @@
+
 /* qms-pages.js — Pages 페이지 렌더러 [v2.62]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
@@ -1938,8 +1939,7 @@ async quality_dash(){
     if(insp&&insp.length>=0) DB.inspections=insp;
     if(ncData&&ncData.length>=0) DB.nc=ncData;
     if(equipData&&equipData.length>=0) DB.equip=equipData;
-  
-}catch(e){console.warn('[quality_dash] SB 로드 실패',e);}
+  }catch(e){console.warn('[quality_dash] SB 로드 실패',e);}
 
   /* ── 상태 변수 (클로저로 유지) ── */
   const state={
@@ -2163,8 +2163,7 @@ async quality_dash(){
         ${TYPES.map(t=>{
           const sel=state.types.includes(t);
           const c=COLORS[t];
-          return
-`<button style="padding:4px 13px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
+          return`<button style="padding:4px 13px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
             border:2px solid ${sel?c:'#e2e8f0'};background:${sel?c:'#fff'};color:${sel?'#fff':'#94a3b8'};transition:.15s"
             onclick="Pages._qdashToggle('${t}')">${t}</button>`;
         }).join('')}
@@ -2288,19 +2287,6 @@ async quality_dash(){
   Pages._qdashState=state;
   Pages._qdashRender=render;
   render();
-
-  /* [v2.62] Pages에 state/render 저장 → Chart.js에서 날짜·유형 연동 */
-  Pages._qdState  = state;
-  Pages._qdRender = render;
-  /* Chart.js 차트 렌더 — state 정의 이후 */
-  setTimeout(function(){
-    if(typeof Chart==='undefined'){
-      var s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-      s.onload=Pages._qdRenderCharts;
-      document.head.appendChild(s);
-    } else { Pages._qdRenderCharts(); }
-  }, 300);
 },
 
 /* 검사종류 토글 */
@@ -10321,101 +10307,7 @@ _codeDelete:function(kind,key,label,cnt){
 },
 
 
-/* [v2.62] Chart.js 렌더 함수 — state.from/to/types 연동 */
-_qdRenderCharts:function(){
-  /* Pages._qdState에서 날짜/유형 조건 가져오기 */
-  var st=Pages._qdState||{types:['수입','공정','구매','외주','최종'],from:'2026-01-01',to:H.today()};
-  var fd=new Date(st.from), td=new Date(st.to);
-  /* canvas 섹션을 pw 마지막에 삽입 */
-  var pw=document.getElementById('pw');
-  if(pw&&!pw.querySelector('#qdChartAll')){
-    var div=document.createElement('div');
-    div.style.marginTop='20px';
-    div.innerHTML=
-      '<div style="font-size:13px;font-weight:600;color:var(--tm);margin-bottom:10px;padding-left:2px">📊 5종 통합 — 월별 불량 수량 비교</div>'+
-      '<div style="background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:16px 16px 10px;margin-bottom:14px">'+
-        '<div style="height:200px;position:relative"><canvas id="qdChartAll"></canvas></div></div>'+
-      '<div style="font-size:13px;font-weight:600;color:var(--tm);margin-bottom:10px;padding-left:2px">📊 검사 종류별 개별 월별 현황</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
-        '<div style="background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px">🔍 수입검사</div><div style="height:130px;position:relative"><canvas id="qdChart0"></canvas></div></div>'+
-        '<div style="background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px">⚙️ 공정검사</div><div style="height:130px;position:relative"><canvas id="qdChart1"></canvas></div></div>'+
-        '<div style="background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px">🛒 구매검사</div><div style="height:130px;position:relative"><canvas id="qdChart2"></canvas></div></div>'+
-        '<div style="background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px">🏭 외주검사</div><div style="height:130px;position:relative"><canvas id="qdChart3"></canvas></div></div>'+
-        '<div style="background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px">✅ 최종검사</div><div style="height:130px;position:relative"><canvas id="qdChart4"></canvas></div></div>'+
-        '<div style="background:linear-gradient(135deg,var(--bg2),#dcfce7);border:1px solid #86efac;border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">'+
-          '<div style="font-size:22px">📥</div><div style="font-size:12px;font-weight:600;color:#166534">엑셀 내보내기</div>'+
-          '<button class="btn bsm" style="background:#059669;color:#fff;border-color:#059669" onclick="Pages._qdashExcel()">전체 데이터 다운로드</button></div>'+
-      '</div>';
-    pw.appendChild(div);
-  }
-  if(typeof Chart==='undefined') return;
-  Chart.defaults.font.family="'Pretendard','Apple SD Gothic Neo',sans-serif";
-  Chart.defaults.font.size=11;
-  Chart.defaults.animation={duration:700,easing:'easeOutQuart'};
-  const MONTHS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const TYPES=[
-    {t:'수입',c:'rgba(59,130,246,.8)',bc:'#3b82f6'},
-    {t:'공정',c:'rgba(16,185,129,.8)',bc:'#10b981'},
-    {t:'구매',c:'rgba(245,158,11,.8)',bc:'#f59e0b'},
-    {t:'외주',c:'rgba(139,92,246,.8)',bc:'#8b5cf6'},
-    {t:'최종',c:'rgba(239,68,68,.8)',bc:'#ef4444'},
-  ];
-  const yr=new Date().getFullYear();
-  /* [v2.62] fd/td 범위 + types 필터 적용 */
-  function monthBad(type){
-    return MONTHS.map(function(_,mi){
-      return (DB.inspections||[]).filter(function(r){
-        const d=new Date(r.insp_date||r.date||'');
-        const inRange=d>=fd&&d<=td;
-        const inType=!type||r.type===type;
-        const inTypes=type||st.types.includes(r.type);
-        return inRange && inType && (type?true:inTypes) && d.getMonth()===mi;
-      }).reduce(function(s,r){return s+(r.fail_qty||r.badQty||0);},0);
-    });
-  }
-  function makeChart(id,datasets,labels,stacked){
-    const el=document.getElementById(id);
-    if(!el) return;
-    if(el._chart) el._chart.destroy();
-    el._chart=new Chart(el,{type:'bar',
-      data:{labels:labels||MONTHS,datasets:datasets},
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12,font:{size:10}}},
-          tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y+'건';}}}},
-        scales:{x:{stacked:!!stacked,grid:{display:false},ticks:{color:'#64748b',font:{size:10}}},
-          y:{stacked:!!stacked,beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},
-            ticks:{color:'#64748b',precision:0,font:{size:10}}}}}});
-  }
-  /* 통합 그룹형 */
-  makeChart('qdChartAll', TYPES.map(function(tp){
-    return{label:tp.t+'검사',data:monthBad(tp.t),backgroundColor:tp.c,borderColor:tp.bc,borderWidth:1,borderRadius:4};
-  }));
-  /* 5종 개별 */
-  TYPES.forEach(function(tp,idx){
-    makeChart('qdChart'+idx,[
-      {label:tp.t+'검사 불량',data:monthBad(tp.t),backgroundColor:tp.c,borderColor:tp.bc,borderWidth:1,borderRadius:4}
-    ]);
-  });
-},
-/* [v2.62 Q7] 엑셀 내보내기 SheetJS */
-_qdashExcel:function(){
-  var rows=DB.inspections||[];
-  if(!rows.length){Toast.show('내보낼 검사 데이터가 없습니다.','warn');return;}
-  var header=['유형','LOT번호','품목코드','품목명','검사일','검사수량','합격수량','불량수량','불량률(%)','결과','검사자','비고'];
-  var data=[header].concat(rows.map(function(r){
-    var rate=r.qty>0?+(r.fail_qty/r.qty*100).toFixed(2):0;
-    return[r.type||'',r.lot_no||'',r.item_code||'',r.item_name||r.item||'',
-      r.insp_date||'',r.qty||0,r.pass_qty||0,r.fail_qty||0,rate,r.result||'',r.inspector||'',r.note||''];
-  }));
-  try{
-    var wb=XLSX.utils.book_new();
-    var ws=XLSX.utils.aoa_to_sheet(data);
-    ws['!cols']=[{wch:8},{wch:16},{wch:12},{wch:20},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:16}];
-    XLSX.utils.book_append_sheet(wb,ws,'품질현황');
-    XLSX.writeFile(wb,'품질현황_'+H.today().replace(/-/g,'')+'.xlsx');
-    Toast.show('엑셀 파일이 다운로드됩니다.','ok');
-  }catch(e){Toast.show('엑셀 생성 실패: '+e.message,'err');}
-},
+
 
 }; /* Pages 객체 끝 */
 /* SQL 복사 헬퍼 */
