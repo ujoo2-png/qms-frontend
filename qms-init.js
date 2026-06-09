@@ -11,16 +11,28 @@ function setupHotkeys(){
     }
     else if(ev.key==='F3'){
       ev.preventDefault();
-      const spOpen=!document.getElementById('spOverlay').classList.contains('hidden');
-      if(spOpen){SearchPop.search();return}
-      /* [v2.62 fix] .ni.active 없으면 sessionStorage 백업 사용 */
-      const page=document.querySelector('.ni.active')?.dataset?.p
-               ||sessionStorage.getItem('qms_page')||'';
+      /* [v2.63] SearchPop 팝업 열림 여부 확인 → 열려있으면 Search 실행 */
+      const spOverlay=document.getElementById('spOverlay');
+      if(spOverlay&&!spOverlay.classList.contains('hidden')){
+        SearchPop.search(); return;
+      }
+      /* [v2.63] 현재 활성 페이지 판별 — 3단계 fallback */
+      const page = document.querySelector('.ni.active')?.dataset?.p  // 1순위: 사이드바 active
+                || sessionStorage.getItem('qms_page')                // 2순위: sessionStorage
+                || document.querySelector('.ni[data-p]')?.dataset?.p  // 3순위: 첫 번째 메뉴
+                || '';
+      /* EMS 설비 페이지 → ems_eq로 통합 검색 */
       const EMS_PAGES=['eq_mgmt','eq_pm','eq_as','eq_cost','eq_manual',
                        'eq_machine_card','eq_dashboard','eq_dept'];
-      const spPage=EMS_PAGES.includes(page)?'ems_eq':page;
-      if(spPage)SearchPop.open(spPage);
-      else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
+      const spPage = EMS_PAGES.includes(page) ? 'ems_eq' : page;
+      if(spPage && window.SearchPop && window.SearchPop._cfg[spPage]){
+        window.SearchPop.open(spPage);
+      } else if(spPage){
+        /* cfg에 없는 페이지 → 사용 불가 안내 */
+        Toast.show('이 화면에서는 Search를 사용할 수 없습니다.','warn');
+      } else {
+        Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
+      }
     }
     else if(ev.key==='F5'){
       /* [v2.394] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
@@ -104,7 +116,7 @@ function setupHotkeys(){
           }
         }catch(e){ console.warn('[세션복원] DB 로드 오류:', e); }
         Nav.go(savedPage);
-        /* [v2.62] 세션 복원 후 Magic Indicator 초기화 */
+        /* [v2.63] 세션 복원 후 Magic Indicator 초기화 */
         setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 200);
         if(savedPage !== 'home'){
           Toast.show('마지막 화면으로 돌아왔습니다.','info',2000);
@@ -116,4 +128,24 @@ function setupHotkeys(){
     }
   }
 })();
-/* [v2.62] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
+/* [v2.63] indicator 초기화: core.js Auth.login + 세션복원 경로로 이전 */
+
+/* ════════════════════════════════════════════════════════════════
+   [v2.63] data-sp 이벤트 위임 — F3 버튼 안전한 클릭 처리
+   ▶ onclick="SearchPop.open(...)" 대신 data-sp 속성으로 팝업 연결
+   ▶ window.SearchPop 등록 여부와 무관하게 안전하게 처리
+   ════════════════════════════════════════════════════════════════ */
+document.addEventListener('click', function(ev){
+  const btn = ev.target.closest('[data-sp]');
+  if(!btn) return;
+  const spPage = btn.dataset.sp;
+  if(!spPage) return;
+  /* EMS 통합 처리 */
+  const EMS=['eq_mgmt','eq_pm','eq_as','eq_cost','eq_manual','eq_machine_card','eq_dashboard','eq_dept'];
+  const target = EMS.includes(spPage) ? 'ems_eq' : spPage;
+  if(window.SearchPop && window.SearchPop._cfg && window.SearchPop._cfg[target]){
+    window.SearchPop.open(target);
+  } else {
+    Toast.show('이 화면에서는 Search를 사용할 수 없습니다.','warn');
+  }
+});
