@@ -3111,7 +3111,7 @@ async equip(){
         danger:true,
         onOk:_doDelete
       });
-    },onRow:row=>Pages._eqDetail(row)});
+    },onRow:row=>Pages._eqDetail(row.id)});
 }
 ,
 /* [v2.394] 계측기 상세 팝업 — row 데이터 연결 */
@@ -3868,7 +3868,7 @@ _eqFilter(){
         onOk:_doDelete
       });
     },
-  onRow:row=>Pages._eqDetail(row)});
+  onRow:row=>Pages._eqDetail(row.id)});
 },
 
 
@@ -8239,7 +8239,7 @@ _eqRender:function(rows){
   });
 },
 _eqDetail:async function(id){
-  var row=(window._eqRows||[]).find(function(r){return r.id===id;});
+  var row=(DB.equip||window._eqRows||[]).find(function(r){return r.id===id;});
   if(!row){ Toast.show('설비 정보를 찾을 수 없습니다.','err'); return; }
   var isAdmin=Auth._u&&(Auth._u.role==='admin'||Auth._u.role==='manager');
   /* 사진 갤러리 */
