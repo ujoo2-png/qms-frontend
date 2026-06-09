@@ -8221,6 +8221,12 @@ _eqRender:function(rows){
     {key:'status',          label:'상태',  align:'center',
       render:function(v){return'<span class="badge '+(stCls[v]||'bgry')+'" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
     {key:'memo',            label:'비고',        render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
+    {key:'photo_urls',       label:'파일',  w:'52px', align:'center',
+      render:function(v,row){
+        var urls=(v&&typeof v==='string')?v.split(',').filter(Boolean):(v||[]);
+        if(!urls.length) return '<span style="color:var(--tl)">—</span>';
+        return'<button class="btn bxs bsm bblu" onclick="event.stopPropagation();Pages._eqPhotoView(this.dataset.url,this.dataset.no)" data-url="'+H.e(urls[0])+'" data-no="'+H.e(row.eq_no||'')+'" style="font-size:11px">📎 '+urls.length+'</button>';
+      }},
   ],
   data:rows,
   onDel:async function(ids){
@@ -10330,6 +10336,7 @@ _equipCalDetail(id){
   var statusTxt=d===null?'미설정':d<0?'교정만료':'교정예정';
   Modal.open({title:'🔬 계측기 상세 — '+H.e(row.name||'-'),size:'sm',
     foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+         (row.file_url?'<a href="'+H.e(row.file_url)+'" target="_blank" class="btn bblu bsm">📎 파일 보기</a>':'')+
          '<button class="btn bpri bsm" onclick="Modal.close();Pages._equipCalForm('+id+')">✏️ 수정</button>',
     body:'<table style="width:100%;font-size:13px;border-collapse:collapse">'+
       [['계측기코드',row.code],['계측기명',row.name],['모델번호',row.model],
@@ -10385,6 +10392,18 @@ Object.assign(Pages,{
           '</select></div>'+
         '<div class="fgroup ff"><label class="fl">비고</label>'+
           '<input class="fc" id="ecNote" value="'+H.e(row?row.note||'':'')+'"></div>'+
+      '<div class="fgroup ff"><label class="fl">첨부파일</label>'+
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+          (row&&row.file_url
+            ?'<a href="'+H.e(row.file_url)+'" target="_blank" class="btn bxs bblu bsm">📎 현재 파일 보기</a>'+
+             '<button class="btn bxs bred bsm" onclick="Pages._equipCalFileDelete()">🗑️ 삭제</button>'
+            :'')+
+          '<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px dashed var(--bd);border-radius:6px;cursor:pointer;font-size:12px;color:var(--tm)">'+
+            '📁 파일 선택'+
+            '<input type="file" id="ecFile" accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.jpeg,.png" style="display:none">'+
+          '</label>'+
+          '<span id="ecFileName" style="font-size:11px;color:var(--tm)"></span>'+
+        '</div></div>'+
       '</div>',
     });
   },
@@ -10394,13 +10413,33 @@ Object.assign(Pages,{
     if(!code){Toast.show('계측기코드를 입력하세요.','warn');return;}
     if(!name){Toast.show('계측기명을 입력하세요.','warn');return;}
     if(!nxt){Toast.show('차기교정일을 입력하세요.','warn');return;}
+    /* [v2.69] 파일 업로드 처리 */
+    var fileUrl=null;
+    var fileEl=document.getElementById('ecFile');
+    if(fileEl&&fileEl.files&&fileEl.files.length>0){
+      var up=await SB.uploadFile('equip',fileEl.files[0]);
+      if(up&&up.url) fileUrl=up.url;
+      else{Toast.show('파일 업로드 실패. 저장은 계속 진행됩니다.','warn');}
+    }
     var row={code,name,model:g('ecModel'),maker:g('ecMaker'),range:g('ecRange'),
       res:g('ecRes'),loc:g('ecLoc'),operator:g('ecOperator'),
       last:g('ecLast')||null,next:nxt,active:parseInt(g('ecActive'))||1,note:g('ecNote')};
+    if(fileUrl) row.file_url=fileUrl;
+    else if(window._ecFileDeleted){row.file_url='';window._ecFileDeleted=false;}
     var r=editId&&editId!=='null'
       ? await SB.updateEquip(Number(editId),row)
       : await SB.addEquip(row);
     if(r?.ok){Toast.show(editId&&editId!=='null'?'수정되었습니다.':'등록되었습니다.','ok');Modal.close();Pages.equip();}
+  },
+  _equipCalFileDelete(){
+    /* 파일 삭제: input 초기화 + file_url 표시 제거 */
+    var fi=document.getElementById('ecFile');
+    if(fi) fi.value='';
+    var fn=document.getElementById('ecFileName');
+    if(fn) fn.textContent='(기존 파일이 삭제됩니다. 저장 시 반영)';
+    /* 삭제 플래그 — _equipCalSave에서 file_url='' 처리 */
+    window._ecFileDeleted=true;
+    Toast.show('저장 시 파일이 삭제됩니다.','warn');
   },
 });
 

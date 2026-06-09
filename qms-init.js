@@ -149,3 +149,11 @@ document.addEventListener('click', function(ev){
     Toast.show('이 화면에서는 Search를 사용할 수 없습니다.','warn');
   }
 });
+
+/* [v2.69] 계측기 파일 선택 표시 */
+document.addEventListener('change', function(ev){
+  if(ev.target.id==='ecFile'){
+    var fn=document.getElementById('ecFileName');
+    if(fn) fn.textContent=ev.target.files[0]?.name||'';
+  }
+});
