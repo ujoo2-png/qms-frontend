@@ -3111,7 +3111,7 @@ async equip(){
         danger:true,
         onOk:_doDelete
       });
-    },onRow:row=>Pages._eqDetail(row.id)});
+    },onRow:row=>Pages._equipCalDetail(row.id)});
 }
 ,
 /* [v2.394] 계측기 상세 팝업 — row 데이터 연결 */
@@ -8239,7 +8239,7 @@ _eqRender:function(rows){
   });
 },
 _eqDetail:async function(id){
-  var row=(DB.equip||window._eqRows||[]).find(function(r){return r.id===id;});
+  var row=(window._eqRows||[]).find(function(r){return r.id===id;});
   if(!row){ Toast.show('설비 정보를 찾을 수 없습니다.','err'); return; }
   var isAdmin=Auth._u&&(Auth._u.role==='admin'||Auth._u.role==='manager');
   /* 사진 갤러리 */
@@ -10319,6 +10319,33 @@ _codeDelete:function(kind,key,label,cnt){
 
 
 
+
+/* ── 계측기 전용 상세 팝업 ── */
+_equipCalDetail(id){
+  var row=(DB.equip||[]).find(function(r){return r.id===id;});
+  if(!row){Toast.show('계측기 정보를 찾을 수 없습니다.','err');return;}
+  var nxt=row.next||null;
+  var d=nxt?Math.ceil((new Date(nxt)-new Date())/864e5):null;
+  var statusCls=d===null?'bgry':d<0?'bred':d<30?'bamb':'bgrn';
+  var statusTxt=d===null?'미설정':d<0?'교정만료':'교정예정';
+  Modal.open({title:'🔬 계측기 상세 — '+H.e(row.name||'-'),size:'sm',
+    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+         '<button class="btn bpri bsm" onclick="Modal.close();Pages._equipCalForm('+id+')">✏️ 수정</button>',
+    body:'<table style="width:100%;font-size:13px;border-collapse:collapse">'+
+      [['계측기코드',row.code],['계측기명',row.name],['모델번호',row.model],
+       ['제조사',row.maker],['측정범위',row.range],['분해능',row.res],
+       ['보관위치',row.loc],['사용자',row.operator],
+       ['최근교정일',row.last||'-'],['차기교정일',row.next||'-'],
+       ['사용여부',row.active==0?'불용':'사용'],['비고',row.note||'-'],
+      ].map(function(r){
+        return '<tr><td style="color:#64748b;padding:5px 8px;width:100px;border-bottom:1px solid #f1f5f9">'+r[0]+'</td>'+
+               '<td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;font-weight:500">'+H.e(String(r[1]||'-'))+'</td></tr>';
+      }).join('')+
+      '<tr><td style="color:#64748b;padding:5px 8px">교정상태</td>'+
+        '<td style="padding:5px 8px"><span class="badge '+statusCls+'">'+statusTxt+(d!==null&&d>=0?' (D-'+d+')':'')+'</span></td></tr>'+
+    '</table>',
+  });
+},
 }; /* Pages 객체 끝 */
 /* ════ 계측기 전용 등록/수정 폼 ════ */
 Object.assign(Pages,{
