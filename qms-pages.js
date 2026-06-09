@@ -14253,7 +14253,7 @@ const ExcelMgr={
    ▶ F3 키: qms-init.js keydown 이벤트에서 SearchPop.open(page) 호출
    ▶ 버튼 클릭: onclick="SearchPop.open('page')" or data-sp 이벤트 위임
    ════════════════════════════════════════════════════════════════ */
-window.SearchPop=SearchPop={
+var SearchPop=window.SearchPop={
   _page:'',
   _cfg:{
     items:{title:'품목 검색',
