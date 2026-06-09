@@ -4460,39 +4460,149 @@ async cal(){
   const w=document.getElementById('pw');
   if(_sb){const d=await SB.getCal();if(d)DB.cals=d;}
   const now=new Date(); const yr=now.getFullYear().toString();
-  const doneCnt=DB.cals.filter(c=>(c.cal_date||c.date||'').startsWith(yr)&&c.result==='합격').length;
-  const soonCnt=DB.cals.filter(c=>{
-    const nd=c.next_date||c.next; if(!nd)return false;
-    const d=Math.ceil((new Date(nd)-now)/864e5); return d>=0&&d<=30;
+  /* ── stat-dash 계산 ── */
+  const doneCnt=DB.cals.filter(function(c){return(c.cal_date||c.date||'').startsWith(yr)&&c.result==='합격';}).length;
+  const soonCnt=DB.equip.filter(function(e){
+    if(!e.next)return false;
+    const d=Math.ceil((new Date(e.next)-now)/864e5);
+    return d>=0&&d<=30;
   }).length;
-  const expCnt=DB.cals.filter(c=>{
-    const nd=c.next_date||c.next; if(!nd)return false;
-    return new Date(nd)<now;
+  const expCnt=DB.equip.filter(function(e){
+    return e.next&&new Date(e.next)<now;
   }).length;
   w.innerHTML=`
     <div class="stat-dash">
-      <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0284c7">📋</div><div><div class="sd-val">${DB.cals.length}</div><div class="sd-lbl">전체 이력</div></div></div>
-      <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${doneCnt}</div><div class="sd-lbl">${yr}년 완료</div></div></div>
-      <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⏰</div><div><div class="sd-val">${soonCnt}</div><div class="sd-lbl">30일 내 예정</div></div></div>
-      <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">⚠️</div><div><div class="sd-val" style="color:var(--err)">${expCnt}</div><div class="sd-lbl">교정 만료</div></div></div>
+      <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0284c7">📋</div>
+        <div><div class="sd-val">${DB.cals.length}</div><div class="sd-lbl">전체 이력</div></div></div>
+      <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div>
+        <div><div class="sd-val">${doneCnt}</div><div class="sd-lbl">${yr}년 완료</div></div></div>
+      <div class="sd-card" style="cursor:pointer" onclick="Pages._calTabSwitch('plan')">
+        <div class="sd-icon" style="background:#fef3c7;color:#d97706">⏰</div>
+        <div><div class="sd-val" style="${soonCnt>0?'color:#d97706':''}">${soonCnt}</div><div class="sd-lbl">30일 내 예정</div></div></div>
+      <div class="sd-card" style="cursor:pointer" onclick="Pages._calTabSwitch('plan')">
+        <div class="sd-icon" style="background:#fee2e2;color:#dc2626">⚠️</div>
+        <div><div class="sd-val" style="${expCnt>0?'color:var(--err)':''}">
+          ${expCnt}</div><div class="sd-lbl">교정 만료</div></div></div>
     </div>
-    <div class="ph" style="margin-top:14px"><div><div class="ptit">📐 교정 계획 & 이력</div></div>
-      <div class="pac"><button class="btn bpri btn-f2" onclick="Pages._calForm()">+ 교정 등록 <span class="kbd">F2</span></button></div>
+    <!-- [v2.70] 탭 메뉴 -->
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--bd);margin:14px 0 0">
+      <button id="calTabHist" class="btn bout bsm" onclick="Pages._calTabSwitch('hist')"
+        style="border-radius:6px 6px 0 0;border-bottom:none;font-weight:600;
+               background:var(--pri);color:#fff;border-color:var(--pri)">
+        📋 교정 이력
+      </button>
+      <button id="calTabPlan" class="btn bout bsm" onclick="Pages._calTabSwitch('plan')"
+        style="border-radius:6px 6px 0 0;border-bottom:none;margin-left:4px">
+        ⏰ 교정 예정
+        ${(soonCnt+expCnt)>0?`<span class="badge bred bsm" style="margin-left:4px;font-size:10px">${soonCnt+expCnt}</span>`:''}
+      </button>
     </div>
-    <div class="tbar">
-      <div class="sw2"><input type="text" id="calKw" placeholder="계측기코드·계측기명·교정기관 검색..." oninput="Pages._calFilter()"></div>
-      <select class="fsel" id="calRes" onchange="Pages._calFilter()">
-        <option value="">전체 결과</option>
-        <option value="합격">합격</option>
-        <option value="불합격">불합격</option>
-      </select>
-      <select class="fsel" id="calYr" onchange="Pages._calFilter()">
-        <option value="">전체 연도</option>
-        ${[yr,(+yr-1).toString()].map(y=>`<option value="${y}">${y}년</option>`).join('')}
-      </select>
+    <!-- 이력 탭 -->
+    <div id="calPaneHist">
+      <div class="ph" style="margin-top:10px">
+        <div><div class="ptit" style="font-size:13px">교정 완료 이력 — calibrations 테이블</div></div>
+        <div class="pac">
+          <button class="btn bpri btn-f2" onclick="Pages._calForm()">+ 교정 등록 <span class="kbd">F2</span></button>
+        </div>
+      </div>
+      <div class="tbar">
+        <div class="sw2"><input type="text" id="calKw" placeholder="계측기코드·계측기명·교정기관 검색..." oninput="Pages._calFilter()"></div>
+        <select class="fsel" id="calRes" onchange="Pages._calFilter()">
+          <option value="">전체 결과</option>
+          <option value="합격">합격</option>
+          <option value="불합격">불합격</option>
+        </select>
+        <select class="fsel" id="calYr" onchange="Pages._calFilter()">
+          <option value="">전체 연도</option>
+          ${[yr,(+yr-1).toString()].map(function(y){return`<option value="${y}">${y}년</option>`;}).join('')}
+        </select>
+      </div>
+      <div id="calTbl"></div>
     </div>
-    <div id="calTbl"></div>`;
+    <!-- 예정 탭 -->
+    <div id="calPanePlan" style="display:none">
+      <div class="ph" style="margin-top:10px">
+        <div><div class="ptit" style="font-size:13px">교정 예정 목록 — 계측기 차기교정일 기준</div></div>
+        <div class="pac">
+          <select class="fsel" id="calPlanFilter" onchange="Pages._calPlanRender()">
+            <option value="">전체</option>
+            <option value="exp">만료</option>
+            <option value="soon">30일 내</option>
+            <option value="upcoming">31~90일</option>
+          </select>
+        </div>
+      </div>
+      <div id="calPlanTbl"></div>
+    </div>`;
   Pages._calRender();
+},
+/* [v2.70] 탭 전환 */
+_calTabSwitch:function(tab){
+  var hist=document.getElementById('calPaneHist');
+  var plan=document.getElementById('calPanePlan');
+  var btnH=document.getElementById('calTabHist');
+  var btnP=document.getElementById('calTabPlan');
+  if(!hist||!plan) return;
+  if(tab==='plan'){
+    hist.style.display='none'; plan.style.display='';
+    if(btnH){btnH.style.background='';btnH.style.color='';btnH.style.borderColor='';}
+    if(btnP){btnP.style.background='var(--pri)';btnP.style.color='#fff';btnP.style.borderColor='var(--pri)';}
+    Pages._calPlanRender();
+  } else {
+    hist.style.display=''; plan.style.display='none';
+    if(btnH){btnH.style.background='var(--pri)';btnH.style.color='#fff';btnH.style.borderColor='var(--pri)';}
+    if(btnP){btnP.style.background='';btnP.style.color='';btnP.style.borderColor='';}
+  }
+},
+/* [v2.70] 교정 예정 탭 렌더 */
+_calPlanRender:function(){
+  const now=new Date();
+  const filter=document.getElementById('calPlanFilter')?.value||'';
+  var rows=DB.equip.filter(function(e){
+    if(!e.next) return false;
+    const d=Math.ceil((new Date(e.next)-now)/864e5);
+    if(filter==='exp')    return d<0;
+    if(filter==='soon')   return d>=0&&d<=30;
+    if(filter==='upcoming') return d>30&&d<=90;
+    return d<=90; /* 전체: 90일 이내만 표시 */
+  }).map(function(e){
+    const d=Math.ceil((new Date(e.next)-now)/864e5);
+    return Object.assign({},e,{_dday:d});
+  }).sort(function(a,b){return a._dday-b._dday;});
+
+  Tbl.render({el:'#calPlanTbl',
+    cols:[
+      {key:'code',     label:'계측기코드', w:'96px',req:true},
+      {key:'name',     label:'계측기명',   w:'130px'},
+      {key:'model',    label:'모델번호',   w:'100px'},
+      {key:'loc',      label:'보관위치',   w:'90px'},
+      {key:'operator', label:'사용자',     w:'70px'},
+      {key:'last',     label:'최근교정일', w:'96px', render:function(v){return v||'-';}},
+      {key:'next',     label:'차기교정일', w:'96px', render:function(v,row){
+        if(!v) return '-';
+        const d=row._dday;
+        const cls=d<0?'bred':d<=30?'bamb':'bblu';
+        const tag=d<0?' (만료 '+Math.abs(d)+'일)':' (D-'+d+')';
+        return'<span class="badge '+cls+'">'+v+tag+'</span>';
+      }},
+      {key:'_dday',    label:'D-day',      w:'72px', align:'center', render:function(v){
+        const cls=v<0?'bred':v<=30?'bamb':'bblu';
+        return'<span class="badge '+cls+'">'+(v<0?'만료':'D-'+v)+'</span>';
+      }},
+      {key:'id', label:'교정 등록', w:'88px', align:'center',
+        render:function(v,row){
+          return'<button class="btn bpri bsm" onclick="event.stopPropagation();Pages._calFormByEquip('+v+')">+ 교정 등록</button>';
+        }},
+    ],
+    data:rows,
+  });
+},
+/* [v2.70] 예정 탭에서 직접 교정 등록 */
+_calFormByEquip:function(equipId){
+  const eq=(DB.equip||[]).find(function(e){return e.id===equipId;});
+  if(!eq){Toast.show('계측기 정보를 찾을 수 없습니다.','err');return;}
+  /* _calForm에 계측기 코드 pre-fill */
+  Pages._calForm(null, eq.code);
 },
 _calRender:function(){
   const kw=(document.getElementById('calKw')?.value||'').toLowerCase();
@@ -4540,9 +4650,9 @@ _calRender:function(){
   });
 },
 _calFilter:function(){Pages._calRender();},
-_calForm:function(row){
+_calForm:function(row, preCode){
   const e=!!row;
-  const equipCodes=DB.equip.map(eq=>`<option value="${H.e(eq.code)}"${(row?.code||row?.equip_code)===eq.code?' selected':''}>${H.e(eq.code)} — ${H.e(eq.name)}</option>`).join('');
+  const _pre=preCode||''; const equipCodes=DB.equip.map(eq=>`<option value="${H.e(eq.code)}"${((row?.code||row?.equip_code)===eq.code||eq.code===_pre)?' selected':''}>${H.e(eq.code)} — ${H.e(eq.name)}</option>`).join('');
   Modal.open({title:e?'교정 이력 수정':'교정 등록',size:'mlg',
     body:`<div class="fg2">
       <div class="fgroup"><label class="fl"><b style="color:#e11d48">계측기코드 *</b></label>
