@@ -4484,7 +4484,7 @@ async cal(){
         <div><div class="sd-val" style="${expCnt>0?'color:var(--err)':''}">
           ${expCnt}</div><div class="sd-lbl">교정 만료</div></div></div>
     </div>
-    <!-- [v2.70] 탭 메뉴 -->
+    <!-- [v2.71] 탭 메뉴 -->
     <div style="display:flex;gap:0;border-bottom:2px solid var(--bd);margin:14px 0 0">
       <button id="calTabHist" class="btn bout bsm" onclick="Pages._calTabSwitch('hist')"
         style="border-radius:6px 6px 0 0;border-bottom:none;font-weight:600;
@@ -4536,7 +4536,7 @@ async cal(){
     </div>`;
   Pages._calRender();
 },
-/* [v2.70] 탭 전환 */
+/* [v2.71] 탭 전환 */
 _calTabSwitch:function(tab){
   var hist=document.getElementById('calPaneHist');
   var plan=document.getElementById('calPanePlan');
@@ -4554,7 +4554,7 @@ _calTabSwitch:function(tab){
     if(btnP){btnP.style.background='';btnP.style.color='';btnP.style.borderColor='';}
   }
 },
-/* [v2.70] 교정 예정 탭 렌더 */
+/* [v2.71] 교정 예정 탭 렌더 */
 _calPlanRender:function(){
   const now=new Date();
   const filter=document.getElementById('calPlanFilter')?.value||'';
@@ -4597,7 +4597,7 @@ _calPlanRender:function(){
     data:rows,
   });
 },
-/* [v2.70] 예정 탭에서 직접 교정 등록 */
+/* [v2.71] 예정 탭에서 직접 교정 등록 */
 _calFormByEquip:function(equipId){
   const eq=(DB.equip||[]).find(function(e){return e.id===equipId;});
   if(!eq){Toast.show('계측기 정보를 찾을 수 없습니다.','err');return;}
@@ -8616,6 +8616,10 @@ _pmEqRender:function(eqs){
       render:function(v){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri)">'+H.e(v||'-')+'</span>';}},
     {key:'name',   label:'설비명',   render:function(v,row){
       return'<span style="font-weight:600;cursor:pointer" onclick="Pages._pmEqDetail('+row.id+')">'+H.e(v||'-')+'</span>';}},
+    {key:'model_name', label:'모델명',    w:'90px',
+      render:function(v,row){return H.e(v||row.model||'-');}},
+    {key:'maker',      label:'제조사',    w:'80px',
+      render:function(v){return H.e(v||'-');}},
     {key:'dept',   label:'담당부서'},
     {key:'status', label:'설비상태', align:'center',
       render:function(v){var c={정상:'bgrn',수리중:'bred',점검중:'bamb'};
@@ -8779,6 +8783,14 @@ _pmForm:function(editRow, preEqId){
       '</select></div>'+
     /* 항목별 체크박스 */
     '<div class="fgroup ff"><label class="fl">점검 항목 <span style="font-size:10px;color:var(--muted)">(○정상 △점검요 X고장)</span></label>'+
+      '<div style="margin:4px 0 6px;display:flex;gap:6px;align-items:center">'+
+        '<button type="button" class="btn bsm" style="background:#059669;color:#fff;border-color:#059669" '+
+          'onclick="(function(){'+
+            'document.querySelectorAll(\'#pmItemsArea input[type=radio]\').forEach(function(r){if(r.value===\'○\')r.checked=true;});'+
+            'Toast.show(\'전체 정상(○) 일괄 적용\',\'ok\');'+
+          '})()">✅ 전체 정상(○) 일괄 적용</button>'+
+        '<span style="font-size:11px;color:var(--tm)">개별 수정은 항목에서 직접 선택</span>'+
+      '</div>'+
       '<div id="pmItemsArea" style="border:1px solid var(--brd);border-radius:var(--r);padding:10px;max-height:260px;overflow-y:auto">'+
         buildItems(defCycle)+
       '</div></div>'+
@@ -10009,7 +10021,7 @@ _homeApplyCardOrder(){
 _pmPrint:function(){
   var eqs=window._pmEqs||[];
   if(!eqs.length){Toast.show('설비가 없습니다.','warn');return;}
-  Modal.open({title:'🖨️ 설비점검표 출력',size:'sm',body:
+  Modal.open({title:'🖨️ 설비점검표 출력',size:'md',body:
     '<div class="fg2">'+
     '<div class="fgroup"><label class="fl req">설비 선택</label>'+
       '<select class="fc" id="pmPrintEq">'+
@@ -10058,20 +10070,22 @@ _pmPrintDo:function(){
   var hist=''; for(var h=0;h<4;h++) hist+='<tr style="height:20px"><td></td><td colspan="2"></td><td colspan="3"></td><td colspan="3"></td><td></td><td></td><td></td></tr>';
 
   var html='<html><head><title>설비점검표</title><style>'+
-    '@page{size:297mm 230mm;margin:5mm 6mm}'+
-    /* 1장 강제 */
-    'html,body{width:285mm;height:218mm;margin:0;padding:0;overflow:hidden;font-family:"맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:8px;color:#000}'+
-    'table{border-collapse:collapse;width:100%;table-layout:fixed}'+
-    'th,td{border:1px solid #777;padding:1px 2px;vertical-align:middle;text-align:center;font-size:7.5px}'+
+    '@page{size:297mm 210mm;margin:5mm 6mm}'+
+    /* [v2.71] A4 표준 — 각 섹션 height 고정으로 1장 꽉 채우기 */
+    'html,body{width:285mm;height:198mm;margin:0;padding:0;overflow:hidden;font-family:"맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:9px;color:#000}'+
+    'table{border-collapse:collapse;width:100%;table-layout:fixed;height:100%}'+
+    'th,td{border:1px solid #777;padding:1px 2px;vertical-align:middle;text-align:center;font-size:8.5px}'+
     'th{background:#dce6f1;font-weight:700}'+
-    '.mlbl{background:#dce6f1;font-weight:700;white-space:nowrap;font-size:7.5px}'+
-    '.sect{background:#dce6f1;font-weight:700;width:11px;writing-mode:vertical-rl;padding:0;font-size:7.5px}'+
-    '.no{width:13px;background:#f5f5f5;font-size:7.5px}'+
-    '.itm{text-align:left;padding:1px 4px;font-size:8px;white-space:nowrap;overflow:hidden}'+
+    '.mlbl{background:#dce6f1;font-weight:700;white-space:nowrap;font-size:8.5px}'+
+    '.sect{background:#dce6f1;font-weight:700;width:12px;writing-mode:vertical-rl;padding:0;font-size:8.5px}'+
+    '.no{width:14px;background:#f5f5f5;font-size:8.5px}'+
+    '.itm{text-align:left;padding:1px 4px;font-size:9px;white-space:nowrap;overflow:hidden}'+
+    '.sec-wrap{overflow:hidden;display:block}'+
     '</style></head><body>'+
 
-    /* 헤드 — 결재란 높이 충분히 */
-    '<table style="margin-bottom:1px">'+
+    /* [v2.71] 헤더 섹션: 46mm 고정 */
+    '<div class="sec-wrap" style="height:46mm;margin-bottom:1px">'+
+    '<table style="height:100%">'+
       '<colgroup>'+
         '<col style="width:52px"><col style="width:88px">'+
         '<col>'+
@@ -10110,24 +10124,28 @@ _pmPrintDo:function(){
       '</tr>'+
     '</table>'+
 
-    /* 일일점검 — 항목칸 충분히, 날짜칸 좁게 */
-    '<table style="margin-bottom:1px">'+
+    '</table></div>'+
+    /* [v2.71] 일일점검 섹션: 78mm 고정 */
+    '<div class="sec-wrap" style="height:78mm;margin-bottom:1px">'+
+    '<table style="height:100%">'+
       '<colgroup><col style="width:11px"><col style="width:13px"><col style="width:190px">'+
       Array(dim).fill('<col style="width:14px">').join('')+
       '</colgroup>'+
       '<tr><th></th><th class="no">No.</th>'+
       '<th style="text-align:left;padding-left:4px">점 검 항 목</th>'+
       dayThs+'</tr>'+
-    dailyRows+'</table>'+
-
-    '<table style="margin-bottom:1px">'+
+    dailyRows+'</table></div>'+
+    /* [v2.71] 월간점검 섹션: 36mm 고정 */
+    '<div class="sec-wrap" style="height:36mm;margin-bottom:1px">'+
+    '<table style="height:100%">'+
       '<colgroup><col style="width:11px"><col style="width:13px"><col style="width:190px">'+
       '<col span="12" style="width:30px"></colgroup>'+
       '<tr><th></th><th class="no">NO.</th>'+
       '<th style="text-align:left;padding-left:4px">점 검 항 목</th>'+
       monThs+'</tr>'+
-    monRows+'</table>'+
-
+    monRows+'</table></div>'+
+    /* [v2.71] 이력+결재 섹션: 38mm 고정 */
+    '<div class="sec-wrap" style="height:38mm">'+
     '<table>'+
     '<tr><td class="mlbl" colspan="12" style="text-align:left;padding:2px 5px">문제발생조치이력</td></tr>'+
     '<tr><th style="width:44px">점검일</th><th colspan="2">고장내역</th><th colspan="3">원 인</th>'+
@@ -10135,6 +10153,7 @@ _pmPrintDo:function(){
     hist+'</table>'+
     '<div style="display:flex;justify-content:space-between;font-size:7px;color:#555;margin-top:2px">'+
     '<span>INDS-QP-005-03</span><span>㈜이노디스</span><span>A4(297*230)</span></div>'+
+    '</table></div>'+
     '</body></html>';
 
   var win=window.open('','_blank','width=1250,height:950');

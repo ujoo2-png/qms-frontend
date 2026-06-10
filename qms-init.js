@@ -150,7 +150,7 @@ document.addEventListener('click', function(ev){
   }
 });
 
-/* [v2.70] 계측기 파일 선택 표시 */
+/* [v2.71] 계측기 파일 선택 표시 */
 document.addEventListener('change', function(ev){
   if(ev.target.id==='ecFile'){
     var fn=document.getElementById('ecFileName');
