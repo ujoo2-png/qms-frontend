@@ -157,3 +157,11 @@ document.addEventListener('change', function(ev){
     if(fn) fn.textContent=ev.target.files[0]?.name||'';
   }
 });
+
+/* [v2.75] 부적합 파일 선택 표시 */
+document.addEventListener('change',function(ev){
+  if(ev.target.id==='ncFile'){
+    var nm=ev.target.closest('.fgroup')?.querySelector('.nc-file-name');
+    if(nm) nm.textContent=ev.target.files[0]?.name||'';
+  }
+});

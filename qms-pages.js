@@ -2648,6 +2648,19 @@ _ncForm(row=null){
         <label class="fl">비고</label>
         <input class="fc" id="ncNote" value="${H.e(isEdit?row.note||'':'')}" placeholder="비고">
       </div>
+      <div class="fgroup ff">
+        <label class="fl">첨부파일</label>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${isEdit&&row.file_url
+            ?`<a href="${H.e(row.file_url)}" target="_blank" class="btn bxs bblu bsm">📎 현재 파일 보기</a>
+               <button type="button" class="btn bxs bred bsm" onclick="window._ncFileDel=true;this.parentNode.querySelector('.nc-fn').textContent='(삭제 예정)';this.style.display='none'">🗑️ 삭제</button>`
+            :''}
+          <label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px dashed var(--bd);border-radius:6px;cursor:pointer;font-size:12px;color:var(--tm)">
+            📁 파일 선택<input type="file" id="ncFile" accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.jpeg,.png,.zip" style="display:none">
+          </label>
+          <span class="nc-fn" style="font-size:11px;color:var(--tm)"></span>
+        </div>
+      </div>
     </div>`
   });
   /* 초기 부적합률 계산 */
@@ -2664,6 +2677,14 @@ _ncCalcRate:function(){
 
 /* ── 부적합 저장 [v2.394] ── */
 async _ncSave(){
+  /* [v2.75] 파일 업로드 처리 */
+  let _ncFileUrl=null;
+  const _ncFEl=document.getElementById('ncFile');
+  if(_ncFEl?.files?.length>0){
+    const up=await SB.uploadFile('nc',_ncFEl.files[0]);
+    if(up?.url)_ncFileUrl=up.url;
+    else Toast.show('파일 업로드 실패. 저장은 계속됩니다.','warn');
+  }
   const g=id=>document.getElementById(id)?.value.trim()||'';
   const no=g('ncNo'), type=g('ncType'), date=g('ncDate'), item=g('ncItem');
   const desc=g('ncDesc'), cause=g('ncCause'), action=g('ncAction');
@@ -2697,6 +2718,8 @@ async _ncSave(){
 
   if(editId){
     /* 수정 */
+    if(_ncFileUrl)row.file_url=_ncFileUrl;
+    else if(window._ncFileDel){row.file_url='';window._ncFileDel=false;}
     const res=await SB.updateNc(editId,row);
     if(!res?.ok) return;
     const idx=DB.nc.findIndex(n=>n.id===editId);
@@ -2705,6 +2728,7 @@ async _ncSave(){
   } else {
     /* 신규 */
     row.created_at=H.today();
+    if(_ncFileUrl)row.file_url=_ncFileUrl;
     const res=await SB.addNc(row);
     if(!res?.ok) return;
     Toast.show('부적합이 등록되었습니다.','ok');
