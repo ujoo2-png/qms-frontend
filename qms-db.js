@@ -810,6 +810,28 @@ const SB={
   },
 
   /* [v2.65 fix D1] DMS 지원 함수 */
+
+  /* ════ code_types — 문서유형/분류 코드 관리 [v2.76] ════ */
+  async getCodeTypes(category){
+    if(!_sb) return [];
+    var q=_sb.from('code_types').select('*').order('sort_order').order('id');
+    if(category) q=q.eq('category',category);
+    var {data,error}=await q;
+    if(error){console.warn('getCodeTypes:',error.message);return [];}
+    return data||[];
+  },
+  async addCodeType(category,code,label){
+    if(!_sb) return {ok:false};
+    var {error}=await _sb.from('code_types').insert({category,code,label});
+    if(error){Toast.show('코드 추가 실패: '+error.message,'err');return {ok:false};}
+    return {ok:true};
+  },
+  async deleteCodeType(id){
+    if(!_sb) return {ok:false};
+    var {error}=await _sb.from('code_types').delete().eq('id',id);
+    if(error){Toast.show('코드 삭제 실패: '+error.message,'err');return {ok:false};}
+    return {ok:true};
+  },
   async getDocMaster(filter){
     if(!_sb) return window._docRows||[];
     var q=_sb.from('doc_master').select('*').order('created_at',{ascending:false});
@@ -841,7 +863,9 @@ const SB={
     status:row.status||'draft', current_ver:row.current_ver||'v1.0',
     owner_id:row.owner_id||null, dept:row.dept||null,
     review_cycle:row.review_cycle||'annual',
-    next_review_at:row.next_review_at||null
+    next_review_at:row.next_review_at||null,
+    file_url:row.file_url||null,
+    file_name:row.file_name||null
   };
   /* [v2.65 D1-2] select().single()으로 삽입된 id 반환 */
   var res=await _sb.from('doc_master').insert(allowed).select('id').single();

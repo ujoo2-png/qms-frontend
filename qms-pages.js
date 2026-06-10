@@ -3966,6 +3966,12 @@ async docs(){
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   window._docRows=[];
+  /* [v2.76] code_types DB에서 _DT/_DC 동적 로드 */
+  try{
+    const ctypes=await SB.getCodeTypes();
+    ctypes.filter(c=>c.category==='doc_type').forEach(c=>{Pages._DT[c.code]=c.label;});
+    ctypes.filter(c=>c.category==='doc_cat').forEach(c=>{Pages._DC[c.code]=c.label;});
+  }catch(e){console.warn('[docs] code_types 로드 실패:',e);}
   try{ window._docRows=await SB.getDocMaster(); }catch(e){ Toast.show('문서 조회 실패: '+e.message,'err'); }
 
   var rows=window._docRows;
@@ -4268,15 +4274,16 @@ _docSave:async function(editId){
   }
   /* [v2.65 fix D1] 파일 업로드 → doc_master.file_url 직접 저장 */
   if(newDoc){
-    /* [v2.65 D1] 폼 파일 input id = fnFile */
-  var fInp=document.getElementById('fnFile');
+    /* [v2.76] fnFile 업로드 → doc_master.file_url 즉시 저장 */
+    var fInp=document.getElementById('fnFile');
     if(fInp&&fInp.files&&fInp.files[0]){
       try{
-        var up=await SB.uploadFile('qms-files',fInp.files[0]);
+        var up=await SB.uploadFile('docs',fInp.files[0]);
         if(up&&up.url){
           await SB.updateDocMaster(newDoc.id,{file_url:up.url,file_name:fInp.files[0].name});
-        }
-      }catch(e){console.warn('[docSave] 파일 업로드 실패:',e.message);}
+          Toast.show('파일이 첨부되었습니다.','ok');
+        } else { Toast.show('파일 업로드 실패: 저장은 완료됐습니다.','warn'); }
+      }catch(e){Toast.show('파일 업로드 오류: '+e.message,'warn');}
     }
     if(App.files['doc-new']&&App.files['doc-new'].length){
       App.files['doc-'+newDoc.id]=App.files['doc-new'];
@@ -10385,17 +10392,25 @@ _docBulkDelete:async function(){
 
 /* [v2.65] 코드 관리 탭 렌더링 */
 /* [v2.65 D1-3] 코드관리 탭 렌더링 — 유형 + 분류 모두 처리 */
-_renderCodeMgmt:function(){
+_renderCodeMgmt:async function(){
+  /* [v2.76] DB에서 코드 로드 후 _DT/_DC 갱신 */
+  var dbCodes=await SB.getCodeTypes();
+  dbCodes.filter(function(c){return c.category==='doc_type';}).forEach(function(c){Pages._DT[c.code]=c.label;});
+  dbCodes.filter(function(c){return c.category==='doc_cat';}).forEach(function(c){Pages._DC[c.code]=c.label;});
+  /* dbId 맵 (삭제 시 id 전달용) */
+  var dtIds={}, dcIds={};
+  dbCodes.forEach(function(c){if(c.category==='doc_type')dtIds[c.code]=c.id;else dcIds[c.code]=c.id;});
   var rows=(window._docRows||[]).filter(function(r){return r.status!=='deleted';});
   /* 유형 tbody */
   var tbody=document.getElementById('codeTypeBody');
   if(tbody) tbody.innerHTML=Object.entries(Pages._DT).map(function(e){
     var k=e[0],v=e[1],cnt=rows.filter(function(r){return r.doc_type===k;}).length;
+    var id=dtIds[k]||null;
     return '<tr>'+
       '<td style="font-family:monospace;font-size:11px;color:var(--pri)">'+H.e(k)+'</td>'+
       '<td>'+H.e(v)+'</td><td>'+cnt+'건</td>'+
-      '<td><button class="btn bxs berr bsm" data-k="'+H.e(k)+'" data-v="'+H.e(v)+'" data-c="'+cnt+'" data-kind="doc_type"'+
-        ' onclick="var b=this;Pages._codeDelete(b.dataset.kind,b.dataset.k,b.dataset.v,+b.dataset.c)">삭제</button></td>'+
+      '<td><button class="btn bxs berr bsm" data-k="'+H.e(k)+'" data-v="'+H.e(v)+'" data-c="'+cnt+'" data-kind="doc_type" data-id="'+(id||'')+'"'+
+        ' onclick="var b=this;Pages._codeDelete(b.dataset.kind,b.dataset.k,b.dataset.v,+b.dataset.c,+b.dataset.id||null)">삭제</button></td>'+
     '</tr>';
   }).join('');
   /* 분류 tbody */
@@ -10435,13 +10450,17 @@ _codeAddSave:function(){
   var isForCat=document.querySelector('#codeCatBody')&&!document.getElementById('codeTypeBody')?.parentElement?.contains(document.querySelector('#codeCatBody'));
   /* 실제로 모달 title로 판단 */
   var title=document.querySelector('.modal .mtit')?.textContent||'';
-  if(title.includes('분류')){ Pages._DC[k]=v; Toast.show('분류 추가됨: '+v,'ok'); }
-  else { Pages._DT[k]=v; Toast.show('유형 추가됨: '+v,'ok'); }
-  Modal.close();
-  Pages._renderCodeMgmt();
+  /* [v2.76] DB 저장 */
+  var cat=title.includes('분류')?'doc_cat':'doc_type';
+  SB.addCodeType(cat,k,v).then(function(r){
+    if(!r.ok) return;
+    Toast.show((cat==='doc_cat'?'분류':'유형')+' 추가됨: '+v,'ok');
+    Modal.close();
+    Pages._renderCodeMgmt();
+  });
 },
 /* [v2.65] 유형 삭제 — 연결 문서 수 확인 후 진행 */
-_codeDelete:function(kind,key,label,cnt){
+_codeDelete:function(kind,key,label,cnt,dbId){
   var isDT=kind==='doc_type', isDC=kind==='doc_cat';
   if(!isDT&&!isDC) return;
   var targetField=isDT?'doc_type':'category';
@@ -10470,7 +10489,10 @@ _codeDelete:function(kind,key,label,cnt){
     Modal.confirm({title:'문서 유형 삭제',
       body:'<b>'+H.e(label)+'</b> 유형을 삭제합니다. (사용 중인 문서 없음)',
       danger:true,
-      onOk:function(){delete targetObj[key];Pages._renderCodeMgmt();Toast.show('삭제됨','ok');}
+      onOk:function(){/* [v2.76] DB 삭제 */
+      if(dbId){SB.deleteCodeType(dbId).then(function(r){if(r.ok){delete targetObj[key];Pages._renderCodeMgmt();Toast.show('삭제됨','ok');}});}
+      else{delete targetObj[key];Pages._renderCodeMgmt();Toast.show('삭제됨','ok');}
+    }
     });
   }
 },
