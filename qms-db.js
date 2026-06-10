@@ -811,7 +811,7 @@ const SB={
 
   /* [v2.65 fix D1] DMS 지원 함수 */
 
-  /* ════ code_types — 문서유형/분류 코드 관리 [v2.76] ════ */
+  /* ════ code_types — 문서유형/분류 코드 관리 [v2.77] ════ */
   async getCodeTypes(category){
     if(!_sb) return [];
     var q=_sb.from('code_types').select('*').order('sort_order').order('id');

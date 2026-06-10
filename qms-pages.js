@@ -30,7 +30,7 @@ async home(){
     {c:'mc-c2',icon:'🔍',name:'품질관리',badge:ncO,
      subs:[{icon:'📊',label:'품질현황 대시보드',page:'quality_dash'},{icon:'🔍',label:'수입검사',page:'insp_in'},{icon:'⚙️',label:'공정검사',page:'insp_pr'},{icon:'🛒',label:'구매검사',page:'insp_pu'},{icon:'🏭',label:'외주검사',page:'insp_ou'},{icon:'✅',label:'최종검사',page:'insp_fi'},{icon:'⚠️',label:'부적합 관리',page:'nc'},{icon:'📝',label:'8D Report',page:'nc_8d'},{icon:'♻️',label:'반품/폐기',page:'nc_dispose'},{icon:'📉',label:'불량 트렌드',page:'nc_trend'}]},
     {c:'mc-c3',icon:'📋',name:'검사 고도화',badge:0,
-     subs:[{icon:'📋',label:'검사 기준서',page:'insp_std'},{icon:'📜',label:'검사 성적서',page:'insp_cert'},{icon:'🔗',label:'LOT 추적성',page:'lot_trace'},{icon:'🚫',label:'Hold 관리',page:'hold_mgmt'},{icon:'🔄',label:'재검사 관리',page:'reinsp'}]},
+     subs:[{icon:'📋',label:'검사 기준서',page:'insp_std'},{icon:'📜',label:'검사 성적서',page:'insp_cert'},{icon:'🔗',label:'LOT 추적성',page:'lot_trace'},{icon:'🚫',label:'Hold 관리',page:'insp_hold'},{icon:'🔄',label:'재검사 관리',page:'insp_reinsp'}]},
     {c:'mc-c4',icon:'⭐',name:'공급업체 품질',badge:0,
      subs:[{icon:'⭐',label:'업체 평가',page:'sqm_eval'},{icon:'🔎',label:'업체 심사',page:'sqm_audit'},{icon:'📅',label:'심사 계획 관리',page:'sqm_plan'},{icon:'🚚',label:'납품 이력',page:'sqm_delivery'},{icon:'📊',label:'SQM 대시보드',page:'sqm_dash'}]},
     {c:'mc-c5',icon:'📈',name:'SPC 통계관리',badge:0,
@@ -3966,7 +3966,7 @@ async docs(){
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   window._docRows=[];
-  /* [v2.76] code_types DB에서 _DT/_DC 동적 로드 */
+  /* [v2.77] code_types DB에서 _DT/_DC 동적 로드 */
   try{
     const ctypes=await SB.getCodeTypes();
     ctypes.filter(c=>c.category==='doc_type').forEach(c=>{Pages._DT[c.code]=c.label;});
@@ -4274,7 +4274,7 @@ _docSave:async function(editId){
   }
   /* [v2.65 fix D1] 파일 업로드 → doc_master.file_url 직접 저장 */
   if(newDoc){
-    /* [v2.76] fnFile 업로드 → doc_master.file_url 즉시 저장 */
+    /* [v2.77] fnFile 업로드 → doc_master.file_url 즉시 저장 */
     var fInp=document.getElementById('fnFile');
     if(fInp&&fInp.files&&fInp.files[0]){
       try{
@@ -7052,12 +7052,66 @@ async insp_cert(){
         <option value="">전체 판정</option>
         <option>합격</option><option>불합격</option><option>조건부합격</option>
       </select>
+      <button class="btn bout bsm" onclick="Pages._certPrint()">🖨️ 인쇄</button>
       <button class="btn bout bsm" onclick="SearchPop.open('insp_cert')">🔎 Search <span class="kbd">F3</span></button>
     </div>
     <div id="certTbl"></div>`;
   Pages._certRefreshTable();
 },
 
+/* [v2.77] 검사 성적서 인쇄
+   선택 행 없으면 전체 조회 결과 출력, 있으면 선택 건만 출력 */
+_certPrint(){
+  /* 선택 체크박스 확인 */
+  var checked=[...document.querySelectorAll('#certTbl .rck:checked')].map(function(c){return parseInt(c.value);});
+  var rows=checked.length>0
+    ? (DB.inspections||[]).filter(function(r){return checked.includes(r.id);})
+    : Pages._certFiltered ? Pages._certFiltered() : (DB.inspections||[]);
+  if(!rows.length){Toast.show('출력할 성적서가 없습니다.','warn');return;}
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>검사 성적서</title><style>'+
+    '@page{size:A4 landscape;margin:10mm}'+
+    'body{font-family:"맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:9px;color:#000}'+
+    'h2{text-align:center;font-size:14px;margin:0 0 8px}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:12px}'+
+    'th{background:#dce6f1;padding:3px 5px;border:1px solid #888;font-size:8px;text-align:center}'+
+    'td{padding:3px 5px;border:1px solid #aaa;font-size:8px;vertical-align:top}'+
+    '.ok{color:#059669;font-weight:700}.ng{color:#dc2626;font-weight:700}'+
+    '@media print{.no-print{display:none}}'+
+  '</style></head><body>'+
+    '<h2>검사 성적서</h2>'+
+    '<table><thead><tr>'+
+      '<th>검사번호</th><th>유형</th><th>품목코드</th><th>품목명</th>'+
+      '<th>거래처</th><th>검사일</th><th>검사자</th>'+
+      '<th>검사수량</th><th>합격수량</th><th>불량수량</th>'+
+      '<th>판정</th><th>비고</th>'+
+    '</tr></thead><tbody>'+
+    rows.map(function(r){
+      var cls=r.result==='합격'?'ok':r.result==='불합격'?'ng':'';
+      return'<tr>'+
+        '<td>'+H.e(r.insp_no||r.no||'-')+'</td>'+
+        '<td>'+H.e(r.type||'-')+'</td>'+
+        '<td>'+H.e(r.item_code||'-')+'</td>'+
+        '<td>'+H.e(r.item||r.item_name||'-')+'</td>'+
+        '<td>'+H.e(r.vendor||r.customer||'-')+'</td>'+
+        '<td>'+H.e(r.insp_date||r.date||'-')+'</td>'+
+        '<td>'+H.e(r.inspector||'-')+'</td>'+
+        '<td style="text-align:right">'+H.e(String(r.insp_qty||r.qty||'-'))+'</td>'+
+        '<td style="text-align:right">'+H.e(String(r.pass_qty||'-'))+'</td>'+
+        '<td style="text-align:right">'+H.e(String(r.fail_qty||r.bad_qty||'-'))+'</td>'+
+        '<td class="'+cls+'" style="text-align:center">'+H.e(r.result||'-')+'</td>'+
+        '<td>'+H.e(r.note||'-')+'</td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody></table>'+
+    '<div style="font-size:10px;color:#64748b;text-align:right">출력일시: '+new Date().toLocaleString('ko-KR')+'</div>'+
+  '</body></html>';
+  var w=window.open('','_blank','width=1100,height=700');
+  if(!w){Toast.show('팝업이 차단됐습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(function(){w.print();},400);
+},
 _certRefreshTable(){
   const q=(document.getElementById('certSearch')?.value||'').toLowerCase();
   const tp=document.getElementById('certTypeF')?.value||'';
@@ -10393,7 +10447,7 @@ _docBulkDelete:async function(){
 /* [v2.65] 코드 관리 탭 렌더링 */
 /* [v2.65 D1-3] 코드관리 탭 렌더링 — 유형 + 분류 모두 처리 */
 _renderCodeMgmt:async function(){
-  /* [v2.76] DB에서 코드 로드 후 _DT/_DC 갱신 */
+  /* [v2.77] DB에서 코드 로드 후 _DT/_DC 갱신 */
   var dbCodes=await SB.getCodeTypes();
   dbCodes.filter(function(c){return c.category==='doc_type';}).forEach(function(c){Pages._DT[c.code]=c.label;});
   dbCodes.filter(function(c){return c.category==='doc_cat';}).forEach(function(c){Pages._DC[c.code]=c.label;});
@@ -10450,7 +10504,7 @@ _codeAddSave:function(){
   var isForCat=document.querySelector('#codeCatBody')&&!document.getElementById('codeTypeBody')?.parentElement?.contains(document.querySelector('#codeCatBody'));
   /* 실제로 모달 title로 판단 */
   var title=document.querySelector('.modal .mtit')?.textContent||'';
-  /* [v2.76] DB 저장 */
+  /* [v2.77] DB 저장 */
   var cat=title.includes('분류')?'doc_cat':'doc_type';
   SB.addCodeType(cat,k,v).then(function(r){
     if(!r.ok) return;
@@ -10489,7 +10543,7 @@ _codeDelete:function(kind,key,label,cnt,dbId){
     Modal.confirm({title:'문서 유형 삭제',
       body:'<b>'+H.e(label)+'</b> 유형을 삭제합니다. (사용 중인 문서 없음)',
       danger:true,
-      onOk:function(){/* [v2.76] DB 삭제 */
+      onOk:function(){/* [v2.77] DB 삭제 */
       if(dbId){SB.deleteCodeType(dbId).then(function(r){if(r.ok){delete targetObj[key];Pages._renderCodeMgmt();Toast.show('삭제됨','ok');}});}
       else{delete targetObj[key];Pages._renderCodeMgmt();Toast.show('삭제됨','ok');}
     }
@@ -11006,7 +11060,7 @@ _inspStdRender(){
       <div><div class="ptit">📋 검사 기준서</div>
         <div class="psub">품목별 검사 항목 · 규격 · AQL 관리</div></div>
       <div class="pac">
-        <button class="btn bpri btn-f2" onclick="Pages._inspStdForm()">+ 기준서 등록 <span class="kbd">F2</span></button>
+        <button class="btn bpri btn-f2" onclick="Pages._inspStdForm(null)">+ 기준서 등록 <span class="kbd">F2</span></button>
       </div>
     </div>
     <div class="tbar">
@@ -11098,11 +11152,13 @@ _inspStdForm(row=null){
     body:`<div class="fg2">
       <!-- 품목 코드/명 -->
       <div class="fgroup">
-        <label class="fl req">품목코드</label>
-        <select class="fc" id="stdItemCode"
-          onchange="const o=this.options[this.selectedIndex];document.getElementById('stdItemName').value=o.dataset.name||''">
-          <option value="">-- 선택 --</option>${itemOpts}
-        </select>
+        <label class="fl req"><b style="color:#e11d48">품목코드 *</b></label>
+        <input class="fc" id="stdItemCode" list="stdItemList"
+          value="${H.e(row?.item_code||'')}" placeholder="코드 입력 또는 목록에서 선택"
+          oninput="(function(){var v=document.getElementById('stdItemCode').value.split(' — ')[0].trim();var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||'')===v;});if(it){document.getElementById('stdItemName').value=it.item_name||it.name||'';}})()"
+          onblur="(function(){var v=document.getElementById('stdItemCode').value.split(' — ')[0].trim();if(!v)return;var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||'')===v;});if(!it)Toast.show('미등록 품목코드입니다.','warn');})()"
+        >
+        <datalist id="stdItemList">${(DB.items||[]).map(it=>`<option value="${H.e(it.item_code||'')}">${H.e(it.item_name||'')}</option>`).join('')}</datalist>
       </div>
       <div class="fgroup">
         <label class="fl req">품목명</label>
@@ -11112,7 +11168,7 @@ _inspStdForm(row=null){
       <div class="fgroup">
         <label class="fl req">검사 유형</label>
         <select class="fc" id="stdType">
-          ${['수입','공정','구매','외주','최종','고객'].map(t=>`<option value="${t}" ${row?.insp_type===t?'selected':''}>${t}검사</option>`).join('')}
+          ${['전체','수입','공정','구매','외주','최종','고객'].map(t=>`<option value="${t}" ${row?.insp_type===t?'selected':''}>${t}검사</option>`).join('')}
         </select>
       </div>
       <!-- 검사 항목 -->
@@ -11505,22 +11561,6 @@ _inspStdDetail(row){
     <div class="xl-result"><table><thead><tr><th>No</th><th>검사항목</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>검사빈도</th></tr></thead>
     <tbody>${row.criteria.map(c=>`<tr><td style="text-align:center">${c.no}</td><td><strong>${H.e(c.item)}</strong></td><td>${H.e(c.method)}</td><td>${H.e(c.spec)}</td><td style="text-align:center">${H.e(c.unit)}</td><td style="text-align:center;color:var(--err)">${H.e(c.usl)}</td><td style="text-align:center;color:var(--acc)">${H.e(c.lsl)}</td><td style="text-align:center">${H.e(c.freq)}</td></tr>`).join('')}</tbody></table></div>`,
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Toast.show('수정 기능 — 추가 개발 예정','info')">수정</button>`});
-},
-_inspStdForm(){
-  Modal.open({title:'📋 검사 기준서 등록',size:'mxl',
-    body:`<div class="fg2">
-      <div class="fgroup"><label class="fl req">품목</label><select class="fc"><option value="">선택</option>${DB.items.map(i=>`<option>${H.e(i.item_code)}-${H.e(i.item_name)}</option>`).join('')}</select></div>
-      <div class="fgroup"><label class="fl req">검사유형</label><select class="fc"><option>수입</option><option>공정</option><option>출하</option></select></div>
-      <div class="fgroup"><label class="fl">AQL</label><select class="fc">${['0.065','0.1','0.25','0.4','0.65','1.0','1.5','2.5'].map(v=>`<option>${v}</option>`).join('')}</select></div>
-      <div class="fgroup"><label class="fl">검사수준</label><select class="fc"><option>I</option><option selected>II</option><option>III</option></select></div>
-      <div class="fgroup"><label class="fl">개정번호</label><input class="fc" value="1.0"></div>
-      <div class="fgroup"><label class="fl">개정일</label><input class="fc" type="date" value="${H.today()}"></div>
-    </div>
-    <div style="margin-top:14px"><div style="font-size:13px;font-weight:700;margin-bottom:9px">검사 항목</div>
-    <table class="ctbl"><thead><tr><th>No</th><th>항목</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>빈도</th><th></th></tr></thead>
-    <tbody id="stdBody"><tr><td style="text-align:center;color:var(--tm)">1</td><td><input class="fc" placeholder="외관"></td><td><input class="fc" placeholder="육안"></td><td><input class="fc"></td><td><input class="fc" style="width:50px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" placeholder="전수"></td><td><button onclick="this.closest('tr').remove()" style="color:var(--err)">✕</button></td></tr></tbody></table>
-    <button class="btn bsm bout" style="margin-top:7px" onclick="Pages._addStdRow()">+ 항목 추가</button></div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('기준서가 등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`});
 },
 _addStdRow(){
   const b=document.getElementById('stdBody');if(!b)return;
