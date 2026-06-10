@@ -13697,6 +13697,12 @@ const ExcelMgr={
       }
       if(!row.created_at) row.created_at=today;
       if(!row.updated_at) row.updated_at=today;
+      /* [v2.73] 날짜 컬럼 빈값 null 변환 */
+      Object.keys(row).forEach(function(k){
+        if(row[k]===''&&(k.indexOf('date')>=0||k.indexOf('_at')>=0)){
+          row[k]=null;
+        }
+      });
       return row;
     });
 
