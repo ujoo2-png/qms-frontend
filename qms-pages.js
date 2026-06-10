@@ -10021,7 +10021,7 @@ _homeApplyCardOrder(){
 _pmPrint:function(){
   var eqs=window._pmEqs||[];
   if(!eqs.length){Toast.show('설비가 없습니다.','warn');return;}
-  Modal.open({title:'🖨️ 설비점검표 출력',size:'md',body:
+  Modal.open({title:'🖨️ 설비점검표 출력',size:'sm',style:'min-width:480px',body:
     '<div class="fg2">'+
     '<div class="fgroup"><label class="fl req">설비 선택</label>'+
       '<select class="fc" id="pmPrintEq">'+
@@ -10072,7 +10072,7 @@ _pmPrintDo:function(){
   var html='<html><head><title>설비점검표</title><style>'+
     '@page{size:297mm 210mm;margin:5mm 6mm}'+
     /* [v2.71] A4 표준 — 각 섹션 height 고정으로 1장 꽉 채우기 */
-    'html,body{width:285mm;height:198mm;margin:0;padding:0;overflow:hidden;font-family:"맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:9px;color:#000}'+
+    'html,body{width:285mm;height:198mm;margin:0;padding:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;font-family:"맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:9px;color:#000}'+
     'table{border-collapse:collapse;width:100%;table-layout:fixed;height:100%}'+
     'th,td{border:1px solid #777;padding:1px 2px;vertical-align:middle;text-align:center;font-size:8.5px}'+
     'th{background:#dce6f1;font-weight:700}'+
@@ -10126,7 +10126,7 @@ _pmPrintDo:function(){
 
     '</table></div>'+
     /* [v2.71] 일일점검 섹션: 78mm 고정 */
-    '<div class="sec-wrap" style="height:78mm;margin-bottom:1px">'+
+    '<div class="sec-wrap" style="height:69mm;margin-bottom:1px">'+
     '<table style="height:100%">'+
       '<colgroup><col style="width:11px"><col style="width:13px"><col style="width:190px">'+
       Array(dim).fill('<col style="width:14px">').join('')+
@@ -10136,7 +10136,7 @@ _pmPrintDo:function(){
       dayThs+'</tr>'+
     dailyRows+'</table></div>'+
     /* [v2.71] 월간점검 섹션: 36mm 고정 */
-    '<div class="sec-wrap" style="height:36mm;margin-bottom:1px">'+
+    '<div class="sec-wrap" style="height:32mm;margin-bottom:1px">'+
     '<table style="height:100%">'+
       '<colgroup><col style="width:11px"><col style="width:13px"><col style="width:190px">'+
       '<col span="12" style="width:30px"></colgroup>'+
@@ -10145,7 +10145,7 @@ _pmPrintDo:function(){
       monThs+'</tr>'+
     monRows+'</table></div>'+
     /* [v2.71] 이력+결재 섹션: 38mm 고정 */
-    '<div class="sec-wrap" style="height:38mm">'+
+    '<div class="sec-wrap" style="height:24mm">'+
     '<table>'+
     '<tr><td class="mlbl" colspan="12" style="text-align:left;padding:2px 5px">문제발생조치이력</td></tr>'+
     '<tr><th style="width:44px">점검일</th><th colspan="2">고장내역</th><th colspan="3">원 인</th>'+
