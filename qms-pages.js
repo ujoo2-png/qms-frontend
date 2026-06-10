@@ -11022,6 +11022,11 @@ async insp_std(){
     const fresh=await SB.getInspStd();
     if(Array.isArray(fresh)) DB.insp_std=fresh;
     else if(!DB.insp_std) DB.insp_std=[];
+    /* [v2.77] 품목 datalist용 items 로드 */
+    if(!DB.items||!DB.items.length){
+      const fitems=await SB.getItems();
+      if(Array.isArray(fitems)) DB.items=fitems;
+    }
   }catch(e){
     console.warn('[insp_std] SB 조회 실패',e);
     if(!DB.insp_std) DB.insp_std=[];
