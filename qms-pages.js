@@ -13697,11 +13697,20 @@ const ExcelMgr={
       }
       if(!row.created_at) row.created_at=today;
       if(!row.updated_at) row.updated_at=today;
-      /* [v2.73] 날짜 컬럼 빈값 null 변환 */
+      /* [v2.74] 날짜 컬럼: 빈값→null, Excel 시리얼→YYYY-MM-DD */
       Object.keys(row).forEach(function(k){
-        if(row[k]===''&&(k.indexOf('date')>=0||k.indexOf('_at')>=0)){
-          row[k]=null;
+        if(k.indexOf('date')<0&&k.indexOf('_at')<0) return;
+        var v=row[k];
+        if(v===''||v===null||v===undefined){row[k]=null;return;}
+        /* Excel 시리얼 숫자 (예: 46171→2026-05-29) */
+        var n=typeof v==='number'?v:(typeof v==='string'&&/^\d{5}$/.test(v.trim())?parseInt(v,10):null);
+        if(n&&n>40000&&n<60000){
+          var d=new Date(Math.round((n-25569)*864e5));
+          row[k]=d.toISOString().slice(0,10);
+          return;
         }
+        if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v.trim())){row[k]=v.trim();return;}
+        if(!v)row[k]=null;
       });
       return row;
     });
