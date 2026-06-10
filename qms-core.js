@@ -314,7 +314,7 @@ const Auth={
       try{
         if(_sb){
           const [eq,ca,it,nc,us,me,docs,cars,vd] = await Promise.all([
-            SB.getEquip(), SB.getCals(), SB.getItems(), SB.getNCs(),
+            SB.getEquip(), SB.getCals(), SB.getItems(), SB.getNc(),
             SB.getUsers(), SB.getMentions(), SB.getDocs(), SB.getCars(),
             SB.getVendors()
           ]);
