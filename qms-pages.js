@@ -7879,9 +7879,9 @@ async _renderSbDash(){
     'inspections','nonconformances','insp_std',            /* 품질관리 */
     'holds','reinspections',                               /* 검사고도화 */
     'vendor_evals','vendor_audits',                        /* 공급업체 */
-    'equipment','calibrations','msa_studies',              /* 계측기 */
+    'equipment','calibrations',                           /* 계측기 */
     'doc_master','doc_versions','doc_approvals','doc_dist_log', /* 문서관리 */
-    'cars',                                                /* 개선활동 */
+    /* cars 테이블 없음 — corrective_actions 사용 */
     'ems_equipment','eq_pm_log','eq_as','eq_cost','eq_manual', /* 제조설비 */
     'qna','qna_replies','notices','mentions',              /* 시스템 */
     'code_types',                                          /* 코드관리 */
@@ -7891,7 +7891,7 @@ async _renderSbDash(){
     inspections:'검사이력',nonconformances:'부적합',insp_std:'검사기준서',
     holds:'Hold관리',reinspections:'재검사',
     vendor_evals:'업체평가',vendor_audits:'업체심사',
-    equipment:'계측기',calibrations:'교정이력',msa_studies:'MSA',
+    equipment:'계측기',calibrations:'교정이력',
     doc_master:'문서',doc_versions:'문서버전',doc_approvals:'결재',doc_dist_log:'배포이력',
     cars:'시정조치',
     ems_equipment:'제조설비',eq_pm_log:'PM점검',eq_as:'AS이력',eq_cost:'유지비용',eq_manual:'설비매뉴얼',
@@ -7901,8 +7901,8 @@ async _renderSbDash(){
   const COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899','#0ea5e9','#d946ef','#14b8a6','#a855f7','#eab308','#64748b','#78716c','#dc2626','#2563eb','#16a34a','#9333ea','#c026d3','#0891b2','#b45309','#4f46e5','#db2777','#047857','#6366f1','#92400e'];
 
   let counts={};
+  const errors={};
   if(_sb){
-    const errors={};
     await Promise.all(tables.map(async t=>{
       try{
         const{count,error}=await _sb.from(t).select('*',{count:'exact',head:true});
