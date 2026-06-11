@@ -10868,6 +10868,27 @@ _inspStdRefreshTable(){
 
 /* ── 검사 기준서 등록/수정 폼 [v2.394] ── */
 /* [v2.78] 검사 기준서 항목 행 추가 */
+_inspStdForm(){
+  Modal.open({title:'📋 검사 기준서 등록',size:'mxl',
+    body:`<div class="fg2">
+      <div class="fgroup"><label class="fl req">품목코드</label>
+        <input class="fc" id="stdItemCode" list="stdItemList" placeholder="코드 입력 또는 선택"
+          oninput="(function(){var v=document.getElementById('stdItemCode').value;var it=(DB.items||[]).find(function(x){return x.item_code===v;});if(it)document.getElementById('stdItemName').value=it.item_name||'';})()">
+        <datalist id="stdItemList">${(DB.items||[]).map(function(it){return`<option value="${H.e(it.item_code)}">${H.e(it.item_name)}</option>`;}).join('')}</datalist>
+      </div>
+      <div class="fgroup"><label class="fl">품목명</label><input class="fc" id="stdItemName" placeholder="자동 입력"></div>
+      <div class="fgroup"><label class="fl req">검사유형</label><select class="fc"><option>수입</option><option>공정</option><option>출하</option></select></div>
+      <div class="fgroup"><label class="fl">AQL</label><select class="fc">${['0.065','0.1','0.25','0.4','0.65','1.0','1.5','2.5'].map(v=>`<option>${v}</option>`).join('')}</select></div>
+      <div class="fgroup"><label class="fl">검사수준</label><select class="fc"><option>I</option><option selected>II</option><option>III</option></select></div>
+      <div class="fgroup"><label class="fl">개정번호</label><input class="fc" value="1.0"></div>
+      <div class="fgroup"><label class="fl">개정일</label><input class="fc" type="date" value="${H.today()}"></div>
+    </div>
+    <div style="margin-top:14px"><div style="font-size:13px;font-weight:700;margin-bottom:9px">검사 항목</div>
+    <table class="ctbl"><thead><tr><th>No</th><th>항목</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>빈도</th><th></th></tr></thead>
+    <tbody id="stdBody"><tr><td style="text-align:center;color:var(--tm)">1</td><td><input class="fc" placeholder="외관"></td><td><input class="fc" placeholder="육안"></td><td><input class="fc"></td><td><input class="fc" style="width:50px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" placeholder="전수"></td><td><button onclick="this.closest('tr').remove()" style="color:var(--err)">✕</button></td></tr></tbody></table>
+    <button class="btn bsm bout" style="margin-top:7px" onclick="Pages._addStdRow()">+ 항목 추가</button></div>`,
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('기준서가 등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`});
+},
 _addStdRow(){
   var tbody=document.getElementById('stdBody');
   if(!tbody) return;
@@ -10884,127 +10905,7 @@ _addStdRow(){
     '<td><button type="button" onclick="this.closest(\'tr\').remove()" style="color:var(--err);font-size:16px;cursor:pointer">✕</button></td>';
   tbody.appendChild(tr);
 },
-_inspStdForm(row=null){
-  const isEdit=!!row;
-  /* 품목 select — items DB 연동 */
-  const itemOpts=(DB.items||[]).map(it=>
-    `<option value="${H.e(it.item_code||'')}" data-name="${H.e(it.item_name||'')}">`
-    +`${H.e(it.item_code||'')} — ${H.e(it.item_name||'')}</option>`
-  ).join('');
 
-  Modal.open({
-    title:isEdit?`✏️ 기준서 수정 — ${row.item_code}`:'+ 검사 기준서 등록',
-    size:'mlg',
-    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
-        +'<button class="btn bgry bsm" onclick="Modal.close();Pages._mentionForm()" title="변경 이력 멘션 전송">💬 멘션</button>'
-        +'<button class="btn bpri btn-f8" onclick="Pages._inspStdSave()">저장 <span class="kbd">F8</span></button>',
-    body:`<div class="fg2">
-      <!-- 품목 코드/명 -->
-      <div class="fgroup">
-        <label class="fl req"><b style="color:#e11d48">품목코드 *</b></label>
-        <input class="fc" id="stdItemCode" list="stdItemList"
-          value="${H.e(row?.item_code||'')}" placeholder="코드 입력 또는 목록에서 선택"
-          oninput="(function(){var v=document.getElementById('stdItemCode').value.split(' — ')[0].trim();var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||'')===v;});if(it){document.getElementById('stdItemName').value=it.item_name||it.name||'';}})()"
-          onblur="(function(){var v=document.getElementById('stdItemCode').value.split(' — ')[0].trim();if(!v)return;var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||'')===v;});if(!it)Toast.show('미등록 품목코드입니다.','warn');})()"
-        >
-        <datalist id="stdItemList">${(DB.items||[]).map(it=>`<option value="${H.e(it.item_code||'')}">${H.e(it.item_name||'')}</option>`).join('')}</datalist>
-      </div>
-      <div class="fgroup">
-        <label class="fl req">품목명</label>
-        <input class="fc" id="stdItemName" value="${H.e(row?.item_name||'')}" placeholder="품목명">
-      </div>
-      <!-- 검사 유형 -->
-      <div class="fgroup">
-        <label class="fl req">검사 유형</label>
-        <select class="fc" id="stdType">
-          ${['전체','수입','공정','구매','외주','최종','고객'].map(t=>`<option value="${t}" ${row?.insp_type===t?'selected':''}>${t}검사</option>`).join('')}
-        </select>
-      </div>
-      <!-- [v2.78] 검사 항목 테이블 -->
-      <div style="margin-top:6px;grid-column:1/-1">
-        <div style="font-size:12px;font-weight:700;margin-bottom:6px">📋 검사 항목</div>
-        <table class="ctbl" style="width:100%">
-          <thead><tr><th style="width:30px">No</th><th>검사항목</th><th>측정방법</th><th>규격/기준</th><th style="width:55px">단위</th><th style="width:65px">USL</th><th style="width:65px">LSL</th><th style="width:65px">검사빈도</th><th style="width:30px"></th></tr></thead>
-          <tbody id="stdBody">${Pages._buildStdRows(row)}</tbody>
-        </table>
-        <button type="button" class="btn bsm bout" style="margin-top:6px" onclick="Pages._addStdRow()">+ 항목 추가</button>
-      </div>
-      <!-- 규격 -->
-      <div class="fgroup">
-        <label class="fl">규격 상한</label>
-        <input class="fc" type="number" id="stdUpper" value="${row?.spec_upper??''}" placeholder="ex: 10.05">
-      </div>
-      <div class="fgroup">
-        <label class="fl">규격 하한</label>
-        <input class="fc" type="number" id="stdLower" value="${row?.spec_lower??''}" placeholder="ex: 9.95">
-      </div>
-      <div class="fgroup">
-        <label class="fl">단위</label>
-        <input class="fc" id="stdUnit" value="${H.e(row?.spec_unit||'')}" placeholder="mm, kgf, %, ppm">
-      </div>
-      <!-- 샘플링 -->
-      <div class="fgroup">
-        <label class="fl req">샘플링 방법</label>
-        <select class="fc" id="stdSampling">
-          ${['전수','샘플링(AQL)','샘플링(고정)'].map(s=>`<option value="${s}" ${row?.sampling_method===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fgroup">
-        <label class="fl">AQL 수준</label>
-        <select class="fc" id="stdAql">
-          <option value="">--</option>
-          ${['0.065','0.1','0.15','0.25','0.4','0.65','1.0','1.5','2.5','4.0','6.5'].map(v=>`<option value="${v}" ${row?.aql==v?'selected':''}>${v}%</option>`).join('')}
-        </select>
-      </div>
-      <div class="fgroup">
-        <label class="fl">시료 수</label>
-        <input class="fc" type="number" id="stdSample" value="${row?.sample_size??''}" placeholder="ex: 5">
-      </div>
-      <!-- 합부기준 -->
-      <div class="fgroup" style="grid-column:1/-1">
-        <label class="fl">합부 기준</label>
-        <textarea class="fc" id="stdCriteria" rows="2" placeholder="예: 치수 ±0.05mm 이내, 외관 크랙·스크래치 없음">${H.e(row?.criteria||'')}</textarea>
-      </div>
-      <!-- 개정 -->
-      <div class="fgroup">
-        <label class="fl">개정 차수</label>
-        <input class="fc" id="stdRev" value="${H.e(row?.rev||'A')}" placeholder="A, B, 1, 2...">
-      </div>
-      <div class="fgroup">
-        <label class="fl">개정일</label>
-        <input class="fc" type="date" id="stdRevDate" value="${H.e(row?.rev_date||H.today())}">
-      </div>
-      <!-- 비고 -->
-      <div class="fgroup" style="grid-column:1/-1">
-        <label class="fl">비고</label>
-        <textarea class="fc" id="stdNote" rows="2" placeholder="특이사항, 참조 문서 등">${H.e(row?.note||'')}</textarea>
-      </div>
-      <!-- 파일 첨부 [v2.394] -->
-      <div class="fgroup" style="grid-column:1/-1">
-        <label class="fl">첨부파일 <span style="font-size:10px;color:var(--tm)">(PDF·DOC·XLS·이미지)</span></label>
-        <input class="fc" type="file" id="stdFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.hwp"
-          style="padding:5px;font-size:12px">
-        ${row?.file_url
-          ?`<div style="margin-top:6px;font-size:12px;display:flex;align-items:center;gap:8px">
-              <span style="color:var(--tm)">현재 파일:</span>
-              <a href="${H.e(row.file_url)}" target="_blank" style="color:#2563eb;text-decoration:none">📎 파일 보기</a>
-              <button type="button" class="btn bxs berr" style="font-size:10px;padding:2px 8px"
-                onclick="document.getElementById('stdFileRemove').value='1';this.parentElement.style.opacity='0.4'">✕ 삭제</button>
-              <input type="hidden" id="stdFileRemove" value="0">
-            </div>`
-          :''}
-      </div>
-    </div>`,
-  });
-  /* 품목코드 기존값 복원 */
-  if(row?.item_code){
-    setTimeout(()=>{
-      const sel=document.getElementById('stdItemCode');
-      if(sel) sel.value=row.item_code;
-    },80);
-  }
-  window._stdEditId=row?.id||null;
-},
 
 /* ── 검사 기준서 저장 [v2.394] ── */
 async _inspStdSave(){

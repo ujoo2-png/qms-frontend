@@ -13,7 +13,7 @@ Pages._editNotice =function(i){Cfg.noticeForm(i);};
 Pages._uploadLogo =function(inp){Cfg.uploadLogo(inp);};
 Pages._removeLogo =function(){Cfg.deleteLogo();};
 /* ══ 설정 액션 ══ */
-const Cfg={
+var Cfg=window.Cfg={
   uploadLogo(inp){
     const f=inp.files[0];if(!f)return;
     const r=new FileReader();
