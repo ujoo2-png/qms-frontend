@@ -10685,102 +10685,7 @@ Pages._editNotice =function(i){Cfg.noticeForm(i);};
 Pages._uploadLogo =function(inp){Cfg.uploadLogo(inp);};
 Pages._removeLogo =function(){Cfg.deleteLogo();};;
 
-
-/* ══ 확장 DB (B/E/C/D) ══ */
-const DB2={
-  insp_std:[
-    {id:1,item_code:'RAW-001',item_name:'스테인레스 플레이트',insp_type:'수입',criteria:[
-      {no:1,item:'외관',method:'육안',spec:'흠집 없음',unit:'-',usl:'-',lsl:'-',freq:'전수'},
-      {no:2,item:'두께',method:'버니어캘리퍼스',spec:'2.0±0.1mm',unit:'mm',usl:'2.1',lsl:'1.9',freq:'5개/LOT'},
-      {no:3,item:'폭',method:'버니어캘리퍼스',spec:'100±0.5mm',unit:'mm',usl:'100.5',lsl:'99.5',freq:'5개/LOT'},
-    ],aql:'1.0',sample_level:'II',rev:'1.0',updated:'2026-01-10',author:'김품질'},
-    {id:2,item_code:'RAW-002',item_name:'알루미늄 바',insp_type:'수입',criteria:[
-      {no:1,item:'외관',method:'육안',spec:'변형 없음',unit:'-',usl:'-',lsl:'-',freq:'전수'},
-      {no:2,item:'직경',method:'마이크로미터',spec:'Ø20±0.05mm',unit:'mm',usl:'20.05',lsl:'19.95',freq:'5개/LOT'},
-      {no:3,item:'경도',method:'로크웰',spec:'60~70HRB',unit:'HRB',usl:'70',lsl:'60',freq:'3개/LOT'},
-    ],aql:'0.65',sample_level:'II',rev:'2.0',updated:'2026-02-01',author:'이검사'},
-    {id:3,item_code:'FG-001',item_name:'완성 어셈블리',insp_type:'출하',criteria:[
-      {no:1,item:'외관',method:'육안',spec:'도장불량 없음',unit:'-',usl:'-',lsl:'-',freq:'전수'},
-      {no:2,item:'치수A',method:'버니어캘리퍼스',spec:'50±0.2mm',unit:'mm',usl:'50.2',lsl:'49.8',freq:'전수'},
-      {no:3,item:'작동확인',method:'기능시험',spec:'정상작동',unit:'-',usl:'-',lsl:'-',freq:'전수'},
-    ],aql:'0.4',sample_level:'II',rev:'1.5',updated:'2026-03-01',author:'김품질'},
-  ],
-  insp_cert:[
-    {id:1,cert_no:'COA-20260501-001',lot:'LOT-20260501',item_name:'스테인레스 플레이트',insp_type:'수입',insp_date:'2026-05-01',qty:100,sample_qty:5,results:[
-      {item:'외관',spec:'흠집 없음',measured:'이상없음',judge:'합격'},
-      {item:'두께',spec:'2.0±0.1mm',measured:'2.02/2.01/1.99/2.00/2.01',judge:'합격'},
-      {item:'폭',spec:'100±0.5mm',measured:'100.1/100.0/99.9/100.2/100.1',judge:'합격'},
-    ],final:'합격',inspector:'이검사',approver:'김품질',issued:'2026-05-01'},
-    {id:2,cert_no:'COA-20260430-001',lot:'LOT-20260430',item_name:'알루미늄 바',insp_type:'수입',insp_date:'2026-04-30',qty:50,sample_qty:5,results:[
-      {item:'외관',spec:'변형 없음',measured:'이상없음',judge:'합격'},
-      {item:'직경',spec:'Ø20±0.05mm',measured:'20.12/20.08/20.10/20.11/20.09',judge:'불합격'},
-      {item:'경도',spec:'60~70HRB',measured:'65/64/66/63/65',judge:'합격'},
-    ],final:'불합격',inspector:'이검사',approver:'김품질',issued:'2026-04-30'},
-  ],
-  lot_trace:[
-    {id:1,lot:'LOT-20260501',item_name:'스테인레스 플레이트',vendor:'한국스틸',recv_date:'2026-05-01',recv_qty:100,remain_qty:20,used_in:[{wip_lot:'WO-20260505',item:'가공 브라켓',qty:50,date:'2026-05-05'}],insp_result:'합격',hold:false},
-    {id:2,lot:'LOT-20260430',item_name:'알루미늄 바',vendor:'알루미늄코리아',recv_date:'2026-04-30',recv_qty:50,remain_qty:50,used_in:[],insp_result:'불합격',hold:true,hold_reason:'직경 치수 불량'},
-    {id:3,lot:'WO-20260429',item_name:'가공 브라켓',vendor:'-',recv_date:'2026-04-29',recv_qty:30,remain_qty:5,used_in:[{wip_lot:'SO-20260428',item:'완성 어셈블리',qty:25,date:'2026-04-28'}],insp_result:'합격',hold:false},
-  ],
-  holds:[
-    {id:1,hold_no:'HOLD-20260430-001',lot:'LOT-20260430',item_name:'알루미늄 바',qty:50,location:'입고창고 A-3',reason:'수입검사 불합격',hold_date:'2026-04-30',status:'Hold중',action:'',assignee:'김품질'},
-    {id:2,hold_no:'HOLD-20260425-001',lot:'WO-20260420',item_name:'가공 브라켓',qty:5,location:'공정라인 B-2',reason:'표면 스크래치 불량',hold_date:'2026-04-25',status:'처리완료',action:'재작업 후 합격',assignee:'박생산'},
-  ],
-  reinsp:[
-    {id:1,reinsp_no:'RI-20260501-001',orig_lot:'LOT-20260430',item_name:'알루미늄 바',orig_result:'불합격',reinsp_date:'2026-05-03',reason:'업체 재선별 후 재검사',result:'합격',qty:40,reject_qty:10,inspector:'이검사',status:'완료'},
-  ],
-  sqm_eval:[
-    {id:1,vendor_name:'한국스틸',   period:'2026-Q1',quality:92,delivery:88,price:85,response:90,total:89.5,grade:'A',ppm:250, complaint:0,eval_date:'2026-04-01',evaluator:'김품질'},
-    {id:2,vendor_name:'알루미늄코리아',period:'2026-Q1',quality:68,delivery:75,price:80,response:72,total:72.0,grade:'C',ppm:4200,complaint:2,eval_date:'2026-04-01',evaluator:'김품질'},
-    {id:3,vendor_name:'부품나라',   period:'2026-Q1',quality:85,delivery:90,price:88,response:87,total:87.0,grade:'B',ppm:800, complaint:0,eval_date:'2026-04-01',evaluator:'김품질'},
-    {id:4,vendor_name:'화학산업',   period:'2026-Q1',quality:90,delivery:85,price:82,response:88,total:86.5,grade:'B',ppm:350, complaint:1,eval_date:'2026-04-01',evaluator:'김품질'},
-    {id:5,vendor_name:'정밀측정기', period:'2026-Q1',quality:95,delivery:92,price:78,response:94,total:91.5,grade:'A',ppm:120, complaint:0,eval_date:'2026-04-01',evaluator:'김품질'},
-  ],
-  sqm_audit:[
-    {id:1,vendor_name:'한국스틸',   audit_type:'정기',plan_date:'2026-03-15',actual_date:'2026-03-15',auditor:'김품질',score:88,grade:'양호',findings:'문서관리 미흡',status:'완료',next_date:'2026-09-15'},
-    {id:2,vendor_name:'알루미늄코리아',audit_type:'특별',plan_date:'2026-05-10',actual_date:'',auditor:'김품질',score:null,grade:'-',findings:'',status:'예정',next_date:''},
-    {id:3,vendor_name:'부품나라',   audit_type:'정기',plan_date:'2026-04-20',actual_date:'2026-04-20',auditor:'이검사',score:82,grade:'양호',findings:'교정 이력 누락',status:'완료',next_date:'2026-10-20'},
-  ],
-  spc_data:[
-    {id:1,process:'가공 브라켓-두께',char:'두께',usl:2.1,lsl:1.9,target:2.0,unit:'mm',
-     subgroups:[
-       {date:'2026-05-01',vals:[2.02,2.01,1.99,2.00,2.01]},
-       {date:'2026-05-02',vals:[2.00,2.02,2.03,1.98,2.01]},
-       {date:'2026-05-03',vals:[2.01,2.00,2.02,2.01,1.99]},
-       {date:'2026-05-04',vals:[1.99,2.00,2.01,2.02,2.00]},
-       {date:'2026-05-05',vals:[2.03,2.01,2.00,1.99,2.02]},
-       {date:'2026-05-06',vals:[2.00,2.01,1.98,2.02,2.01]},
-       {date:'2026-05-07',vals:[2.01,2.00,2.02,2.01,2.00]},
-       {date:'2026-05-08',vals:[1.99,2.01,2.00,2.02,2.01]},
-       {date:'2026-05-09',vals:[2.02,2.01,2.00,1.99,2.01]},
-       {date:'2026-05-10',vals:[2.00,2.02,2.01,2.00,1.99]},
-     ]},
-    {id:2,process:'알루미늄 바-직경',char:'직경',usl:20.05,lsl:19.95,target:20.0,unit:'mm',
-     subgroups:[
-       {date:'2026-04-21',vals:[20.01,20.02,19.99,20.00,20.01]},
-       {date:'2026-04-22',vals:[20.03,20.01,20.04,20.02,20.03]},
-       {date:'2026-04-23',vals:[20.05,20.06,20.07,20.05,20.06]},
-       {date:'2026-04-24',vals:[20.08,20.07,20.09,20.06,20.08]},
-       {date:'2026-04-25',vals:[20.10,20.09,20.11,20.08,20.10]},
-     ]},
-  ],
-  report_8d:[
-    {id:1,ref_nc:'NC-20260430-001',title:'알루미늄 바 직경 치수불량 8D',open_date:'2026-05-01',
-     d1_team:'김품질(팀장), 이검사, 박생산, 알루미늄코리아 최담당',
-     d2_problem:'수입검사 시 알루미늄 바 직경이 규격(20±0.05mm) 초과. LOT-20260430 50EA 전수검사 결과 평균 20.09mm 확인.',
-     d3_contain:'해당 LOT 50EA 전량 격리(HOLD-20260430-001). 입고 보류 및 생산라인 사용 금지.',
-     d4_root:'[Why1]직경 과다→[Why2]압출 금형 마모→[Why3]금형 교체 주기 미준수→[Why4]PM 계획 부재→[Why5]공급업체 품질관리 시스템 미흡',
-     d5_action:'공급업체 금형 즉시 교체 및 전수 재선별 후 40EA 재납품. 불합격 10EA 반품.',
-     d6_implement:'2026-05-03 재선별 완료, 40EA 재검사 합격. 2026-05-05 반품 10EA 처리.',
-     d7_prevent:'공급업체 금형 PM 주기 3개월로 단축. 수입검사 샘플 5→10개 강화. 분기별 업체 심사 추가.',
-     d8_close:'2026-05-07 조치 효과 확인 완료. 재발 없음.',
-     status:'완료',assignee:'김품질',close_date:'2026-05-07'},
-  ],
-  nc_dispose:[
-    {id:1,ref_nc:'NC-20260430-001',item_name:'알루미늄 바',lot:'LOT-20260430',qty:50,action:'반품',return_qty:10,scrap_qty:0,rework_qty:40,vendor:'알루미늄코리아',action_date:'2026-05-05',cost:150000,note:'10EA 반품, 40EA 재납품',status:'완료',handler:'김품질'},
-    {id:2,ref_nc:'NC-20260425-001',item_name:'가공 브라켓',lot:'WO-20260425',qty:5,action:'재작업',return_qty:0,scrap_qty:1,rework_qty:4,vendor:'-',action_date:'2026-04-28',cost:30000,note:'4EA 재작업 합격, 1EA 폐기',status:'완료',handler:'박생산'},
-  ],
-};
+;
 /* ══ B: 검사 고도화 ══ */
 Object.assign(Pages,{
 async insp_std(){
@@ -10910,6 +10815,23 @@ _inspStdRefreshTable(){
 },
 
 /* ── 검사 기준서 등록/수정 폼 [v2.394] ── */
+/* [v2.77] 검사 기준서 항목 행 추가 */
+_addStdRow(){
+  var tbody=document.getElementById('stdBody');
+  if(!tbody) return;
+  var no=tbody.rows.length+1;
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td style="text-align:center;color:var(--tm)">'+no+'</td>'+
+    '<td><input class="fc" placeholder="항목명"></td>'+
+    '<td><input class="fc" placeholder="육안/측정"></td>'+
+    '<td><input class="fc"></td>'+
+    '<td><input class="fc"></td>'+
+    '<td><input class="fc"></td>'+
+    '<td><input class="fc"></td>'+
+    '<td><input class="fc" placeholder="전수"></td>'+
+    '<td><button type="button" onclick="this.closest(\'tr\').remove()" style="color:var(--err);font-size:16px;cursor:pointer">✕</button></td>';
+  tbody.appendChild(tr);
+},
 _inspStdForm(row=null){
   const isEdit=!!row;
   /* 품목 select — items DB 연동 */
@@ -10946,10 +10868,14 @@ _inspStdForm(row=null){
           ${['전체','수입','공정','구매','외주','최종','고객'].map(t=>`<option value="${t}" ${row?.insp_type===t?'selected':''}>${t}검사</option>`).join('')}
         </select>
       </div>
-      <!-- 검사 항목 -->
-      <div class="fgroup" style="grid-column:1/-1">
-        <label class="fl req">검사 항목</label>
-        <input class="fc" id="stdItems" value="${H.e(row?.insp_items||'')}" placeholder="예: 외관검사, 치수검사, 압력테스트">
+      <!-- [v2.77] 검사 항목 테이블 -->
+      <div style="margin-top:6px;grid-column:1/-1">
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px">📋 검사 항목</div>
+        <table class="ctbl" style="width:100%">
+          <thead><tr><th style="width:30px">No</th><th>검사항목</th><th>측정방법</th><th>규격/기준</th><th style="width:55px">단위</th><th style="width:65px">USL</th><th style="width:65px">LSL</th><th style="width:65px">검사빈도</th><th style="width:30px"></th></tr></thead>
+          <tbody id="stdBody">${Pages._buildStdRows(row)}</tbody>
+        </table>
+        <button type="button" class="btn bsm bout" style="margin-top:6px" onclick="Pages._addStdRow()">+ 항목 추가</button>
       </div>
       <!-- 규격 -->
       <div class="fgroup">
@@ -11035,10 +10961,17 @@ async _inspStdSave(){
   const item_code=document.getElementById('stdItemCode')?.value||g('stdItemCode');
   const item_name=g('stdItemName');
   const insp_type=g('stdType');
-  const insp_items=g('stdItems');
+  /* [v2.77] stdBody 테이블에서 검사항목 수집 */
+  const stdBody=document.getElementById('stdBody');
+  const insp_items_arr=stdBody?[...stdBody.rows].map(function(tr){
+    var inp=tr.querySelectorAll('input');
+    return{item:inp[0]?.value||'',method:inp[1]?.value||'',spec:inp[2]?.value||'',
+           unit:inp[3]?.value||'',usl:inp[4]?.value||'',lsl:inp[5]?.value||'',freq:inp[6]?.value||''};
+  }).filter(function(it){return it.item;}) : [];
+  const insp_items=JSON.stringify(insp_items_arr);
   if(!item_code&&!item_name){Toast.show('품목코드 또는 품목명을 입력하세요.','warn');return;}
   if(!insp_type){Toast.show('검사 유형을 선택하세요.','warn');return;}
-  if(!insp_items){Toast.show('검사 항목을 입력하세요.','warn');return;}
+  if(!insp_items_arr.length){Toast.show('검사 항목을 1개 이상 입력하세요.','warn');return;}
 
   const row={
     item_code, item_name, insp_type, insp_items,
@@ -11336,6 +11269,24 @@ _inspStdDetail(row){
     <div class="xl-result"><table><thead><tr><th>No</th><th>검사항목</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>검사빈도</th></tr></thead>
     <tbody>${row.criteria.map(c=>`<tr><td style="text-align:center">${c.no}</td><td><strong>${H.e(c.item)}</strong></td><td>${H.e(c.method)}</td><td>${H.e(c.spec)}</td><td style="text-align:center">${H.e(c.unit)}</td><td style="text-align:center;color:var(--err)">${H.e(c.usl)}</td><td style="text-align:center;color:var(--acc)">${H.e(c.lsl)}</td><td style="text-align:center">${H.e(c.freq)}</td></tr>`).join('')}</tbody></table></div>`,
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Toast.show('수정 기능 — 추가 개발 예정','info')">수정</button>`});
+},
+/* [v2.77] 검사 기준서 항목 초기 행 HTML 생성 */
+_buildStdRows(row){
+  var its=[]; try{its=JSON.parse(row?.insp_items||'[]');}catch(e){}
+  if(!its.length) its=[{}];
+  return its.map(function(it,idx){
+    return '<tr>'+
+      '<td style="text-align:center;color:var(--tm)">'+(idx+1)+'</td>'+
+      '<td><input class="fc" placeholder="항목명" value="'+H.e(it.item||'')+'"></td>'+
+      '<td><input class="fc" placeholder="육안/측정" value="'+H.e(it.method||'')+'"></td>'+
+      '<td><input class="fc" value="'+H.e(it.spec||'')+'"></td>'+
+      '<td><input class="fc" value="'+H.e(it.unit||'')+'"></td>'+
+      '<td><input class="fc" value="'+H.e(it.usl||'')+'"></td>'+
+      '<td><input class="fc" value="'+H.e(it.lsl||'')+'"></td>'+
+      '<td><input class="fc" placeholder="전수" value="'+H.e(it.freq||'')+'"></td>'+
+      '<td><button type="button" onclick="this.closest(\'tr\').remove()" style="color:var(--err);font-size:14px;cursor:pointer">✕</button></td>'+
+    '</tr>';
+  }).join('');
 },
 _addStdRow(){
   const b=document.getElementById('stdBody');if(!b)return;
