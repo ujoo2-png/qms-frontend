@@ -4282,7 +4282,7 @@ _docSave:async function(editId){
         if(up&&up.url){
           await SB.updateDocMaster(newDoc.id,{file_url:up.url,file_name:fInp.files[0].name});
           Toast.show('파일이 첨부되었습니다.','ok');
-        } else { Toast.show('파일 업로드 실패: 저장은 완료됐습니다.','warn'); }
+        } else { Toast.show('파일 업로드 실패: Supabase Storage [docs] 버킷을 확인하세요.','err'); }
       }catch(e){Toast.show('파일 업로드 오류: '+e.message,'warn');}
     }
     if(App.files['doc-new']&&App.files['doc-new'].length){
@@ -7926,7 +7926,9 @@ async _renderSbDash(){
   /* ── KPI 값 정의 (SB 무료플랜 기준) ── */
   const kpiList=[
     {label:'Database',   icon:'🗄️', used:totalRows, max:50000, unit:'행',
-     color:'#3b82f6', bg:'#eff6ff', desc:'DB 전체 행 수 / 무료 50K행'},
+     color:totalRows>50000?'#ef4444':'#3b82f6',
+     bg:totalRows>50000?'#fef2f2':'#eff6ff',
+     desc:totalRows>50000?'⚠️ 무료플랜 50K행 초과!':'DB 전체 행 수 / 무료 50K행'},
     {label:'Storage',    icon:'💾', used:storageMB, max:1024, unit:'MB',
      color:'#10b981', bg:'#f0fdf4', desc:'파일 저장소 / 무료 1GB'},
     {label:'Egress',     icon:'📡', used:0, max:5120, unit:'MB',
@@ -7950,12 +7952,14 @@ async _renderSbDash(){
   /* 5개 KPI 도넛 카드 */
   h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">';
   kpiList.forEach((k,i)=>{
-    const pct=k.max>0?Math.min(100,Math.round((k.used/k.max)*100)):0;
+    const rawPct=k.max>0?Math.round((k.used/k.max)*100):0;
+    const pct=Math.min(100,rawPct);
+    const overPct=rawPct>100;
     h+='<div class="card" style="padding:12px 10px;text-align:center;background:'+k.bg+'">';
     h+='<div style="font-size:11px;font-weight:700;color:'+k.color+';margin-bottom:6px">'+k.label+'</div>';
     h+='<div style="position:relative;height:80px;margin:0 auto 6px">';
     h+='<canvas id="'+canvasIds[i]+'" style="max-width:80px;max-height:80px"></canvas>';
-    h+='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:700;color:'+k.color+'">'+pct+'%</div>';
+    h+='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:700;color:'+k.color+'">'+(rawPct>100?'⚠️ '+rawPct+'%':pct+'%')+'</div>';
     h+='</div>';
     h+='<div style="font-size:10px;color:#64748b">'+k.icon+' '+k.used.toLocaleString()+k.unit+'</div>';
     h+='<div style="font-size:9px;color:#94a3b8;margin-top:2px">'+k.desc+'</div>';
@@ -8016,7 +8020,8 @@ async _renderSbDash(){
     kpiList.forEach((k,i)=>{
       const canvas=document.getElementById(canvasIds[i]);
       if(!canvas) return;
-      const pct=k.max>0?Math.min(100,Math.round((k.used/k.max)*100)):0;
+      const rawPct=k.max>0?Math.round((k.used/k.max)*100):0;
+      const pct=Math.min(100,rawPct);
       const rem=100-pct;
       new Chart(canvas,{
         type:'doughnut',
