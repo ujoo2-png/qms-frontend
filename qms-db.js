@@ -973,7 +973,6 @@ const SB={
     if(!_sb){const id=Date.now();DB.insp_std=(DB.insp_std||[]);DB.insp_std.push({id,...row});return{ok:true,id};}
     const allowed={
       item_code:row.item_code||'', item_name:row.item_name||'',
-      insp_type:row.insp_type||'수입', category:row.category||'',
       insp_items:row.insp_items||'',  spec_upper:row.spec_upper||null,
       spec_lower:row.spec_lower||null, spec_unit:row.spec_unit||'',
       sampling_method:row.sampling_method||'전수', aql:row.aql||null,

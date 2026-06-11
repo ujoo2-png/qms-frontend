@@ -4238,6 +4238,8 @@ _docForm:function(editDoc){
       '<div class="fgroup"><label class="fl">최종 결재자</label><select class="fc" id="fnApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
       '<div class="fgroup ff"><label class="fl">개정 사유</label><input class="fc" id="fnSummary" placeholder="신규 등록 시 생략 가능"></div>'+
       '<div class="fgroup ff"><label class="fl">첨부 파일</label>'+
+        '<input type="hidden" id="fnExistingFileUrl" value="'+(editId&&row?H.e(row.file_url||''):'')+'">'+
+        '<input type="hidden" id="fnExistingFileName" value="'+(editId&&row?H.e(row.file_name||''):'')+'">'+
         '<input type="file" id="fnFile" style="width:100%;margin-top:4px;font-size:12px" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png,.zip,.hwp">'+
         '<div id="fnFilePreview" style="font-size:11px;color:var(--tm);margin-top:3px"></div>'+
       '</div>'+
@@ -4276,14 +4278,19 @@ _docSave:async function(editId){
   if(newDoc){
     /* [v2.78] fnFile 업로드 → doc_master.file_url 즉시 저장 */
     var fInp=document.getElementById('fnFile');
+    var existUrl=document.getElementById('fnExistingFileUrl')?.value||'';
+    var existName=document.getElementById('fnExistingFileName')?.value||'';
     if(fInp&&fInp.files&&fInp.files[0]){
       try{
         var up=await SB.uploadFile('docs',fInp.files[0]);
         if(up&&up.url){
           await SB.updateDocMaster(newDoc.id,{file_url:up.url,file_name:fInp.files[0].name});
           Toast.show('파일이 첨부되었습니다.','ok');
-        } else { Toast.show('파일 업로드 실패: Supabase Storage [docs] 버킷을 확인하세요.','err'); }
+        } else { Toast.show('파일 업로드 실패: Storage [docs] 버킷을 확인하세요.','err'); }
       }catch(e){Toast.show('파일 업로드 오류: '+e.message,'warn');}
+    } else if(existUrl){
+      /* [v2.82] 기존 파일 URL 보존 — 수정 시 파일 사라짐 방지 */
+      await SB.updateDocMaster(newDoc.id,{file_url:existUrl,file_name:existName});
     }
     if(App.files['doc-new']&&App.files['doc-new'].length){
       App.files['doc-'+newDoc.id]=App.files['doc-new'];
@@ -7770,8 +7777,8 @@ async settings(){
               +'<td style="text-align:center"><input type="checkbox" '+(n.show?"checked":"")+' onchange="Pages._noticeToggleById(n)" style="width:15px;height:15px;cursor:pointer"></td>'
               +'<td style="text-align:center">'+(n.file?'<span title="'+H.e(n.file.name||"")+'">📎</span>':'<span style="color:var(--tl)">-</span>')+'</td>'
               +'<td style="text-align:center;white-space:nowrap">'
-              +'<button class="btn bxs bgh" onclick="Cfg._editNoticeById_id('+(n.id||i)+')">수정</button> '
-              +'<button class="btn bxs berr" onclick="Cfg._noticeDelById_id('+(n.id||i)+')">삭제</button>'
+              +'<button class="btn bxs bgh" onclick="Cfg.noticeForm('+i+')">수정</button> '
+              +'<button class="btn bxs berr" onclick="Cfg.noticeDel('+i+')">삭제</button>'
               +'</td></tr>';
           }).join('');
           })()
@@ -7924,7 +7931,7 @@ async _renderSbDash(){
   }
 
   /* ── KPI 값 정의 (SB 무료플랜 기준) ── */
-  /* [v2.81] C안: 행수 기반 추정값 */
+  /* [v2.82] C안: 행수 기반 추정값 */
   const dbEstMB = Math.round(totalRows * 0.7 / 1024 * 10) / 10;  /* 행당 ~0.7KB */
   const egEstMB = Math.round(dbEstMB * 37);                        /* DB × 37배 경험치 */
   const kpiList=[
