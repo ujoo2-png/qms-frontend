@@ -965,7 +965,7 @@ const SB={
   /* ── 검사 기준서 [v2.394] ── */
   async getInspStd(){
     if(!_sb) return DB.insp_std||[];
-    const data=await this._sbFetchAll('insp_std','item_code',true);
+    const data=await this._sbFetchAll('insp_std','id',true);
     if(data===null){console.warn('[SB] insp_std 조회 실패');return DB.insp_std||[];}
     return data;
   },
@@ -973,7 +973,7 @@ const SB={
     if(!_sb){const id=Date.now();DB.insp_std=(DB.insp_std||[]);DB.insp_std.push({id,...row});return{ok:true,id};}
     const allowed={
       item_code:row.item_code||'', item_name:row.item_name||'',
-      insp_type:row.insp_type||'수입',          /* [v2.83] 추가 */
+      insp_type:row.insp_type||'수입',          /* [v2.84] 추가 */
       insp_items:row.insp_items||'',  spec_upper:row.spec_upper||null,
       spec_lower:row.spec_lower||null, spec_unit:row.spec_unit||'',
       sampling_method:row.sampling_method||'전수', aql:row.aql||null,
@@ -1333,7 +1333,7 @@ SB.activateDocVersion=async function(docId,verId,verNo,approverId){
 SB.getDocApprovals=async function(docVerId){
   if(!_sb)return[];
   var res=await _sb.from('doc_approvals')
-    .select('*')  /* [v2.83] approver_id 외래키 없음 → JOIN 제거 */
+    .select('*')  /* [v2.84] approver_id 외래키 없음 → JOIN 제거 */
     .eq('doc_ver_id',docVerId).order('step_order',{ascending:true});
   return res.error?[]:(res.data||[]);
 };

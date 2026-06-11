@@ -4238,8 +4238,8 @@ _docForm:function(editDoc){
       '<div class="fgroup"><label class="fl">최종 결재자</label><select class="fc" id="fnApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
       '<div class="fgroup ff"><label class="fl">개정 사유</label><input class="fc" id="fnSummary" placeholder="신규 등록 시 생략 가능"></div>'+
       '<div class="fgroup ff"><label class="fl">첨부 파일</label>'+
-        '<input type="hidden" id="fnExistingFileUrl" value="'+(editId&&row?H.e(row.file_url||''):'')+'">'+
-        '<input type="hidden" id="fnExistingFileName" value="'+(editId&&row?H.e(row.file_name||''):'')+'">'+
+        '<input type="hidden" id="fnExistingFileUrl" value="'+(editDoc&&row?H.e(row.file_url||''):'')+'">'+
+        '<input type="hidden" id="fnExistingFileName" value="'+(editDoc&&row?H.e(row.file_name||''):'')+'">'+
         '<input type="file" id="fnFile" style="width:100%;margin-top:4px;font-size:12px" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png,.zip,.hwp">'+
         '<div id="fnFilePreview" style="font-size:11px;color:var(--tm);margin-top:3px"></div>'+
       '</div>'+
@@ -7741,7 +7741,7 @@ async settings(){
     <div class="card" style="margin-bottom:14px">
       <div class="ch" style="padding-bottom:10px">
         <div class="ct">📢 공지사항 관리</div>
-        <button class="btn bpri bsm" onclick="Pages._addNotice()">+ 공지 추가</button>
+        <button class="btn bpri bsm" onclick="Cfg.noticeForm()">+ 공지 추가</button>
       </div>
       <div class="ts"><table class="dt" style="font-size:12px">
         <thead><tr>
@@ -10477,7 +10477,7 @@ _emsSearchPick:function(eqId){
 
 _docBulkDelete:async function(){
   /* [v2.65] 체크박스 선택된 문서 삭제 */
-  var ids=Tbl.getChecked('docTbl');
+  var ids=[...document.querySelectorAll('#docTbl .rck:checked')].map(function(c){return parseInt(c.value);});
   if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
   var hasActive=(window._docRows||[]).some(function(r){return ids.includes(r.id)&&r.status==='active';});
   Modal.confirm({
