@@ -7924,15 +7924,21 @@ async _renderSbDash(){
   }
 
   /* ── KPI 값 정의 (SB 무료플랜 기준) ── */
+  /* [v2.81] C안: 행수 기반 추정값 */
+  const dbEstMB = Math.round(totalRows * 0.7 / 1024 * 10) / 10;  /* 행당 ~0.7KB */
+  const egEstMB = Math.round(dbEstMB * 37);                        /* DB × 37배 경험치 */
   const kpiList=[
     {label:'Database',   icon:'🗄️', used:totalRows, max:50000, unit:'행',
      color:totalRows>50000?'#ef4444':'#3b82f6',
      bg:totalRows>50000?'#fef2f2':'#eff6ff',
      desc:totalRows>50000?'⚠️ 무료플랜 50K행 초과!':'DB 전체 행 수 / 무료 50K행'},
-    {label:'Storage',    icon:'💾', used:storageMB, max:1024, unit:'MB',
-     color:'#10b981', bg:'#f0fdf4', desc:'파일 저장소 / 무료 1GB'},
-    {label:'Egress',     icon:'📡', used:0, max:5120, unit:'MB',
-     color:'#f59e0b', bg:'#fef3c7', desc:'⚠️ SB 대시보드에서 확인', link:'https://supabase.com/dashboard'},
+    {label:'Storage',    icon:'💾', used:storageMB||dbEstMB, max:1024, unit:'MB',
+     color:'#10b981', bg:'#f0fdf4',
+     desc:'파일:'+(storageMB||0)+'MB / DB추정:'+dbEstMB+'MB'},
+    {label:'Egress',     icon:'📡', used:egEstMB, max:5120, unit:'MB',
+     color:egEstMB>4000?'#ef4444':'#f59e0b', bg:'#fef3c7',
+     desc:'추정값 (행수×0.7KB×37배) ※실제: SB대시보드 확인',
+     link:'https://supabase.com/dashboard/project/_/reports'},
     {label:'전체행',     icon:'📋', used:totalRows, max:50000, unit:'행',
      color:'#8b5cf6', bg:'#f5f3ff', desc:'전체 데이터 행 수'},
     {label:'비활성방지', icon:'🛡️', used:1, max:1, unit:'',
@@ -7962,7 +7968,7 @@ async _renderSbDash(){
     h+='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:700;color:'+k.color+'">'+(rawPct>100?'⚠️ '+rawPct+'%':pct+'%')+'</div>';
     h+='</div>';
     h+='<div style="font-size:10px;color:#64748b">'+k.icon+' '+k.used.toLocaleString()+k.unit+'</div>';
-    h+='<div style="font-size:9px;color:#94a3b8;margin-top:2px">'+k.desc+'</div>';
+    h+='<div style="font-size:9px;color:#94a3b8;margin-top:2px">'+(k.link?'<a href="'+k.link+'" target="_blank" style="color:inherit;text-decoration:underline">'+k.desc+'</a>':k.desc)+'</div>';
     h+='</div>';
   });
   h+='</div>';
