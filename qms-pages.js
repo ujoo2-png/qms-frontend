@@ -7770,7 +7770,7 @@ async settings(){
             return '<tr style="'+rowBg+'">'  /* [v2.65] 게시중 행 음영 */
               +'<td><input type="checkbox" class="notice-chk" value="'+(n.id||i)+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
-              +'<td style="font-weight:600;cursor:pointer" onclick="Cfg._noticeDetail_id('+(n.id||i)+')">'+H.e(n.title)+'</td>'
+              +'<td style="font-weight:600;cursor:pointer" onclick="Cfg.noticeForm('+i+')" style="cursor:pointer;text-decoration:underline">'+H.e(n.title)+'</td>'
               +'<td style="color:var(--tm);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+H.e(n.body)+'</td>'
               +'<td style="font-size:11px">'+(n.date||"-")+'</td>'
               +'<td style="font-size:11px;'+expiredCls+'">'+(n.expire||"-")+'</td>'
