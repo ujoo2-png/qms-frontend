@@ -965,9 +965,11 @@ const SB={
   /* ── 검사 기준서 [v2.394] ── */
   async getInspStd(){
     if(!_sb) return DB.insp_std||[];
-    const data=await this._sbFetchAll('insp_std','id',true);
-    if(data===null){console.warn('[SB] insp_std 조회 실패');return DB.insp_std||[];}
-    return data;
+    /* [v2.87] _sbFetchAll ORDER BY 오류 → 직접 select 사용 */
+    const {data,error}=await _sb.from('insp_std').select('*');
+    if(error){console.warn('[SB] insp_std 조회 실패:',error.message);return DB.insp_std||[];}
+    console.log('[SB] insp_std 전체 '+(data?.length||0)+'건 로드');
+    return data||[];
   },
   async addInspStd(row){
     if(!_sb){const id=Date.now();DB.insp_std=(DB.insp_std||[]);DB.insp_std.push({id,...row});return{ok:true,id};}

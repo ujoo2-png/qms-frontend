@@ -10877,7 +10877,15 @@ _inspStdForm(){
         <datalist id="stdItemList">${(DB.items||[]).map(function(it){return`<option value="${H.e(it.item_code)}">${H.e(it.item_name)}</option>`;}).join('')}</datalist>
       </div>
       <div class="fgroup"><label class="fl">품목명</label><input class="fc" id="stdItemName" placeholder="자동 입력"></div>
-      <div class="fgroup"><label class="fl req">검사유형</label><select class="fc"><option>수입</option><option>공정</option><option>출하</option></select></div>
+      <div class="fgroup"><label class="fl req">검사유형</label>
+        <select class="fc" id="stdInspType">
+          <option value="수입">수입</option>
+          <option value="공정">공정</option>
+          <option value="구매">구매</option>
+          <option value="외주">외주</option>
+          <option value="최종">최종</option>
+        </select>
+      </div>
       <div class="fgroup"><label class="fl">AQL</label><select class="fc">${['0.065','0.1','0.25','0.4','0.65','1.0','1.5','2.5'].map(v=>`<option>${v}</option>`).join('')}</select></div>
       <div class="fgroup"><label class="fl">검사수준</label><select class="fc"><option>I</option><option selected>II</option><option>III</option></select></div>
       <div class="fgroup"><label class="fl">개정번호</label><input class="fc" value="1.0"></div>
@@ -10913,7 +10921,7 @@ async _inspStdSave(){
   const g=id=>document.getElementById(id)?.value.trim()||'';
   const item_code=document.getElementById('stdItemCode')?.value||g('stdItemCode');
   const item_name=g('stdItemName');
-  const insp_type=g('stdType');
+  const insp_type=g('stdInspType')||g('stdType');
   /* [v2.78] stdBody 테이블에서 검사항목 수집 */
   const stdBody=document.getElementById('stdBody');
   const insp_items_arr=stdBody?[...stdBody.rows].map(function(tr){
@@ -10972,6 +10980,9 @@ async _inspStdSave(){
   } else {
     const res=await SB.addInspStd(row);
     if(!res.ok) return;
+    /* [v2.87] DB 메모리 갱신 후 재렌더 */
+    const fresh=await SB.getInspStd();
+    if(fresh) DB.insp_std=fresh;
     Toast.show('기준서가 등록되었습니다.','ok');
   }
   Modal.close();

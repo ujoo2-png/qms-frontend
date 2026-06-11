@@ -173,3 +173,6 @@ document.addEventListener('change',function(ev){
     if(prev) prev.textContent='선택됨: '+(ev.target.files[0]?.name||'');
   }
 });
+
+/* [v2.85] Cfg 전역 등록 보장 */
+if(typeof window.Cfg==='undefined'&&typeof Cfg!=='undefined') window.Cfg=Cfg;
