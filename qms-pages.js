@@ -7874,30 +7874,19 @@ async _renderSbDash(){
   /* ── 테이블 행 수 조회 ── */
   /* [v2.65] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
   /* [v2.78] 전체 테이블 목록 — 누락 테이블 추가 */
-  const tables=[
-    'items','vendors','users',                              /* 기준정보 */
-    'inspections','nonconformances','insp_std',            /* 품질관리 */
-    'holds','reinspections',                               /* 검사고도화 */
-    'vendor_evals','vendor_audits',                        /* 공급업체 */
-    'equipment','calibrations',                           /* 계측기 */
-    'doc_master','doc_versions','doc_approvals','doc_dist_log', /* 문서관리 */
-    /* cars 테이블 없음 — corrective_actions 사용 */
-    'ems_equipment','eq_pm_log','eq_as','eq_cost','eq_manual', /* 제조설비 */
-    'qna','qna_replies','notices','mentions',              /* 시스템 */
-    'code_types',                                          /* 코드관리 */
+  /* [v2.79] 테이블 트리 구조 */
+  const treeGroups=[
+    {group:'기준정보',     items:[{t:'items',l:'품목 등록'},{t:'vendors',l:'거래처 등록'},{t:'users',l:'사원관리'}]},
+    {group:'품질관리',     items:[{t:'inspections',l:'검사이력'},{t:'nonconformances',l:'부적합관리'},{t:'insp_std',l:'검사기준서'}]},
+    {group:'검사고도화',   items:[{t:'holds',l:'Hold관리'},{t:'reinspections',l:'재검사관리'}]},
+    {group:'공급업체 품질',items:[{t:'vendor_evals',l:'업체평가'},{t:'vendor_audits',l:'업체심사'}]},
+    {group:'계측기관리',   items:[{t:'equipment',l:'계측기 등록'},{t:'calibrations',l:'교정이력'}]},
+    {group:'문서관리',     items:[{t:'doc_master',l:'문서 마스터'},{t:'doc_versions',l:'문서 버전'},{t:'doc_approvals',l:'결재 이력'},{t:'doc_dist_log',l:'배포 이력'}]},
+    {group:'제조설비',     items:[{t:'ems_equipment',l:'설비 등록'},{t:'eq_pm_log',l:'PM 점검'},{t:'eq_as',l:'AS 이력'},{t:'eq_cost',l:'유지비용'},{t:'eq_manual',l:'설비매뉴얼'}]},
+    {group:'시스템',       items:[{t:'qna',l:'Q&A'},{t:'qna_replies',l:'Q&A 답변'},{t:'notices',l:'공지사항'},{t:'mentions',l:'멘션'},{t:'code_types',l:'코드관리'}]},
   ];
-  const LABELS={
-    items:'품목',vendors:'거래처',users:'사용자',
-    inspections:'검사이력',nonconformances:'부적합',insp_std:'검사기준서',
-    holds:'Hold관리',reinspections:'재검사',
-    vendor_evals:'업체평가',vendor_audits:'업체심사',
-    equipment:'계측기',calibrations:'교정이력',
-    doc_master:'문서',doc_versions:'문서버전',doc_approvals:'결재',doc_dist_log:'배포이력',
-    cars:'시정조치',
-    ems_equipment:'제조설비',eq_pm_log:'PM점검',eq_as:'AS이력',eq_cost:'유지비용',eq_manual:'설비매뉴얼',
-    qna:'Q&A',qna_replies:'Q&A답변',notices:'공지사항',mentions:'멘션',
-    code_types:'코드관리',
-  };
+  const tables=treeGroups.flatMap(g=>g.items.map(i=>i.t));
+  const LABELS=Object.fromEntries(treeGroups.flatMap(g=>g.items.map(i=>[i.t,i.l])));
   const COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899','#0ea5e9','#d946ef','#14b8a6','#a855f7','#eab308','#64748b','#78716c','#dc2626','#2563eb','#16a34a','#9333ea','#c026d3','#0891b2','#b45309','#4f46e5','#db2777','#047857','#6366f1','#92400e'];
 
   let counts={};
@@ -7985,26 +7974,22 @@ async _renderSbDash(){
   h+='<th style="padding:6px 10px;min-width:80px">비율</th>';
   h+='<th style="padding:6px 10px;text-align:center">권한(RLS)</th>';
   h+='</tr></thead><tbody>';
-  tables.forEach((t,i)=>{
-    const cnt=counts[t]||0;
-    const pct=totalRows>0?Math.round((cnt/totalRows)*100):0;
-    h+='<tr style="border-bottom:0.5px solid var(--bd)">';
-    h+='<td style="padding:5px 10px;display:flex;align-items:center;gap:6px">';
-    h+='<span style="width:8px;height:8px;border-radius:50%;background:'+COLORS[i]+'"></span>';
-    h+=LABELS[t]+'</td>';
-    h+='<td style="padding:5px 10px;text-align:right;font-weight:600">'+cnt.toLocaleString()+'</td>';
-    h+='<td style="padding:5px 14px">';
-    h+='<div style="height:6px;background:var(--bd);border-radius:3px">';
-    h+='<div style="height:6px;background:'+COLORS[i%COLORS.length]+';border-radius:3px;width:'+pct+'%"></div></div>';
-    h+='</td>';
-    /* RLS/권한 상태 */
-    if(errors[t]){
-      h+='<td style="padding:5px 10px;text-align:center" title="'+errors[t]+'"><span style="color:#ef4444;font-size:11px">❌ 오류</span></td>';
-    } else {
-      h+='<td style="padding:5px 10px;text-align:center"><span style="color:#22c55e;font-size:11px">✅ 정상</span></td>';
-    }
-    h+='</tr>';
-  });
+  /* [v2.80] 트리 구조 렌더 */
+  let colorIdx=0;
+  treeGroups.forEach(g=>{
+    h+='<tr style="background:var(--bg2)"><td colspan="4" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--pri)">📁 '+H.e(g.group)+'</td></tr>';
+    g.items.forEach(item=>{
+      const t=item.t,cnt=counts[t]||0,pct=totalRows>0?Math.min(100,Math.round((cnt/totalRows)*100)):0;
+      const col=COLORS[colorIdx++%COLORS.length];
+      h+='<tr>';
+      h+='<td style="padding:4px 10px 4px 22px;font-size:12px">└ '+H.e(item.l)+' <span style="font-family:monospace;font-size:10px;color:#94a3b8">('+t+')</span></td>';
+      h+='<td style="padding:4px 10px;text-align:right;font-weight:700">'+cnt.toLocaleString()+'</td>';
+      h+='<td style="padding:4px 14px"><div style="height:5px;background:var(--bd);border-radius:3px"><div style="height:5px;background:'+col+';border-radius:3px;width:'+pct+'%"></div></div></td>';
+      if(errors[t]) h+='<td style="padding:4px 10px;text-align:center" title="'+errors[t]+'"><span style="color:#ef4444;font-size:11px">❌ 오류</span></td>';
+      else h+='<td style="padding:4px 10px;text-align:center"><span style="color:#22c55e;font-size:11px">✅ 정상</span></td>';
+      h+='</tr>';
+    });
+  });;
   h+='</tbody></table></div>';
 
   /* 휴지통 */
@@ -12535,7 +12520,7 @@ _8dForm(){
 nc_dispose(){
   /* [v2.394] 반품/폐기처리 — DB.disposals 기반, tbar+F3+F2+onRow */
   const w=document.getElementById('pw');
-  const data=(DB.disposals||DB2?.nc_dispose||[]);
+  const data=(DB.disposals||[]);
   const total=data.length;
   const pending=data.filter(r=>r.status==='대기'||r.status==='처리중'||!r.status).length;
   const done=data.filter(r=>r.status==='완료'||r.status==='처리완료').length;
@@ -12581,7 +12566,7 @@ _dispRefresh(){
   const q=(document.getElementById('dispSearch')?.value||'').toLowerCase();
   const tf=document.getElementById('dispTypeF')?.value||'';
   const sf=document.getElementById('dispStatusF')?.value||'';
-  const data=(DB.disposals||DB2?.nc_dispose||[]);
+  const data=(DB.disposals||[]);
   let filtered=data.filter(r=>
     (!q||(r.no||r.ref_nc||'').toLowerCase().includes(q)||
       (r.item_name||'').toLowerCase().includes(q)||

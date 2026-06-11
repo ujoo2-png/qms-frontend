@@ -1295,7 +1295,7 @@ SB.getExpiringDocs=async function(days){
 SB.getDocVersions=async function(docId){
   if(!_sb)return[];
   var res=await _sb.from('doc_versions')
-    .select('*, creator:created_by(id,name,dept), approver:approved_by(id,name,dept)')
+    .select('*')
     .eq('doc_id',docId).order('created_at',{ascending:false});
   if(res.error){console.warn('[SB] getDocVersions:',res.error.message);return[];}
   return res.data||[];
