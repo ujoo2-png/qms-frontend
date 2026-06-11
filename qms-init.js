@@ -158,7 +158,7 @@ document.addEventListener('change', function(ev){
   }
 });
 
-/* [v2.77] 부적합 파일 선택 표시 */
+/* [v2.78] 부적합 파일 선택 표시 */
 document.addEventListener('change',function(ev){
   if(ev.target.id==='ncFile'){
     var nm=ev.target.closest('.fgroup')?.querySelector('.nc-file-name');
@@ -166,7 +166,7 @@ document.addEventListener('change',function(ev){
   }
 });
 
-/* [v2.77] 문서 등록 파일 선택 표시 */
+/* [v2.78] 문서 등록 파일 선택 표시 */
 document.addEventListener('change',function(ev){
   if(ev.target.id==='fnFile'){
     var prev=document.getElementById('fnFilePreview');

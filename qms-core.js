@@ -1103,7 +1103,7 @@ const TopNav={
     /* [v2.394] 시스템 탭 — 설정/사용자등록 분리 */
     '시스템':      [{label:'설정',page:'settings'},{label:'사용자 등록',page:'sysusers'}],
     '품질관리':    [{label:'품질현황 대시보드',page:'quality_dash'},{label:'수입검사',page:'insp_in'},{label:'공정검사',page:'insp_pr'},{label:'구매검사',page:'insp_pu'},{label:'외주검사',page:'insp_ou'},{label:'최종검사',page:'insp_fi'},{label:'부적합 관리',page:'nc'},{label:'8D Report',page:'nc_8d'},{label:'반품/폐기',page:'nc_dispose'},{label:'불량 트렌드',page:'nc_trend'}],
-    '검사 고도화': [{label:'검사 기준서',page:'insp_std'},{label:'검사 성적서',page:'insp_cert'},{label:'LOT 추적성',page:'lot_trace'},{label:'Hold 관리',page:'hold_mgmt'},{label:'재검사 관리',page:'reinsp'}],
+    '검사 고도화': [{label:'검사 기준서',page:'insp_std'},{label:'검사 성적서',page:'insp_cert'},{label:'LOT 추적성',page:'lot_trace'},{label:'Hold 관리',page:'insp_hold'},{label:'재검사 관리',page:'insp_reinsp'}],
     '공급업체 품질':[{label:'업체 평가',page:'sqm_eval'},{label:'업체 심사',page:'sqm_audit'},{label:'SQM 대시보드',page:'sqm_dash'}],
     '계측기관리':  [{label:'계측기 등록',page:'equip'},{label:'교정 관리',page:'cal'},{label:'MSA 분석',page:'msa'}],
     /* [v2.65] 제조설비관리 (EMS) */

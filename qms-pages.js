@@ -3966,7 +3966,7 @@ async docs(){
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   window._docRows=[];
-  /* [v2.77] code_types DB에서 _DT/_DC 동적 로드 */
+  /* [v2.78] code_types DB에서 _DT/_DC 동적 로드 */
   try{
     const ctypes=await SB.getCodeTypes();
     ctypes.filter(c=>c.category==='doc_type').forEach(c=>{Pages._DT[c.code]=c.label;});
@@ -4274,7 +4274,7 @@ _docSave:async function(editId){
   }
   /* [v2.65 fix D1] 파일 업로드 → doc_master.file_url 직접 저장 */
   if(newDoc){
-    /* [v2.77] fnFile 업로드 → doc_master.file_url 즉시 저장 */
+    /* [v2.78] fnFile 업로드 → doc_master.file_url 즉시 저장 */
     var fInp=document.getElementById('fnFile');
     if(fInp&&fInp.files&&fInp.files[0]){
       try{
@@ -7059,7 +7059,7 @@ async insp_cert(){
   Pages._certRefreshTable();
 },
 
-/* [v2.77] 검사 성적서 인쇄
+/* [v2.78] 검사 성적서 인쇄
    선택 행 없으면 전체 조회 결과 출력, 있으면 선택 건만 출력 */
 _certPrint(){
   /* 선택 체크박스 확인 */
@@ -7873,19 +7873,42 @@ async _renderSbDash(){
 
   /* ── 테이블 행 수 조회 ── */
   /* [v2.65] 테이블명 수정: documents → doc_master (v2.395 이후 변경됨) */
-  const tables=['equipment','calibrations','users','mentions','items','vendors',
-    'nonconformances','cars','doc_master'];
-  const LABELS={equipment:'계측기',calibrations:'교정이력',users:'사용자',
-    mentions:'멘션',items:'품목',vendors:'거래처',nonconformances:'부적합',
-    cars:'시정조치',doc_master:'문서'};
-  const COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6',
-    '#06b6d4','#f97316','#84cc16','#ec4899'];
+  /* [v2.78] 전체 테이블 목록 — 누락 테이블 추가 */
+  const tables=[
+    'items','vendors','users',                              /* 기준정보 */
+    'inspections','nonconformances','insp_std',            /* 품질관리 */
+    'holds','reinspections',                               /* 검사고도화 */
+    'vendor_evals','vendor_audits',                        /* 공급업체 */
+    'equipment','calibrations','msa_studies',              /* 계측기 */
+    'doc_master','doc_versions','doc_approvals','doc_dist_log', /* 문서관리 */
+    'cars',                                                /* 개선활동 */
+    'ems_equipment','eq_pm_log','eq_as','eq_cost','eq_manual', /* 제조설비 */
+    'qna','qna_replies','notices','mentions',              /* 시스템 */
+    'code_types',                                          /* 코드관리 */
+  ];
+  const LABELS={
+    items:'품목',vendors:'거래처',users:'사용자',
+    inspections:'검사이력',nonconformances:'부적합',insp_std:'검사기준서',
+    holds:'Hold관리',reinspections:'재검사',
+    vendor_evals:'업체평가',vendor_audits:'업체심사',
+    equipment:'계측기',calibrations:'교정이력',msa_studies:'MSA',
+    doc_master:'문서',doc_versions:'문서버전',doc_approvals:'결재',doc_dist_log:'배포이력',
+    cars:'시정조치',
+    ems_equipment:'제조설비',eq_pm_log:'PM점검',eq_as:'AS이력',eq_cost:'유지비용',eq_manual:'설비매뉴얼',
+    qna:'Q&A',qna_replies:'Q&A답변',notices:'공지사항',mentions:'멘션',
+    code_types:'코드관리',
+  };
+  const COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899','#0ea5e9','#d946ef','#14b8a6','#a855f7','#eab308','#64748b','#78716c','#dc2626','#2563eb','#16a34a','#9333ea','#c026d3','#0891b2','#b45309','#4f46e5','#db2777','#047857','#6366f1','#92400e'];
 
   let counts={};
   if(_sb){
+    const errors={};
     await Promise.all(tables.map(async t=>{
-      try{const{count}=await _sb.from(t).select('*',{count:'exact',head:true});
-        counts[t]=count||0;}catch(e){counts[t]=0;}
+      try{
+        const{count,error}=await _sb.from(t).select('*',{count:'exact',head:true});
+        if(error){counts[t]=0;errors[t]=error.message;}
+        else{counts[t]=count||0;errors[t]=null;}
+      }catch(e){counts[t]=0;errors[t]=e.message;}
     }));
   } else {
     tables.forEach(t=>counts[t]=0);
@@ -7893,14 +7916,32 @@ async _renderSbDash(){
   const totalRows=Object.values(counts).reduce((a,b)=>a+b,0);
   const connected=!!_sb;
 
+  /* ── Storage 실제 조회 (docs 버킷 파일 크기 합산) ── */
+  let storageMB=0;
+  if(_sb){
+    try{
+      const {data:files}=await _sb.storage.from('docs').list('',{limit:1000});
+      if(files) storageMB=Math.round(files.reduce((s,f)=>s+(f.metadata?.size||0),0)/1024/1024*10)/10;
+    }catch(e){}
+    /* equip 버킷도 합산 */
+    try{
+      const {data:f2}=await _sb.storage.from('equip').list('',{limit:1000});
+      if(f2) storageMB+=Math.round(f2.reduce((s,f)=>s+(f.metadata?.size||0),0)/1024/1024*10)/10;
+    }catch(e){}
+    try{
+      const {data:f3}=await _sb.storage.from('nc').list('',{limit:1000});
+      if(f3) storageMB+=Math.round(f3.reduce((s,f)=>s+(f.metadata?.size||0),0)/1024/1024*10)/10;
+    }catch(e){}
+  }
+
   /* ── KPI 값 정의 (SB 무료플랜 기준) ── */
   const kpiList=[
     {label:'Database',   icon:'🗄️', used:totalRows, max:50000, unit:'행',
-     color:'#3b82f6', bg:'#eff6ff', desc:'DB 전체 행 수 / 무료 50K'},
-    {label:'Storage',    icon:'💾', used:12, max:1024, unit:'MB',
+     color:'#3b82f6', bg:'#eff6ff', desc:'DB 전체 행 수 / 무료 50K행'},
+    {label:'Storage',    icon:'💾', used:storageMB, max:1024, unit:'MB',
      color:'#10b981', bg:'#f0fdf4', desc:'파일 저장소 / 무료 1GB'},
-    {label:'Egress',     icon:'📡', used:3, max:5120, unit:'MB',
-     color:'#f59e0b', bg:'#fef3c7', desc:'월 데이터 전송 / 무료 5GB'},
+    {label:'Egress',     icon:'📡', used:0, max:5120, unit:'MB',
+     color:'#f59e0b', bg:'#fef3c7', desc:'⚠️ SB 대시보드에서 확인', link:'https://supabase.com/dashboard'},
     {label:'전체행',     icon:'📋', used:totalRows, max:50000, unit:'행',
      color:'#8b5cf6', bg:'#f5f3ff', desc:'전체 데이터 행 수'},
     {label:'비활성방지', icon:'🛡️', used:1, max:1, unit:'',
@@ -7939,9 +7980,10 @@ async _renderSbDash(){
   h+='<span style="font-size:11px;color:var(--tm)">총 '+totalRows.toLocaleString()+'행</span></div>';
   h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
   h+='<thead><tr style="background:var(--bg2)">';
-  h+='<th style="padding:6px 10px;text-align:left">테이블</th>';
+  h+='<th style="padding:6px 10px;text-align:left">테이블 (모듈)</th>';
   h+='<th style="padding:6px 10px;text-align:right">행 수</th>';
-  h+='<th style="padding:6px 10px;min-width:100px">비율</th>';
+  h+='<th style="padding:6px 10px;min-width:80px">비율</th>';
+  h+='<th style="padding:6px 10px;text-align:center">권한(RLS)</th>';
   h+='</tr></thead><tbody>';
   tables.forEach((t,i)=>{
     const cnt=counts[t]||0;
@@ -7953,8 +7995,15 @@ async _renderSbDash(){
     h+='<td style="padding:5px 10px;text-align:right;font-weight:600">'+cnt.toLocaleString()+'</td>';
     h+='<td style="padding:5px 14px">';
     h+='<div style="height:6px;background:var(--bd);border-radius:3px">';
-    h+='<div style="height:6px;background:'+COLORS[i]+';border-radius:3px;width:'+pct+'%"></div></div>';
-    h+='</td></tr>';
+    h+='<div style="height:6px;background:'+COLORS[i%COLORS.length]+';border-radius:3px;width:'+pct+'%"></div></div>';
+    h+='</td>';
+    /* RLS/권한 상태 */
+    if(errors[t]){
+      h+='<td style="padding:5px 10px;text-align:center" title="'+errors[t]+'"><span style="color:#ef4444;font-size:11px">❌ 오류</span></td>';
+    } else {
+      h+='<td style="padding:5px 10px;text-align:center"><span style="color:#22c55e;font-size:11px">✅ 정상</span></td>';
+    }
+    h+='</tr>';
   });
   h+='</tbody></table></div>';
 
@@ -10447,7 +10496,7 @@ _docBulkDelete:async function(){
 /* [v2.65] 코드 관리 탭 렌더링 */
 /* [v2.65 D1-3] 코드관리 탭 렌더링 — 유형 + 분류 모두 처리 */
 _renderCodeMgmt:async function(){
-  /* [v2.77] DB에서 코드 로드 후 _DT/_DC 갱신 */
+  /* [v2.78] DB에서 코드 로드 후 _DT/_DC 갱신 */
   var dbCodes=await SB.getCodeTypes();
   dbCodes.filter(function(c){return c.category==='doc_type';}).forEach(function(c){Pages._DT[c.code]=c.label;});
   dbCodes.filter(function(c){return c.category==='doc_cat';}).forEach(function(c){Pages._DC[c.code]=c.label;});
@@ -10504,7 +10553,7 @@ _codeAddSave:function(){
   var isForCat=document.querySelector('#codeCatBody')&&!document.getElementById('codeTypeBody')?.parentElement?.contains(document.querySelector('#codeCatBody'));
   /* 실제로 모달 title로 판단 */
   var title=document.querySelector('.modal .mtit')?.textContent||'';
-  /* [v2.77] DB 저장 */
+  /* [v2.78] DB 저장 */
   var cat=title.includes('분류')?'doc_cat':'doc_type';
   SB.addCodeType(cat,k,v).then(function(r){
     if(!r.ok) return;
@@ -10543,7 +10592,7 @@ _codeDelete:function(kind,key,label,cnt,dbId){
     Modal.confirm({title:'문서 유형 삭제',
       body:'<b>'+H.e(label)+'</b> 유형을 삭제합니다. (사용 중인 문서 없음)',
       danger:true,
-      onOk:function(){/* [v2.77] DB 삭제 */
+      onOk:function(){/* [v2.78] DB 삭제 */
       if(dbId){SB.deleteCodeType(dbId).then(function(r){if(r.ok){delete targetObj[key];Pages._renderCodeMgmt();Toast.show('삭제됨','ok');}});}
       else{delete targetObj[key];Pages._renderCodeMgmt();Toast.show('삭제됨','ok');}
     }
@@ -10697,7 +10746,7 @@ async insp_std(){
     const fresh=await SB.getInspStd();
     if(Array.isArray(fresh)) DB.insp_std=fresh;
     else if(!DB.insp_std) DB.insp_std=[];
-    /* [v2.77] 품목 datalist용 items 로드 */
+    /* [v2.78] 품목 datalist용 items 로드 */
     if(!DB.items||!DB.items.length){
       const fitems=await SB.getItems();
       if(Array.isArray(fitems)) DB.items=fitems;
@@ -10815,7 +10864,7 @@ _inspStdRefreshTable(){
 },
 
 /* ── 검사 기준서 등록/수정 폼 [v2.394] ── */
-/* [v2.77] 검사 기준서 항목 행 추가 */
+/* [v2.78] 검사 기준서 항목 행 추가 */
 _addStdRow(){
   var tbody=document.getElementById('stdBody');
   if(!tbody) return;
@@ -10868,7 +10917,7 @@ _inspStdForm(row=null){
           ${['전체','수입','공정','구매','외주','최종','고객'].map(t=>`<option value="${t}" ${row?.insp_type===t?'selected':''}>${t}검사</option>`).join('')}
         </select>
       </div>
-      <!-- [v2.77] 검사 항목 테이블 -->
+      <!-- [v2.78] 검사 항목 테이블 -->
       <div style="margin-top:6px;grid-column:1/-1">
         <div style="font-size:12px;font-weight:700;margin-bottom:6px">📋 검사 항목</div>
         <table class="ctbl" style="width:100%">
@@ -10961,7 +11010,7 @@ async _inspStdSave(){
   const item_code=document.getElementById('stdItemCode')?.value||g('stdItemCode');
   const item_name=g('stdItemName');
   const insp_type=g('stdType');
-  /* [v2.77] stdBody 테이블에서 검사항목 수집 */
+  /* [v2.78] stdBody 테이블에서 검사항목 수집 */
   const stdBody=document.getElementById('stdBody');
   const insp_items_arr=stdBody?[...stdBody.rows].map(function(tr){
     var inp=tr.querySelectorAll('input');
@@ -11270,7 +11319,7 @@ _inspStdDetail(row){
     <tbody>${row.criteria.map(c=>`<tr><td style="text-align:center">${c.no}</td><td><strong>${H.e(c.item)}</strong></td><td>${H.e(c.method)}</td><td>${H.e(c.spec)}</td><td style="text-align:center">${H.e(c.unit)}</td><td style="text-align:center;color:var(--err)">${H.e(c.usl)}</td><td style="text-align:center;color:var(--acc)">${H.e(c.lsl)}</td><td style="text-align:center">${H.e(c.freq)}</td></tr>`).join('')}</tbody></table></div>`,
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Toast.show('수정 기능 — 추가 개발 예정','info')">수정</button>`});
 },
-/* [v2.77] 검사 기준서 항목 초기 행 HTML 생성 */
+/* [v2.78] 검사 기준서 항목 초기 행 HTML 생성 */
 _buildStdRows(row){
   var its=[]; try{its=JSON.parse(row?.insp_items||'[]');}catch(e){}
   if(!its.length) its=[{}];
