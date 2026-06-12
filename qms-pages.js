@@ -10791,256 +10791,216 @@ Pages._removeLogo =function(){Cfg.deleteLogo();};;
 /* ══ B: 검사 고도화 ══ */
 Object.assign(Pages,{
 async insp_std(){
-  /* [v2.394] 검사 기준서 — SB 연동, hasLayout 패턴 */
-  const w=document.getElementById('pw');
-  const hasLayout=!!w.querySelector('#stdTbl');
-  if(!hasLayout) w.innerHTML='<div class="spin"></div>';
-  try{
-    const fresh=await SB.getInspStd();
-    if(Array.isArray(fresh)) DB.insp_std=fresh;
-    else if(!DB.insp_std) DB.insp_std=[];
-    /* [v2.78] 품목 datalist용 items 로드 */
-    if(!DB.items||!DB.items.length){
-      const fitems=await SB.getItems();
-      if(Array.isArray(fitems)) DB.items=fitems;
-    }
-  }catch(e){
-    console.warn('[insp_std] SB 조회 실패',e);
-    if(!DB.insp_std) DB.insp_std=[];
-  }
-  Pages._inspStdRender();
-},
-
-/* ── 검사 기준서 렌더 [v2.394] ── */
-_inspStdRender(){
-  /* [v2.394] 무한루프 수정 — w.innerHTML 최초1회, 테이블만 갱신 */
   const w=document.getElementById('pw');
   if(!w) return;
-
-  /* 레이아웃이 이미 있으면 테이블만 갱신 */
-  if(w.querySelector('#stdTbl')){
-    Pages._inspStdRefreshTable();
-    return;
-  }
-
+  const list=await SB.getInspStd();
+  window._stdData=list;
   const types=['수입','공정','구매','외주','최종'];
-  const itemOpts=(DB.items||[]).map(it=>
-    '<option value="'+H.e(it.item_code||'')+'" data-name="'+H.e(it.item_name||'')+'">'+
-    H.e(it.item_code||'')+' — '+H.e(it.item_name||'')+'</option>'
-  ).join('');
-
-  w.innerHTML=`
-    <div class="stat-dash">
-      <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>
-        <div><div class="sd-val" id="stdTotal">${(DB.insp_std||[]).length}</div>
-        <div class="sd-lbl">전체 기준서</div></div></div>
-      <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">📝</div>
-        <div><div class="sd-val" id="stdTypeCount">${new Set((DB.insp_std||[]).map(r=>r.insp_type)).size}</div>
-        <div class="sd-lbl">검사 유형</div></div></div>
-    </div>
-    <div class="ph" style="margin-top:14px">
-      <div><div class="ptit">📋 검사 기준서</div>
-        <div class="psub">품목별 검사 항목 · 규격 · AQL 관리</div></div>
-      <div class="pac">
-        <button class="btn bpri btn-f2" onclick="Pages._inspStdForm(null)">+ 기준서 등록 <span class="kbd">F2</span></button>
-      </div>
-    </div>
-    <div class="tbar">
-      <div class="sw2">
-        <input type="text" id="stdSearch" placeholder="품목코드, 품목명 검색..."
-          oninput="Pages._inspStdRefreshTable()">
-      </div>
-      <select class="fsel" id="stdTypeF" onchange="Pages._inspStdRefreshTable()">
-        <option value="">전체 유형</option>
-        ${types.map(t=>`<option>${t}</option>`).join('')}
-      </select>
-      <button class="btn bout bsm" onclick="SearchPop.open('insp_std')">🔎 Search <span class="kbd">F3</span></button>
-    </div>
-    <div id="stdTbl"></div>`;
-
-  Pages._inspStdRefreshTable();
+  const typeCnt={};types.forEach(t=>typeCnt[t]=(list.filter(r=>r.insp_type===t).length));
+  w.innerHTML='<div class="stat-dash">'+
+    '<div class="sd-card" style="cursor:pointer" onclick="document.getElementById(\'stdTypeF\').value=\'\';Pages._stdRender()">'+
+    '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>'+
+    '<div><div class="sd-val">'+list.length+'</div><div class="sd-lbl">전체 기준서</div></div></div>'+
+    types.map(t=>'<div class="sd-card" style="cursor:pointer" onclick="document.getElementById(\'stdTypeF\').value=\''+t+'\';Pages._stdRender()">'+
+    '<div class="sd-icon" style="background:#f0fdf4;color:#0f6e56">📝</div>'+
+    '<div><div class="sd-val">'+typeCnt[t]+'</div><div class="sd-lbl">'+t+'</div></div></div>').join('')+
+    '</div>'+
+    '<div class="ph" style="margin-top:14px">'+
+    '<div><div class="ptit">📋 검사 기준서</div><div class="psub">품목별 검사 항목 · AQL · 개정 관리</div></div>'+
+    '<div class="pac"><button class="btn bpri btn-f2" onclick="Pages._stdForm(null)">+ 기준서 등록 <span class="kbd">F2</span></button></div></div>'+
+    '<div class="tbar">'+
+    '<input type="text" id="stdSearch" class="finp" style="width:200px" placeholder="품목코드, 품목명 검색..." oninput="Pages._stdRender()">'+
+    '<select class="fsel" id="stdTypeF" onchange="Pages._stdRender()">'+
+    '<option value="">전체 유형</option>'+types.map(t=>'<option>'+t+'</option>').join('')+'</select>'+
+    '<button class="btn bout bsm" onclick="SearchPop.open(\'insp_std\')">🔎 Search <span class="kbd">F3</span></button></div>'+
+    '<div id="stdList"></div>';
+  Pages._stdRender();
 },
 
-/* ── 검사 기준서 테이블만 갱신 [v2.394] ── */
-_inspStdRefreshTable(){
+_stdRender(){
   const q=(document.getElementById('stdSearch')?.value||'').toLowerCase();
   const tp=document.getElementById('stdTypeF')?.value||'';
-  const data=DB.insp_std||[];
-  const filtered=data.filter(r=>{
+  const filtered=(window._stdData||[]).filter(r=>{
     const mQ=!q||(r.item_code||'').toLowerCase().includes(q)||(r.item_name||'').toLowerCase().includes(q);
-    const mT=!tp||r.insp_type===tp;
-    return mQ&&mT;
+    return mQ&&(!tp||r.insp_type===tp);
   });
   Tbl.render({
-    el:'#stdTbl',
+    el:'#stdList',
     cols:[
       {key:'item_code',  label:'품목코드', w:'100px'},
       {key:'item_name',  label:'품목명',   w:'130px'},
       {key:'insp_type',  label:'검사유형', w:'70px',
         render:function(v){return '<span class="badge bblu" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
-      {key:'insp_items', label:'검사항목', w:'120px',
-        render:function(v){try{var a=JSON.parse(v||'[]');return a.map(function(i){return H.e(i.item||'');}).filter(Boolean).join(', ')||'-';}catch(e){return '-';}}},
-      {key:'insp_items', label:'측정방법', w:'90px',
-        render:function(v){try{var a=JSON.parse(v||'[]');return a.map(function(i){return H.e(i.method||'');}).filter(Boolean).join(', ')||'-';}catch(e){return '-';}}},
-      {key:'insp_items', label:'규격/기준', w:'90px',
-        render:function(v){try{var a=JSON.parse(v||'[]');return a.map(function(i){return H.e(i.spec||'');}).filter(Boolean).join(', ')||'-';}catch(e){return '-';}}},
-      {key:'spec_upper',  label:'상한',    w:'60px'},
-      {key:'spec_lower',  label:'하한',    w:'60px'},
-      {key:'aql',         label:'AQL',     w:'55px'},
-      {key:'sample_size', label:'샘플',    w:'55px'},
-      {key:'rev',         label:'개정',    w:'50px'},
-      {key:'effective_date',label:'적용일',w:'90px'},
+      {key:'insp_items', label:'검사항목(수)', w:'90px',
+        render:function(v){try{var a=JSON.parse(v||'[]');return'<b>'+a.length+'</b>개 항목';}catch(e){return '-';}}},
+      {key:'aql',        label:'AQL',       w:'55px'},
+      {key:'insp_level', label:'검사수준',  w:'70px',
+        render:function(v){return v?'<span class="badge" style="background:#F1EFE8;color:#444441;font-size:10px">'+H.e(v)+'</span>':'-';}},
+      {key:'sample_size',label:'샘플',      w:'55px'},
+      {key:'rev',        label:'개정',      w:'50px'},
+      {key:'rev_date',   label:'개정일',    w:'90px'},
+      {key:'effective_date',label:'적용일', w:'90px'},
+      {key:'created_by', label:'작성자',    w:'70px'},
+      {key:'file_url',   label:'파일',      w:'55px',
+        render:function(v){return v?'<button class="btn bxs bblu" style="font-size:10px;padding:2px 6px" onclick="event.stopPropagation();window.open(\''+H.e(v)+'\',\'_blank\')">📎</button>':'<span style="color:var(--tl);font-size:11px">-</span>';}}
     ],
     data:filtered,
-    onRow:row=>Pages._inspStdDetail(row),
-    onDel:async(ids)=>{
-      const numIds=ids.map(Number);
-      /* [v2.394] 삭제 경고 */
-      const _doDelete=async()=>{
-        if(typeof _sb!=='undefined'&&_sb){
-          const res=await SB._softDelete('insp_std',numIds);
-          if(!res.ok) return;
-        }
-        DB.insp_std=DB.insp_std.filter(r=>!numIds.includes(Number(r.id)));
-        Toast.show(numIds.length+'건 삭제되었습니다.','ok');
-        Pages._inspStdRefreshTable();
-      };
-      Modal.confirm({
-        title:'🗑️ 검사 기준서 삭제 확인',
-        msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div>'
-          +'<div style="font-size:14px;font-weight:700;margin:6px 0">선택한 <b style="color:#dc2626">'+ids.length+'건</b>의 기준서를 삭제합니다.</div>'
-          +'<div style="font-size:12px;color:#64748b">계속하시겠습니까?</div></div>',
-        danger:true, onOk:_doDelete
-      });
+    onRow:function(row){Pages._stdDetail(row);},
+    onDel:async function(ids){
+      Modal.confirm({title:'기준서 삭제',msg:ids.length+'건을 삭제하시겠습니까?',danger:true,onOk:async function(){
+        for(var i2=0;i2<ids.length;i2++) await _sb.from('insp_std').update({deleted_at:new Date().toISOString()}).eq('id',ids[i2]);
+        Toast.show(ids.length+'건 삭제되었습니다.','ok');
+        await Pages.insp_std();
+      }});
     }
   });
 },
 
-/* ── 검사 기준서 등록/수정 폼 [v2.394] ── */
-/* [v2.78] 검사 기준서 항목 행 추가 */
-_inspStdForm(){
-  Modal.open({title:'📋 검사 기준서 등록',size:'mxl',
-    body:`<div class="fg2">
-      <div class="fgroup"><label class="fl req">품목코드</label>
-        <input class="fc" id="stdItemCode" list="stdItemList" placeholder="코드 입력 또는 선택"
-          oninput="(function(){var v=document.getElementById('stdItemCode').value.toUpperCase();var it=(DB.items||[]).find(function(x){return (x.item_code||'').toUpperCase()===v;});if(it)document.getElementById('stdItemName').value=it.item_name||'';})()">
-        <datalist id="stdItemList">${(DB.items&&DB.items.length?(DB.items):[]).map(function(it){return'<option value="'+H.e(it.item_code||'')+'">'+H.e(it.item_name||'')+'</option>';}).join('')}</datalist>
-      </div>
-      <div class="fgroup"><label class="fl">품목명</label><input class="fc" id="stdItemName" placeholder="자동 입력"></div>
-      <div class="fgroup"><label class="fl req">검사유형</label>
-        <select class="fc" id="stdInspType">
-          <option value="수입">수입</option>
-          <option value="공정">공정</option>
-          <option value="구매">구매</option>
-          <option value="외주">외주</option>
-          <option value="최종">최종</option>
-        </select>
-      </div>
-      <div class="fgroup"><label class="fl">AQL</label><select class="fc">${['0.065','0.1','0.25','0.4','0.65','1.0','1.5','2.5'].map(v=>`<option>${v}</option>`).join('')}</select></div>
-      <div class="fgroup"><label class="fl">검사수준</label><select class="fc"><option>I</option><option selected>II</option><option>III</option></select></div>
-      <div class="fgroup"><label class="fl">개정번호</label><input class="fc" value="1.0"></div>
-      <div class="fgroup"><label class="fl">개정일</label><input class="fc" type="date" value="${H.today()}"></div>
-    </div>
-    <div style="margin-top:14px"><div style="font-size:13px;font-weight:700;margin-bottom:9px">검사 항목</div>
-    <table class="ctbl"><thead><tr><th>No</th><th>항목</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>빈도</th><th></th></tr></thead>
-    <tbody id="stdBody"><tr><td style="text-align:center;color:var(--tm)">1</td><td><input class="fc" placeholder="외관"></td><td><input class="fc" placeholder="육안"></td><td><input class="fc"></td><td><input class="fc" style="width:50px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" placeholder="전수"></td><td><button onclick="this.closest('tr').remove()" style="color:var(--err)">✕</button></td></tr></tbody></table>
-    <button class="btn bsm bout" style="margin-top:7px" onclick="Pages._addStdRow()">+ 항목 추가</button></div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('기준서가 등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`});
+_stdForm(editRow){
+  var r=editRow||{};
+  var items=[];
+  try{items=JSON.parse(r.insp_items||'[]');}catch(e){}
+  if(!items.length) items=[{item:'',method:'',spec:'',unit:'',usl:'',lsl:'',freq:''}];
+  var makeRow=function(it,idx){
+    return '<tr><td style="text-align:center;color:var(--tm);font-size:11px">'+(idx+1)+'</td>'+
+    '<td><input class="fc std-item" placeholder="외관" value="'+H.e(it.item||'')+'"></td>'+
+    '<td><input class="fc std-method" placeholder="육안" value="'+H.e(it.method||'')+'"></td>'+
+    '<td><input class="fc std-spec" placeholder="기준" value="'+H.e(it.spec||'')+'"></td>'+
+    '<td><input class="fc std-unit" style="width:48px" value="'+H.e(it.unit||'')+'"></td>'+
+    '<td><input class="fc std-usl" style="width:56px" value="'+H.e(it.usl||'')+'"></td>'+
+    '<td><input class="fc std-lsl" style="width:56px" value="'+H.e(it.lsl||'')+'"></td>'+
+    '<td><input class="fc std-freq" style="width:56px" placeholder="전수" value="'+H.e(it.freq||'')+'"></td>'+
+    '<td style="text-align:center"><button type="button" class="btn bxs berr bsm" style="padding:1px 6px;font-size:11px" onclick="this.closest(\'tr\').remove()">✕</button></td></tr>';
+  };
+  var fileHtml=(editRow&&r.file_url)?
+    '<div id="stdExistFile" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+    '<a href="'+H.e(r.file_url||'')+'" target="_blank" class="btn bxs bblu bsm">📎 '+H.e(r.file_name||'파일 보기')+'</a>'+
+    '<button type="button" class="btn bxs berr bsm" onclick="document.getElementById(\'stdExistFile\').remove();window._stdFileRemove=true;">🗑️ 삭제</button></div>':'';
+  window._stdEditId=editRow?r.id:null;
+  window._stdFileRemove=false;
+  var aqls=['0.065','0.1','0.25','0.4','0.65','1.0','1.5','2.5','4.0'];
+  var types=['수입','공정','구매','외주','최종'];
+  var dlOpts=(DB.items||[]).map(function(it){return'<option value="'+H.e(it.item_code||'')+'">'+H.e(it.item_name||'')+'</option>';}).join('');
+  var oi="(function(){var v=document.getElementById('stdItemCode').value.toUpperCase();"+
+    "var it=(DB.items||[]).find(function(x){return(x.item_code||'').toUpperCase()===v;});"+
+    "if(it)document.getElementById('stdItemName').value=it.item_name||'';})()";
+  Modal.open({
+    title:editRow?'📋 검사 기준서 수정':'📋 검사 기준서 등록',size:'mxl',
+    body:'<div class="fg2" style="margin-bottom:14px">'+
+    '<div class="fgroup"><label class="fl req">품목코드</label>'+
+    '<input class="fc" id="stdItemCode" list="stdItemList" value="'+H.e(r.item_code||'')+'" placeholder="코드 입력 또는 목록 선택" oninput="'+H.e(oi)+'">'+
+    '<datalist id="stdItemList">'+dlOpts+'</datalist></div>'+
+    '<div class="fgroup"><label class="fl">품목명</label><input class="fc" id="stdItemName" value="'+H.e(r.item_name||'')+'" placeholder="자동 입력"></div>'+
+    '<div class="fgroup"><label class="fl req">검사유형</label><select class="fc" id="stdInspType">'+
+    types.map(function(t){return'<option value="'+t+'"'+(r.insp_type===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select></div>'+
+    '<div class="fgroup"><label class="fl">AQL</label><select class="fc" id="stdAql"><option value="">선택</option>'+
+    aqls.map(function(v){return'<option value="'+v+'"'+(r.aql===v?' selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'+
+    '<div class="fgroup"><label class="fl">검사수준</label><select class="fc" id="stdInspLevel">'+
+    ['I','II','III'].map(function(v){return'<option value="'+v+'"'+((r.insp_level||'II')===v?' selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'+
+    '<div class="fgroup"><label class="fl">샘플 수</label><input class="fc" id="stdSample" type="number" min="1" value="'+H.e(r.sample_size||'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">개정 번호</label><input class="fc" id="stdRev" value="'+H.e(r.rev||'A')+'"></div>'+
+    '<div class="fgroup"><label class="fl">개정일</label><input class="fc" id="stdRevDate" type="date" value="'+H.e(r.rev_date||'')+'"></div>'+
+    '<div class="fgroup"><label class="fl">적용일</label><input class="fc" id="stdEffDate" type="date" value="'+H.e(r.effective_date||'')+'"></div>'+
+    '<div class="fgroup ff"><label class="fl">파일 첨부</label><div>'+fileHtml+
+    '<input type="file" id="stdFile" class="fc" style="font-size:12px" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"></div></div></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+    '<div style="font-size:13px;font-weight:700">검사 항목</div>'+
+    '<button type="button" class="btn bpri bsm" onclick="Pages._stdAddRow()">+ 항목 추가</button></div>'+
+    '<div style="overflow-x:auto"><table class="ctbl"><thead><tr>'+
+    '<th>No</th><th>항목명 *</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>빈도</th><th></th>'+
+    '</tr></thead><tbody id="stdRows">'+items.map(makeRow).join('')+'</tbody></table></div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+    '<button class="btn bpri btn-f8" onclick="Pages._stdSave()">저장 <span class="kbd">F8</span></button>'
+  });
 },
-_addStdRow(){
-  var tbody=document.getElementById('stdBody');
+
+_stdAddRow(){
+  var tbody=document.getElementById('stdRows');
   if(!tbody) return;
-  var no=tbody.rows.length+1;
+  var idx=tbody.rows.length+1;
   var tr=document.createElement('tr');
-  tr.innerHTML='<td style="text-align:center;color:var(--tm)">'+no+'</td>'+
-    '<td><input class="fc" placeholder="항목명"></td>'+
-    '<td><input class="fc" placeholder="육안/측정"></td>'+
-    '<td><input class="fc"></td>'+
-    '<td><input class="fc"></td>'+
-    '<td><input class="fc"></td>'+
-    '<td><input class="fc"></td>'+
-    '<td><input class="fc" placeholder="전수"></td>'+
-    '<td><button type="button" onclick="this.closest(\'tr\').remove()" style="color:var(--err);font-size:16px;cursor:pointer">✕</button></td>';
+  tr.innerHTML='<td style="text-align:center;color:var(--tm);font-size:11px">'+idx+'</td>'+
+    '<td><input class="fc std-item" placeholder="외관"></td>'+
+    '<td><input class="fc std-method" placeholder="육안"></td>'+
+    '<td><input class="fc std-spec"></td>'+
+    '<td><input class="fc std-unit" style="width:48px"></td>'+
+    '<td><input class="fc std-usl" style="width:56px"></td>'+
+    '<td><input class="fc std-lsl" style="width:56px"></td>'+
+    '<td><input class="fc std-freq" style="width:56px" placeholder="전수"></td>'+
+    '<td style="text-align:center"><button type="button" class="btn bxs berr bsm" style="padding:1px 6px;font-size:11px" onclick="this.closest(\'tr\').remove()">✕</button></td>';
   tbody.appendChild(tr);
 },
 
-
-/* ── 검사 기준서 저장 [v2.394] ── */
-async _inspStdSave(){
-  /* [v2.394] 파일 업로드 포함 */
-  const g=id=>document.getElementById(id)?.value.trim()||'';
-  const item_code=document.getElementById('stdItemCode')?.value||g('stdItemCode');
-  const item_name=g('stdItemName');
-  const insp_type=g('stdInspType')||g('stdType');
-  /* [v2.78] stdBody 테이블에서 검사항목 수집 */
-  const stdBody=document.getElementById('stdBody');
-  const insp_items_arr=stdBody?[...stdBody.rows].map(function(tr){
-    var inp=tr.querySelectorAll('input');
-    return{item:inp[0]?.value||'',method:inp[1]?.value||'',spec:inp[2]?.value||'',
-           unit:inp[3]?.value||'',usl:inp[4]?.value||'',lsl:inp[5]?.value||'',freq:inp[6]?.value||''};
+async _stdSave(){
+  var g=function(id){return(document.getElementById(id)?.value||'').trim();};
+  var item_code=g('stdItemCode').toUpperCase();
+  var insp_type=g('stdInspType');
+  if(!item_code){Toast.show('품목코드를 입력하세요.','warn');return;}
+  if(!insp_type){Toast.show('검사유형을 선택하세요.','warn');return;}
+  var tbody=document.getElementById('stdRows');
+  var items=tbody?[...tbody.rows].map(function(tr){
+    return{item:(tr.querySelector('.std-item')?.value||'').trim(),
+      method:(tr.querySelector('.std-method')?.value||'').trim(),
+      spec:(tr.querySelector('.std-spec')?.value||'').trim(),
+      unit:(tr.querySelector('.std-unit')?.value||'').trim(),
+      usl:(tr.querySelector('.std-usl')?.value||'').trim(),
+      lsl:(tr.querySelector('.std-lsl')?.value||'').trim(),
+      freq:(tr.querySelector('.std-freq')?.value||'').trim()};
   }).filter(function(it){return it.item;}) : [];
-  const insp_items=JSON.stringify(insp_items_arr);
-  if(!item_code&&!item_name){Toast.show('품목코드 또는 품목명을 입력하세요.','warn');return;}
-  if(!insp_type){Toast.show('검사 유형을 선택하세요.','warn');return;}
-  if(!insp_items_arr.length){Toast.show('검사 항목을 1개 이상 입력하세요.','warn');return;}
-
-  const row={
-    item_code, item_name, insp_type, insp_items,
-    spec_upper: document.getElementById('stdUpper')?.value!==''?Number(document.getElementById('stdUpper')?.value):null,
-    spec_lower: document.getElementById('stdLower')?.value!==''?Number(document.getElementById('stdLower')?.value):null,
-    spec_unit: g('stdUnit'),
-    sampling_method: g('stdSampling'),
-    aql: g('stdAql')||null,
-    sample_size: document.getElementById('stdSample')?.value?Number(document.getElementById('stdSample')?.value):null,
-    criteria: g('stdCriteria'),
-    rev: g('stdRev'),
-    rev_date: g('stdRevDate')||null,
-    note: g('stdNote'),
-    created_by: Auth._u?.name||Auth._u?.username||'',
-  };
-
-  /* ── 파일 처리 [v2.394] ── */
-  const fileEl=document.getElementById('stdFile');
-  const removeEl=document.getElementById('stdFileRemove');
-  const editId=window._stdEditId;
-  const existRow=editId?(DB.insp_std||[]).find(r=>r.id===editId):null;
-
-  /* 파일 삭제 요청 */
-  if(removeEl?.value==='1'&&existRow?.file_url){
-    try{ await SB.deleteFile(existRow.file_url); }catch(e){}
-    row.file_url=null;
-  }
-  /* 새 파일 업로드 */
+  if(!items.length){Toast.show('검사 항목을 1개 이상 입력하세요.','warn');return;}
+  var row={item_code,item_name:g('stdItemName'),insp_type,
+    insp_items:JSON.stringify(items),
+    aql:g('stdAql')||null,insp_level:g('stdInspLevel')||'II',
+    sample_size:g('stdSample')||null,rev:g('stdRev')||'A',
+    rev_date:g('stdRevDate')||null,effective_date:g('stdEffDate')||null,
+    created_by:Auth._u?.name||Auth._u?.username||''};
+  if(window._stdFileRemove){row.file_url=null;row.file_name=null;}
+  var fileEl=document.getElementById('stdFile');
   if(fileEl?.files?.length){
-    const file=fileEl.files[0];
-    const uploadRes=await SB.uploadFile('insp_std', file);
-    if(uploadRes?.url) row.file_url=uploadRes.url;
-    else row.file_url=existRow?.file_url||null;
-  } else if(!removeEl||removeEl.value!=='1'){
-    /* 파일 변경 없음 — 기존 url 유지 */
-    if(existRow?.file_url) row.file_url=existRow.file_url;
+    var up=await SB.uploadFile('insp_std',fileEl.files[0]);
+    if(up?.url){row.file_url=up.url;row.file_name=fileEl.files[0].name;}
+    else Toast.show('파일 업로드 실패','warn');
   }
-
-  if(editId){
-    const res=await SB.updateInspStd(editId,row);
-    if(!res.ok) return;
-    const idx=DB.insp_std?.findIndex(r=>r.id===editId);
-    if(idx>=0) DB.insp_std[idx]={...DB.insp_std[idx],...row};
-    Toast.show('기준서가 수정되었습니다.','ok');
-  } else {
-    const res=await SB.addInspStd(row);
-    if(!res.ok) return;
-    Toast.show('기준서가 등록되었습니다.','ok');
-  }
+  var editId=window._stdEditId;
+  var res=editId?await SB.updateInspStd(editId,row):await SB.addInspStd(row);
+  if(!res.ok) return;
+  Toast.show(editId?'기준서가 수정되었습니다.':'기준서가 등록되었습니다.','ok');
   Modal.close();
-  /* [v2.92] 등록 후 페이지 강제 재빌드 */
-  const pw=document.getElementById('pw');
-  if(pw){
-    const stdTbl=pw.querySelector('#stdTbl');
-    if(stdTbl) stdTbl.remove();
-  }
   await Pages.insp_std();
 },
+
+_stdDetail(row){
+  if(!row) return;
+  var items=[];try{items=JSON.parse(row.insp_items||'[]');}catch(e){}
+  var itemRows=items.length?items.map(function(it,i){
+    return '<tr><td style="text-align:center">'+(i+1)+'</td>'+
+    '<td>'+H.e(it.item||'-')+'</td><td>'+H.e(it.method||'-')+'</td>'+
+    '<td>'+H.e(it.spec||'-')+'</td><td>'+H.e(it.unit||'-')+'</td>'+
+    '<td>'+H.e(it.usl||'-')+'</td><td>'+H.e(it.lsl||'-')+'</td>'+
+    '<td>'+H.e(it.freq||'-')+'</td></tr>';
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--tm)">검사항목 없음</td></tr>';
+  var rowJson=JSON.stringify(row);
+  Modal.open({title:'📋 '+H.e(row.item_code||'')+' — 기준서 상세',size:'mxl',
+    body:'<div class="fg2" style="margin-bottom:14px">'+
+    '<div class="fgroup"><label class="fl">품목코드</label><div class="fc-ro">'+H.e(row.item_code||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">품목명</label><div class="fc-ro">'+H.e(row.item_name||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">검사유형</label><div class="fc-ro">'+H.e(row.insp_type||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">AQL / 수준</label><div class="fc-ro">'+(row.aql||'-')+' / '+(row.insp_level||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">샘플</label><div class="fc-ro">'+(row.sample_size||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">개정 / 개정일</label><div class="fc-ro">'+(row.rev||'-')+' / '+(row.rev_date||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">적용일</label><div class="fc-ro">'+(row.effective_date||'-')+'</div></div>'+
+    '<div class="fgroup"><label class="fl">작성자</label><div class="fc-ro">'+(row.created_by||'-')+'</div></div>'+
+    (row.file_url?'<div class="fgroup ff"><label class="fl">첨부파일</label><a href="'+H.e(row.file_url)+'" target="_blank" class="btn bxs bblu bsm">📎 '+H.e(row.file_name||'파일')+'</a></div>':'')+
+    '</div><div style="font-size:13px;font-weight:700;margin-bottom:8px">검사 항목 ('+items.length+'개)</div>'+
+    '<div style="overflow-x:auto"><table class="ctbl"><thead><tr>'+
+    '<th>No</th><th>항목명</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>빈도</th>'+
+    '</tr></thead><tbody>'+itemRows+'</tbody></table></div>',
+    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+    '<button class="btn bpri" onclick="Modal.close();window._stdEditRow='+H.e(rowJson)+';setTimeout(function(){Pages._stdForm(JSON.parse(window._stdEditRow));},50)">✏️ 수정</button>'
+  });
+},
+
+
 
 /* 파일 미리보기 [v2.394] */
 _inspStdFilePreview(url, itemCode){
