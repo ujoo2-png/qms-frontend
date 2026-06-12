@@ -2801,18 +2801,19 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  const nc=DB.nc.find(n=>String(n.id)===String(id));
+  /* [v2.97] DB.nc 의존 제거 → window._ncRow 직접 사용 */
+  const nc=window._ncRow;
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
   const cur=steps.indexOf(nc.status||'접수');
   const next=steps[(cur+1)%steps.length];
   Modal.confirm({
     title:'상태 변경',
-    msg:`"${nc.no}" 상태를 <strong>${nc.status||'접수'}</strong> → <strong>${next}</strong>으로 변경하시겠습니까?`,
+    msg:`"${H.e(nc.no||'-')}" 상태를 <strong>${nc.status||'접수'}</strong> → <strong>${next}</strong>으로 변경하시겠습니까?`,
     onOk:async()=>{
-      const res=await SB.updateNc(id,{status:next,updated_at:H.today()});
-      if(!res?.ok) return;
-      nc.status=next;
+      const res=await SB.updateNc(nc.id,{status:next});
+      if(!res?.ok){Toast.show('상태 변경 실패','err');return;}
+      window._ncRow={...nc,status:next};
       Modal.close();
       Toast.show(`상태가 "${next}"으로 변경되었습니다.`,'ok');
       Pages._ncRender();
