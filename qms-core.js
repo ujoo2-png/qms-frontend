@@ -342,18 +342,28 @@ const Auth={
   },
 
   logout(){
-    this._u=null;this._pwV=false;this._cur=null;
-    /* C안: 로그아웃 시 sessionStorage 완전 삭제 */
-    sessionStorage.removeItem('qms_auth');
-    sessionStorage.removeItem('qms_page');
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('loginOv').style.display='';
-    document.getElementById('npOverlay').classList.add('hidden');
-    const li=document.getElementById('lid'),lp=document.getElementById('lpw');
-    if(li)li.value='';if(lp){lp.value='';lp.type='password';}
-    const ico=document.getElementById('pwToggle');if(ico)ico.textContent='👁️';
-    this.switchTab('login',document.querySelectorAll('.lo-tab')[0]);
-    Toast.show('로그아웃되었습니다.','info');
+    /* [v2.101] 로그아웃 확인 팝업 */
+    const self=this;
+    Modal.confirm({
+      title:'로그아웃',
+      msg:'<div style="text-align:center;padding:8px 0">'+
+          '<div style="font-size:24px;margin-bottom:8px">👋</div>'+
+          '<div style="font-size:14px;font-weight:500">로그아웃 하시겠습니까?</div>'+
+          '</div>',
+      onOk:function(){
+        self._u=null;self._pwV=false;self._cur=null;
+        sessionStorage.removeItem('qms_auth');
+        sessionStorage.removeItem('qms_page');
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('loginOv').style.display='';
+        document.getElementById('npOverlay').classList.add('hidden');
+        const li=document.getElementById('lid'),lp=document.getElementById('lpw');
+        if(li)li.value='';if(lp){lp.value='';lp.type='password';}
+        const ico=document.getElementById('pwToggle');if(ico)ico.textContent='👁️';
+        self.switchTab('login',document.querySelectorAll('.lo-tab')[0]);
+        Toast.show('로그아웃되었습니다.','info');
+      }
+    });
   },
 
   /* ── 회원가입 [v2.394 복구] ──

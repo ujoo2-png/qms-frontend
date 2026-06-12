@@ -6,19 +6,19 @@
   ╠══════════════════════════════════════════════════════════╣
   ║  v2.39  기준 — Q&A·문서관리 DMS·Magic Indicator 완료      ║
   ║  v2.40  2026-06-03  제조설비관리(EMS) M1~M8 골격 구현      ║
-  ║  v2.100  2026-06-03  버전규칙 변경(*.**) / 홈카드 2×5       ║
+  ║  v2.101  2026-06-03  버전규칙 변경(*.**) / 홈카드 2×5       ║
   ╚══════════════════════════════════════════════════════════╝
 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.100</title>
+<title>QMS - 품질경영시스템 v2.101</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- [v2.100] QR 코드 생성 — 마이머신카드 출력용 -->
+<!-- [v2.101] QR 코드 생성 — 마이머신카드 출력용 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<link rel="stylesheet" href="qms-style.css?v=2.100">
+<link rel="stylesheet" href="qms-style.css?v=2.101">
 <!-- Supabase JS SDK CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -78,7 +78,7 @@
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.100</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.101</div>
         </div>
       </div>
     </div>
@@ -228,7 +228,7 @@
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.100</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.101</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
   </div>
 </div>
 
@@ -239,7 +239,7 @@
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.100</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.101</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -295,7 +295,7 @@
         <div class="ni" data-p="cal" onclick="Nav.go('cal')"><span class="nii">📐</span><span class="nt">교정 관리</span></div>
         <div class="ni" data-p="msa" onclick="Nav.go('msa')"><span class="nii">📈</span><span class="nt">MSA 분석</span></div>
       </div>
-      <!-- [v2.100] 제조설비관리 (EMS) -->
+      <!-- [v2.101] 제조설비관리 (EMS) -->
       <div class="ns" id="ns-eq" style="display:none">
         <div class="nst">제조설비관리</div>
         <div class="ni" data-p="eq_mgmt"         onclick="Nav.go('eq_mgmt')"><span class="nii">🏭</span><span class="nt">설비 등록 관리</span></div>
@@ -354,7 +354,7 @@
         <div class="tb-mod tb-mod-mention" data-mod="멘션함" onclick="TopNav.selectMention()" id="tbMentionBtn" style="position:relative">💬 멘션함<span id="tbMentionBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;display:flex;align-items:center;justify-content:center"></span></div>
       </div>
       <div class="tb-right">
-        <!-- [v2.100] Q&A 버튼: tbd 왼쪽 배치 / 이름 Q&A -->
+        <!-- [v2.101] Q&A 버튼: tbd 왼쪽 배치 / 이름 Q&A -->
         <button class="qna-topbar-btn" id="qnaBtn" onclick="Nav.go('qna')" title="Q&A / 매뉴얼 / 팁">Q&amp;A</button>
         <div class="tbd" id="tbd"></div>
         <button class="ib" onclick="UI.toggleMpop()" title="멘션">🔔<span class="bdot" id="bdot"></span></button>
@@ -405,12 +405,12 @@
 
 
 <!-- QMS 분리 파일 로드 순서: db → core → pages → excel → init -->
-<script src="qms-db.js?v=2.100"></script>
-<script src="qms-core.js?v=2.100"></script>
-<script src="qms-pages.js?v=2.100"></script>
-<script src="qms-excel.js?v=2.100"></script>
+<script src="qms-db.js?v=2.101"></script>
+<script src="qms-core.js?v=2.101"></script>
+<script src="qms-pages.js?v=2.101"></script>
+<script src="qms-excel.js?v=2.101"></script>
   <script>/* Cfg 전역 보장 */if(typeof window.Cfg==='undefined'&&typeof Cfg!=='undefined')window.Cfg=Cfg;if(typeof window.ExcelMgr==='undefined'&&typeof ExcelMgr!=='undefined')window.ExcelMgr=ExcelMgr;</script>
-<script src="qms-init.js?v=2.100"></script>
+<script src="qms-init.js?v=2.101"></script>
 
 
 <script type="text/plain" id="ncCarPrintTpl">
@@ -453,22 +453,21 @@ rt
 
 
 <style>
-body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:9pt;background:#fff}
-@page{size:A4 landscape;margin:.55in .31in .16in .31in}
+body{font-family:'맑은 고딕','Malgun Gothic','나눔고딕',sans-serif;font-size:9pt;background:#fff;margin:0}
+
 @media print{.no-print{display:none!important}}
-table{border-collapse:collapse;width:100%}
-td{border:0.5pt solid #000;padding:1px 3px;vertical-align:middle;font-size:7.5pt}
-.xl66,.xl67,.xl68,.xl73,.xl74,.xl76,.xl77,.xl78,.xl79,.xl80,.xl81,.xl82,.xl83,.xl87,.xl88,.xl89,.xl90,.xl91,.xl92,.xl93,.xl94,.xl95,.xl103,.xl104,.xl107,.xl109,.xl111,.xl114,.xl116,.xl126,.xl127,.xl132,.xl150,.xl151,.xl154,.xl156,.xl159,.xl161,.xl169,.xl171,.xl180,.xl184,.xl186,.xl195,.xl196,.xl197,.xl198,.xl199,.xl200,.xl201,.xl202,.xl203,.xl204{border:0.5pt solid #000}
-.xl184,.xl186,.xl195{background:#c6d9f1;font-weight:bold;text-align:center;font-size:9pt}
-.xl66,.xl67,.xl68{background:#c6d9f1;text-align:center;font-size:8pt}
-.xl73,.xl74,.xl76,.xl77,.xl78,.xl79,.xl80,.xl87,.xl88,.xl89,.xl94,.xl95,.xl103,.xl104,.xl107{background:#c6d9f1;text-align:center;font-size:7.5pt;font-weight:bold}
-.xl81,.xl82,.xl83{background:#c6d9f1;text-align:center;font-size:7.5pt;font-weight:bold}
-.xl109,.xl111,.xl116,.xl156,.xl159,.xl161,.xl169,.xl171,.xl150,.xl151,.xl180,.xl114{background:#c6d9f1;text-align:center;font-size:7.5pt;font-weight:bold}
-.xl199,.xl198{background:#c6d9f1;font-size:7.5pt}
-.xl204,.xl202{background:#c6d9f1;text-align:center;font-weight:bold}
-.xl126,.xl127,.xl132{background:#e2efda;font-size:7.5pt;text-align:center}
-.xl186{font-size:14pt;letter-spacing:3px;text-align:center;background:#fff}
-.print-btn{position:fixed;bottom:16px;right:16px;padding:8px 18px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
+table{border-collapse:collapse;table-layout:fixed}
+td{border:.5pt solid #000;padding:1px 3px;vertical-align:middle;font-size:7.5pt;word-break:break-all}
+.xl66,.xl67,.xl68,.xl73,.xl74,.xl76,.xl77,.xl81,.xl82,.xl83,.xl87,.xl89,.xl94,.xl95,.xl111,.xl114,.xl116,.xl150,.xl151,.xl154,.xl156,.xl159,.xl161,.xl169,.xl171,.xl180,.xl195,.xl202,.xl204,.xl199,.xl198{background:#dce6f1;font-weight:bold;text-align:center}
+.xl184,.xl195{background:#dce6f1;font-weight:bold;text-align:center;font-size:9pt}
+.xl186{font-size:15pt;font-weight:bold;text-align:center;letter-spacing:3px;background:#fff}
+.xl65,.xl69,.xl70,.xl72,.xl75,.xl78,.xl79,.xl80,.xl84,.xl85,.xl88,.xl90,.xl91{background:#fff}
+.xl97,.xl98,.xl107,.xl109,.xl142,.xl163,.xl181,.xl197,.xl200,.xl207,.xl210,.xl216,.xl219{background:#fff}
+.xl86{text-align:right}
+.xl92{text-align:left;background:#fff}
+.xl126,.xl127,.xl132{background:#e2efda;text-align:center;font-size:7.5pt;font-weight:bold}
+.xl154{text-align:center;font-size:7.5pt}
+.print-btn{position:fixed;bottom:16px;right:16px;padding:8px 18px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;z-index:999}
 </style>
 </head>
 
@@ -958,6 +957,16 @@ set('d_act_occur_date', d.due_date);
 set('ap_s1',       d.created_by);
 set('ap_s5',       d.created_by);
 if(d.type) setCheck('d_inout', d.type);
+</script>
+</body>
+
+</html>
+
+</script>
+</body>
+
+</html>
+
 </script>
 </body>
 

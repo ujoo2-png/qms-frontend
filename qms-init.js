@@ -89,7 +89,7 @@ function setupHotkeys(){
         const el=document.getElementById(id);
         if(el)el.textContent=[(u.name||u.username||'?')[0],u.name||u.username,roleLabel[u.role]||'사용자',u.name||u.username][i];
       });
-      /* [v2.100] pw 먼저 설정 → app 표시 시 홈 초기화면 노출 방지 */
+      /* [v2.101] pw 먼저 설정 → app 표시 시 홈 초기화면 노출 방지 */
       const pw=document.getElementById('pw');
       if(pw) pw.innerHTML='<div style="padding:60px;text-align:center;color:var(--tm);font-size:14px">⏳ 데이터 불러오는 중...</div>';
       document.getElementById('loginOv').style.display='none';
