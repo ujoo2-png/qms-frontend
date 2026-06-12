@@ -964,10 +964,10 @@ const SB={
 
   /* ── 검사 기준서 [v2.394] ── */
   async getInspStd(){
-    if(!_sb) return DB.insp_std||[];
-    /* [v2.87] _sbFetchAll ORDER BY 오류 → 직접 select 사용 */
-    const {data,error}=await _sb.from('insp_std').select('*');
-    if(error){console.warn('[SB] insp_std 조회 실패:',error.message);return DB.insp_std||[];}
+    if(!_sb) return [];
+    /* [v2.94] deleted_at IS NULL 필터 + id 정렬 */
+    const {data,error}=await _sb.from('insp_std').select('*').is('deleted_at',null).order('id');
+    if(error){console.warn('[SB] insp_std 조회 실패:',error.message);return [];}
     console.log('[SB] insp_std 전체 '+(data?.length||0)+'건 로드');
     return data||[];
   },
@@ -975,17 +975,21 @@ const SB={
     if(!_sb){const id=Date.now();DB.insp_std=(DB.insp_std||[]);DB.insp_std.push({id,...row});return{ok:true,id};}
     /* [v2.91] 실제 컬럼: id,item_code,item_name,insp_type,insp_items,
        spec_upper,spec_lower,aql,sample_size,rev,effective_date,created_at,deleted_at */
+    /* [v2.94] 실제 컬럼 전체 */
     const allowed={
-      item_code:    row.item_code||'',
-      item_name:    row.item_name||'',
-      insp_type:    row.insp_type||'수입',
-      insp_items:   row.insp_items||'[]',
-      spec_upper:   row.spec_upper!=null?String(row.spec_upper):null,
-      spec_lower:   row.spec_lower!=null?String(row.spec_lower):null,
-      aql:          row.aql||null,
-      sample_size:  row.sample_size!=null?String(row.sample_size):null,
-      rev:          row.rev||'A',
-      effective_date: row.effective_date||row.rev_date||null,
+      item_code:     row.item_code||'',
+      item_name:     row.item_name||'',
+      insp_type:     row.insp_type||'수입',
+      insp_items:    row.insp_items||'[]',
+      aql:           row.aql||null,
+      insp_level:    row.insp_level||'II',
+      sample_size:   row.sample_size||null,
+      rev:           row.rev||'A',
+      rev_date:      row.rev_date||null,
+      effective_date:row.effective_date||null,
+      created_by:    row.created_by||'',
+      file_url:      row.file_url||null,
+      file_name:     row.file_name||null,
     };
     const {error}=await _sb.from('insp_std').insert(allowed);
     if(error){Toast.show('기준서 저장 실패: '+error.message,'err');return{ok:false};}
@@ -997,7 +1001,8 @@ const SB={
     /* [v2.91] 실제 컬럼만 필터 */
     const allowed={};
     const cols=['item_code','item_name','insp_type','insp_items',
-                 'spec_upper','spec_lower','aql','sample_size','rev','effective_date'];
+      'aql','insp_level','sample_size','rev','rev_date','effective_date',
+      'created_by','file_url','file_name'];
     cols.forEach(k=>{ if(patch[k]!==undefined) allowed[k]=patch[k]; });
     const {error}=await _sb.from('insp_std').update(allowed).eq('id',id);
     if(error){Toast.show('기준서 수정 실패: '+error.message,'err');return{ok:false};}
