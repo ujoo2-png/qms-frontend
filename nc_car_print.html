@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>시정조치 요청서</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:9pt;background:#fff;color:#000}
+@page{size:A4 landscape;margin:10mm 8mm 6mm 8mm}
+@media print{body{margin:0}.no-print{display:none!important}}
+.wrap{width:267mm;min-height:170mm;padding:0}
+/* 결재란 */
+.approval-area{display:flex;justify-content:space-between;margin-bottom:4px}
+.approval-box{border:1px solid #000;font-size:8pt}
+.approval-box table{border-collapse:collapse;width:100%}
+.approval-box td{border:1px solid #000;padding:2px 6px;text-align:center;height:22px}
+.approval-box .hdr{background:#dce6f1;font-weight:bold;font-size:8pt}
+.approval-box .sign{height:36px;min-width:36px}
+/* 제목 */
+.doc-title{text-align:center;font-size:16pt;font-weight:bold;padding:4px 0 6px;letter-spacing:2px}
+/* 본문 테이블 */
+.main-tbl{width:100%;border-collapse:collapse;margin-top:4px}
+.main-tbl td,.main-tbl th{border:1px solid #000;padding:3px 6px;font-size:8.5pt;vertical-align:middle}
+.main-tbl .lbl{background:#dce6f1;font-weight:bold;white-space:nowrap;width:68px;text-align:center}
+.main-tbl .val{min-height:20px}
+.main-tbl .area{height:54px;vertical-align:top;padding:4px 6px}
+/* 하단 */
+.footer-row{display:flex;gap:4px;margin-top:4px;font-size:8pt}
+.doc-no-box{border:1px solid #000;padding:2px 8px;font-size:8pt}
+.print-btn{position:fixed;bottom:20px;right:20px;padding:10px 20px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 결재란 -->
+  <div class="approval-area">
+    <!-- 조치부서 결재 -->
+    <div class="approval-box">
+      <table>
+        <tr><td colspan="4" class="hdr">조치부서 결재</td></tr>
+        <tr><td class="hdr">작성</td><td class="hdr">검토</td><td class="hdr">검토</td><td class="hdr">승인</td></tr>
+        <tr><td class="sign" id="ap_write1"></td><td class="sign" id="ap_review1"></td><td class="sign" id="ap_review2"></td><td class="sign" id="ap_approve1"></td></tr>
+      </table>
+    </div>
+    <!-- 제목 -->
+    <div class="doc-title">시 정 조 치 요 청 서</div>
+    <!-- 발행부서 결재 -->
+    <div class="approval-box">
+      <table>
+        <tr><td colspan="3" class="hdr">발행부서 결재</td></tr>
+        <tr><td class="hdr">작성</td><td class="hdr">검토</td><td class="hdr">승인</td></tr>
+        <tr><td class="sign" id="ap_write2"></td><td class="sign" id="ap_review3"></td><td class="sign" id="ap_approve2"></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 본문 -->
+  <table class="main-tbl">
+    <tr>
+      <td class="lbl">등록번호</td><td class="val" id="nc_no" style="width:110px"></td>
+      <td class="lbl">등록일자</td><td class="val" id="nc_date" style="width:90px"></td>
+      <td class="lbl">발행번호</td><td class="val" id="nc_issue_no" style="width:90px"></td>
+      <td class="lbl">고객사명</td><td class="val" id="nc_customer"></td>
+      <td class="lbl">도면번호</td><td class="val" id="nc_dwg_no"></td>
+    </tr>
+    <tr>
+      <td class="lbl">품&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명</td><td class="val" colspan="3" id="nc_item"></td>
+      <td class="lbl">작업지시번호</td><td class="val" id="nc_work_order"></td>
+      <td class="lbl">불량유형</td><td class="val" id="nc_type"></td>
+      <td class="lbl">불량현상</td><td class="val" id="nc_desc"></td>
+    </tr>
+    <tr>
+      <td class="lbl">납품수량</td><td class="val" id="nc_ship_qty"></td>
+      <td class="lbl">검사수량</td><td class="val" id="nc_insp_qty"></td>
+      <td class="lbl">불량수량</td><td class="val" id="nc_qty"></td>
+      <td class="lbl">불량율</td><td class="val" id="nc_defect_rate"></td>
+      <td class="lbl">DWG_LC</td><td class="val" id="nc_dwg_lc"></td>
+    </tr>
+    <tr>
+      <td class="lbl">처리기한</td><td class="val" id="nc_due_date"></td>
+      <td class="lbl">처리방법</td><td class="val" colspan="3" id="nc_process_method"></td>
+      <td class="lbl">담당자</td><td class="val" colspan="3" id="nc_assignee"></td>
+    </tr>
+    <tr>
+      <td class="lbl">부적합 내용</td>
+      <td class="val area" colspan="9" id="nc_detail"></td>
+    </tr>
+    <tr>
+      <td class="lbl">원인 분석</td>
+      <td class="val area" colspan="9" id="nc_cause"></td>
+    </tr>
+    <tr>
+      <td class="lbl">시정조치 내용</td>
+      <td class="val area" colspan="9" id="nc_action"></td>
+    </tr>
+    <tr>
+      <td class="lbl">재발방지 대책</td>
+      <td class="val area" colspan="9" id="nc_prevention"></td>
+    </tr>
+    <tr>
+      <td class="lbl">효과 확인</td>
+      <td class="val area" colspan="9" id="nc_effect"></td>
+    </tr>
+  </table>
+
+  <!-- 하단 문서정보 -->
+  <div class="footer-row" style="margin-top:4px;justify-content:space-between">
+    <span>문서번호: INDS-QP-018-01</span>
+    <span id="nc_footer_no"></span>
+    <span>개정: Rev.01</span>
+  </div>
+
+</div>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄</button>
+
+<script>
+function esc(v){
+  if(v==null||v===undefined) return '';
+  return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function set(id,v){ var el=document.getElementById(id); if(el) el.textContent=v||''; }
+
+// URL 파라미터에서 데이터 수신
+var params=new URLSearchParams(window.location.search);
+var data={};
+try{ data=JSON.parse(decodeURIComponent(params.get('d')||'{}')); }catch(e){}
+
+// 데이터 바인딩
+set('nc_no',      data.no||'');
+set('nc_date',    data.date||'');
+set('nc_issue_no',data.issue_no||'');
+set('nc_customer',data.customer||'');
+set('nc_dwg_no',  data.dwg_no||'');
+set('nc_item',    data.item||'');
+set('nc_work_order',data.work_order||'');
+set('nc_type',    data.type||'');
+set('nc_desc',    data.desc||'');
+set('nc_ship_qty',data.ship_qty||'');
+set('nc_insp_qty',data.insp_qty||'');
+set('nc_qty',     data.qty?(data.qty+'ea'):'');
+set('nc_defect_rate',data.defect_rate||'');
+set('nc_dwg_lc',  data.dwg_lc||'');
+set('nc_due_date',data.due_date||'');
+set('nc_process_method',data.process_method||'');
+set('nc_assignee',data.assignee||'');
+set('nc_detail',  data.desc||'');
+set('nc_cause',   data.cause||'');
+set('nc_action',  data.action||'');
+set('nc_prevention',data.prevention||'');
+set('nc_effect',  data.effect||'');
+set('nc_footer_no',data.no||'');
+set('ap_write1',  data.created_by||'');
+set('ap_write2',  data.created_by||'');
+</script>
+</body>
+</html>

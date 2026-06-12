@@ -2760,6 +2760,7 @@ _ncDetail(row){
     title:`⚠️ 부적합 상세 — ${H.e(row.no||'-')}`,
     size:'mlg',
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
+        +`<button class="btn bgh bsm" onclick="Pages._ncPrint(${JSON.stringify(row).replace(/</g,'\u003c')})">🖨️ 인쇄</button>`
         +`<button class="btn bgh" onclick="Modal.close();Pages._ncForm(Tbl._curData?.find(r=>r.id===${row.id})||${JSON.stringify(row).replace(/</g,'\u003c')})">✏️ 수정</button>`
         +`<button class="btn bpri" onclick="Pages._ncStatusChange(${row.id})">🔄 상태 변경</button>`,
     body:`
@@ -10684,6 +10685,98 @@ _equipCalDetail(id){
       setTimeout(()=>document.querySelector('.stab-btn[data-tab="general"]')?.click(),100);
     }});
   },
+
+
+
+  async _stdFileOnly(row){
+    if(!row) return;
+    window._stdFileRemoveOnly=false;
+    var existHtml=row.file_url?
+      '<div class="fo-exist" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:var(--bg2);border-radius:var(--r)">'+
+      '<span style="font-size:12px">📎 '+H.e(row.file_name||'현재 파일')+'</span>'+
+      '<a href="'+H.e(row.file_url)+'" target="_blank" class="btn bxs bblu bsm">보기</a>'+
+      '<button type="button" class="btn bxs berr bsm" onclick="window._stdFileRemoveOnly=true;this.closest(\".fo-exist\").remove()">🗑️ 삭제</button>'+
+      '</div>':
+      '<p style="font-size:12px;color:var(--tm);margin-bottom:12px">첨부 파일 없음</p>';
+    Modal.open({
+      title:'📎 파일 첨부/변경 — '+H.e(row.item_code||''),size:'msm',
+      body:'<div style="padding:8px 0">'+existHtml+
+        '<label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px">새 파일 선택</label>'+
+        '<input type="file" id="stdFileOnly" class="fc" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"></div>',
+      foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+           '<button class="btn bpri" onclick="Pages._stdFileSave('+JSON.stringify(row)+')" >저장</button>'
+    });
+  },
+
+  async _stdFileSave(row){
+    var fileEl=document.getElementById('stdFileOnly');
+    var patch={};
+    if(window._stdFileRemoveOnly){patch.file_url=null;patch.file_name=null;}
+    if(fileEl&&fileEl.files&&fileEl.files.length){
+      Toast.show('파일 업로드 중...','info');
+      var up=await SB.uploadFile('insp_std',fileEl.files[0]);
+      if(up&&up.url){patch.file_url=up.url;patch.file_name=fileEl.files[0].name;}
+      else{Toast.show('업로드 실패','err');return;}
+    }
+    if(!Object.keys(patch).length){Modal.close();return;}
+    var res=await SB.updateInspStd(row.id,patch);
+    if(!res.ok) return;
+    Toast.show('파일이 저장되었습니다.','ok');
+    Modal.close();
+    await Pages.insp_std();
+  },
+  async _stdFileOnly(row){
+    if(!row) return;
+    window._stdFileRemoveOnly=false;
+    var delBtn='<button type="button" class="btn bxs berr bsm" onclick="window._stdFileRemoveOnly=true;document.getElementById(\'stdFOExist\').remove()">🗑️ 삭제</button>';
+    var existHtml=row.file_url?
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:var(--bg2);border-radius:var(--r)" id="stdFOExist">'+
+      '<span style="font-size:12px">📎 '+H.e(row.file_name||'현재 파일')+'</span>'+
+      '<a href="'+H.e(row.file_url)+'" target="_blank" class="btn bxs bblu bsm">보기</a>'+
+      delBtn+'</div>':
+      '<p style="font-size:12px;color:var(--tm);margin-bottom:12px">첨부 파일 없음</p>';
+    Modal.open({
+      title:'📎 파일 첨부/변경 — '+H.e(row.item_code||''),size:'msm',
+      body:'<div style="padding:8px 0">'+existHtml+
+        '<label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px">새 파일 선택</label>'+
+        '<input type="file" id="stdFileOnly" class="fc" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"></div>',
+      foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
+           '<button class="btn bpri" onclick="Pages._stdFileSave('+JSON.stringify(row)+')" >저장</button>'
+    });
+  },
+
+  async _stdFileSave(row){
+    var fileEl=document.getElementById('stdFileOnly');
+    var patch={};
+    if(window._stdFileRemoveOnly){patch.file_url=null;patch.file_name=null;}
+    if(fileEl&&fileEl.files&&fileEl.files.length){
+      Toast.show('파일 업로드 중...','info');
+      var up=await SB.uploadFile('insp_std',fileEl.files[0]);
+      if(up&&up.url){patch.file_url=up.url;patch.file_name=fileEl.files[0].name;}
+      else{Toast.show('업로드 실패','err');return;}
+    }
+    if(!Object.keys(patch).length){Modal.close();return;}
+    var res=await SB.updateInspStd(row.id,patch);
+    if(!res.ok) return;
+    Toast.show('파일이 저장되었습니다.','ok');
+    Modal.close();
+    await Pages.insp_std();
+  },
+
+/* ── 시정조치요청서 인쇄 [v2.95] ── */
+_ncPrint(row){
+  if(!row) return;
+  var data={
+    no:row.no||'',date:row.date||'',item:row.item||'',
+    type:row.type||'',desc:row.desc||'',cause:row.cause||'',
+    action:row.action||'',qty:row.qty||'',due_date:row.due_date||'',
+    assignee:row.assignee||'',created_by:row.created_by||'',
+    status:row.status||'',
+  };
+  var url='nc_car_print.html?d='+encodeURIComponent(JSON.stringify(data));
+  var w=window.open(url,'_blank','width=1050,height=700,scrollbars=yes');
+  if(!w) Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');
+},
 }; /* Pages 객체 끝 */
 /* ════ 계측기 전용 등록/수정 폼 ════ */
 Object.assign(Pages,{
@@ -10990,12 +11083,13 @@ _stdDetail(row){
     '<div class="fgroup"><label class="fl">개정 / 개정일</label><div class="fc-ro">'+(row.rev||'-')+' / '+(row.rev_date||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">적용일</label><div class="fc-ro">'+(row.effective_date||'-')+'</div></div>'+
     '<div class="fgroup"><label class="fl">작성자</label><div class="fc-ro">'+(row.created_by||'-')+'</div></div>'+
-    (row.file_url?'<div class="fgroup ff"><label class="fl">첨부파일</label><a href="'+H.e(row.file_url)+'" target="_blank" class="btn bxs bblu bsm">📎 '+H.e(row.file_name||'파일')+'</a></div>':'')+
+    '<div class="fgroup ff"><label class="fl">첨부파일</label>'+(row.file_url?'<div style="display:flex;align-items:center;gap:8px"><a href="'+H.e(row.file_url)+'" target="_blank" class="btn bxs bblu bsm">📎 '+H.e(row.file_name||'파일 보기')+'</a></div>':'<span style="color:var(--tm);font-size:12px">없음</span>')+'</div>'+
     '</div><div style="font-size:13px;font-weight:700;margin-bottom:8px">검사 항목 ('+items.length+'개)</div>'+
     '<div style="overflow-x:auto"><table class="ctbl"><thead><tr>'+
     '<th>No</th><th>항목명</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>빈도</th>'+
     '</tr></thead><tbody>'+itemRows+'</tbody></table></div>',
     foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+    '<button class="btn bgh" onclick="Modal.close();window._stdEditRow='+H.e(rowJson)+';setTimeout(function(){Pages._stdFileOnly(JSON.parse(window._stdEditRow));},50)">📎 파일</button>'+
     '<button class="btn bpri" onclick="Modal.close();window._stdEditRow='+H.e(rowJson)+';setTimeout(function(){Pages._stdForm(JSON.parse(window._stdEditRow));},50)">✏️ 수정</button>'
   });
 },
