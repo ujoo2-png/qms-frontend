@@ -836,7 +836,7 @@ nc_trend(){
 });
 
 /* ══ Excel 관리 (ExcelMgr) ══ */
-const ExcelMgr={
+var ExcelMgr=window.ExcelMgr={
   /* ── 모듈별 컬럼 정의 ──
      key: DB 필드명, label: 헤더, req: 필수여부, sample: 샘플값 */
   _schemas:{

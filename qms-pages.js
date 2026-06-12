@@ -2756,13 +2756,14 @@ _ncDetail(row){
     dday=`<span class="badge ${cls}" style="margin-left:8px">${diff<0?'D+'+Math.abs(diff):'D-'+diff}</span>`;
   }
 
+  window._ncRow=row;
   Modal.open({
     title:`⚠️ 부적합 상세 — ${H.e(row.no||'-')}`,
     size:'mlg',
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
-        +`<button class="btn bgh bsm" onclick="Pages._ncPrint(${JSON.stringify(row).replace(/</g,'\u003c')})">🖨️ 인쇄</button>`
-        +`<button class="btn bgh" onclick="Modal.close();Pages._ncForm(Tbl._curData?.find(r=>r.id===${row.id})||${JSON.stringify(row).replace(/</g,'\u003c')})">✏️ 수정</button>`
-        +`<button class="btn bpri" onclick="Pages._ncStatusChange(${row.id})">🔄 상태 변경</button>`,
+        +`<button class="btn bgh bsm" onclick="Pages._ncPrint(window._ncRow)">🖨️ 인쇄</button>`
+        +`<button class="btn bgh" onclick="Modal.close();Pages._ncForm(window._ncRow)">✏️ 수정</button>`
+        +`<button class="btn bpri" onclick="Pages._ncStatusChange(window._ncRow?.id)">🔄 상태 변경</button>`,
     body:`
       <div class="psteps">${stBar}</div>
       <div class="card" style="margin:12px 0;padding:14px 18px">
@@ -2800,7 +2801,7 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  const nc=DB.nc.find(n=>n.id===id);
+  const nc=DB.nc.find(n=>String(n.id)===String(id));
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
   const cur=steps.indexOf(nc.status||'접수');
@@ -10763,7 +10764,7 @@ _equipCalDetail(id){
     await Pages.insp_std();
   },
 
-/* ── 시정조치요청서 인쇄 [v2.95] ── */
+/* ── 시정조치요청서 인쇄 [v2.96] ── */
 _ncPrint(row){
   if(!row) return;
   var data={
