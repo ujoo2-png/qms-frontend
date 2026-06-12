@@ -488,7 +488,7 @@ const Auth={
         localStorage.setItem('qms_admin_noti',JSON.stringify(arr.slice(0,50)));
       }catch(e){}
     }
-    const adminEmail=(document.getElementById('adminContactEmail')?.textContent||'admin@company.com');
+    const adminEmail=localStorage.getItem('qms_admin_email')||(document.getElementById('adminContactEmail')?.textContent||'admin@company.com');
     const lo=document.getElementById('loginOv');
     let prev=document.getElementById('adminInqDlg');
     if(prev){prev.remove();return;}

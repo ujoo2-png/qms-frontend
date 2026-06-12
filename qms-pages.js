@@ -2801,7 +2801,7 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  /* [v2.103] DB.nc 의존 제거 → window._ncRow 직접 사용 */
+  /* [v2.104] DB.nc 의존 제거 → window._ncRow 직접 사용 */
   const nc=window._ncRow;
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
@@ -7803,6 +7803,18 @@ async settings(){
           <button class="btn bpri bsm" onclick="Pages._changePw()" style="font-size:12px">변경</button>
         </div>
       </div>
+      <!-- [v2.104] 관리자 이메일 설정 -->
+      <div class="card" style="margin-top:12px;padding:14px 16px">
+        <div class="ct" style="font-size:12px">📧 관리자 문의 이메일</div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <input class="fc" id="sAdminEmail" type="email"
+            placeholder="admin@company.com"
+            value="${localStorage.getItem('qms_admin_email')||''}"
+            style="font-size:12px;padding:5px 8px;flex:1">
+          <button class="btn bpri bsm" onclick="Pages._saveAdminEmail()" style="font-size:12px">저장</button>
+        </div>
+        <div style="font-size:11px;color:var(--tm);margin-top:4px">로그인 화면 '관리자 문의'에 사용되는 이메일입니다.</div>
+      </div>
     </div>
   </div>
 
@@ -10657,7 +10669,7 @@ _equipCalDetail(id){
     if(!obj.title||!obj.body){Toast.show('필수 항목을 입력하세요.','warn');return;}
     if(idx!=null){
       if(App.notices[idx]) Object.assign(App.notices[idx],obj);
-      if(_sb) await SB.updateNotice(idx,obj);
+      if(_sb) await SB.updateNotice(App.notices[idx]?.id||idx,obj);
     } else {
       App.notices=(App.notices||[]);
       const r=await SB.addNotice(obj);
@@ -10762,7 +10774,7 @@ _ncPrint(row){
   if(!row) return;
   var w=window.open('','_blank','width=1200,height=850,scrollbars=yes');
   if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
-  /* [v2.103] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
+  /* [v2.104] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
   var e=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
   var no=e(row.no),date=e(row.date),customer=e(row.customer||''),
       item_code=e(row.item_code||''),item=e(row.item||''),
@@ -10927,7 +10939,7 @@ _ncPrint(row){
   w.document.close();
 },
 
-  /* [v2.103] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
+  /* [v2.104] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
   _ncExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('nc');
@@ -10937,6 +10949,16 @@ _ncPrint(row){
     var em=window.ExcelMgr;
     if(em&&em.openUpload) em.openUpload('nc');
     else Toast.show('엑셀 모듈 로딩 실패. 새로고침 후 시도하세요.','warn');
+  },
+
+  _saveAdminEmail(){
+    var email=(document.getElementById('sAdminEmail')?.value||'').trim();
+    if(!email){Toast.show('이메일을 입력하세요.','warn');return;}
+    localStorage.setItem('qms_admin_email',email);
+    /* adminContactEmail span 업데이트 */
+    var span=document.getElementById('adminContactEmail');
+    if(span) span.textContent=email;
+    Toast.show('관리자 이메일이 저장되었습니다.','ok');
   },
 }; /* Pages 객체 끝 */
 /* ════ 계측기 전용 등록/수정 폼 ════ */
