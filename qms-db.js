@@ -973,15 +973,19 @@ const SB={
   },
   async addInspStd(row){
     if(!_sb){const id=Date.now();DB.insp_std=(DB.insp_std||[]);DB.insp_std.push({id,...row});return{ok:true,id};}
+    /* [v2.91] 실제 컬럼: id,item_code,item_name,insp_type,insp_items,
+       spec_upper,spec_lower,aql,sample_size,rev,effective_date,created_at,deleted_at */
     const allowed={
-      item_code:row.item_code||'', item_name:row.item_name||'',
-      insp_type:row.insp_type||'수입',          /* [v2.84] 추가 */
-      insp_items:row.insp_items||'',  spec_upper:row.spec_upper||null,
-      spec_lower:row.spec_lower||null, spec_unit:row.spec_unit||'',
-      sampling_method:row.sampling_method||'전수', aql:row.aql||null,
-      sample_size:row.sample_size||null, criteria:row.criteria||'',
-      rev:row.rev||'A', rev_date:row.rev_date||null,
-      note:row.note||'', file_url:row.file_url||null,
+      item_code:    row.item_code||'',
+      item_name:    row.item_name||'',
+      insp_type:    row.insp_type||'수입',
+      insp_items:   row.insp_items||'[]',
+      spec_upper:   row.spec_upper!=null?String(row.spec_upper):null,
+      spec_lower:   row.spec_lower!=null?String(row.spec_lower):null,
+      aql:          row.aql||null,
+      sample_size:  row.sample_size!=null?String(row.sample_size):null,
+      rev:          row.rev||'A',
+      effective_date: row.effective_date||row.rev_date||null,
     };
     const {error}=await _sb.from('insp_std').insert(allowed);
     if(error){Toast.show('기준서 저장 실패: '+error.message,'err');return{ok:false};}
@@ -990,7 +994,12 @@ const SB={
   },
   async updateInspStd(id,patch){
     if(!_sb){const r=DB.insp_std?.find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
-    const {error}=await _sb.from('insp_std').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);
+    /* [v2.91] 실제 컬럼만 필터 */
+    const allowed={};
+    const cols=['item_code','item_name','insp_type','insp_items',
+                 'spec_upper','spec_lower','aql','sample_size','rev','effective_date'];
+    cols.forEach(k=>{ if(patch[k]!==undefined) allowed[k]=patch[k]; });
+    const {error}=await _sb.from('insp_std').update(allowed).eq('id',id);
     if(error){Toast.show('기준서 수정 실패: '+error.message,'err');return{ok:false};}
     return{ok:true};
   },
