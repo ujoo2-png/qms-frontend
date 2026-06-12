@@ -2801,7 +2801,7 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  /* [v2.102] DB.nc 의존 제거 → window._ncRow 직접 사용 */
+  /* [v2.103] DB.nc 의존 제거 → window._ncRow 직접 사용 */
   const nc=window._ncRow;
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
@@ -10762,7 +10762,7 @@ _ncPrint(row){
   if(!row) return;
   var w=window.open('','_blank','width=1200,height=850,scrollbars=yes');
   if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
-  /* [v2.102] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
+  /* [v2.103] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
   var e=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
   var no=e(row.no),date=e(row.date),customer=e(row.customer||''),
       item_code=e(row.item_code||''),item=e(row.item||''),
@@ -10792,24 +10792,27 @@ _ncPrint(row){
     '.no-border{border:none;background:#fff}'+
     '.print-btn{position:fixed;bottom:14px;right:14px;padding:8px 18px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}'+
     '</style></head><body><div class="wrap">';
-  /* ① 결재란 + 제목 */
-  html+='<table style="margin-bottom:2px"><tr>'+
-    '<td colspan="4" class="ap-hdr" style="width:92px">조치부서 결재</td>'+
-    '<td class="title" style="width:auto">시 정 조 치 요 청 서</td>'+
-    '<td colspan="3" class="ap-hdr" style="width:70px">발행부서 결재</td>'+
-    '<td class="no-border" style="width:4px"></td><td class="no-border" style="width:4px"></td>'+
-    '<td class="no-border" style="width:4px"></td><td class="no-border" style="width:4px"></td>'+
+  /* ① 결재란 + 제목 — 가로 재설계 */
+  html+='<table style="margin-bottom:2px;table-layout:fixed;width:100%">'+
+    '<colgroup>'+
+    '<col style="width:36px"><col style="width:36px"><col style="width:36px"><col style="width:36px">'+
+    '<col style="width:auto">'+
+    '<col style="width:36px"><col style="width:36px"><col style="width:36px">'+
+    '</colgroup>'+
+    '<tr>'+
+    '<td colspan="4" class="ap-hdr">조치부서 결재</td>'+
+    '<td class="title">시 정 조 치 요 청 서</td>'+
+    '<td colspan="3" class="ap-hdr">발행부서 결재</td>'+
     '</tr><tr>'+
-    '<td class="ap-hdr" style="width:23px">작성</td><td class="ap-hdr" style="width:23px">검토</td>'+
-    '<td class="ap-hdr" style="width:23px">검토</td><td class="ap-hdr" style="width:23px">승인</td>'+
+    '<td class="ap-hdr">작성</td><td class="ap-hdr">검토</td>'+
+    '<td class="ap-hdr">검토</td><td class="ap-hdr">승인</td>'+
     '<td rowspan="2" class="no-border"></td>'+
-    '<td class="ap-hdr" style="width:23px">작성</td><td class="ap-hdr" style="width:23px">검토</td>'+
-    '<td class="ap-hdr" style="width:23px">승인</td>'+
-    '<td class="no-border"></td><td class="no-border"></td><td class="no-border"></td><td class="no-border"></td>'+
+    '<td class="ap-hdr">작성</td><td class="ap-hdr">검토</td><td class="ap-hdr">승인</td>'+
     '</tr><tr>'+
-    '<td class="ap-sign">'+created_by+'</td><td class="ap-sign"></td><td class="ap-sign"></td><td class="ap-sign"></td>'+
-    '<td class="ap-sign">'+created_by+'</td><td class="ap-sign"></td><td class="ap-sign"></td>'+
-    '<td class="no-border"></td><td class="no-border"></td><td class="no-border"></td><td class="no-border"></td>'+
+    '<td class="ap-sign" style="text-align:center;font-size:7pt">'+created_by+'</td>'+
+    '<td class="ap-sign"></td><td class="ap-sign"></td><td class="ap-sign"></td>'+
+    '<td class="ap-sign" style="text-align:center;font-size:7pt">'+created_by+'</td>'+
+    '<td class="ap-sign"></td><td class="ap-sign"></td>'+
     '</tr></table>';
   /* ② 기본정보 */
   html+='<table><colgroup>'+
@@ -10924,7 +10927,7 @@ _ncPrint(row){
   w.document.close();
 },
 
-  /* [v2.102] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
+  /* [v2.103] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
   _ncExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('nc');
