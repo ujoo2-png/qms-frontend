@@ -2801,7 +2801,7 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  /* [v2.97] DB.nc 의존 제거 → window._ncRow 직접 사용 */
+  /* [v2.98] DB.nc 의존 제거 → window._ncRow 직접 사용 */
   const nc=window._ncRow;
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
@@ -10760,19 +10760,74 @@ _equipCalDetail(id){
 /* ── 시정조치요청서 인쇄 [v2.96] ── */
 _ncPrint(row){
   if(!row) return;
-  var data={
-    no:row.no||'',date:row.date||'',item:row.item||'',
-    type:row.type||'',desc:row.desc||'',cause:row.cause||'',
-    action:row.action||'',qty:row.qty||'',due_date:row.due_date||'',
-    assignee:row.assignee||'',created_by:row.created_by||'',
-    status:row.status||'',
-  };
-  var url='nc_car_print.html?d='+encodeURIComponent(JSON.stringify(data));
-  var w=window.open(url,'_blank','width=1050,height=700,scrollbars=yes');
-  if(!w) Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');
+  var e=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">'+
+    '<title>시정조치 요청서 — '+e(row.no)+'</title>'+
+    '<style>'+
+    '*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif;font-size:9pt}'+
+    'body{background:#fff;color:#000;padding:8mm}'+
+    '@page{size:A4 landscape;margin:10mm 8mm 6mm 8mm}'+
+    '@media print{.no-print{display:none!important}}'+
+    '.wrap{width:267mm}'+
+    '.ap-area{display:flex;justify-content:space-between;margin-bottom:4px;align-items:flex-end}'+
+    '.ap-box{border:1px solid #000;font-size:8pt}'+
+    '.ap-box table{border-collapse:collapse;width:100%}'+
+    '.ap-box td{border:1px solid #000;padding:2px 6px;text-align:center;height:22px}'+
+    '.ap-box .hdr{background:#dce6f1;font-weight:bold;font-size:8pt}'+
+    '.ap-box .sign{height:38px;min-width:40px}'+
+    '.title{text-align:center;font-size:16pt;font-weight:bold;padding:4px 20px;letter-spacing:3px;white-space:nowrap}'+
+    '.mt{width:100%;border-collapse:collapse;margin-top:4px}'+
+    '.mt td,.mt th{border:1px solid #000;padding:3px 6px;font-size:8.5pt;vertical-align:middle}'+
+    '.lb{background:#dce6f1;font-weight:bold;white-space:nowrap;text-align:center;width:68px}'+
+    '.area{height:52px;vertical-align:top;padding:4px 6px}'+
+    '.ft{display:flex;justify-content:space-between;margin-top:4px;font-size:8pt}'+
+    '.pb{position:fixed;bottom:20px;right:20px;padding:10px 22px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer}'+
+    '</style></head><body>'+
+    '<div class="wrap">'+
+    '<div class="ap-area">'+
+    '<div class="ap-box"><table>'+
+    '<tr><td colspan="4" class="hdr">조치부서 결재</td></tr>'+
+    '<tr><td class="hdr">작성</td><td class="hdr">검토</td><td class="hdr">검토</td><td class="hdr">승인</td></tr>'+
+    '<tr><td class="sign">'+e(row.created_by)+'</td><td class="sign"></td><td class="sign"></td><td class="sign"></td></tr>'+
+    '</table></div>'+
+    '<div class="title">시 정 조 치 요 청 서</div>'+
+    '<div class="ap-box"><table>'+
+    '<tr><td colspan="3" class="hdr">발행부서 결재</td></tr>'+
+    '<tr><td class="hdr">작성</td><td class="hdr">검토</td><td class="hdr">승인</td></tr>'+
+    '<tr><td class="sign">'+e(row.created_by)+'</td><td class="sign"></td><td class="sign"></td></tr>'+
+    '</table></div>'+
+    '</div>'+
+    '<table class="mt">'+
+    '<tr><td class="lb">등록번호</td><td style="width:110px">'+e(row.no)+'</td>'+
+    '<td class="lb">등록일자</td><td style="width:90px">'+e(row.date)+'</td>'+
+    '<td class="lb">처리기한</td><td style="width:90px">'+e(row.due_date)+'</td>'+
+    '<td class="lb">고객사명</td><td></td>'+
+    '<td class="lb">도면번호</td><td></td></tr>'+
+    '<tr><td class="lb">품목명</td><td colspan="3">'+e(row.item)+'</td>'+
+    '<td class="lb">불량유형</td><td>'+e(row.type)+'</td>'+
+    '<td class="lb">불량현상</td><td colspan="3">'+e(row.desc)+'</td></tr>'+
+    '<tr><td class="lb">납품수량</td><td></td>'+
+    '<td class="lb">검사수량</td><td></td>'+
+    '<td class="lb">불량수량</td><td>'+e(row.qty)+'</td>'+
+    '<td class="lb">불량율</td><td></td>'+
+    '<td class="lb">담당자</td><td>'+e(row.assignee)+'</td></tr>'+
+    '<tr><td class="lb">부적합 내용</td><td class="area" colspan="9">'+e(row.desc)+'</td></tr>'+
+    '<tr><td class="lb">원인 분석</td><td class="area" colspan="9">'+e(row.cause)+'</td></tr>'+
+    '<tr><td class="lb">시정조치 내용</td><td class="area" colspan="9">'+e(row.action)+'</td></tr>'+
+    '<tr><td class="lb">재발방지 대책</td><td class="area" colspan="9"></td></tr>'+
+    '<tr><td class="lb">효과 확인</td><td class="area" colspan="9"></td></tr>'+
+    '</table>'+
+    '<div class="ft"><span>문서번호: INDS-QP-018-01</span><span>'+e(row.no)+'</span><span>개정: Rev.01</span></div>'+
+    '</div>'+
+    '<button class="pb no-print" onclick="window.print()">🖨️ 인쇄</button>'+
+    '</body></html>';
+  var w=window.open('','_blank','width=1100,height=750,scrollbars=yes');
+  if(!w){Toast.show('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도하세요.','warn');return;}
+  w.document.write(html);
+  w.document.close();
 },
 
-  /* [v2.97] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
+  /* [v2.98] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
   _ncExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('nc');

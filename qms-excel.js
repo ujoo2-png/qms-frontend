@@ -1,4 +1,5 @@
 /* qms-excel.js — ExcelMgr + SearchPop [v2.394] */
+(function(){
 "use strict";
 
 
@@ -2756,3 +2757,6 @@ const SearchPop={
     this._initDrag();
   },
 };
+
+window.SearchPop=SearchPop;
+})();
