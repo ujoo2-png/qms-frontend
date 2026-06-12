@@ -2427,8 +2427,8 @@ _ncRender(){
       <div><div class="ptit">⚠️ 부적합 관리</div>
         <div class="psub">부적합 발행 · 처리 · 이력 관리</div></div>
       <div class="pac">
-        <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('nc')" title="엑셀 양식 내려받기">📥 양식</button>
-        <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('nc')" title="엑셀 일괄등록">📤 일괄등록</button>
+        <button class="btn btn-xl-down bsm" onclick="Pages._ncExcelDown()" title="엑셀 양식 내려받기">📥 양식</button>
+        <button class="btn btn-xl-up bsm" onclick="Pages._ncExcelUp()" title="엑셀 일괄등록">📤 일괄등록</button>
         <button class="btn bpri btn-f2" onclick="Pages._ncForm()">+ 부적합 등록 <span class="kbd">F2</span></button>
       </div>
     </div>
@@ -2820,15 +2820,7 @@ async _ncStatusChange(id){
     }
   });
 },
-_ncDetail(row){Modal.open({title:`부적합 — ${row.no}`,size:'mlg',
-  body:`<div class="psteps">${['접수','처리중','완료'].map((s,i)=>`<div class="pst"><div class="psd ${row.status===s?'ac':i<['접수','처리중','완료'].indexOf(row.status)?'dn':''}">${i+1}</div><div class="psl ${row.status===s?'ac':''}">${s}</div></div>`).join('')}</div>
-  <div class="ir"><div class="il">부적합번호</div><div class="iv" style="font-family:'JetBrains Mono',monospace">${H.e(row.no)}</div></div>
-  <div class="ir"><div class="il">유형/품목</div><div class="iv"><span class="badge bblu">${H.e(row.type)}</span> ${H.e(row.item)}</div></div>
-  <div class="ir"><div class="il">내용</div><div class="iv">${H.e(row.desc)}</div></div>
-  <div class="ir"><div class="il">담당자</div><div class="iv">${H.e(row.assignee)}</div></div>
-  <div id="ncCmt"></div>`,
-  foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bok" onclick="Toast.show('상태변경(더미)','ok')">상태 변경</button><button class="btn bpri">수정</button>`
-});setTimeout(()=>Cmt.render('#ncCmt',`nc-${row.id}`),80)},
+
 
 /* ── 계측기 ── */
 /* ══════════════════════════════════════════════════════
@@ -6378,7 +6370,7 @@ _carDetail(row){Modal.open({title:`CAR — ${row.no}`,size:'mlg',
   <div class="ir"><div class="il">기간</div><div class="iv">${row.open} ~ ${row.due}</div></div>
   <div class="ir"><div class="il">담당자</div><div class="iv">${H.e(row.assignee)}</div></div>
   <div id="carCmt"></div>`,
-  foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bok" onclick="Toast.show('상태변경(더미)','ok')">상태 변경</button><button class="btn bpri">수정</button>`
+  foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
 });setTimeout(()=>Cmt.render('#carCmt',`car-${row.id}`),80)},
 audit(){document.getElementById('pw').innerHTML=`<div class="ph"><div><div class="ptit">🔎 내부심사</div></div><div class="pac"><button class="btn bpri btn-f2">+ 심사 등록 <span class="kbd">F2</span></button></div></div><div class="card"><div class="es"><div class="es-icon">🔎</div><div>내부심사 — 백엔드 연동 후 활성화</div></div></div>`},
 
@@ -10779,6 +10771,18 @@ _ncPrint(row){
   var w=window.open(url,'_blank','width=1050,height=700,scrollbars=yes');
   if(!w) Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');
 },
+
+  /* [v2.97] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
+  _ncExcelDown(){
+    var em=window.ExcelMgr;
+    if(em&&em.download) em.download('nc');
+    else Toast.show('엑셀 모듈 로딩 실패. 새로고침 후 시도하세요.','warn');
+  },
+  _ncExcelUp(){
+    var em=window.ExcelMgr;
+    if(em&&em.openUpload) em.openUpload('nc');
+    else Toast.show('엑셀 모듈 로딩 실패. 새로고침 후 시도하세요.','warn');
+  },
 }; /* Pages 객체 끝 */
 /* ════ 계측기 전용 등록/수정 폼 ════ */
 Object.assign(Pages,{
