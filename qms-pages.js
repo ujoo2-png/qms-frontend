@@ -10760,46 +10760,25 @@ _equipCalDetail(id){
 /* ── 시정조치요청서 인쇄 [v2.96] ── */
 _ncPrint(row){
   if(!row) return;
-  var e=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  /* [v2.99] 모든 NC 필드 전달 */
   var d={
-    no:        row.no||'',
-    date:      row.date||'',
-    dept:      '품질팀',
-    customer:  row.customer||'',
-    item_code: row.item_code||'',
-    item:      row.item||'',
-    work_order:row.work_order||'',
-    type:      row.type||'',
-    desc:      row.desc||'',
-    dwg_lc:    row.dwg_lc||'',
-    action:    row.action||'',
-    ship_qty:  row.ship_qty||'',
-    insp_qty:  row.insp_qty||row.qty||'',
-    bad_qty:   row.qty||'',
-    rate:      row.rate||'',
-    note:      row.note||'',
-    responsible: row.responsible||'',
-    assignee:  row.assignee||'',
-    cause:     row.cause||'',
-    due_date:  row.due_date||'',
-    in_out:    row.in_out||'',
+    no:row.no||'',date:row.date||'',dept:'품질팀',
+    customer:row.customer||'',item_code:row.item_code||'',item:row.item||'',
+    work_order:row.work_order||'',type:row.type||'',desc:row.desc||'',
+    dwg_lc:row.dwg_lc||'',action:row.action||'',ship_qty:row.ship_qty||'',
+    insp_qty:row.insp_qty||row.qty||'',bad_qty:row.qty||'',rate:row.rate||'',
+    note:row.note||'',responsible:row.responsible||'',assignee:row.assignee||'',
+    cause:row.cause||'',due_date:row.due_date||'',in_out:row.in_out||'',
     created_by:row.created_by||'',
   };
-  var w=window.open('','_blank','width=900,height=1100,scrollbars=yes');
+  var w=window.open('','_blank','width=1100,height=800,scrollbars=yes');
   if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
-  /* nc_car_print.html 내용을 fetch해서 데이터 주입 */
-  fetch('nc_car_print.html').then(function(r){return r.text();}).then(function(html){
-    /* 스크립트 내 d={} 부분을 실제 데이터로 교체 */
-    var injected=html.replace('var d={};',
-      'var d='+JSON.stringify(d)+';');
-    w.document.open();
-    w.document.write(injected);
-    w.document.close();
-  }).catch(function(){
-    /* fetch 실패 시 URL 파라미터 방식 */
-    w.location.href='nc_car_print.html?d='+encodeURIComponent(JSON.stringify(d));
-  });
+  /* [v2.99] Vercel 라우팅 우회: HTML을 직접 document.write */
+  var html=document.getElementById('ncCarPrintTpl')?.innerHTML||'';
+  if(!html){Toast.show('인쇄 템플릿을 찾을 수 없습니다.','err');w.close();return;}
+  html=html.replace('var d={};','var d='+JSON.stringify(d)+';');
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 },
 
   /* [v2.99] ExcelMgr 래퍼 — 전역 참조 오류 방지 */

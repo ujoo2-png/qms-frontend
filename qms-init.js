@@ -91,11 +91,13 @@ function setupHotkeys(){
       });
       document.getElementById('loginOv').style.display='none';
       document.getElementById('app').classList.remove('hidden');
-      /* [v2.394] 설정 메뉴: 세션 복원 시에도 admin만 표시 */
+      /* [v2.99] 설정 메뉴 */
       const sm=document.getElementById('ni_settings');
       if(sm) sm.style.display=(u.role==='admin')?'':'none';
       const savedPage = sessionStorage.getItem('qms_page') || 'home';
-      /* [v2.394] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
+      /* [v2.99] 로딩 중 표시 — DB 로드 전 빈 화면 방지 */
+      const pw=document.getElementById('pw');
+      if(pw) pw.innerHTML='<div style="padding:60px;text-align:center;color:var(--tm);font-size:14px">⏳ 데이터 불러오는 중...</div>';
       (async()=>{
         try{
           if(_sb){
