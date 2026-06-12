@@ -10874,22 +10874,22 @@ _inspStdRefreshTable(){
   Tbl.render({
     el:'#stdTbl',
     cols:[
-      {key:'item_code',  label:'품목코드',  w:'110px', req:true},
-      {key:'item_name',  label:'품목명',    w:'140px', req:true},
-      {key:'insp_type',  label:'검사유형',  w:'70px',  req:true,
-        render:v=>`<span class="badge bblu" style="font-size:10px">${H.e(v||'-')}</span>`},
-      {key:'insp_items', label:'검사 항목'},
-      {key:'spec_upper', label:'규격 상한', w:'80px'},
-      {key:'spec_lower', label:'규격 하한', w:'80px'},
-      {key:'aql',        label:'AQL',      w:'60px'},
-      {key:'sample_size',label:'샘플 수',  w:'60px'},
-      {key:'rev',        label:'개정',     w:'50px'},
-      {key:'effective_date',label:'적용일', w:'90px'},
-      {key:'file_url',   label:'파일',     w:'70px',
-        render:(v,row)=>v
-          ?`<button class="btn bxs bblu" style="font-size:10px;padding:2px 8px"
-              onclick="event.stopPropagation();Pages._inspStdFilePreview('${H.e(v)}','${H.e(row?.item_code||'')}')">📎 보기</button>`
-          :'<span style="color:var(--tl);font-size:11px">-</span>'},
+      {key:'item_code',  label:'품목코드', w:'100px'},
+      {key:'item_name',  label:'품목명',   w:'130px'},
+      {key:'insp_type',  label:'검사유형', w:'70px',
+        render:function(v){return '<span class="badge bblu" style="font-size:10px">'+H.e(v||'-')+'</span>';}},
+      {key:'insp_items', label:'검사항목', w:'120px',
+        render:function(v){try{var a=JSON.parse(v||'[]');return a.map(function(i){return H.e(i.item||'');}).filter(Boolean).join(', ')||'-';}catch(e){return '-';}}},
+      {key:'insp_items', label:'측정방법', w:'90px',
+        render:function(v){try{var a=JSON.parse(v||'[]');return a.map(function(i){return H.e(i.method||'');}).filter(Boolean).join(', ')||'-';}catch(e){return '-';}}},
+      {key:'insp_items', label:'규격/기준', w:'90px',
+        render:function(v){try{var a=JSON.parse(v||'[]');return a.map(function(i){return H.e(i.spec||'');}).filter(Boolean).join(', ')||'-';}catch(e){return '-';}}},
+      {key:'spec_upper',  label:'상한',    w:'60px'},
+      {key:'spec_lower',  label:'하한',    w:'60px'},
+      {key:'aql',         label:'AQL',     w:'55px'},
+      {key:'sample_size', label:'샘플',    w:'55px'},
+      {key:'rev',         label:'개정',    w:'50px'},
+      {key:'effective_date',label:'적용일',w:'90px'},
     ],
     data:filtered,
     onRow:row=>Pages._inspStdDetail(row),
@@ -10923,8 +10923,8 @@ _inspStdForm(){
     body:`<div class="fg2">
       <div class="fgroup"><label class="fl req">품목코드</label>
         <input class="fc" id="stdItemCode" list="stdItemList" placeholder="코드 입력 또는 선택"
-          oninput="(function(){var v=document.getElementById('stdItemCode').value;var it=(DB.items||[]).find(function(x){return x.item_code===v;});if(it)document.getElementById('stdItemName').value=it.item_name||'';})()">
-        <datalist id="stdItemList">${(DB.items||[]).map(function(it){return`<option value="${H.e(it.item_code)}">${H.e(it.item_name)}</option>`;}).join('')}</datalist>
+          oninput="(function(){var v=document.getElementById('stdItemCode').value.toUpperCase();var it=(DB.items||[]).find(function(x){return (x.item_code||'').toUpperCase()===v;});if(it)document.getElementById('stdItemName').value=it.item_name||'';})()">
+        <datalist id="stdItemList">${(DB.items&&DB.items.length?(DB.items):[]).map(function(it){return'<option value="'+H.e(it.item_code||'')+'">'+H.e(it.item_name||'')+'</option>';}).join('')}</datalist>
       </div>
       <div class="fgroup"><label class="fl">품목명</label><input class="fc" id="stdItemName" placeholder="자동 입력"></div>
       <div class="fgroup"><label class="fl req">검사유형</label>
@@ -11030,13 +11030,16 @@ async _inspStdSave(){
   } else {
     const res=await SB.addInspStd(row);
     if(!res.ok) return;
-    /* [v2.87] DB 메모리 갱신 후 재렌더 */
-    const fresh=await SB.getInspStd();
-    if(fresh) DB.insp_std=fresh;
     Toast.show('기준서가 등록되었습니다.','ok');
   }
   Modal.close();
-  Pages._inspStdRender();
+  /* [v2.92] 등록 후 페이지 강제 재빌드 */
+  const pw=document.getElementById('pw');
+  if(pw){
+    const stdTbl=pw.querySelector('#stdTbl');
+    if(stdTbl) stdTbl.remove();
+  }
+  await Pages.insp_std();
 },
 
 /* 파일 미리보기 [v2.394] */
