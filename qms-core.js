@@ -342,7 +342,7 @@ const Auth={
   },
 
   logout(){
-    /* [v2.101] 로그아웃 확인 팝업 */
+    /* [v2.102] 로그아웃 확인 팝업 */
     const self=this;
     Modal.confirm({
       title:'로그아웃',

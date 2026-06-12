@@ -2801,7 +2801,7 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  /* [v2.101] DB.nc 의존 제거 → window._ncRow 직접 사용 */
+  /* [v2.102] DB.nc 의존 제거 → window._ncRow 직접 사용 */
   const nc=window._ncRow;
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
@@ -10760,28 +10760,171 @@ _equipCalDetail(id){
 /* ── 시정조치요청서 인쇄 [v2.96] ── */
 _ncPrint(row){
   if(!row) return;
-  var d={
-    no:row.no||'',date:row.date||'',dept:'품질팀',
-    customer:row.customer||'',item_code:row.item_code||'',item:row.item||'',
-    work_order:row.work_order||'',type:row.type||'',desc:row.desc||'',
-    dwg_lc:row.dwg_lc||'',action:row.action||'',ship_qty:row.ship_qty||'',
-    insp_qty:row.insp_qty||row.qty||'',bad_qty:row.qty||'',rate:row.rate||'',
-    note:row.note||'',responsible:row.responsible||'',assignee:row.assignee||'',
-    cause:row.cause||'',due_date:row.due_date||'',in_out:row.in_out||'',
-    created_by:row.created_by||'',
-  };
-  var w=window.open('','_blank','width=1100,height=800,scrollbars=yes');
+  var w=window.open('','_blank','width=1200,height=850,scrollbars=yes');
   if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
-  /* [v2.101] Vercel 라우팅 우회: HTML을 직접 document.write */
-  var tpl=document.getElementById('ncCarPrintTpl');var html=tpl?tpl.textContent:'';
-  if(!html){Toast.show('인쇄 템플릿을 찾을 수 없습니다.','err');w.close();return;}
-  html=html.replace('var d={};','var d='+JSON.stringify(d)+';');
+  /* [v2.102] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
+  var e=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var no=e(row.no),date=e(row.date),customer=e(row.customer||''),
+      item_code=e(row.item_code||''),item=e(row.item||''),
+      work_order=e(row.work_order||''),type=e(row.type||''),
+      desc=e(row.desc||''),dwg=e(row.dwg_lc||''),action=e(row.action||''),
+      ship_qty=e(row.ship_qty||''),insp_qty=e(row.insp_qty||row.qty||''),
+      bad_qty=e(row.qty||''),rate=e(row.rate||''),note=e(row.note||''),
+      responsible=e(row.responsible||''),assignee=e(row.assignee||''),
+      cause=e(row.cause||''),due=e(row.due_date||''),
+      created_by=e(row.created_by||'');
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">'+
+    '<title>시정조치 요청서 — '+no+'</title>'+
+    '<style>'+
+    '*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'+
+    'body{background:#fff;color:#000;font-size:8pt}'+
+    '@page{size:A4 landscape;margin:8mm 8mm 6mm 8mm}'+
+    '@media print{.no-print{display:none!important}}'+
+    '.wrap{width:281mm}'+
+    'table{border-collapse:collapse;width:100%}'+
+    'td{border:.5pt solid #000;padding:1px 4px;vertical-align:middle;font-size:7.5pt}'+
+    '.lb{background:#dce6f1;font-weight:bold;text-align:center;white-space:nowrap;font-size:7pt}'+
+    '.val{background:#fff}'+
+    '.area{vertical-align:top;padding:3px 4px;background:#fff}'+
+    '.ap-hdr{background:#dce6f1;font-weight:bold;text-align:center;font-size:8pt;height:16px}'+
+    '.ap-sign{height:28px;background:#fff}'+
+    '.title{font-size:16pt;font-weight:bold;text-align:center;letter-spacing:3px;border:none;background:#fff}'+
+    '.no-border{border:none;background:#fff}'+
+    '.print-btn{position:fixed;bottom:14px;right:14px;padding:8px 18px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}'+
+    '</style></head><body><div class="wrap">';
+  /* ① 결재란 + 제목 */
+  html+='<table style="margin-bottom:2px"><tr>'+
+    '<td colspan="4" class="ap-hdr" style="width:92px">조치부서 결재</td>'+
+    '<td class="title" style="width:auto">시 정 조 치 요 청 서</td>'+
+    '<td colspan="3" class="ap-hdr" style="width:70px">발행부서 결재</td>'+
+    '<td class="no-border" style="width:4px"></td><td class="no-border" style="width:4px"></td>'+
+    '<td class="no-border" style="width:4px"></td><td class="no-border" style="width:4px"></td>'+
+    '</tr><tr>'+
+    '<td class="ap-hdr" style="width:23px">작성</td><td class="ap-hdr" style="width:23px">검토</td>'+
+    '<td class="ap-hdr" style="width:23px">검토</td><td class="ap-hdr" style="width:23px">승인</td>'+
+    '<td rowspan="2" class="no-border"></td>'+
+    '<td class="ap-hdr" style="width:23px">작성</td><td class="ap-hdr" style="width:23px">검토</td>'+
+    '<td class="ap-hdr" style="width:23px">승인</td>'+
+    '<td class="no-border"></td><td class="no-border"></td><td class="no-border"></td><td class="no-border"></td>'+
+    '</tr><tr>'+
+    '<td class="ap-sign">'+created_by+'</td><td class="ap-sign"></td><td class="ap-sign"></td><td class="ap-sign"></td>'+
+    '<td class="ap-sign">'+created_by+'</td><td class="ap-sign"></td><td class="ap-sign"></td>'+
+    '<td class="no-border"></td><td class="no-border"></td><td class="no-border"></td><td class="no-border"></td>'+
+    '</tr></table>';
+  /* ② 기본정보 */
+  html+='<table><colgroup>'+
+    '<col style="width:14mm"><col style="width:24mm"><col style="width:14mm"><col style="width:24mm">'+
+    '<col style="width:14mm"><col style="width:22mm"><col style="width:14mm"><col style="width:30mm">'+
+    '<col style="width:14mm"><col></colgroup>'+
+    '<tr><td class="lb">등록번호</td><td class="val">'+no+'</td>'+
+    '<td class="lb">등록일자</td><td class="val">'+date+'</td>'+
+    '<td class="lb">발행부서</td><td class="val">품질팀</td>'+
+    '<td class="lb">고객사명</td><td class="val">'+customer+'</td>'+
+    '<td class="lb">품목코드</td><td class="val">'+item_code+'</td></tr>'+
+    '<tr><td class="lb">품목명</td><td class="val" colspan="3">'+item+'</td>'+
+    '<td class="lb" colspan="2" style="text-align:center">작업지시번호</td>'+
+    '<td class="val" colspan="1">'+work_order+'</td>'+
+    '<td class="lb">불량유형</td><td class="lb">불량현상</td><td class="val">'+desc+'</td></tr>'+
+    '<tr><td class="lb">DWG_LC</td><td class="val">'+dwg+'</td>'+
+    '<td class="lb">처리방법</td><td class="val" colspan="3">'+action+'</td>'+
+    '<td class="lb">납품수량</td><td class="val">'+ship_qty+'</td>'+
+    '<td class="lb">검사수량</td><td class="val">'+insp_qty+'</td></tr>'+
+    '<tr><td class="lb">불량수량</td><td class="val">'+bad_qty+'</td>'+
+    '<td class="lb">불량율</td><td class="val">'+rate+'</td>'+
+    '<td class="lb" colspan="2" style="text-align:center">부적합_비고</td>'+
+    '<td class="val" colspan="4">'+note+'</td></tr>'+
+    '</table>';
+  /* ③ 손실비용 */
+  html+='<table><tr>'+
+    '<td class="lb" rowspan="2" style="width:14mm">상세내역</td>'+
+    '<td class="lb" rowspan="2" style="width:14mm">손실비용</td>'+
+    '<td class="lb">자재비</td><td class="lb">가공비</td><td class="lb">기타</td><td class="lb">계</td></tr>'+
+    '<tr><td class="val" style="height:12px"></td><td class="val"></td><td class="val"></td><td class="val" style="text-align:right">0</td></tr>'+
+    '</table>';
+  /* ④ 현상/조치 영역 */
+  html+='<table><colgroup><col style="width:48%"><col style="width:36%"><col style="width:8mm"><col style="width:8mm"><col style="width:12mm"></colgroup>'+
+    '<tr><td class="lb">현상 ( Photo / Sketch )</td>'+
+    '<td class="lb">시정조치, 원인분석 및 재발방지대책</td>'+
+    '<td class="lb" style="font-size:6.5pt">귀책처</td>'+
+    '<td class="lb" style="font-size:6.5pt">C/Check</td>'+
+    '<td class="lb" style="font-size:6.5pt">작업자</td></tr>'+
+    '<tr><td class="val area" style="height:28mm"></td>'+
+    '<td class="val area"></td>'+
+    '<td class="val">'+responsible+'</td>'+
+    '<td class="val"></td>'+
+    '<td class="val">'+assignee+'</td></tr></table>';
+  /* ⑤ 부적합 구분 */
+  html+='<table><tr><td class="lb" colspan="2" style="width:30mm">부적합 구분</td>'+
+    '<td class="val" style="font-size:7pt;padding:2px 6px">&nbsp;□사람 &nbsp;□설비 &nbsp;□자재 &nbsp;□방법 &nbsp;□기타(　　　　　)</td></tr></table>';
+  /* ⑥ 즉시시정조치 + 원인분석 */
+  html+='<table><colgroup><col style="width:14mm"><col style="width:46%"><col style="width:14mm"><col style="width:12mm"><col><col></colgroup>'+
+    '<tr><td class="lb" rowspan="4" style="writing-mode:vertical-rl;letter-spacing:2px">즉시시정조치</td>'+
+    '<td class="val area" style="height:9mm" rowspan="2">'+action+'</td>'+
+    '<td class="lb" rowspan="7">원인분석</td>'+
+    '<td class="lb"></td><td class="lb" style="text-align:center">발 생 원 인</td><td class="lb" style="text-align:center">유 출 원 인</td></tr>'+
+    '<tr><td class="lb" style="font-size:6pt;text-align:center">1 Why</td>'+
+    '<td class="val area" style="height:9mm">'+cause+'</td><td class="val area"></td></tr>'+
+    '<tr><td class="val area" style="height:7mm"></td>'+
+    '<td class="lb" style="font-size:6pt;text-align:center">2 Why</td>'+
+    '<td class="val area"></td><td class="val area"></td></tr>'+
+    '<tr><td class="val area" style="height:7mm"></td>'+
+    '<td class="lb" style="font-size:6pt;text-align:center">3 Why</td>'+
+    '<td class="val area"></td><td class="val area"></td></tr>'+
+    '<tr><td class="lb" rowspan="3" colspan="2" style="text-align:center;font-size:7pt">참원인(결론)</td>'+
+    '<td class="lb" style="font-size:6pt;text-align:center">참원인</td>'+
+    '<td class="val area" style="height:7mm">'+cause+'</td><td class="val area"></td></tr>'+
+    '<tr><td class="val area" colspan="3" style="height:6mm"></td></tr>'+
+    '<tr><td class="val area" colspan="3" style="height:6mm"></td></tr>'+
+    '</table>';
+  /* ⑦ 재발방지대책 */
+  html+='<table><colgroup><col style="width:14mm"><col style="width:12mm"><col><col style="width:14mm"><col><col style="width:14mm"></colgroup>'+
+    '<tr><td class="lb" rowspan="4" style="writing-mode:vertical-rl;letter-spacing:2px">재발방지대책</td>'+
+    '<td class="lb"></td><td class="lb" style="text-align:center">발 생 방 지</td>'+
+    '<td class="lb" style="text-align:center">일정</td>'+
+    '<td class="lb" style="text-align:center">유 출 방 지</td>'+
+    '<td class="lb" style="text-align:center">일정</td></tr>'+
+    '<tr><td class="lb" style="font-size:6.5pt;text-align:center">단기</td>'+
+    '<td class="val area" style="height:8mm">'+action+'</td><td class="val">'+due+'</td>'+
+    '<td class="val area"></td><td class="val"></td></tr>'+
+    '<tr><td class="lb" style="font-size:6.5pt;text-align:center">중기</td>'+
+    '<td class="val area" style="height:7mm"></td><td class="val"></td>'+
+    '<td class="val area"></td><td class="val"></td></tr>'+
+    '<tr><td class="lb" style="font-size:6.5pt;text-align:center">장기</td>'+
+    '<td class="val area" style="height:7mm"></td><td class="val"></td>'+
+    '<td class="val area"></td><td class="val"></td></tr>'+
+    '</table>';
+  /* ⑧ 회람 + 표준류 반영 */
+  html+='<table><colgroup><col style="width:10mm"><col style="width:22mm"><col style="width:10mm"><col style="width:22mm">'+
+    '<col style="width:12mm"><col><col><col><col><col style="width:12mm"></colgroup>'+
+    '<tr><td class="lb" rowspan="4">회람</td>'+
+    '<td class="lb" style="text-align:center">성명</td><td class="lb" rowspan="2">서명</td>'+
+    '<td class="lb" style="text-align:center">성명</td>'+
+    '<td class="lb" rowspan="4" style="writing-mode:vertical-rl;font-size:6.5pt;text-align:center">표준류반영</td>'+
+    '<td class="lb" colspan="2" style="font-size:7pt">□ 관리계획서</td>'+
+    '<td class="lb" colspan="2" style="font-size:7pt">□ FMEA</td>'+
+    '<td class="lb" rowspan="4">첨부</td></tr>'+
+    '<tr><td class="val" style="height:9mm">'+assignee+'</td>'+
+    '<td class="val"></td>'+
+    '<td class="val" colspan="2" style="font-size:7pt">□ 작업표준서</td>'+
+    '<td class="val" colspan="2" style="font-size:7pt">□ 검사기준서</td></tr>'+
+    '<tr><td class="lb" style="text-align:center">성명</td><td class="lb" rowspan="2">서명</td>'+
+    '<td class="lb" style="text-align:center">성명</td>'+
+    '<td class="val" colspan="4" rowspan="2"></td></tr>'+
+    '<tr><td class="val" style="height:9mm"></td><td class="val"></td></tr>'+
+    '</table>';
+  /* ⑨ 하단 */
+  html+='<table><tr>'+
+    '<td style="border:.5pt solid #000;background:#dce6f1;font-size:7pt;width:33%">IPD-806-01(Rev01)</td>'+
+    '<td style="border:.5pt solid #000;background:#dce6f1;font-size:7pt;text-align:center;width:34%">㈜이노디스</td>'+
+    '<td style="border:.5pt solid #000;background:#dce6f1;font-size:7pt;text-align:right;width:33%">A4(210mm X 297mm)</td>'+
+    '</tr></table>';
+  html+='</div><button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄</button></body></html>';
   w.document.open();
   w.document.write(html);
   w.document.close();
 },
 
-  /* [v2.101] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
+  /* [v2.102] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
   _ncExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('nc');
