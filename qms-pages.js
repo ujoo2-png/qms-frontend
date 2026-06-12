@@ -7741,7 +7741,7 @@ async settings(){
     <div class="card" style="margin-bottom:14px">
       <div class="ch" style="padding-bottom:10px">
         <div class="ct">📢 공지사항 관리</div>
-        <button class="btn bpri bsm" onclick="Cfg.noticeForm()">+ 공지 추가</button>
+        <button class="btn bpri bsm" onclick="Pages._noticeOpen(null)">+ 공지 추가</button>
       </div>
       <div class="ts"><table class="dt" style="font-size:12px">
         <thead><tr>
@@ -7770,15 +7770,15 @@ async settings(){
             return '<tr style="'+rowBg+'">'  /* [v2.65] 게시중 행 음영 */
               +'<td><input type="checkbox" class="notice-chk" value="'+(n.id||i)+'"></td>'
               +'<td style="text-align:center;color:var(--tm)">'+(i+1)+'</td>'
-              +'<td style="font-weight:600;cursor:pointer" onclick="Cfg.noticeForm('+i+')" style="cursor:pointer;text-decoration:underline">'+H.e(n.title)+'</td>'
+              +'<td style="font-weight:600;cursor:pointer" onclick="Pages._noticeOpen('+i+')" style="cursor:pointer;text-decoration:underline">'+H.e(n.title)+'</td>'
               +'<td style="color:var(--tm);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+H.e(n.body)+'</td>'
               +'<td style="font-size:11px">'+(n.date||"-")+'</td>'
               +'<td style="font-size:11px;'+expiredCls+'">'+(n.expire||"-")+'</td>'
               +'<td style="text-align:center"><input type="checkbox" '+(n.show?"checked":"")+' onchange="Pages._noticeToggleById(n)" style="width:15px;height:15px;cursor:pointer"></td>'
               +'<td style="text-align:center">'+(n.file?'<span title="'+H.e(n.file.name||"")+'">📎</span>':'<span style="color:var(--tl)">-</span>')+'</td>'
               +'<td style="text-align:center;white-space:nowrap">'
-              +'<button class="btn bxs bgh" onclick="Cfg.noticeForm('+i+')">수정</button> '
-              +'<button class="btn bxs berr" onclick="Cfg.noticeDel('+i+')">삭제</button>'
+              +'<button class="btn bxs bgh" onclick="Pages._noticeOpen('+i+')">수정</button> '
+              +'<button class="btn bxs berr" onclick="Pages._noticeRemove('+i+')">삭제</button>'
               +'</td></tr>';
           }).join('');
           })()
@@ -10634,6 +10634,56 @@ _equipCalDetail(id){
     '</table>',
   });
 },
+  /* ── [v2.89] 공지사항 함수 — Cfg 의존 제거, Pages에 직접 구현 ── */
+  _noticeOpen:function(idx){
+    /* idx=null: 신규, idx=숫자: 수정 */
+    const notices=App.notices||[];
+    const n=idx!=null?notices[idx]:{title:'',body:'',author:(Auth._u?.name||'관리자'),date:H.today(),expire:'',show:true};
+    Modal.open({title:idx!=null?'공지 수정':'공지 등록',size:'mmd',
+      body:`<div class="fg2">
+        <div class="fgroup ff"><label class="fl req">제목</label><input class="fc" id="nt" value="${H.e(n.title||'')}"></div>
+        <div class="fgroup ff"><label class="fl req">내용</label><textarea class="fc" id="nb" rows="3">${H.e(n.body||'')}</textarea></div>
+        <div class="fgroup"><label class="fl req">게시 시작일</label><input class="fc" type="date" id="nd" value="${n.date||H.today()}"></div>
+        <div class="fgroup"><label class="fl req">게시 종료일</label><input class="fc" type="date" id="ne" value="${n.expire||''}"></div>
+        <div class="fgroup"><label class="fl">등록자</label><input class="fc" id="na" value="${H.e(n.author||'')}"></div>
+        <div class="fgroup"><label class="fl">게시 여부</label><select class="fc" id="ns">
+          <option value="1" ${n.show?'selected':''}>게시</option>
+          <option value="0" ${!n.show?'selected':''}>게시중지</option>
+        </select></div>
+      </div>`,
+      foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+            <button class="btn bpri btn-f8" onclick="Pages._noticeSave(${JSON.stringify(idx)})">저장 <span class="kbd">F8</span></button>`
+    });
+  },
+  _noticeSave:async function(idx){
+    const g=id=>document.getElementById(id)?.value.trim()||'';
+    const obj={title:g('nt'),body:g('nb'),date:g('nd'),expire:g('ne'),author:g('na'),
+                show:document.getElementById('ns')?.value==='1'};
+    if(!obj.title||!obj.body){Toast.show('필수 항목을 입력하세요.','warn');return;}
+    if(idx!=null){
+      if(App.notices[idx]) Object.assign(App.notices[idx],obj);
+      if(_sb) await SB.updateNotice(idx,obj);
+    } else {
+      App.notices=(App.notices||[]);
+      const r=await SB.addNotice(obj);
+      if(r?.id) obj.id=r.id;
+      App.notices.push(obj);
+    }
+    Modal.close();
+    Toast.show(idx!=null?'공지가 수정되었습니다.':'공지가 등록되었습니다.','ok');
+    await Pages.settings();
+    setTimeout(()=>document.querySelector('.stab-btn[data-tab="general"]')?.click(),100);
+  },
+  _noticeRemove:async function(i){
+    Modal.confirm({title:'공지 삭제',msg:'공지사항을 삭제하시겠습니까?',danger:true,onOk:async()=>{
+      const notices=App.notices||[];
+      if(_sb&&notices[i]?.id) await SB.deleteNotice(notices[i].id);
+      notices.splice(i,1);
+      Toast.show('삭제되었습니다.','ok');
+      await Pages.settings();
+      setTimeout(()=>document.querySelector('.stab-btn[data-tab="general"]')?.click(),100);
+    }});
+  },
 }; /* Pages 객체 끝 */
 /* ════ 계측기 전용 등록/수정 폼 ════ */
 Object.assign(Pages,{
