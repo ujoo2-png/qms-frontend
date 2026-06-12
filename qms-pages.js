@@ -2801,7 +2801,7 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  /* [v2.99] DB.nc 의존 제거 → window._ncRow 직접 사용 */
+  /* [v2.100] DB.nc 의존 제거 → window._ncRow 직접 사용 */
   const nc=window._ncRow;
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
@@ -10772,8 +10772,8 @@ _ncPrint(row){
   };
   var w=window.open('','_blank','width=1100,height=800,scrollbars=yes');
   if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
-  /* [v2.99] Vercel 라우팅 우회: HTML을 직접 document.write */
-  var html=document.getElementById('ncCarPrintTpl')?.innerHTML||'';
+  /* [v2.100] Vercel 라우팅 우회: HTML을 직접 document.write */
+  var tpl=document.getElementById('ncCarPrintTpl');var html=tpl?tpl.textContent:'';
   if(!html){Toast.show('인쇄 템플릿을 찾을 수 없습니다.','err');w.close();return;}
   html=html.replace('var d={};','var d='+JSON.stringify(d)+';');
   w.document.open();
@@ -10781,7 +10781,7 @@ _ncPrint(row){
   w.document.close();
 },
 
-  /* [v2.99] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
+  /* [v2.100] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
   _ncExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('nc');
