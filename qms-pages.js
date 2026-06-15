@@ -3193,7 +3193,7 @@ _eqForm(row=null){
       +'<option value="1"'+optSel(!row||row.active!==0)+'>사용</option>'
       +'<option value="0"'+optSel(!!row&&row.active===0)+'>불용</option>'
       +'</select></div>'
-      /* [v2.109] 계측기 이력카드용 11개 필드 추가 */
+      /* [v2.110] 계측기 이력카드용 11개 필드 추가 */
       +'<div class="fgroup"><label class="fl">고정구분</label>'
       +'<input id="ef_fixture_type" class="fc" value="'+H.e(row?.fixture_type||'')+'" placeholder="측정기기"></div>'
       +'<div class="fgroup"><label class="fl">Code_No</label>'
@@ -3255,7 +3255,7 @@ async _eqSave(orig){
     last:g('ef_last')||null,next:g('ef_next')||null,
     active:Number(document.getElementById('ef_active')?.value??1),
     file_url:eq_file_url,
-    /* [v2.109] 계측기 이력카드용 11개 필드 */
+    /* [v2.110] 계측기 이력카드용 11개 필드 */
     fixture_type:g('ef_fixture_type'),
     code_no:g('ef_code_no'),
     serial_no:g('ef_serial_no'),
@@ -4806,7 +4806,7 @@ async _calSave(id){
     next_date:g('cfNext')||null,
     cost:g('cfCost')?Number(g('cfCost')):null,
     note:g('cfNote'),
-    /* [v2.109] 교정구분/교정의뢰일 추가 */
+    /* [v2.110] 교정구분/교정의뢰일 추가 */
     cal_type:g('cfCalType')||null,
     request_date:g('cfReqDate')||null,
   };
@@ -10712,7 +10712,7 @@ async _equipCalDetail(id){
   var statusCls=d===null?'bgry':d<0?'bred':d<30?'bamb':'bgrn';
   var statusTxt=d===null?'미설정':d<0?'교정만료':'교정예정';
   window._curEqRow=row;
-  /* [v2.109] 수리이력 미리 로드 */
+  /* [v2.110] 수리이력 미리 로드 */
   window._curRepairs=await SB.getRepairs(row.code);
 
   var basicRows=[
@@ -10721,7 +10721,7 @@ async _equipCalDetail(id){
     ['보관위치',row.loc],['사용자',row.operator],
     ['최근교정일',row.last||'-'],['차기교정일',row.next||'-'],
     ['사용여부',row.active==0?'불용':'사용'],
-    /* [v2.109] 이력카드 신규 11필드 */
+    /* [v2.110] 이력카드 신규 11필드 */
     ['고정구분',row.fixture_type||'-'],['Code_No',row.code_no||'-'],
     ['제조번호',row.serial_no||'-'],['사용용도',row.purpose||'-'],
     ['교정구분',row.cal_method||'-'],['교정주기(년)',row.cal_cycle||'-'],
@@ -10856,32 +10856,38 @@ _eqHistoryCard(row){
   var totalPages=Math.max(calPages.length,repPages.length,1);
 
   var fmtCost=function(v){return v?Number(v).toLocaleString()+'원':'';};
+  /* [v2.110] 데이터행 colspan을 헤더 colspan 합계(35)와 정확히 일치시킴
+     교정이력 헤더: 4,4,4,4,4,4,7,4=35 / 수리이력 헤더: 4,3,5,9,4,3,4,3=35 */
   var calRow=function(c){
     return '<tr>'+
-      '<td class="xl79">'+esc(c.cal_type)+'</td>'+
-      '<td class="xl74">'+esc(c.request_date)+'</td>'+
-      '<td class="xl74">'+esc(c.cal_date)+'</td>'+
-      '<td class="xl74">'+esc(c.agency)+'</td>'+
-      '<td class="xl74">'+esc(c.cert_no)+'</td>'+
-      '<td class="xl74">'+esc(c.result)+'</td>'+
-      '<td class="xl74" colspan="2">'+esc(c.next_date)+'</td>'+
-      '<td class="xl74">'+fmtCost(c.cost)+'</td>'+
+      '<td class="xl79" colspan="4">'+esc(c.cal_type)+'</td>'+
+      '<td class="xl74" colspan="4">'+esc(c.request_date)+'</td>'+
+      '<td class="xl74" colspan="4">'+esc(c.cal_date)+'</td>'+
+      '<td class="xl74" colspan="4">'+esc(c.agency)+'</td>'+
+      '<td class="xl74" colspan="4">'+esc(c.cert_no)+'</td>'+
+      '<td class="xl74" colspan="4">'+esc(c.result)+'</td>'+
+      '<td class="xl74" colspan="7">'+esc(c.next_date)+'</td>'+
+      '<td class="xl74" colspan="4">'+fmtCost(c.cost)+'</td>'+
     '</tr>';
   };
-  var calEmptyRow='<tr>'+'<td class="xl74">&nbsp;</td>'.repeat(7)+'<td class="xl74" colspan="2">&nbsp;</td></tr>';
+  var calEmptyRow='<tr>'+
+    [4,4,4,4,4,4,7,4].map(function(cs){return '<td class="xl74" colspan="'+cs+'">&nbsp;</td>';}).join('')+
+    '</tr>';
   var repRow=function(r){
     return '<tr>'+
-      '<td class="xl79">'+esc(r.request_date)+'</td>'+
-      '<td class="xl74">'+esc(r.dept)+'</td>'+
-      '<td class="xl74">'+esc(r.reason)+'</td>'+
-      '<td class="xl74">'+esc(r.content)+'</td>'+
-      '<td class="xl74">'+esc(r.agency)+'</td>'+
-      '<td class="xl74">'+esc(r.complete_date)+'</td>'+
-      '<td class="xl74">'+esc(r.checker)+'</td>'+
-      '<td class="xl74">'+esc(r.result)+'</td>'+
+      '<td class="xl79" colspan="4">'+esc(r.request_date)+'</td>'+
+      '<td class="xl74" colspan="3">'+esc(r.dept)+'</td>'+
+      '<td class="xl74" colspan="5">'+esc(r.reason)+'</td>'+
+      '<td class="xl74" colspan="9">'+esc(r.content)+'</td>'+
+      '<td class="xl74" colspan="4">'+esc(r.agency)+'</td>'+
+      '<td class="xl74" colspan="3">'+esc(r.complete_date)+'</td>'+
+      '<td class="xl74" colspan="4">'+esc(r.checker)+'</td>'+
+      '<td class="xl74" colspan="3">'+esc(r.result)+'</td>'+
     '</tr>';
   };
-  var repEmptyRow='<tr>'+'<td class="xl74">&nbsp;</td>'.repeat(8)+'</tr>';
+  var repEmptyRow='<tr>'+
+    [4,3,5,9,4,3,4,3].map(function(cs){return '<td class="xl74" colspan="'+cs+'">&nbsp;</td>';}).join('')+
+    '</tr>';
 
   var calTableHtml=function(pageIdx){
     var rows=calPages[pageIdx]||[];
@@ -11420,7 +11426,32 @@ Object.assign(Pages,{
             '<option value="1"'+(!row||row.active!=0?' selected':'')+'>사용</option>'+
             '<option value="0"'+(row&&row.active==0?' selected':'')+'>불용</option>'+
           '</select></div>'+
-        '<div class="fgroup ff"><label class="fl">비고</label>'+
+        /* [v2.110] 계측기 이력카드용 10개 필드 추가 (특이사항=ecNote로 통합, 11번째) */
+        '<div class="fgroup"><label class="fl">고정구분</label>'+
+          '<input class="fc" id="ecFixtureType" placeholder="예) 측정기기" value="'+H.e(row?row.fixture_type||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">Code_No</label>'+
+          '<input class="fc" id="ecCodeNo" placeholder="예) 500-182-30" value="'+H.e(row?row.code_no||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">제조번호</label>'+
+          '<input class="fc" id="ecSerialNo" placeholder="예) B16013027" value="'+H.e(row?row.serial_no||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">사용용도</label>'+
+          '<input class="fc" id="ecPurpose" placeholder="예) 외경, 내경, 깊이" value="'+H.e(row?row.purpose||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">교정구분</label>'+
+          '<select class="fc" id="ecCalMethod">'+
+            '<option value=""'+(!row||!row.cal_method?' selected':'')+'>선택</option>'+
+            '<option value="사내교정"'+(row&&row.cal_method==='사내교정'?' selected':'')+'>사내교정</option>'+
+            '<option value="사외교정"'+(row&&row.cal_method==='사외교정'?' selected':'')+'>사외교정</option>'+
+          '</select></div>'+
+        '<div class="fgroup"><label class="fl">교정주기(년)</label>'+
+          '<input class="fc" type="number" step="0.5" id="ecCalCycle" placeholder="예) 1" value="'+H.e(row?row.cal_cycle||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">구입일</label>'+
+          '<input class="fc" type="date" id="ecPurchaseDate" value="'+H.e(row?row.purchase_date||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">구입가격</label>'+
+          '<input class="fc" type="number" id="ecPurchaseCost" placeholder="0" value="'+H.e(row?row.purchase_cost||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">사용무_사유</label>'+
+          '<input class="fc" id="ecInactiveReason" placeholder="불용 시 사유" value="'+H.e(row?row.inactive_reason||'':'')+'"></div>'+
+        '<div class="fgroup"><label class="fl">부속장비</label>'+
+          '<input class="fc" id="ecAccessories" placeholder="케이스, 충전기 등" value="'+H.e(row?row.accessories||'':'')+'"></div>'+
+        '<div class="fgroup ff"><label class="fl">비고(특이사항)</label>'+
           '<input class="fc" id="ecNote" value="'+H.e(row?row.note||'':'')+'"></div>'+
       '<div class="fgroup ff"><label class="fl">첨부파일</label>'+
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
@@ -11453,7 +11484,19 @@ Object.assign(Pages,{
     }
     var row={code,name,model:g('ecModel'),maker:g('ecMaker'),range:g('ecRange'),
       res:g('ecRes'),loc:g('ecLoc'),operator:g('ecOperator'),
-      last:g('ecLast')||null,next:nxt,active:parseInt(g('ecActive'))||1,note:g('ecNote')};
+      last:g('ecLast')||null,next:nxt,active:parseInt(g('ecActive'))||1,note:g('ecNote'),
+      /* [v2.110] 계측기 이력카드용 10필드 */
+      fixture_type:g('ecFixtureType'),
+      code_no:g('ecCodeNo'),
+      serial_no:g('ecSerialNo'),
+      purpose:g('ecPurpose'),
+      cal_method:g('ecCalMethod'),
+      cal_cycle:g('ecCalCycle')||null,
+      purchase_date:g('ecPurchaseDate')||null,
+      purchase_cost:g('ecPurchaseCost')?Number(g('ecPurchaseCost')):null,
+      inactive_reason:g('ecInactiveReason'),
+      accessories:g('ecAccessories'),
+    };
     if(fileUrl) row.file_url=fileUrl;
     else if(window._ecFileDeleted){row.file_url='';window._ecFileDeleted=false;}
     var r=editId&&editId!=='null'
