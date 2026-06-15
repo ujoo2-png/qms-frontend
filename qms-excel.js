@@ -1405,7 +1405,7 @@ var ExcelMgr=window.ExcelMgr={
         this._ws=ws; /* [v2.394] ws 저장 — 날짜 변환에 사용 */
         const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
         /* [v2.394] 날짜 필드 변환 — 엑셀 시리얼/Date객체 → YYYY-MM-DD */
-        const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date']);
+        const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','next_date']);
         const _cvDate=(v,ci,ri)=>{
           try{
             const addr=XLSX.utils.encode_cell({r:ri,c:ci});
@@ -1708,7 +1708,7 @@ var ExcelMgr=window.ExcelMgr={
     /* [v2.394] equip: SB.addEquip 헬퍼 직접 호출 (검사5종 방식과 동일)
        — bulk insert 경로 우회 → toAllowed/insertOne 의존 제거
        — addEquip 내부에서 allowed 컬럼 필터 + 동적 컬럼 오류 자동 제거 */
-    /* [v2.107] cal: SB.addCal 헬퍼 직접 호출 — addCal 내부에서 실제컬럼(date/cert NOT NULL 등) 필터링 처리
+    /* [v2.108] cal: SB.addCal 헬퍼 직접 호출 — addCal 내부에서 실제컬럼(date/cert NOT NULL 등) 필터링 처리
        (successCnt/failCnt는 이 분기 뒤에 선언되어 TDZ 발생 → 로컬 변수 사용) */
     if(page==='cal'&&_sb){
       let _ok=0,_fail=0,cnt=0;
@@ -2073,7 +2073,7 @@ var ExcelMgr=window.ExcelMgr={
             }
             return s;
           };
-          const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','expire_date']);
+          const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','next_date','expire_date']);
           cMap.forEach((key,i)=>{
             if(!key) return;
             const rawVal=row[i];

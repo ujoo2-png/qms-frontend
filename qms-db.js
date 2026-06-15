@@ -707,12 +707,24 @@ const SB={
     return data;
   },
   async addCal(row){
-    /* [v2.107] 실제 컬럼 확정(information_schema 조회):
+    /* [v2.108] 실제 컬럼 확정(information_schema 조회):
        id,cert(NOT NULL),equip_id,equip_name,date(NOT NULL),agency,result,
        next_date,note,created_at,equip_code,cal_date,cert_no,cost,file_url,file_name,created_by
        -> date/cert 둘 다 NOT NULL → cal_date/cert_no와 동일값 동시 전송 */
+    /* [v2.108] 엑셀 시리얼 날짜(예: 46486) 방어적 변환 — _DATE_KEYS 누락 대비 */
+    const _toDateStr=function(v){
+      if(!v) return null;
+      if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)) return v;
+      const n=Number(v);
+      if(!isNaN(n)&&n>20000&&n<100000){
+        const d=new Date(Math.round((n-25569)*86400)*1000);
+        return d.toISOString().slice(0,10);
+      }
+      return v;
+    };
     const certVal = row.cert_no||row.cert||'';
-    const dateVal = row.cal_date||row.date||H.today();
+    const dateVal = _toDateStr(row.cal_date||row.date)||H.today();
+    const nextVal = _toDateStr(row.next_date||row.next);
     const eq=(DB.equip||[]).find(function(e){return e.code===(row.equip_code||row.code);});
     const allowed={
       equip_code: row.equip_code||row.code||'',
@@ -720,7 +732,7 @@ const SB={
       equip_name:  eq?eq.name:(row.name||null),
       date:        dateVal,
       cal_date:    dateVal,
-      next_date:   row.next_date||row.next||null,
+      next_date:   nextVal,
       agency:      row.agency||'',
       cert_no:     certVal,
       cert:        certVal,
@@ -740,7 +752,7 @@ const SB={
   /* ── [v2.394 Phase1] 교정이력 수정/삭제 ── */
   async updateCal(id, patch){
     if(!_sb){const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    /* [v2.107] 실제 컬럼만 필터(information_schema 확정) — updated_at 없음, date/cert NOT NULL */
+    /* [v2.108] 실제 컬럼만 필터(information_schema 확정) — updated_at 없음, date/cert NOT NULL */
     const cols=['equip_code','equip_id','equip_name','cal_date','date','next_date','agency','cert_no','cert','result','cost','note','file_url','file_name'];
     if(patch.cal_date!==undefined) patch.date=patch.cal_date;
     if(patch.cert_no!==undefined) patch.cert=patch.cert_no;
@@ -752,7 +764,7 @@ const SB={
   },
   async deleteCal(id){
     if(!_sb){DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};}
-    /* [v2.107] calibrations 테이블에 deleted_at 컬럼 없음 — hard delete */
+    /* [v2.108] calibrations 테이블에 deleted_at 컬럼 없음 — hard delete */
     const{error}=await _sb.from('calibrations').delete().eq('id',id);
     if(error){Toast.show('교정이력 삭제 실패: '+error.message,'err');return{ok:false};}
     DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};
@@ -941,7 +953,7 @@ const SB={
   /* [v2.65] ── 교정 이력 ─────────────────────────────── */
   async getCal(){
     if(!_sb) return DB.cals;
-    /* [v2.107] calibrations 테이블에 deleted_at 컬럼 없음 — 필터 제거 */
+    /* [v2.108] calibrations 테이블에 deleted_at 컬럼 없음 — 필터 제거 */
     const data=await this._sbFetchAll('calibrations','id',true);
     if(data===null) return DB.cals;
     DB.cals=data; return data;

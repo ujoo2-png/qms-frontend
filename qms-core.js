@@ -156,7 +156,7 @@ const Auth={
   switchTab(name,btn){
     /* [v2.394] 탭 전환 시 이전 탭 입력값 초기화 */
     const clearIds={
-      findId:['findIdName','findIdEmail','findIdResult'],
+      findId:['findIdName','findIdEmail'],
       findPw:['fpId','fpEmail','fpNewPw','fpNewPw2'],
       signup:['sgId','sgName','sgEmail','sgPw','sgPw2','sgDept','sgTel'],
     };
@@ -165,9 +165,12 @@ const Auth={
       const el=document.getElementById(id);
       if(el) el.value='';
     });
-    /* findId 결과 텍스트 초기화 */
+    /* [v2.108] findId 결과 영역 초기화 — textContent='' 사용 시 내부 strong#foundId가
+       영구 삭제되는 버그 수정 → display만 숨김 처리 */
     const res=document.getElementById('findIdResult');
-    if(res) res.textContent='';
+    if(res) res.style.display='none';
+    const errEl=document.getElementById('findIdError');
+    if(errEl) errEl.style.display='none';
     /* findPw step1→step2 초기화 */
     const s1=document.getElementById('fpStep1'),s2=document.getElementById('fpStep2');
     if(s1)s1.style.display='block';
@@ -416,7 +419,7 @@ const Auth={
       const r=document.getElementById('findIdResult'),fi=document.getElementById('foundId');
       if(fi)fi.textContent='admin';if(r)r.style.display='block';return;
     }
-    /* [v2.107] DB.users 항상 최신 재조회 + trim/대소문자 무시 비교
+    /* [v2.108] DB.users 항상 최신 재조회 + trim/대소문자 무시 비교
        — RLS 정책으로 비로그인 조회가 막힐 경우 콘솔에 원인 표시 */
     const users=await SB.getUsers();
     console.log('[findId] getUsers 결과:', users?.length||0,'건');
