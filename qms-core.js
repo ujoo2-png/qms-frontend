@@ -416,20 +416,30 @@ const Auth={
       const r=document.getElementById('findIdResult'),fi=document.getElementById('foundId');
       if(fi)fi.textContent='admin';if(r)r.style.display='block';return;
     }
-    /* [v2.106] DB.users 항상 최신 재조회 + trim/대소문자 무시 비교 */
+    /* [v2.107] DB.users 항상 최신 재조회 + trim/대소문자 무시 비교
+       — RLS 정책으로 비로그인 조회가 막힐 경우 콘솔에 원인 표시 */
     const users=await SB.getUsers();
+    console.log('[findId] getUsers 결과:', users?.length||0,'건');
     if(users&&users.length) DB.users=users;
+    if(!DB.users||DB.users.length===0){
+      console.warn('[findId] DB.users가 비어있습니다. users 테이블 RLS 정책에서 anon SELECT 권한을 확인하세요.');
+    }
     const nameNorm=name.replace(/\s+/g,'');
     const emailNorm=email.toLowerCase();
     const user=(DB.users||[]).find(u=>
       (u.name||'').replace(/\s+/g,'')===nameNorm &&
       (u.email||'').toLowerCase()===emailNorm
     );
+    const rEl=document.getElementById('findIdResult');
+    const eEl=document.getElementById('findIdError');
     if(user){
-      const r=document.getElementById('findIdResult'),fi=document.getElementById('foundId');
-      if(fi)fi.textContent=user.username;if(r)r.style.display='block';
+      const fi=document.getElementById('foundId');
+      if(fi)fi.textContent=user.username;
+      if(rEl)rEl.style.display='block';
+      if(eEl)eEl.style.display='none';
     } else {
-      document.getElementById('findIdResult')?.style&&(document.getElementById('findIdResult').style.display='none');
+      if(rEl)rEl.style.display='none';
+      if(eEl)eEl.style.display='block';
       Toast.show('일치하는 계정을 찾을 수 없습니다.','err');
     }
   },

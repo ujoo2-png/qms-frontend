@@ -1708,6 +1708,33 @@ var ExcelMgr=window.ExcelMgr={
     /* [v2.394] equip: SB.addEquip 헬퍼 직접 호출 (검사5종 방식과 동일)
        — bulk insert 경로 우회 → toAllowed/insertOne 의존 제거
        — addEquip 내부에서 allowed 컬럼 필터 + 동적 컬럼 오류 자동 제거 */
+    /* [v2.107] cal: SB.addCal 헬퍼 직접 호출 — addCal 내부에서 실제컬럼(date/cert NOT NULL 등) 필터링 처리
+       (successCnt/failCnt는 이 분기 뒤에 선언되어 TDZ 발생 → 로컬 변수 사용) */
+    if(page==='cal'&&_sb){
+      let _ok=0,_fail=0,cnt=0;
+      for(const row of rows){
+        const res=await SB.addCal(row);
+        if(res.ok){_ok++;cnt++;}
+        else{_fail++;console.error('[SB] addCal 실패:',row.equip_code||row.code);}
+        if(cnt>0&&cnt%50===0){
+          document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
+          Toast.show('교정이력 등록 중... '+_ok+'/'+rows.length+'건','info',30000);
+        }
+        await new Promise(r=>setTimeout(r,30));
+      }
+      const msg=_fail>0
+        ?`✅ ${_ok}건 등록 / ❌ ${_fail}건 실패`
+        :`✅ ${_ok}건 모두 등록 완료`;
+      Toast.show(msg, _fail>0?'warn':'ok', 4000);
+      if(_ok>0){
+        await new Promise(r=>setTimeout(r,400));
+        DB.cals=await SB.getCal();
+        Modal.close();
+        Pages.cal();
+      }
+      return;
+    }
+
     if((page==='equip'||page==='equipment')&&_sb){
       let cnt=0;
       for(const row of rows){

@@ -707,11 +707,19 @@ const SB={
     return data;
   },
   async addCal(row){
-    /* [v2.106] cert 컬럼 NOT NULL 제약 — cert_no와 함께 동일값 전송 (cert 컬럼 존재 시에만 안전) */
+    /* [v2.107] 실제 컬럼 확정(information_schema 조회):
+       id,cert(NOT NULL),equip_id,equip_name,date(NOT NULL),agency,result,
+       next_date,note,created_at,equip_code,cal_date,cert_no,cost,file_url,file_name,created_by
+       -> date/cert 둘 다 NOT NULL → cal_date/cert_no와 동일값 동시 전송 */
     const certVal = row.cert_no||row.cert||'';
+    const dateVal = row.cal_date||row.date||H.today();
+    const eq=(DB.equip||[]).find(function(e){return e.code===(row.equip_code||row.code);});
     const allowed={
       equip_code: row.equip_code||row.code||'',
-      cal_date:    row.cal_date||row.date||null,
+      equip_id:    eq?eq.id:null,
+      equip_name:  eq?eq.name:(row.name||null),
+      date:        dateVal,
+      cal_date:    dateVal,
       next_date:   row.next_date||row.next||null,
       agency:      row.agency||'',
       cert_no:     certVal,
@@ -732,22 +740,21 @@ const SB={
   /* ── [v2.394 Phase1] 교정이력 수정/삭제 ── */
   async updateCal(id, patch){
     if(!_sb){const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    /* [v2.106] 실제 컬럼만 필터 — code/date/next/cert 등 없는 컬럼 제거 */
-    const cols=['equip_code','cal_date','next_date','agency','cert_no','result','cost','note','file_url','file_name'];
-    /* [v2.106] cert 컬럼 NOT NULL — cert_no 변경 시 cert도 동일하게 업데이트 */
+    /* [v2.107] 실제 컬럼만 필터(information_schema 확정) — updated_at 없음, date/cert NOT NULL */
+    const cols=['equip_code','equip_id','equip_name','cal_date','date','next_date','agency','cert_no','cert','result','cost','note','file_url','file_name'];
+    if(patch.cal_date!==undefined) patch.date=patch.cal_date;
     if(patch.cert_no!==undefined) patch.cert=patch.cert_no;
-    cols.push('cert');
     const allowed={};
     cols.forEach(function(k){ if(patch[k]!==undefined) allowed[k]=patch[k]; });
-    allowed.updated_at=H.today();
     const{error}=await _sb.from('calibrations').update(allowed).eq('id',id);
     if(error){Toast.show('교정이력 수정 실패: '+error.message,'err');return{ok:false};}
     const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
   },
   async deleteCal(id){
     if(!_sb){DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};}
-    const res=await SB._softDelete('calibrations', [id]);
-    if(!res.ok) return {ok:false};
+    /* [v2.107] calibrations 테이블에 deleted_at 컬럼 없음 — hard delete */
+    const{error}=await _sb.from('calibrations').delete().eq('id',id);
+    if(error){Toast.show('교정이력 삭제 실패: '+error.message,'err');return{ok:false};}
     DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};
   },
 
@@ -934,7 +941,8 @@ const SB={
   /* [v2.65] ── 교정 이력 ─────────────────────────────── */
   async getCal(){
     if(!_sb) return DB.cals;
-    const data=await this._sbFetchAll('calibrations','id',true,q=>q.is('deleted_at',null));
+    /* [v2.107] calibrations 테이블에 deleted_at 컬럼 없음 — 필터 제거 */
+    const data=await this._sbFetchAll('calibrations','id',true);
     if(data===null) return DB.cals;
     DB.cals=data; return data;
   },

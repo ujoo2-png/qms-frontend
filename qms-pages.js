@@ -2801,7 +2801,7 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  /* [v2.106] DB.nc 의존 제거 → window._ncRow 직접 사용 */
+  /* [v2.107] DB.nc 의존 제거 → window._ncRow 직접 사용 */
   const nc=window._ncRow;
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
@@ -4694,7 +4694,7 @@ _calFilter:function(){Pages._calRender();},
 _calForm:function(row, preCode){
   const e=!!row;
   const _pre=preCode||'';
-  /* [v2.106] 계측기코드만 옵션 텍스트로 표시 — 계측기명은 별도 읽기전용 필드로 분리 */
+  /* [v2.107] 계측기코드만 옵션 텍스트로 표시 — 계측기명은 별도 읽기전용 필드로 분리 */
   const equipCodes=DB.equip.map(function(eq){
     const sel=((row&&row.equip_code)===eq.code||eq.code===_pre)?' selected':'';
     return `<option value="${H.e(eq.code)}" data-name="${H.e(eq.name||'')}"${sel}>${H.e(eq.code)}</option>`;
@@ -4746,7 +4746,7 @@ async _calSave(id){
   if(!date){Toast.show('교정일을 입력하세요.','warn');return;}
   if(!agency){Toast.show('교정기관을 입력하세요.','warn');return;}
   const eq=DB.equip.find(e=>e.code===code)||{};
-  /* [v2.106] calibrations 실제 컬럼만 — code/date/next/cert 중복키 제거 */
+  /* [v2.107] calibrations 실제 컬럼만 — code/date/next/cert 중복키 제거 */
   const row={
     equip_code:code,
     cal_date:date,
@@ -7839,7 +7839,7 @@ async settings(){
           <button class="btn bpri bsm" onclick="Pages._changePw()" style="font-size:12px">변경</button>
         </div>
       </div>
-      <!-- [v2.106] 관리자 이메일 설정 -->
+      <!-- [v2.107] 관리자 이메일 설정 -->
       <div class="card" style="margin-top:12px;padding:14px 16px">
         <div class="ct" style="font-size:12px">📧 관리자 문의 이메일</div>
         <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
@@ -10810,7 +10810,7 @@ _ncPrint(row){
   if(!row) return;
   var w=window.open('','_blank','width=1200,height=850,scrollbars=yes');
   if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
-  /* [v2.106] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
+  /* [v2.107] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
   var e=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
   var no=e(row.no),date=e(row.date),customer=e(row.customer||''),
       item_code=e(row.item_code||''),item=e(row.item||''),
@@ -10975,7 +10975,7 @@ _ncPrint(row){
   w.document.close();
 },
 
-  /* [v2.106] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
+  /* [v2.107] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
   _ncExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('nc');
@@ -10997,7 +10997,7 @@ _ncPrint(row){
     Toast.show('관리자 이메일이 저장되었습니다.','ok');
   },
 
-  /* [v2.106] ExcelMgr 래퍼 — 전역 참조 오류 방지 (IIFE 학습 패턴) */
+  /* [v2.107] ExcelMgr 래퍼 — 전역 참조 오류 방지 (IIFE 학습 패턴) */
   _calExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('cal');
