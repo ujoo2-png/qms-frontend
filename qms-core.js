@@ -165,7 +165,7 @@ const Auth={
       const el=document.getElementById(id);
       if(el) el.value='';
     });
-    /* [v2.108] findId 결과 영역 초기화 — textContent='' 사용 시 내부 strong#foundId가
+    /* [v2.109] findId 결과 영역 초기화 — textContent='' 사용 시 내부 strong#foundId가
        영구 삭제되는 버그 수정 → display만 숨김 처리 */
     const res=document.getElementById('findIdResult');
     if(res) res.style.display='none';
@@ -419,7 +419,7 @@ const Auth={
       const r=document.getElementById('findIdResult'),fi=document.getElementById('foundId');
       if(fi)fi.textContent='admin';if(r)r.style.display='block';return;
     }
-    /* [v2.108] DB.users 항상 최신 재조회 + trim/대소문자 무시 비교
+    /* [v2.109] DB.users 항상 최신 재조회 + trim/대소문자 무시 비교
        — RLS 정책으로 비로그인 조회가 막힐 경우 콘솔에 원인 표시 */
     const users=await SB.getUsers();
     console.log('[findId] getUsers 결과:', users?.length||0,'건');

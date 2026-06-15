@@ -675,6 +675,18 @@ const SB={
       updated_at:  null,
       created_at:  row.created_at||null,
       file_url:    row.file_url||null,    /* [v2.394] 파일 URL */
+      /* [v2.109] 계측기 이력카드용 11개 컬럼 */
+      fixture_type:    row.fixture_type||null,
+      code_no:         row.code_no||null,
+      serial_no:       row.serial_no||null,
+      purpose:         row.purpose||null,
+      cal_method:      row.cal_method||null,
+      cal_cycle:       row.cal_cycle||null,
+      purchase_date:   _fmtD(row.purchase_date),
+      purchase_cost:   row.purchase_cost||null,
+      inactive_reason: row.inactive_reason||null,
+      accessories:     row.accessories||null,
+      note:            row.note||null,
     };
     /* [v2.394] upsert — code 중복 시 update (insert conflict 방지) */
     let insertRow={...allowed};
@@ -707,11 +719,11 @@ const SB={
     return data;
   },
   async addCal(row){
-    /* [v2.108] 실제 컬럼 확정(information_schema 조회):
+    /* [v2.109] 실제 컬럼 확정(information_schema 조회):
        id,cert(NOT NULL),equip_id,equip_name,date(NOT NULL),agency,result,
        next_date,note,created_at,equip_code,cal_date,cert_no,cost,file_url,file_name,created_by
        -> date/cert 둘 다 NOT NULL → cal_date/cert_no와 동일값 동시 전송 */
-    /* [v2.108] 엑셀 시리얼 날짜(예: 46486) 방어적 변환 — _DATE_KEYS 누락 대비 */
+    /* [v2.109] 엑셀 시리얼 날짜(예: 46486) 방어적 변환 — _DATE_KEYS 누락 대비 */
     const _toDateStr=function(v){
       if(!v) return null;
       if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)) return v;
@@ -733,6 +745,8 @@ const SB={
       date:        dateVal,
       cal_date:    dateVal,
       next_date:   nextVal,
+      cal_type:    row.cal_type||null,
+      request_date:_toDateStr(row.request_date)||null,
       agency:      row.agency||'',
       cert_no:     certVal,
       cert:        certVal,
@@ -752,8 +766,8 @@ const SB={
   /* ── [v2.394 Phase1] 교정이력 수정/삭제 ── */
   async updateCal(id, patch){
     if(!_sb){const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    /* [v2.108] 실제 컬럼만 필터(information_schema 확정) — updated_at 없음, date/cert NOT NULL */
-    const cols=['equip_code','equip_id','equip_name','cal_date','date','next_date','agency','cert_no','cert','result','cost','note','file_url','file_name'];
+    /* [v2.109] 실제 컬럼만 필터(information_schema 확정) — updated_at 없음, date/cert NOT NULL */
+    const cols=['equip_code','equip_id','equip_name','cal_date','date','next_date','agency','cert_no','cert','result','cost','note','file_url','file_name','cal_type','request_date'];
     if(patch.cal_date!==undefined) patch.date=patch.cal_date;
     if(patch.cert_no!==undefined) patch.cert=patch.cert_no;
     const allowed={};
@@ -764,7 +778,7 @@ const SB={
   },
   async deleteCal(id){
     if(!_sb){DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};}
-    /* [v2.108] calibrations 테이블에 deleted_at 컬럼 없음 — hard delete */
+    /* [v2.109] calibrations 테이블에 deleted_at 컬럼 없음 — hard delete */
     const{error}=await _sb.from('calibrations').delete().eq('id',id);
     if(error){Toast.show('교정이력 삭제 실패: '+error.message,'err');return{ok:false};}
     DB.cals=DB.cals.filter(c=>c.id!==id);return{ok:true};
@@ -953,10 +967,51 @@ const SB={
   /* [v2.65] ── 교정 이력 ─────────────────────────────── */
   async getCal(){
     if(!_sb) return DB.cals;
-    /* [v2.108] calibrations 테이블에 deleted_at 컬럼 없음 — 필터 제거 */
+    /* [v2.109] calibrations 테이블에 deleted_at 컬럼 없음 — 필터 제거 */
     const data=await this._sbFetchAll('calibrations','id',true);
     if(data===null) return DB.cals;
     DB.cals=data; return data;
+  },
+
+  /* [v2.109] ── 계측기 수리이력 (equip_repairs) ── */
+  async getRepairs(equipCode){
+    if(!_sb) return (DB.repairs||[]).filter(r=>!equipCode||r.equip_code===equipCode);
+    let q=_sb.from('equip_repairs').select('*').order('request_date',{ascending:false});
+    if(equipCode) q=q.eq('equip_code',equipCode);
+    const {data,error}=await q;
+    if(error){console.warn('[SB] equip_repairs 조회 실패',error.message);return [];}
+    if(!equipCode) DB.repairs=data;
+    return data||[];
+  },
+  async addRepair(row){
+    const allowed={
+      equip_code:    row.equip_code||'',
+      request_date:  row.request_date||null,
+      dept:          row.dept||'',
+      reason:        row.reason||'',
+      content:       row.content||'',
+      agency:        row.agency||'',
+      complete_date: row.complete_date||null,
+      checker:       row.checker||'',
+      result:        row.result||'',
+      created_by:    row.created_by||Auth.cur()?.username||'system',
+    };
+    if(!_sb){const id=Math.max(0,...(DB.repairs||[]).map(r=>r.id||0))+1;DB.repairs=DB.repairs||[];DB.repairs.push({id,...allowed});return{ok:true,id};}
+    const {data,error}=await _sb.from('equip_repairs').insert(allowed).select().single();
+    if(error){Toast.show('수리이력 저장 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true,id:data.id};
+  },
+  async updateRepair(id,patch){
+    if(!_sb){const r=(DB.repairs||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
+    const {error}=await _sb.from('equip_repairs').update(patch).eq('id',id);
+    if(error){Toast.show('수리이력 수정 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true};
+  },
+  async deleteRepair(id){
+    if(!_sb){DB.repairs=(DB.repairs||[]).filter(r=>r.id!==id);return{ok:true};}
+    const {error}=await _sb.from('equip_repairs').delete().eq('id',id);
+    if(error){Toast.show('수리이력 삭제 실패: '+error.message,'err');return{ok:false};}
+    DB.repairs=(DB.repairs||[]).filter(r=>r.id!==id);return{ok:true};
   },
   /* [v2.65] ── MSA ────────────────────────────────────── */
   async getMsa(){

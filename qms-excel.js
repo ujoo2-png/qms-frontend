@@ -1096,6 +1096,18 @@ var ExcelMgr=window.ExcelMgr={
         {key:'last',     label:'I_최근교정일',  req:false, sample:'2026-01-01',           note:'YYYY-MM-DD'},
         {key:'next',     label:'J_차기교정일',  req:false, sample:'2026-07-01',           note:'날짜만입력'},
         {key:'active',   label:'K_사용여부',    req:false, sample:'사용',                 note:'사용/불용'},
+        /* [v2.109] 계측기 이력카드용 11개 컬럼 */
+        {key:'fixture_type',    label:'L_고정구분',    req:false, sample:'측정기기'},
+        {key:'code_no',         label:'M_CodeNo',     req:false, sample:'500-182-30'},
+        {key:'serial_no',       label:'N_제조번호',    req:false, sample:'B16013027'},
+        {key:'purpose',         label:'O_사용용도',    req:false, sample:'외경,내경,깊이'},
+        {key:'cal_method',      label:'P_교정구분',    req:false, sample:'사외교정',            note:'사내교정/사외교정'},
+        {key:'cal_cycle',       label:'Q_교정주기(년)',req:false, sample:'1'},
+        {key:'purchase_date',   label:'R_구입일',      req:false, sample:'2026-01-01',         note:'YYYY-MM-DD'},
+        {key:'purchase_cost',   label:'S_구입가격',    req:false, sample:'150000'},
+        {key:'inactive_reason', label:'T_사용무사유',  req:false, sample:''},
+        {key:'accessories',     label:'U_부속장비',    req:false, sample:''},
+        {key:'note',            label:'V_특이사항',    req:false, sample:''},
       ],
       dupKey:'code', dupLabel:'A_계측기코드', getData:()=>DB.equip,
     },
@@ -1105,6 +1117,9 @@ var ExcelMgr=window.ExcelMgr={
       cols:[
         {key:'equip_code', label:'계측기코드', req:true,  sample:'EQ-001'},
         {key:'name',       label:'계측기명',   req:false, sample:'버니어캘리퍼스'},
+        /* [v2.109] 교정구분/교정의뢰일 */
+        {key:'cal_type',    label:'교정구분',    req:false, sample:'사외교정', note:'사내교정/사외교정'},
+        {key:'request_date',label:'교정의뢰일',  req:false, sample:'2026-05-25', note:'YYYY-MM-DD'},
         {key:'cal_date',   label:'교정일',     req:true,  sample:'2026-06-01'},
         {key:'agency',     label:'교정기관',   req:true,  sample:'㈜정밀측정'},
         {key:'cert_no',    label:'성적서번호', req:false, sample:'CAL-2026-010'},
@@ -1405,7 +1420,7 @@ var ExcelMgr=window.ExcelMgr={
         this._ws=ws; /* [v2.394] ws 저장 — 날짜 변환에 사용 */
         const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
         /* [v2.394] 날짜 필드 변환 — 엑셀 시리얼/Date객체 → YYYY-MM-DD */
-        const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','next_date']);
+        const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','next_date','purchase_date','request_date']);
         const _cvDate=(v,ci,ri)=>{
           try{
             const addr=XLSX.utils.encode_cell({r:ri,c:ci});
@@ -1708,7 +1723,7 @@ var ExcelMgr=window.ExcelMgr={
     /* [v2.394] equip: SB.addEquip 헬퍼 직접 호출 (검사5종 방식과 동일)
        — bulk insert 경로 우회 → toAllowed/insertOne 의존 제거
        — addEquip 내부에서 allowed 컬럼 필터 + 동적 컬럼 오류 자동 제거 */
-    /* [v2.108] cal: SB.addCal 헬퍼 직접 호출 — addCal 내부에서 실제컬럼(date/cert NOT NULL 등) 필터링 처리
+    /* [v2.109] cal: SB.addCal 헬퍼 직접 호출 — addCal 내부에서 실제컬럼(date/cert NOT NULL 등) 필터링 처리
        (successCnt/failCnt는 이 분기 뒤에 선언되어 TDZ 발생 → 로컬 변수 사용) */
     if(page==='cal'&&_sb){
       let _ok=0,_fail=0,cnt=0;
@@ -2073,7 +2088,7 @@ var ExcelMgr=window.ExcelMgr={
             }
             return s;
           };
-          const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','next_date','expire_date']);
+          const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','next_date','purchase_date','request_date','expire_date']);
           cMap.forEach((key,i)=>{
             if(!key) return;
             const rawVal=row[i];

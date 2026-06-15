@@ -3083,6 +3083,7 @@ async equip(){
     {key:'name',     label:'계측기명', req:true,   w:'130px'},
     {key:'model',    label:'모델번호',   w:'100px'},
     {key:'maker',    label:'제조사',     w:'80px'},
+    {key:'serial_no',label:'제조번호',   w:'90px'},
     {key:'range',    label:'측정범위',   w:'100px'},
     {key:'res',      label:'분해능',     w:'70px'},
     {key:'loc',      label:'보관위치',   w:'80px'},
@@ -3192,6 +3193,33 @@ _eqForm(row=null){
       +'<option value="1"'+optSel(!row||row.active!==0)+'>사용</option>'
       +'<option value="0"'+optSel(!!row&&row.active===0)+'>불용</option>'
       +'</select></div>'
+      /* [v2.109] 계측기 이력카드용 11개 필드 추가 */
+      +'<div class="fgroup"><label class="fl">고정구분</label>'
+      +'<input id="ef_fixture_type" class="fc" value="'+H.e(row?.fixture_type||'')+'" placeholder="측정기기"></div>'
+      +'<div class="fgroup"><label class="fl">Code_No</label>'
+      +'<input id="ef_code_no" class="fc" value="'+H.e(row?.code_no||'')+'" placeholder="500-182-30"></div>'
+      +'<div class="fgroup"><label class="fl">제조번호</label>'
+      +'<input id="ef_serial_no" class="fc" value="'+H.e(row?.serial_no||'')+'" placeholder="B16013027"></div>'
+      +'<div class="fgroup"><label class="fl">사용용도</label>'
+      +'<input id="ef_purpose" class="fc" value="'+H.e(row?.purpose||'')+'" placeholder="외경, 내경, 깊이"></div>'
+      +'<div class="fgroup"><label class="fl">교정구분</label>'
+      +'<select id="ef_cal_method" class="fc">'
+      +'<option value=""'+optSel(!row?.cal_method)+'>선택</option>'
+      +'<option value="사내교정"'+optSel(row?.cal_method==='사내교정')+'>사내교정</option>'
+      +'<option value="사외교정"'+optSel(row?.cal_method==='사외교정')+'>사외교정</option>'
+      +'</select></div>'
+      +'<div class="fgroup"><label class="fl">교정주기(년)</label>'
+      +'<input id="ef_cal_cycle" class="fc" type="number" step="0.5" value="'+H.e(row?.cal_cycle||'')+'" placeholder="1"></div>'
+      +'<div class="fgroup"><label class="fl">구입일</label>'
+      +'<input id="ef_purchase_date" class="fc" type="date" value="'+H.e(row?.purchase_date||'')+'"></div>'
+      +'<div class="fgroup"><label class="fl">구입가격</label>'
+      +'<input id="ef_purchase_cost" class="fc" type="number" value="'+H.e(row?.purchase_cost||'')+'" placeholder="0"></div>'
+      +'<div class="fgroup"><label class="fl">사용무_사유</label>'
+      +'<input id="ef_inactive_reason" class="fc" value="'+H.e(row?.inactive_reason||'')+'" placeholder="불용 시 사유"></div>'
+      +'<div class="fgroup ff"><label class="fl">부속장비</label>'
+      +'<input id="ef_accessories" class="fc" value="'+H.e(row?.accessories||'')+'" placeholder="케이스, 충전기 등"></div>'
+      +'<div class="fgroup ff"><label class="fl">특이사항</label>'
+      +'<input id="ef_note" class="fc" value="'+H.e(row?.note||'')+'" placeholder="특이사항 메모"></div>'
       +'<div class="fgroup" style="grid-column:1/-1">'
       +'<label class="fl">첨부파일 <span style="font-size:10px;color:var(--tm)">(PDF·이미지·문서)</span></label>'
       +'<input class="fc" type="file" id="eqFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="padding:5px;font-size:12px">'
@@ -3227,6 +3255,18 @@ async _eqSave(orig){
     last:g('ef_last')||null,next:g('ef_next')||null,
     active:Number(document.getElementById('ef_active')?.value??1),
     file_url:eq_file_url,
+    /* [v2.109] 계측기 이력카드용 11개 필드 */
+    fixture_type:g('ef_fixture_type'),
+    code_no:g('ef_code_no'),
+    serial_no:g('ef_serial_no'),
+    purpose:g('ef_purpose'),
+    cal_method:g('ef_cal_method'),
+    cal_cycle:g('ef_cal_cycle')||null,
+    purchase_date:g('ef_purchase_date')||null,
+    purchase_cost:g('ef_purchase_cost')?Number(g('ef_purchase_cost')):null,
+    inactive_reason:g('ef_inactive_reason'),
+    accessories:g('ef_accessories'),
+    note:g('ef_note'),
   };
   row.status=H.equipStatus(row.next);
   if(orig?.id) row.id=orig.id;
@@ -4657,6 +4697,8 @@ _calRender:function(){
           var eq=(DB.equip||[]).find(function(e){return e.code===row.equip_code;});
           return eq?H.e(eq.name||'-'):'-';
         }},
+      {key:'cal_type', label:'교정구분',    w:'80px', render:v=>v||'-'},
+      {key:'request_date', label:'교정의뢰일', w:'96px', render:v=>v||'-'},
       {key:'cal_date', label:'교정일',      w:'96px', render:v=>v||'-'},
       {key:'agency',   label:'교정기관',    w:'110px'},
       {key:'cert_no',  label:'성적서번호',  w:'110px'},
@@ -4714,6 +4756,14 @@ _calForm:function(row, preCode){
           <option value="">\uc120\ud0dd</option>${equipCodes}</select></div>
       <div class="fgroup"><label class="fl">\uACC4\uCE21\uAE30\uBA85</label>
         <input class="fc" id="cfName" readonly value="${H.e(curEq.name||'')}" style="background:var(--bg2)"></div>
+      <div class="fgroup"><label class="fl">\uAD50\uC815\uAD6C\uBD84</label>
+        <select class="fc" id="cfCalType">
+          <option value="">\uC120\uD0DD</option>
+          <option value="\uC0AC\uB0B4\uAD50\uC815"${row?.cal_type==='\uC0AC\uB0B4\uAD50\uC815'?' selected':''}>\uC0AC\uB0B4\uAD50\uC815</option>
+          <option value="\uC0AC\uC678\uAD50\uC815"${!row?.cal_type||row?.cal_type==='\uC0AC\uC678\uAD50\uC815'?' selected':''}>\uC0AC\uC678\uAD50\uC815</option>
+        </select></div>
+      <div class="fgroup"><label class="fl">\uAD50\uC815\uC758\uB8B0\uC77C</label>
+        <input class="fc" type="date" id="cfReqDate" value="${H.e(row?.request_date||'')}"></div>
       <div class="fgroup"><label class="fl"><b style="color:#e11d48">\uad50\uc815\uc77c *</b></label>
         <input class="fc" type="date" id="cfDate" value="${H.e(row?.cal_date||row?.date||H.today())}"></div>
       <div class="fgroup"><label class="fl"><b style="color:#e11d48">\uad50\uc815\uae30\uad00 *</b></label>
@@ -4755,7 +4805,10 @@ async _calSave(id){
     result:g('cfResult')||'합격',
     next_date:g('cfNext')||null,
     cost:g('cfCost')?Number(g('cfCost')):null,
-    note:g('cfNote')
+    note:g('cfNote'),
+    /* [v2.109] 교정구분/교정의뢰일 추가 */
+    cal_type:g('cfCalType')||null,
+    request_date:g('cfReqDate')||null,
   };
   if(window._calFileRemove){row.file_url=null;row.file_name=null;}
   var fileEl=document.getElementById('cfFile');
@@ -10651,32 +10704,354 @@ _codeDelete:function(kind,key,label,cnt,dbId){
 
 
 /* ── 계측기 전용 상세 팝업 ── */
-_equipCalDetail(id){
+async _equipCalDetail(id){
   var row=(DB.equip||[]).find(function(r){return r.id===id;});
   if(!row){Toast.show('계측기 정보를 찾을 수 없습니다.','err');return;}
   var nxt=row.next||null;
   var d=nxt?Math.ceil((new Date(nxt)-new Date())/864e5):null;
   var statusCls=d===null?'bgry':d<0?'bred':d<30?'bamb':'bgrn';
   var statusTxt=d===null?'미설정':d<0?'교정만료':'교정예정';
-  Modal.open({title:'🔬 계측기 상세 — '+H.e(row.name||'-'),size:'sm',
+  window._curEqRow=row;
+  /* [v2.109] 수리이력 미리 로드 */
+  window._curRepairs=await SB.getRepairs(row.code);
+
+  var basicRows=[
+    ['계측기코드',row.code],['계측기명',row.name],['모델번호',row.model],
+    ['제조사',row.maker],['측정범위',row.range],['분해능',row.res],
+    ['보관위치',row.loc],['사용자',row.operator],
+    ['최근교정일',row.last||'-'],['차기교정일',row.next||'-'],
+    ['사용여부',row.active==0?'불용':'사용'],
+    /* [v2.109] 이력카드 신규 11필드 */
+    ['고정구분',row.fixture_type||'-'],['Code_No',row.code_no||'-'],
+    ['제조번호',row.serial_no||'-'],['사용용도',row.purpose||'-'],
+    ['교정구분',row.cal_method||'-'],['교정주기(년)',row.cal_cycle||'-'],
+    ['구입일',row.purchase_date||'-'],['구입가격',row.purchase_cost?Number(row.purchase_cost).toLocaleString()+'원':'-'],
+    ['사용무_사유',row.inactive_reason||'-'],['부속장비',row.accessories||'-'],
+    ['특이사항',row.note||'-'],
+  ];
+  var basicHtml='<table style="width:100%;font-size:13px;border-collapse:collapse">'+
+    basicRows.map(function(r){
+      return '<tr><td style="color:#64748b;padding:5px 8px;width:110px;border-bottom:1px solid #f1f5f9">'+r[0]+'</td>'+
+             '<td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;font-weight:500">'+H.e(String(r[1]||'-'))+'</td></tr>';
+    }).join('')+
+    '<tr><td style="color:#64748b;padding:5px 8px">교정상태</td>'+
+      '<td style="padding:5px 8px"><span class="badge '+statusCls+'">'+statusTxt+(d!==null&&d>=0?' (D-'+d+')':'')+'</span></td></tr>'+
+  '</table>';
+
+  Modal.open({title:'🔬 계측기 상세 — '+H.e(row.name||'-'),size:'mlg',
     foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
          (row.file_url?'<a href="'+H.e(row.file_url)+'" target="_blank" class="btn bblu bsm">📎 파일 보기</a>':'')+
+         '<button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._eqHistoryCard(window._curEqRow)">🪪 이력카드</button>'+
          '<button class="btn bpri bsm" onclick="Modal.close();Pages._equipCalForm('+id+')">✏️ 수정</button>',
-    body:'<table style="width:100%;font-size:13px;border-collapse:collapse">'+
-      [['계측기코드',row.code],['계측기명',row.name],['모델번호',row.model],
-       ['제조사',row.maker],['측정범위',row.range],['분해능',row.res],
-       ['보관위치',row.loc],['사용자',row.operator],
-       ['최근교정일',row.last||'-'],['차기교정일',row.next||'-'],
-       ['사용여부',row.active==0?'불용':'사용'],['비고',row.note||'-'],
-      ].map(function(r){
-        return '<tr><td style="color:#64748b;padding:5px 8px;width:100px;border-bottom:1px solid #f1f5f9">'+r[0]+'</td>'+
-               '<td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;font-weight:500">'+H.e(String(r[1]||'-'))+'</td></tr>';
-      }).join('')+
-      '<tr><td style="color:#64748b;padding:5px 8px">교정상태</td>'+
-        '<td style="padding:5px 8px"><span class="badge '+statusCls+'">'+statusTxt+(d!==null&&d>=0?' (D-'+d+')':'')+'</span></td></tr>'+
-    '</table>',
+    body:'<div class="stabs" style="margin-bottom:10px">'+
+      '<button class="stab-btn on" data-tab="basic" onclick="Pages._eqDetailTab(\'basic\',this)">📋 기본정보</button>'+
+      '<button class="stab-btn" data-tab="repair" onclick="Pages._eqDetailTab(\'repair\',this)">🔧 수리이력</button>'+
+      '</div>'+
+      '<div id="eqDetailBasic">'+basicHtml+'</div>'+
+      '<div id="eqDetailRepair" style="display:none"></div>',
   });
 },
+_eqDetailTab(tab,btn){
+  document.querySelectorAll('.stab-btn').forEach(function(b){b.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  var basic=document.getElementById('eqDetailBasic');
+  var repair=document.getElementById('eqDetailRepair');
+  if(tab==='basic'){
+    if(basic)basic.style.display='block';
+    if(repair)repair.style.display='none';
+  } else {
+    if(basic)basic.style.display='none';
+    if(repair){repair.style.display='block';Pages._repairRenderList();}
+  }
+},
+_repairRenderList(){
+  var row=window._curEqRow;
+  var list=window._curRepairs||[];
+  var el=document.getElementById('eqDetailRepair');
+  if(!el||!row)return;
+  var rows=list.map(function(r){
+    return '<tr>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;font-size:12px">'+H.e(r.request_date||'-')+'</td>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;font-size:12px">'+H.e(r.dept||'-')+'</td>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;font-size:12px">'+H.e(r.reason||'-')+'</td>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;font-size:12px">'+H.e(r.content||'-')+'</td>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;font-size:12px">'+H.e(r.agency||'-')+'</td>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;font-size:12px">'+H.e(r.complete_date||'-')+'</td>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;font-size:12px">'+H.e(r.checker||'-')+'</td>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;font-size:12px">'+H.e(r.result||'-')+'</td>'+
+      '<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;text-align:center">'+
+        '<button class="btn bxs berr" style="font-size:10px;padding:1px 6px" onclick="Pages._repairDel('+r.id+')">🗑️</button></td>'+
+    '</tr>';
+  }).join('');
+  el.innerHTML=
+    '<div style="margin-bottom:8px;text-align:right">'+
+      '<button class="btn bpri bsm" onclick="Pages._repairFormToggle()">+ 수리이력 등록</button></div>'+
+    '<div id="repairFormArea"></div>'+
+    '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
+    '<thead><tr style="background:var(--bg2)">'+
+      ['수리요청일자','의뢰부서','의뢰사유','수리내역','수리기관','완료일자','확인자','결과',''].map(function(h){
+        return '<th style="padding:4px 6px;text-align:left;font-weight:600">'+h+'</th>';
+      }).join('')+
+    '</tr></thead><tbody>'+
+    (rows||'<tr><td colspan="9" style="padding:12px;text-align:center;color:var(--tm)">수리이력이 없습니다.</td></tr>')+
+    '</tbody></table>';
+},
+_repairFormToggle(){
+  var area=document.getElementById('repairFormArea');
+  if(!area)return;
+  if(area.innerHTML){area.innerHTML='';return;}
+  area.innerHTML='<div class="fg2" style="background:var(--bg2);padding:10px;border-radius:8px;margin-bottom:10px">'+
+    '<div class="fgroup"><label class="fl">수리요청일자</label><input class="fc" type="date" id="rpReqDate" value="'+H.today()+'"></div>'+
+    '<div class="fgroup"><label class="fl">의뢰부서</label><input class="fc" id="rpDept"></div>'+
+    '<div class="fgroup"><label class="fl">의뢰사유</label><input class="fc" id="rpReason"></div>'+
+    '<div class="fgroup ff"><label class="fl">수리내역</label><input class="fc" id="rpContent"></div>'+
+    '<div class="fgroup"><label class="fl">수리기관</label><input class="fc" id="rpAgency"></div>'+
+    '<div class="fgroup"><label class="fl">완료일자</label><input class="fc" type="date" id="rpCompDate"></div>'+
+    '<div class="fgroup"><label class="fl">확인자</label><input class="fc" id="rpChecker"></div>'+
+    '<div class="fgroup"><label class="fl">결과</label><select class="fc" id="rpResult">'+
+      '<option value="">선택</option><option value="완료">완료</option><option value="진행중">진행중</option></select></div>'+
+    '<div class="fgroup ff" style="text-align:right">'+
+      '<button class="btn bout bsm" onclick="Pages._repairFormToggle()">취소</button> '+
+      '<button class="btn bpri bsm" onclick="Pages._repairSave()">저장</button></div>'+
+  '</div>';
+},
+async _repairSave(){
+  var g=function(id){return (document.getElementById(id)?.value||'').trim();};
+  var row=window._curEqRow;
+  if(!row){Toast.show('계측기 정보가 없습니다.','err');return;}
+  var data={
+    equip_code:row.code,
+    request_date:g('rpReqDate')||null,
+    dept:g('rpDept'),reason:g('rpReason'),content:g('rpContent'),
+    agency:g('rpAgency'),complete_date:g('rpCompDate')||null,
+    checker:g('rpChecker'),result:g('rpResult'),
+  };
+  var res=await SB.addRepair(data);
+  if(!res.ok){Toast.show('수리이력 저장 실패','err');return;}
+  Toast.show('수리이력이 등록되었습니다.','ok');
+  window._curRepairs=await SB.getRepairs(row.code);
+  document.getElementById('repairFormArea').innerHTML='';
+  Pages._repairRenderList();
+},
+async _repairDel(id){
+  var row=window._curEqRow;
+  var res=await SB.deleteRepair(id);
+  if(!res.ok)return;
+  Toast.show('수리이력이 삭제되었습니다.','ok');
+  window._curRepairs=await SB.getRepairs(row.code);
+  Pages._repairRenderList();
+},
+_eqHistoryCard(row){
+  var code=row.code;
+  var esc=function(s){return H.e(String(s==null?'':s));};
+  var cals=(DB.cals||[]).filter(function(c){return c.equip_code===code;})
+    .sort(function(a,b){return (b.cal_date||'').localeCompare(a.cal_date||'');});
+  var repairs=(window._curRepairs||[]).filter(function(r){return r.equip_code===code;});
+
+  /* 교정이력 6행/수리이력 3행 단위로 페이지 분할 */
+  var calPages=[]; for(var i=0;i<Math.max(cals.length,1);i+=6) calPages.push(cals.slice(i,i+6));
+  if(calPages.length===0) calPages=[[]];
+  var repPages=[]; for(var i=0;i<Math.max(repairs.length,1);i+=3) repPages.push(repairs.slice(i,i+3));
+  if(repPages.length===0) repPages=[[]];
+  var totalPages=Math.max(calPages.length,repPages.length,1);
+
+  var fmtCost=function(v){return v?Number(v).toLocaleString()+'원':'';};
+  var calRow=function(c){
+    return '<tr>'+
+      '<td class="xl79">'+esc(c.cal_type)+'</td>'+
+      '<td class="xl74">'+esc(c.request_date)+'</td>'+
+      '<td class="xl74">'+esc(c.cal_date)+'</td>'+
+      '<td class="xl74">'+esc(c.agency)+'</td>'+
+      '<td class="xl74">'+esc(c.cert_no)+'</td>'+
+      '<td class="xl74">'+esc(c.result)+'</td>'+
+      '<td class="xl74" colspan="2">'+esc(c.next_date)+'</td>'+
+      '<td class="xl74">'+fmtCost(c.cost)+'</td>'+
+    '</tr>';
+  };
+  var calEmptyRow='<tr>'+'<td class="xl74">&nbsp;</td>'.repeat(7)+'<td class="xl74" colspan="2">&nbsp;</td></tr>';
+  var repRow=function(r){
+    return '<tr>'+
+      '<td class="xl79">'+esc(r.request_date)+'</td>'+
+      '<td class="xl74">'+esc(r.dept)+'</td>'+
+      '<td class="xl74">'+esc(r.reason)+'</td>'+
+      '<td class="xl74">'+esc(r.content)+'</td>'+
+      '<td class="xl74">'+esc(r.agency)+'</td>'+
+      '<td class="xl74">'+esc(r.complete_date)+'</td>'+
+      '<td class="xl74">'+esc(r.checker)+'</td>'+
+      '<td class="xl74">'+esc(r.result)+'</td>'+
+    '</tr>';
+  };
+  var repEmptyRow='<tr>'+'<td class="xl74">&nbsp;</td>'.repeat(8)+'</tr>';
+
+  var calTableHtml=function(pageIdx){
+    var rows=calPages[pageIdx]||[];
+    var html=rows.map(calRow).join('');
+    var pad=6-rows.length;
+    for(var i=0;i<pad;i++) html+=calEmptyRow;
+    return html;
+  };
+  var repTableHtml=function(pageIdx){
+    var rows=repPages[pageIdx]||[];
+    var html=rows.map(repRow).join('');
+    var pad=3-rows.length;
+    for(var i=0;i<pad;i++) html+=repEmptyRow;
+    return html;
+  };
+
+  /* 제품사진 */
+  var fileUrl=row.file_url||'';
+  var isImg=/\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileUrl);
+  var photoHtml;
+  if(fileUrl&&isImg){
+    photoHtml='<img src="'+esc(fileUrl)+'" style="max-width:100%;max-height:230px;object-fit:contain">';
+  }else if(fileUrl){
+    photoHtml='<div style="font-size:9pt;padding:10px">📎 <a href="'+esc(fileUrl)+'" target="_blank">'+esc(row.file_name||'첨부파일 열기')+'</a></div>';
+  }else{
+    photoHtml='<div style="color:#999;font-size:9pt">사진 없음</div>';
+  }
+
+  /* 기본정보 4열(라벨/값/라벨/값) — sheet001 R06~R14 매핑 */
+  var basicRows=[
+    ['ID','',                         '보관위치',row.loc],
+    ['구분',row.fixture_type,         '사용자',row.operator],
+    ['계측기코드',row.code,           '사용용도',row.purpose],
+    ['계측기명',row.name,             '측정범위',row.range],
+    ['모델번호',row.model,            '교정구분',row.cal_method],
+    ['Code_No',row.code_no,           '교정주기(년)',row.cal_cycle],
+    ['제조번호',row.serial_no,        '사용여부',(row.active==0?'N':'Y')],
+    ['제조사',row.maker,              '사용무_사유',row.inactive_reason],
+    ['구입일',row.purchase_date,      '구입가격',fmtCost(row.purchase_cost)],
+  ];
+  var basicHtml=basicRows.map(function(r){
+    var cls1=(r[0]==='계측기코드')?'xl119':(r[0]==='계측기명'||r[0]==='Code_No'||r[0]==='제조사')?'xl111':
+             (r[0]==='제조번호')?'xl91':'xl65';
+    var cls3=(r[2]==='사용용도'||r[2]==='사용자'||r[2]==='제조사'||r[2]==='사용무_사유')?'xl112':
+             (r[2]==='교정구분'||r[2]==='교정주기(년)')?'xl92':'xl66';
+    return '<tr>'+
+      '<td class="'+cls1+'" colspan="4">'+esc(r[0])+'</td>'+
+      '<td class="xl74" colspan="5">'+esc(r[1])+'</td>'+
+      '<td class="'+cls3+'" colspan="4">'+esc(r[2])+'</td>'+
+      '<td class="xl74" colspan="7">'+esc(r[3])+'</td>'+
+    '</tr>';
+  }).join('');
+  basicHtml+=
+    '<tr><td class="xl65" colspan="4" rowspan="2">부속장비</td><td class="xl66" colspan="16" rowspan="2">'+esc(row.accessories)+'</td></tr><tr></tr>'+
+    '<tr><td class="xl65" colspan="4" rowspan="2">특이사항</td><td class="xl76" colspan="31" rowspan="2">'+esc(row.note)+'</td></tr><tr></tr>';
+
+  /* 페이지 1장 빌드 */
+  var buildPage=function(pageIdx,isFirst){
+    var titleArea=isFirst?
+      ('<table class="card-tbl"><colgroup><col span="35" style="width:23pt"></colgroup>'+
+       '<tr><td class="xl67" colspan="26" rowspan="4">계측기 이력카드</td>'+
+       '<td class="xl78" colspan="3">검교정 성적서</td>'+
+       '<td class="xl71" colspan="2">작성</td><td class="xl71" colspan="2">검토</td><td class="xl71" colspan="2">승인</td></tr>'+
+       '<tr><td class="xl70" colspan="3" rowspan="3">&nbsp;</td>'+
+       '<td class="xl66" colspan="2" rowspan="2">&nbsp;</td><td class="xl66" colspan="2" rowspan="2">&nbsp;</td><td class="xl66" colspan="2" rowspan="2">&nbsp;</td></tr>'+
+       '<tr></tr>'+
+       '<tr><td class="xl87" colspan="2">/</td><td class="xl88" colspan="2">/</td><td class="xl88" colspan="2">/</td></tr>'+
+       '</table>')
+      :
+      ('<table class="card-tbl"><colgroup><col span="35" style="width:23pt"></colgroup>'+
+       '<tr><td class="xl94" colspan="35" style="text-align:left;font-size:12pt">계측기 이력카드 (계속) — '+esc(row.code)+' / '+esc(row.name)+'</td></tr>'+
+       '</table>');
+
+    var basicPhotoArea=isFirst?
+      ('<table class="card-tbl"><colgroup><col span="35" style="width:23pt"></colgroup>'+
+       '<tr><td class="xl99" colspan="20">&lt;기본 정보&gt;</td><td class="xl100" colspan="15">제품사진</td></tr>'+
+       '<tr>'+basicRowsFirst()+'<td class="xl90" colspan="15" rowspan="11" style="text-align:center;vertical-align:middle">'+photoHtml+'</td></tr>'+
+       basicRowsRest()+
+       '</table>')
+      :'';
+
+    var calHeader=
+      '<tr><td class="xl115" colspan="4">교정구분</td><td class="xl116" colspan="4">교정의뢰일</td>'+
+      '<td class="xl117" colspan="4">교정일</td><td class="xl117" colspan="4">교정기관</td>'+
+      '<td class="xl117" colspan="4">성적서번호</td><td class="xl117" colspan="4">결과</td>'+
+      '<td class="xl117" colspan="7">다음교정일</td><td class="xl117" colspan="4">비용</td></tr>';
+
+    var repHeader=
+      '<tr><td class="xl91" colspan="4">수리요청일자</td><td class="xl92" colspan="3">의뢰부서</td>'+
+      '<td class="xl92" colspan="5">의뢰사유</td><td class="xl92" colspan="9">수리내역</td>'+
+      '<td class="xl92" colspan="4">수리기관</td><td class="xl92" colspan="3">완료일자</td>'+
+      '<td class="xl92" colspan="4">확인자</td><td class="xl92" colspan="3">결과</td></tr>';
+
+    var calArea=
+      '<table class="card-tbl"><colgroup><col span="35" style="width:23pt"></colgroup>'+
+      '<tr><td class="xl94" colspan="35"></td></tr>'+
+      '<tr><td class="xl114" colspan="35">&lt;교정이력&gt;'+
+        (calPages.length>1?' ('+(pageIdx+1)+'/'+calPages.length+'페이지)':'')+'</td></tr>'+
+      calHeader+calTableHtml(pageIdx)+
+      '</table>';
+
+    var repArea=
+      '<table class="card-tbl"><colgroup><col span="35" style="width:23pt"></colgroup>'+
+      '<tr><td class="xl94" colspan="35"></td></tr>'+
+      '<tr><td class="xl95" colspan="35">&lt;수리이력&gt;'+
+        (repPages.length>1?' ('+(pageIdx+1)+'/'+repPages.length+'페이지)':'')+'</td></tr>'+
+      repHeader+repTableHtml(pageIdx)+
+      '</table>';
+
+    return '<div class="card-page">'+titleArea+basicPhotoArea+calArea+repArea+'</div>';
+  };
+
+  function basicRowsFirst(){
+    /* basicHtml의 첫 행(R06)만 분리 — 사진 셀과 같은 <tr>에 위치해야 함 */
+    var firstRowMatch=basicHtml.match(/^<tr>(.*?)<\/tr>/);
+    return firstRowMatch?firstRowMatch[1]:'';
+  }
+  function basicRowsRest(){
+    return basicHtml.replace(/^<tr>.*?<\/tr>/,'');
+  }
+
+  var pagesHtml='';
+  for(var pi=0;pi<totalPages;pi++) pagesHtml+=buildPage(pi,pi===0);
+
+  var css=
+    '@page{size:A4 landscape;margin:6mm}'+
+    'body{font-family:"맑은 고딕","Malgun Gothic",sans-serif;margin:0;background:#fff}'+
+    '@media print{.no-print{display:none!important}}'+
+    '.card-page{page-break-after:always;padding:4px}'+
+    '.card-page:last-child{page-break-after:auto}'+
+    '.card-tbl{border-collapse:collapse;table-layout:fixed;width:100%;margin-bottom:2px}'+
+    '.card-tbl td{border:.5pt solid #000;padding:2px 3px;text-align:center;vertical-align:middle;font-size:9pt;overflow:hidden;white-space:nowrap}'+
+    '.xl65{border-left:1pt solid #000}'+
+    '.xl66{border:.5pt solid #000}'+
+    '.xl67{font-size:22pt;text-decoration:underline;border:1pt solid #000}'+
+    '.xl70{border:.5pt solid #000}'+
+    '.xl71{border:1pt solid #000}'+
+    '.xl74{font-size:9pt;white-space:normal}'+
+    '.xl76{text-align:left;vertical-align:top;white-space:normal;border-left:.5pt solid #000}'+
+    '.xl78{font-size:9pt;border:1pt solid #000}'+
+    '.xl79{font-size:9pt;border-left:1pt solid #000}'+
+    '.xl87{border-bottom:1pt solid #000}'+
+    '.xl88{border-bottom:1pt solid #000}'+
+    '.xl90{}'+
+    '.xl91{background:#CAEDFB;border-left:1pt solid #000}'+
+    '.xl92{background:#CAEDFB}'+
+    '.xl94{font-size:18pt;text-decoration:underline;border-top:1pt solid #000;text-align:left}'+
+    '.xl95{font-size:11pt;font-weight:700;text-align:left;border-bottom:1pt solid #000}'+
+    '.xl99{font-size:11pt;font-weight:700;text-align:left;border-bottom:1pt solid #000}'+
+    '.xl100{font-weight:700;background:#CAEDFB;border-bottom:1pt solid #000}'+
+    '.xl111{background:yellow;border-left:1pt solid #000}'+
+    '.xl112{background:yellow}'+
+    '.xl115{background:#CAEDFB;border:1pt solid #000;border-left:1pt solid #000}'+
+    '.xl116{background:#CAEDFB;border:1pt solid #000}'+
+    '.xl117{background:yellow;border:1pt solid #000}'+
+    '.xl119{font-weight:700;background:yellow;border-left:1pt solid #000;border:.5pt solid #000}'+
+    'img{display:block;margin:0 auto}'+
+    '.print-btn{position:fixed;bottom:16px;right:16px;padding:8px 18px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;z-index:999}';
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>계측기 이력카드 — '+esc(row.code)+'</title>'+
+    '<style>'+css+'</style></head><body>'+pagesHtml+
+    '<button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄</button>'+
+    '</body></html>';
+
+  var win=window.open('','_blank','width=1300,height=900');
+  if(!win){Toast.show('팝업이 차단됐습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
+  win.document.write(html);
+  win.document.close();
+},
+
   /* ── [v2.89] 공지사항 함수 — Cfg 의존 제거, Pages에 직접 구현 ── */
   _noticeOpen:function(idx){
     /* idx=null: 신규, idx=숫자: 수정 */
