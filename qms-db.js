@@ -707,21 +707,18 @@ const SB={
     return data;
   },
   async addCal(row){
-    /* [v2.394 Phase1] allowed 컬럼 명시 */
+    /* [v2.105] calibrations 실제 컬럼만 — code/date/next/cert 중복키 제거 (400 오류 원인) */
     const allowed={
       equip_code: row.equip_code||row.code||'',
-      code:        row.code||row.equip_code||'',
       cal_date:    row.cal_date||row.date||null,
-      date:        row.date||row.cal_date||null,
       next_date:   row.next_date||row.next||null,
-      next:        row.next||row.next_date||null,
       agency:      row.agency||'',
       cert_no:     row.cert_no||row.cert||'',
-      cert:        row.cert||row.cert_no||'',
       result:      row.result||'합격',
       cost:        row.cost||null,
       note:        row.note||'',
-      file_url:    row.file_url||'',
+      file_url:    row.file_url||null,
+      file_name:   row.file_name||null,
       created_by:  row.created_by||Auth.cur()?.username||'system',
     };
     if(!_sb){const id=Math.max(0,...DB.cals.map(c=>c.id))+1;DB.cals.push({id,...allowed});return{ok:true,id};}
@@ -733,8 +730,12 @@ const SB={
   /* ── [v2.394 Phase1] 교정이력 수정/삭제 ── */
   async updateCal(id, patch){
     if(!_sb){const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    patch.updated_at=H.today();
-    const{error}=await _sb.from('calibrations').update(patch).eq('id',id);
+    /* [v2.105] 실제 컬럼만 필터 — code/date/next/cert 등 없는 컬럼 제거 */
+    const cols=['equip_code','cal_date','next_date','agency','cert_no','result','cost','note','file_url','file_name'];
+    const allowed={};
+    cols.forEach(function(k){ if(patch[k]!==undefined) allowed[k]=patch[k]; });
+    allowed.updated_at=H.today();
+    const{error}=await _sb.from('calibrations').update(allowed).eq('id',id);
     if(error){Toast.show('교정이력 수정 실패: '+error.message,'err');return{ok:false};}
     const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
   },

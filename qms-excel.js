@@ -1101,16 +1101,19 @@ var ExcelMgr=window.ExcelMgr={
     },
     cal:{
       title:'교정관리',
+      /* [v2.105] calibrations 실제 컬럼명으로 재정의 — code/date/next/cert 중복키 제거 */
       cols:[
-        {key:'code',   label:'계측기코드', req:true,  sample:'EQ-001'},
-        {key:'name',   label:'계측기명',   req:false, sample:'버니어캘리퍼스'},
-        {key:'date',   label:'교정일',     req:true,  sample:'2026-06-01'},
-        {key:'agency', label:'교정기관',   req:true,  sample:'㈜정밀측정'},
-        {key:'cert',   label:'성적서번호', req:false, sample:'CAL-2026-010'},
-        {key:'result', label:'결과',       req:true,  sample:'합격'},
-        {key:'next',   label:'차기교정일', req:true,  sample:'2026-12-01'},
+        {key:'equip_code', label:'계측기코드', req:true,  sample:'EQ-001'},
+        {key:'name',       label:'계측기명',   req:false, sample:'버니어캘리퍼스'},
+        {key:'cal_date',   label:'교정일',     req:true,  sample:'2026-06-01'},
+        {key:'agency',     label:'교정기관',   req:true,  sample:'㈜정밀측정'},
+        {key:'cert_no',    label:'성적서번호', req:false, sample:'CAL-2026-010'},
+        {key:'result',     label:'결과',       req:true,  sample:'합격'},
+        {key:'next_date',  label:'다음교정일', req:true,  sample:'2026-12-01'},
+        {key:'cost',       label:'비용',       req:false, sample:'50000'},
+        {key:'note',       label:'비고',       req:false, sample:''},
       ],
-      dupKey:'cert', dupLabel:'성적서번호', getData:()=>DB.cals,
+      dupKey:'cert_no', dupLabel:'성적서번호', getData:()=>DB.cals,
     },
     docs:{
       title:'문서관리',
