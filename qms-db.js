@@ -707,13 +707,15 @@ const SB={
     return data;
   },
   async addCal(row){
-    /* [v2.105] calibrations 실제 컬럼만 — code/date/next/cert 중복키 제거 (400 오류 원인) */
+    /* [v2.106] cert 컬럼 NOT NULL 제약 — cert_no와 함께 동일값 전송 (cert 컬럼 존재 시에만 안전) */
+    const certVal = row.cert_no||row.cert||'';
     const allowed={
       equip_code: row.equip_code||row.code||'',
       cal_date:    row.cal_date||row.date||null,
       next_date:   row.next_date||row.next||null,
       agency:      row.agency||'',
-      cert_no:     row.cert_no||row.cert||'',
+      cert_no:     certVal,
+      cert:        certVal,
       result:      row.result||'합격',
       cost:        row.cost||null,
       note:        row.note||'',
@@ -730,8 +732,11 @@ const SB={
   /* ── [v2.394 Phase1] 교정이력 수정/삭제 ── */
   async updateCal(id, patch){
     if(!_sb){const c=DB.cals.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    /* [v2.105] 실제 컬럼만 필터 — code/date/next/cert 등 없는 컬럼 제거 */
+    /* [v2.106] 실제 컬럼만 필터 — code/date/next/cert 등 없는 컬럼 제거 */
     const cols=['equip_code','cal_date','next_date','agency','cert_no','result','cost','note','file_url','file_name'];
+    /* [v2.106] cert 컬럼 NOT NULL — cert_no 변경 시 cert도 동일하게 업데이트 */
+    if(patch.cert_no!==undefined) patch.cert=patch.cert_no;
+    cols.push('cert');
     const allowed={};
     cols.forEach(function(k){ if(patch[k]!==undefined) allowed[k]=patch[k]; });
     allowed.updated_at=H.today();

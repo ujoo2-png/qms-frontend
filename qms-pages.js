@@ -2801,7 +2801,7 @@ _ncDetail(row){
 
 /* ── 부적합 상태 변경 [v2.394] ── */
 async _ncStatusChange(id){
-  /* [v2.105] DB.nc 의존 제거 → window._ncRow 직접 사용 */
+  /* [v2.106] DB.nc 의존 제거 → window._ncRow 직접 사용 */
   const nc=window._ncRow;
   if(!nc){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
   const steps=['접수','처리중','완료'];
@@ -3571,8 +3571,7 @@ cal(){
     const d=Math.ceil((new Date(e.next)-_now)/(864e5));
     return d>=0&&d<30;
   });
-  w.innerHTML=`<div class="ph"><div><div class="ptit">📐 교정 관리</div></div><div class="pac"><button class="btn bpri btn-f2" onclick="Pages._calForm(null)">+ 교정 등록 <span class="kbd">F2</span></button></div></div>
-    <button class="btn btn-xl-down bsm" onclick="Pages._calExcelDown()" title="엑셀 양식 내려받기">📥 양식 내려받기</button><button class="btn btn-xl-up bsm" onclick="Pages._calExcelUp()" title="엑셀 일괄등록">📤 자료 일괄등록</button>
+  w.innerHTML=`<div class="ph"><div><div class="ptit">📐 교정 관리</div></div></div>
     ${soon.length?`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--warn)"><div class="ct" style="margin-bottom:9px">🔔 교정 예정/만료 알림 (30일 이내)</div>
     ${soon.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bd);font-size:13px"><div><strong>${H.e(e.name)}</strong> <span style="color:var(--tm);font-size:11px">(${H.e(e.code)})</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--tm)">차기: ${e.next}</span><span class="badge ${e.status==='교정만료'?'bred':'bamb'}">${H.e(e.status)}</span></div></div>`).join('')}
     </div>`:''}
@@ -4535,6 +4534,8 @@ async cal(){
       <div class="ph" style="margin-top:10px">
         <div><div class="ptit" style="font-size:13px">교정 완료 이력 — calibrations 테이블</div></div>
         <div class="pac">
+          <button class="btn btn-xl-down bsm" onclick="Pages._calExcelDown()" title="엑셀 양식 내려받기">📥 양식</button>
+          <button class="btn btn-xl-up bsm" onclick="Pages._calExcelUp()" title="엑셀 일괄등록">📤 일괄등록</button>
           <button class="btn bpri btn-f2" onclick="Pages._calForm()">+ 교정 등록 <span class="kbd">F2</span></button>
         </div>
       </div>
@@ -4693,7 +4694,7 @@ _calFilter:function(){Pages._calRender();},
 _calForm:function(row, preCode){
   const e=!!row;
   const _pre=preCode||'';
-  /* [v2.105] 계측기코드만 옵션 텍스트로 표시 — 계측기명은 별도 읽기전용 필드로 분리 */
+  /* [v2.106] 계측기코드만 옵션 텍스트로 표시 — 계측기명은 별도 읽기전용 필드로 분리 */
   const equipCodes=DB.equip.map(function(eq){
     const sel=((row&&row.equip_code)===eq.code||eq.code===_pre)?' selected':'';
     return `<option value="${H.e(eq.code)}" data-name="${H.e(eq.name||'')}"${sel}>${H.e(eq.code)}</option>`;
@@ -4711,7 +4712,7 @@ _calForm:function(row, preCode){
       <div class="fgroup"><label class="fl"><b style="color:#e11d48">\uACC4\uCE21\uAE30\uCF54\uB4DC *</b></label>
         <select class="fc" id="cfCode" onchange="(function(){var s=document.getElementById('cfCode');var o=s.options[s.selectedIndex];var nm=document.getElementById('cfName');if(nm)nm.value=o?o.dataset.name||'':'';})()">
           <option value="">\uc120\ud0dd</option>${equipCodes}</select></div>
-      <div class="fgroup"><label class="fl">\uACC4\uCE21\uAE30\uCF54\uB4DC *</label>
+      <div class="fgroup"><label class="fl">\uACC4\uCE21\uAE30\uBA85</label>
         <input class="fc" id="cfName" readonly value="${H.e(curEq.name||'')}" style="background:var(--bg2)"></div>
       <div class="fgroup"><label class="fl"><b style="color:#e11d48">\uad50\uc815\uc77c *</b></label>
         <input class="fc" type="date" id="cfDate" value="${H.e(row?.cal_date||row?.date||H.today())}"></div>
@@ -4745,7 +4746,7 @@ async _calSave(id){
   if(!date){Toast.show('교정일을 입력하세요.','warn');return;}
   if(!agency){Toast.show('교정기관을 입력하세요.','warn');return;}
   const eq=DB.equip.find(e=>e.code===code)||{};
-  /* [v2.105] calibrations 실제 컬럼만 — code/date/next/cert 중복키 제거 */
+  /* [v2.106] calibrations 실제 컬럼만 — code/date/next/cert 중복키 제거 */
   const row={
     equip_code:code,
     cal_date:date,
@@ -7838,7 +7839,7 @@ async settings(){
           <button class="btn bpri bsm" onclick="Pages._changePw()" style="font-size:12px">변경</button>
         </div>
       </div>
-      <!-- [v2.105] 관리자 이메일 설정 -->
+      <!-- [v2.106] 관리자 이메일 설정 -->
       <div class="card" style="margin-top:12px;padding:14px 16px">
         <div class="ct" style="font-size:12px">📧 관리자 문의 이메일</div>
         <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
@@ -10809,7 +10810,7 @@ _ncPrint(row){
   if(!row) return;
   var w=window.open('','_blank','width=1200,height=850,scrollbars=yes');
   if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
-  /* [v2.105] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
+  /* [v2.106] 데이터 직접 삽입 방식 — replace/textContent 의존 없음 */
   var e=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
   var no=e(row.no),date=e(row.date),customer=e(row.customer||''),
       item_code=e(row.item_code||''),item=e(row.item||''),
@@ -10974,7 +10975,7 @@ _ncPrint(row){
   w.document.close();
 },
 
-  /* [v2.105] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
+  /* [v2.106] ExcelMgr 래퍼 — 전역 참조 오류 방지 */
   _ncExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('nc');
@@ -10996,7 +10997,7 @@ _ncPrint(row){
     Toast.show('관리자 이메일이 저장되었습니다.','ok');
   },
 
-  /* [v2.105] ExcelMgr 래퍼 — 전역 참조 오류 방지 (IIFE 학습 패턴) */
+  /* [v2.106] ExcelMgr 래퍼 — 전역 참조 오류 방지 (IIFE 학습 패턴) */
   _calExcelDown(){
     var em=window.ExcelMgr;
     if(em&&em.download) em.download('cal');

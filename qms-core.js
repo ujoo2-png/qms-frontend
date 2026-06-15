@@ -416,9 +416,15 @@ const Auth={
       const r=document.getElementById('findIdResult'),fi=document.getElementById('foundId');
       if(fi)fi.textContent='admin';if(r)r.style.display='block';return;
     }
-    /* DB.users 조회 */
-    if(!DB.users||DB.users.length===0) DB.users=await SB.getUsers();
-    const user=DB.users.find(u=>u.name===name&&(u.email||'')===email);
+    /* [v2.106] DB.users 항상 최신 재조회 + trim/대소문자 무시 비교 */
+    const users=await SB.getUsers();
+    if(users&&users.length) DB.users=users;
+    const nameNorm=name.replace(/\s+/g,'');
+    const emailNorm=email.toLowerCase();
+    const user=(DB.users||[]).find(u=>
+      (u.name||'').replace(/\s+/g,'')===nameNorm &&
+      (u.email||'').toLowerCase()===emailNorm
+    );
     if(user){
       const r=document.getElementById('findIdResult'),fi=document.getElementById('foundId');
       if(fi)fi.textContent=user.username;if(r)r.style.display='block';
