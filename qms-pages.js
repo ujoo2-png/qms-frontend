@@ -1,4 +1,12 @@
 
+/* [v2.111] 변경이력:
+   1. setupHotkeys 중복 정의 제거 (qms-pages.js) → qms-init.js 최신 버전 사용
+   2. SearchPop._cfg.equip: fields에 serial_no/purpose/cal_method/교정구분 추가, cols 확장
+   3. Tbl.render eqTbl: v2.110 신규 컬럼 목록 반영 (cal_method, cal_cycle, fixture_type, purpose, purchase_date, inactive_reason)
+   4. _EQUIP_COLS: 엑셀 양식 신규 컬럼 10개 추가
+   5. alias 매핑 신규 컬럼 별칭 추가
+   6. index.html: Search 버튼 F8→F3 표기 수정
+*/
 /* qms-pages.js — Pages 페이지 렌더러 [v2.65]
    v2.394→v2.395  문서관리 고도화 페이지 함수 추가 */
 "use strict";
@@ -2832,17 +2840,27 @@ async _ncStatusChange(id){
 
 /* 컬럼 정의 — 단일 소스 (이 배열만 수정하면 모두 반영) */
 _EQUIP_COLS:[
-  {key:'code',    label:'계측기코드', req:true, req:true,  sample:'EQ-001'},
-  {key:'name',    label:'계측기명',   req:true,  sample:'디지털버니어캘리퍼스'},
-  {key:'model',   label:'모델번호',   req:false, sample:'CD-20APX'},
-  {key:'maker',   label:'제조사',     req:false, sample:'미쓰토요'},
-  {key:'range',   label:'측정범위',   req:false, sample:'0~200mm'},
-  {key:'res',     label:'분해능',     req:false, sample:'0.01mm'},
-  {key:'loc',     label:'보관위치',   req:false, sample:'품질실'},
-  {key:'operator',label:'사용자',     req:false, sample:'홍길동'},
-  {key:'last',    label:'최근교정일', req:false, sample:'2026-01-01'},
-  {key:'next',    label:'차기교정일', req:false, sample:'2026-07-01'},
-  {key:'active',  label:'사용여부',   req:false, sample:'사용'},
+  {key:'code',          label:'계측기코드', req:true,  sample:'EQ-001'},
+  {key:'name',          label:'계측기명',   req:true,  sample:'디지털버니어캘리퍼스'},
+  {key:'model',         label:'모델번호',   req:false, sample:'CD-20APX'},
+  {key:'serial_no',     label:'제조번호',   req:false, sample:'B16013027'},       /* [v2.111] */
+  {key:'maker',         label:'제조사',     req:false, sample:'미쓰토요'},
+  {key:'range',         label:'측정범위',   req:false, sample:'0~200mm'},
+  {key:'res',           label:'분해능',     req:false, sample:'0.01mm'},
+  {key:'loc',           label:'보관위치',   req:false, sample:'품질실'},
+  {key:'operator',      label:'사용자',     req:false, sample:'홍길동'},
+  {key:'last',          label:'최근교정일', req:false, sample:'2026-01-01'},
+  {key:'next',          label:'차기교정일', req:false, sample:'2026-07-01'},
+  {key:'active',        label:'사용여부',   req:false, sample:'사용'},
+  {key:'fixture_type',  label:'고정구분',   req:false, sample:'측정기기'},          /* [v2.111] */
+  {key:'purpose',       label:'사용용도',   req:false, sample:'외경,내경,깊이'},    /* [v2.111] */
+  {key:'cal_method',    label:'교정구분',   req:false, sample:'사외교정'},          /* [v2.111] */
+  {key:'cal_cycle',     label:'교정주기(년)',req:false, sample:'1'},                /* [v2.111] */
+  {key:'purchase_date', label:'구입일',     req:false, sample:'2020-03-15'},        /* [v2.111] */
+  {key:'purchase_cost', label:'구입가격',   req:false, sample:'350000'},            /* [v2.111] */
+  {key:'inactive_reason',label:'불용사유',  req:false, sample:''},                 /* [v2.111] */
+  {key:'accessories',   label:'부속장비',   req:false, sample:'케이스,충전기'},     /* [v2.111] */
+  {key:'note',          label:'비고',       req:false, sample:''},
 ],
 
 /* 1단계: 팝업 열기 */
@@ -2944,22 +2962,33 @@ _equipRenderPreview(raw){
     'B_계측기명':'name',
     '모델번호':'model','모델':'model','형번':'model','Model':'model',
     'C_모델번호':'model',
+    '제조번호':'serial_no','시리얼':'serial_no','S/N':'serial_no',      /* [v2.111] */
+    'D_제조번호':'serial_no',
     '제조사':'maker','메이커':'maker','Maker':'maker',
-    'D_제조사':'maker',
+    'E_제조사':'maker',
     '측정범위':'range','범위':'range','Range':'range',
-    'E_측정범위':'range',
+    'F_측정범위':'range',
     '분해능':'res','해상도':'res','Res':'res',
-    'F_분해능':'res',
+    'G_분해능':'res',
     '보관위치':'loc','위치':'loc','장소':'loc',
-    'G_보관위치':'loc',
+    'H_보관위치':'loc',
     '사용자':'operator','담당자':'operator','사용부서':'operator',
-    'H_사용자':'operator',
+    'I_사용자':'operator',
     '최근교정일':'last','교정일':'last','직전교정일':'last',
-    'I_최근교정일':'last',
+    'J_최근교정일':'last',
     '차기교정일':'next','다음교정일':'next','예정교정일':'next',
-    'J_차기교정일':'next',
+    'K_차기교정일':'next',
     '사용여부':'active','활성여부':'active',
-    'K_사용여부':'active',
+    'L_사용여부':'active',
+    '고정구분':'fixture_type','구분':'fixture_type',                      /* [v2.111] */
+    '사용용도':'purpose','용도':'purpose',                                /* [v2.111] */
+    '교정구분':'cal_method','교정방법':'cal_method',                      /* [v2.111] */
+    '교정주기':'cal_cycle','교정주기(년)':'cal_cycle',                    /* [v2.111] */
+    '구입일':'purchase_date','구매일':'purchase_date',                    /* [v2.111] */
+    '구입가격':'purchase_cost','구매가격':'purchase_cost','가격':'purchase_cost', /* [v2.111] */
+    '불용사유':'inactive_reason','사용무_사유':'inactive_reason',         /* [v2.111] */
+    '부속장비':'accessories','부속품':'accessories',                      /* [v2.111] */
+    '비고':'note','특이사항':'note',
   };
   Object.assign(h2k,alias);
   const colMap=headerRow.map(h=>h2k[h]||null);
@@ -3078,18 +3107,18 @@ async equip(){
     </div>
     <div id="eqTbl"></div>`;
   Tbl.render({el:'#eqTbl',cols:[
-    /* [v2.394] 컬럼 순서: 요청사항 기준 재정의 + model 복구 */
-    {key:'code',     label:'계측기코드', req:true, w:'96px'},
-    {key:'name',     label:'계측기명', req:true,   w:'130px'},
-    {key:'model',    label:'모델번호',   w:'100px'},
-    {key:'maker',    label:'제조사',     w:'80px'},
-    {key:'serial_no',label:'제조번호',   w:'90px'},
-    {key:'range',    label:'측정범위',   w:'100px'},
-    {key:'res',      label:'분해능',     w:'70px'},
-    {key:'loc',      label:'보관위치',   w:'80px'},
-    {key:'operator', label:'사용자',     w:'72px'},
-    {key:'last',     label:'최근교정일', w:'96px'},
-    {key:'next',     label:'차기교정일', w:'96px',
+    /* [v2.111] 컬럼 순서: 기존 + v2.110 신규 컬럼 통합 */
+    {key:'code',         label:'계측기코드',  req:true,  w:'96px'},
+    {key:'name',         label:'계측기명',    req:true,  w:'130px'},
+    {key:'model',        label:'모델번호',               w:'100px'},
+    {key:'serial_no',    label:'제조번호',               w:'100px'},
+    {key:'maker',        label:'제조사',                  w:'80px'},
+    {key:'range',        label:'측정범위',               w:'100px'},
+    {key:'res',          label:'분해능',                  w:'70px'},
+    {key:'loc',          label:'보관위치',               w:'80px'},
+    {key:'operator',     label:'사용자',                  w:'72px'},
+    {key:'last',         label:'최근교정일',             w:'96px'},
+    {key:'next',         label:'차기교정일',             w:'96px',
       render:v=>{
         if(!v) return '-';
         const d=Math.ceil((new Date(v)-new Date())/(864e5));
@@ -3105,6 +3134,18 @@ async equip(){
         const cls=s==='정상'?'bgrn':s==='교정중'?'bamb':'bred';
         return `<span class="badge ${cls}">${s}</span>`;
       }},
+    {key:'cal_method',   label:'교정구분',   w:'72px', align:'center',   /* [v2.111] */
+      render:v=>v?`<span class="badge bblu" style="font-size:10px">${v}</span>`:'<span style="color:var(--tl);font-size:11px">-</span>'},
+    {key:'cal_cycle',    label:'교정주기',   w:'64px', align:'center',   /* [v2.111] */
+      render:v=>v?`${v}년`:'-'},
+    {key:'fixture_type', label:'고정구분',   w:'76px',                   /* [v2.111] */
+      render:v=>v||'-'},
+    {key:'purpose',      label:'사용용도',   w:'110px',                  /* [v2.111] */
+      render:v=>v||'-'},
+    {key:'purchase_date',label:'구입일',     w:'88px',                   /* [v2.111] */
+      render:v=>v||'-'},
+    {key:'inactive_reason',label:'불용사유', w:'100px',                  /* [v2.111] */
+      render:v=>v||'-'},
     {key:'file_url', label:'파일',       w:'64px', align:'center',  /* [v2.394] */
       render:(v,row)=>v
         ?`<button class="btn bxs bblu" style="font-size:10px;padding:1px 7px"
@@ -13508,43 +13549,10 @@ nc_trend(){
 ;
 
 /* ══ 전역 단축키 ══ */
-function setupHotkeys(){
-  document.addEventListener('keydown',ev=>{
-    if(ev.key==='F2'){
-      ev.preventDefault();
-      const mOpen=!document.getElementById('gmo').classList.contains('hidden');
-      (mOpen?document.querySelector('#gmo .btn-f2'):document.querySelector('.btn-f2'))?.click();
-    }
-    else if(ev.key==='F3'){
-      ev.preventDefault();
-      const spOpen=!document.getElementById('spOverlay').classList.contains('hidden');
-      if(spOpen){SearchPop.search();return}
-      const page=document.querySelector('.ni.active')?.dataset?.p;
-      if(page)SearchPop.open(page);
-      else Toast.show('홈 화면에서는 Search를 사용할 수 없습니다.','warn');
-    }
-    else if(ev.key==='F5'){
-      /* [v2.394] F5 브라우저 새로고침 방지 — 앱 내부에서 현재 페이지 재렌더 */
-      ev.preventDefault();
-      if(Auth._u){
-        const page=document.querySelector('.ni.active')?.dataset?.p||'home';
-        Nav.go(page);
-        Toast.show('화면을 새로고침했습니다.','info',1500);
-      }
-    }
-    else if(ev.key==='F8'){
-      ev.preventDefault();
-      if(!document.getElementById('gmo').classList.contains('hidden'))
-        document.querySelector('#gmo .btn-f8')?.click();
-    }
-    else if(ev.key==='Escape'){
-      if(!document.getElementById('spOverlay').classList.contains('hidden'))SearchPop.close();
-      else Modal.close();
-    }
-  });
-  // Search 팝업 Enter → search
-  document.getElementById('spCond')?.addEventListener('keydown',ev=>{if(ev.key==='Enter')SearchPop.search()});
-}
+/* [v2.111] setupHotkeys 구버전 중복 정의 제거
+   → qms-init.js의 최신 버전 사용 (EMS 페이지 별칭, sessionStorage fallback 등 포함)
+   setupHotkeys(); 호출은 아래 init() 블록에서 qms-init.js가 담당 */
+/* REMOVED: function setupHotkeys(){...} */
 
 /* ══ 초기화 ══ */
 (function init(){

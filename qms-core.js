@@ -1857,24 +1857,30 @@ var SearchPop=window.SearchPop={
       ]},
     equip:{title:'계측기 검색',
       fields:[
-        {id:'se_code',  label:'계측기코드', type:'text',   ph:'EQ-001'},
-        {id:'se_name',  label:'계측기명',   type:'text',   ph:'계측기명'},
-        {id:'se_maker', label:'제조사',     type:'text',   ph:'제조사'},
-        {id:'se_loc',   label:'보관위치',   type:'text',   ph:'보관위치'},
-        {id:'se_status',label:'상태',       type:'select', opts:['','정상','교정중','교정만료']},
+        {id:'se_code',    label:'계측기코드', type:'text',   ph:'EQ-001'},
+        {id:'se_name',    label:'계측기명',   type:'text',   ph:'계측기명'},
+        {id:'se_maker',   label:'제조사',     type:'text',   ph:'제조사'},
+        {id:'se_serial',  label:'제조번호',   type:'text',   ph:'제조번호'},
+        {id:'se_loc',     label:'보관위치',   type:'text',   ph:'보관위치'},
+        {id:'se_cal_method',label:'교정구분', type:'select', opts:['','사내교정','사외교정']},
+        {id:'se_status',  label:'상태',       type:'select', opts:['','정상','교정중','교정만료']},
       ],
-      cols:['계측기코드','계측기명','제조사','측정범위','분해능','보관위치','사용자','최근교정일','차기교정일','사용여부'],
+      cols:['계측기코드','계측기명','모델번호','제조번호','제조사','측정범위','분해능','보관위치','사용자','최근교정일','차기교정일','교정구분','사용여부'],
       get:(f)=>DB.equip.filter(r=>{
-        if(f.se_code  &&!r.code.includes(f.se_code))   return false;
-        if(f.se_name  &&!r.name.includes(f.se_name))   return false;
-        if(f.se_maker &&!(r.maker||'').includes(f.se_maker)) return false;
-        if(f.se_loc   &&!(r.loc||'').includes(f.se_loc))     return false;
-        if(f.se_status&&r.status!==f.se_status)        return false;
+        if(f.se_code   &&!r.code.includes(f.se_code))          return false;
+        if(f.se_name   &&!r.name.includes(f.se_name))          return false;
+        if(f.se_maker  &&!(r.maker||'').includes(f.se_maker))  return false;
+        if(f.se_serial &&!(r.serial_no||'').includes(f.se_serial)) return false;
+        if(f.se_loc    &&!(r.loc||'').includes(f.se_loc))      return false;
+        if(f.se_cal_method&&r.cal_method!==f.se_cal_method)    return false;
+        if(f.se_status &&r.status!==f.se_status)               return false;
         return true;
       }),
       row:(r)=>[
         H.e(r.code),
         H.e(r.name),
+        H.e(r.model||'-'),
+        H.e(r.serial_no||'-'),
         H.e(r.maker||'-'),
         H.e(r.range||'-'),
         H.e(r.res||'-'),
@@ -1882,6 +1888,7 @@ var SearchPop=window.SearchPop={
         H.e(r.operator||'-'),
         H.e(r.last||'-'),
         H.e(r.next||'-'),
+        H.e(r.cal_method||'-'),
         `<span class="badge ${r.active===0||r.active==='0'?'bred':'bgrn'}">${r.active===0||r.active==='0'?'불용':'사용'}</span>`,
       ]},
     cal:{title:'교정 검색',fields:[{id:'sc_code',label:'계측기코드',type:'text',ph:'EQ-001'},{id:'sc_name',label:'계측기명',type:'text',ph:'계측기명'},{id:'sc_agency',label:'교정기관',type:'text',ph:'교정기관'},{id:'sc_from',label:'교정일(시작)',type:'date'},{id:'sc_to',label:'교정일(종료)',type:'date'},{id:'sc_result',label:'결과',type:'select',opts:['','합격','부분합격','특채','보류','불합격']}],cols:['계측기코드','계측기명','교정일','교정기관','성적서번호','결과','차기교정일'],get:(f)=>DB.cals.filter(r=>{if(f.sc_code&&!r.code.includes(f.sc_code))return false;if(f.sc_name&&!r.name.includes(f.sc_name))return false;if(f.sc_agency&&!r.agency.includes(f.sc_agency))return false;if(f.sc_from&&r.date<f.sc_from)return false;if(f.sc_to&&r.date>f.sc_to)return false;if(f.sc_result&&r.result!==f.sc_result)return false;return true;}),row:(r)=>[H.e(r.code),H.e(r.name),H.e(r.date),H.e(r.agency),H.e(r.cert),`<span class="badge ${r.result==='합격'?'bgrn':'bred'}">${H.e(r.result)}</span>`,H.e(r.next)]},

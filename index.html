@@ -18,7 +18,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- [v2.110] QR 코드 생성 — 마이머신카드 출력용 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<link rel="stylesheet" href="qms-style.css?v=2.110">
+<link rel="stylesheet" href="qms-style.css?v=2.111">
 <!-- Supabase JS SDK CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -41,7 +41,7 @@
       <div class="sp-foot-info" id="spInfo">검색 결과가 여기에 표시됩니다.</div>
       <div style="display:flex;gap:7px">
         <button class="btn bout bsm" onclick="SearchPop.reset()">초기화</button>
-        <button class="btn bpri bsm" onclick="SearchPop.search()">Search <span class="kbd">F8</span></button>
+        <button class="btn bpri bsm" onclick="SearchPop.search()">Search <span class="kbd">F3</span></button>
       </div>
     </div>
   </div>
@@ -408,12 +408,12 @@
 
 
 <!-- QMS 분리 파일 로드 순서: db → core → pages → excel → init -->
-<script src="qms-db.js?v=2.110"></script>
-<script src="qms-core.js?v=2.110"></script>
-<script src="qms-pages.js?v=2.110"></script>
-<script src="qms-excel.js?v=2.110"></script>
+<script src="qms-db.js?v=2.111"></script>
+<script src="qms-core.js?v=2.111"></script>
+<script src="qms-pages.js?v=2.111"></script>
+<script src="qms-excel.js?v=2.111"></script>
   <script>/* Cfg 전역 보장 */if(typeof window.Cfg==='undefined'&&typeof Cfg!=='undefined')window.Cfg=Cfg;if(typeof window.ExcelMgr==='undefined'&&typeof ExcelMgr!=='undefined')window.ExcelMgr=ExcelMgr;</script>
-<script src="qms-init.js?v=2.110"></script>
+<script src="qms-init.js?v=2.111"></script>
 
 
 <script type="text/plain" id="ncCarPrintTpl">
