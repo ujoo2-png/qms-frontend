@@ -1998,6 +1998,22 @@ var SearchPop=window.SearchPop={
       row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.period||'-'),H.e(String(r.total||'-')),H.e(r.grade||'-'),H.e(String(r.ppm||'0')),H.e(String(r.complaint||'0'))],
     },
 
+    sqm_plan:{title:'심사 계획 검색',
+      fields:[
+        {id:'sqp_vn', label:'거래처명', type:'text', ph:'거래처명'},
+        {id:'sqp_tp', label:'심사유형', type:'select', opts:['','정기','수시','특별','인증']},
+        {id:'sqp_st', label:'상태',     type:'select', opts:['','계획','진행중','완료','보류']},
+      ],
+      cols:['거래처','심사유형','계획일','상태'],
+      get:(f)=>(DB.vendor_audits||[]).filter(r=>{
+        if(f.sqp_vn&&!(r.vendor_name||'').includes(f.sqp_vn))return false;
+        if(f.sqp_tp&&r.audit_type!==f.sqp_tp)return false;
+        if(f.sqp_st&&r.status!==f.sqp_st)return false;
+        return true;
+      }),
+      row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.audit_type||'-'),H.e(r.plan_date||'-'),H.e(r.status||'-')],
+    },
+
     sqm_audit:{title:'업체 심사 검색',
       fields:[
         {id:'sqa_vn',  label:'거래처명', type:'text', ph:'거래처명'},

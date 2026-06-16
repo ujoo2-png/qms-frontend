@@ -24,14 +24,11 @@ function setupHotkeys(){
       /* EMS 설비 페이지 → ems_eq로 통합 검색 */
       const EMS_PAGES=['eq_mgmt','eq_pm','eq_as','eq_cost','eq_manual',
                        'eq_machine_card','eq_dashboard','eq_dept'];
-      /* [v2.116] 협력사관리(SQM) 4개 메뉴 — 인라인 필터 검색창으로 직접 포커스
-         (SearchPop 팝업 의존 제거: v2.113 계측기 정책과 동일하게 통일) */
-      const SQM_SEARCH_IDS={sqm_plan:'planSearch',sqm_audit:'auditSearch',
-                             sqm_eval:'evalSearch',sqm_delivery:'delivSearch'};
-      if(SQM_SEARCH_IDS[page]){
-        document.getElementById(SQM_SEARCH_IDS[page])?.focus();
-        return;
-      }
+      /* [v2.121] SQM_SEARCH_IDS 매핑 제거 — SQM 4메뉴(sqm_plan/audit/eval/delivery)는
+         SearchPop._cfg에 이미 검색 설정이 등록되어 있으므로, 다른 모듈과 동일하게
+         SearchPop 팝업 방식 사용. (v2.116에서 단순 focus 방식으로 바꿨던 것을 되돌림 —
+         F3 버튼 클릭은 SearchPop.open()을 호출하는데 키보드 F3은 focus()만 하여
+         동작이 불일치하던 문제 해결) */
       const spPage = EMS_PAGES.includes(page) ? 'ems_eq' : page;
       if(spPage && window.SearchPop && window.SearchPop._cfg[spPage]){
         window.SearchPop.open(spPage);

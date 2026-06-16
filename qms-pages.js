@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.120</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.121</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -12154,7 +12154,7 @@ async sqm_eval(){
         <option value="">전체 등급</option>
         ${['A','B','C','D'].map(g=>`<option value="${g}">${g}등급 — ${GL[g]}</option>`).join('')}
       </select>
-      <button class="btn bout bsm" onclick="document.getElementById('evalSearch')?.focus()" title="검색창으로 이동">🔎 Search <span class="kbd">F3</span></button>
+      <button class="btn bout bsm" onclick="SearchPop.open('sqm_eval')" title="검색 팝업">🔎 Search <span class="kbd">F3</span></button>
     </div>
     <div id="evalTbl"></div>`;
   Pages._sqmEvalRefresh();
@@ -12196,6 +12196,8 @@ _sqmEvalRefresh(){
       {key:'evaluator',   label:'평가자',   w:'70px'},
       {key:'file_url',    label:'파일',     w:'64px',align:'center',
         render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" class="btn bxs bblu" style="font-size:10px;padding:1px 7px;text-decoration:none">📎 보기</a>`:'<span style="color:var(--tl);font-size:11px">-</span>'},
+      {key:'_mail',       label:'메일',     w:'58px',align:'center',
+        render:(v,row)=>`<button class="btn bxs" style="font-size:10px;padding:1px 7px;background:#475569;color:#fff" onclick="event.stopPropagation();Pages._evalSendMail(${row.id})">📧 통보</button>`},
     ],
     data:filtered,
     onRow:row=>Pages._sqmEvalDetail(row),
@@ -12255,24 +12257,24 @@ _sqmEvalForm(row=null){
       <div class="fgroup"><label class="fl req">평가기간</label>
         <input class="fc" id="evPeriod" value="${isEdit?H.e(row.period||''):''}" placeholder="예) 2026-Q2">
       </div>
-      <div class="fgroup"><label class="fl req">품질 점수 (40%)</label>
-        <input class="fc" type="number" id="evQuality" min="0" max="100"
+      <div class="fgroup"><label class="fl req">품질 점수 (40% 반영)</label>
+        <input class="fc" type="number" id="evQuality" min="0" max="100" placeholder="0~100점 입력"
           value="${isEdit?row.quality||'':''}" oninput="Pages._sqmCalcTotal()">
       </div>
-      <div class="fgroup"><label class="fl req">납기 점수 (30%)</label>
-        <input class="fc" type="number" id="evDelivery" min="0" max="100"
+      <div class="fgroup"><label class="fl req">납기 점수 (30% 반영)</label>
+        <input class="fc" type="number" id="evDelivery" min="0" max="100" placeholder="0~100점 입력"
           value="${isEdit?row.delivery||'':''}" oninput="Pages._sqmCalcTotal()">
       </div>
-      <div class="fgroup"><label class="fl req">가격 점수 (20%)</label>
-        <input class="fc" type="number" id="evPrice" min="0" max="100"
+      <div class="fgroup"><label class="fl req">가격 점수 (20% 반영)</label>
+        <input class="fc" type="number" id="evPrice" min="0" max="100" placeholder="0~100점 입력"
           value="${isEdit?row.price||'':''}" oninput="Pages._sqmCalcTotal()">
       </div>
-      <div class="fgroup"><label class="fl req">대응 점수 (10%)</label>
-        <input class="fc" type="number" id="evResponse" min="0" max="100"
+      <div class="fgroup"><label class="fl req">대응 점수 (10% 반영)</label>
+        <input class="fc" type="number" id="evResponse" min="0" max="100" placeholder="0~100점 입력"
           value="${isEdit?row.response||'':''}" oninput="Pages._sqmCalcTotal()">
       </div>
       <div class="fgroup">
-        <label class="fl">종합점수 (자동)</label>
+        <label class="fl">종합점수 (100점 만점, 자동계산)</label>
         <input class="fc" id="evTotal" value="${isEdit?row.total||'':''}" readonly
           style="font-weight:800;font-size:16px;color:#2563eb">
       </div>
@@ -12404,7 +12406,7 @@ async sqm_audit(){
         <option value="">전체 상태</option>
         ${['계획','진행중','완료','보류'].map(s=>`<option>${s}</option>`).join('')}
       </select>
-      <button class="btn bout bsm" onclick="document.getElementById('auditSearch')?.focus()" title="검색창으로 이동">🔎 <span class="kbd">F3</span></button>
+      <button class="btn bout bsm" onclick="SearchPop.open('sqm_audit')" title="검색 팝업">🔎 <span class="kbd">F3</span></button>
     </div>
     <div class="stab-pane" data-tab="list" style="display:block"><div id="auditTbl"></div></div>
     <div class="stab-pane" data-tab="kanban" style="display:none"><div id="auditKanban"></div></div>`;
@@ -12449,6 +12451,8 @@ _auditRefresh(){
       {key:'next_date',   label:'차기심사',  w:'90px', render:v=>v||'-'},
       {key:'file_url',    label:'파일',     w:'64px', align:'center',
         render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" class="btn bxs bblu" style="font-size:10px;padding:1px 7px;text-decoration:none">📎 보기</a>`:'<span style="color:var(--tl);font-size:11px">-</span>'},
+      {key:'_mail',       label:'메일',     w:'58px', align:'center',
+        render:(v,row)=>`<button class="btn bxs" style="font-size:10px;padding:1px 7px;background:#475569;color:#fff" onclick="event.stopPropagation();Pages._auditSendMail(${row.id})">📧 통보</button>`},
     ],
     data:filtered,
     onRow:row=>Pages._sqmAuditDetail(row),
@@ -12974,7 +12978,7 @@ async sqm_plan(){
       </select>
       <button class="btn bout bsm" onclick="Pages._sqmPlanQuick('upcoming')" title="계획 상태만 보기">⏰ 임박심사</button>
       <button class="btn bout bsm" onclick="Pages._sqmPlanQuick('')" title="필터 초기화">↺ 초기화</button>
-      <button class="btn bout bsm" onclick="document.getElementById('planSearch')?.focus()" title="검색창으로 이동">🔎 <span class="kbd">F3</span></button>
+      <button class="btn bout bsm" onclick="SearchPop.open('sqm_plan')" title="검색 팝업">🔎 <span class="kbd">F3</span></button>
     </div>
 
     <!-- 예정 심사 알림 -->
@@ -13069,7 +13073,7 @@ async sqm_delivery(){
         <option value="">전체 판정</option>
         <option>합격</option><option>불합격</option>
       </select>
-      <button class="btn bout bsm" onclick="document.getElementById('delivSearch')?.focus()" title="검색창으로 이동">🔎 <span class="kbd">F3</span></button>
+      <button class="btn bout bsm" onclick="SearchPop.open('sqm_delivery')" title="검색 팝업">🔎 <span class="kbd">F3</span></button>
     </div>
     <div id="delivTbl"></div>`;
   Pages._delivRefresh();
