@@ -416,125 +416,13 @@ _reinspForm(){Modal.open({title:'🔄 재검사 등록',size:'mlg',body:`<div cl
 </div>`,foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('재검사가 등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`})},
 });
 
-/* ══ E: SQM ══ */
-Object.assign(Pages,{
-sqm_eval(){
-  const w=document.getElementById('pw');const data=DB2.sqm_eval;
-  const avgScore=(data.reduce((s,d)=>s+d.total,0)/data.length).toFixed(1);
-  w.innerHTML=`<div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⭐</div><div><div class="sd-val">${data.length}</div><div class="sd-lbl">평가 업체</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">🏆</div><div><div class="sd-val">${data.filter(d=>d.grade==='A').length}</div><div class="sd-lbl">A등급</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📊</div><div><div class="sd-val">${avgScore}</div><div class="sd-lbl">평균 점수</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">📉</div><div><div class="sd-val">${Math.round(data.reduce((s,e)=>s+e.ppm,0)/data.length).toLocaleString()}</div><div class="sd-lbl">평균 PPM</div></div></div>
-  </div>
-  <div class="ph" style="margin-top:14px"><div><div class="ptit">⭐ 공급업체 평가</div><div class="psub">품질·납기·가격·대응 항목별 점수화, 등급 산출</div></div>
-    <div class="pac"><button class="btn bpri btn-f2" onclick="Pages._sqmEvalForm()">+ 평가 등록 <span class="kbd">F2</span></button></div>
-  </div><div id="evalTbl"></div>`;
-  Tbl.render({el:'#evalTbl',cols:[
-    {key:'vendor_name',label:'거래처명'},{key:'period',label:'평가기간',w:'86px'},
-    {key:'quality',label:'품질(40%)',w:'76px',align:'center',render:v=>`<span style="font-weight:700;color:${v>=90?'var(--ok)':v>=70?'var(--warn)':'var(--err)'}">${v}</span>`},
-    {key:'delivery',label:'납기(30%)',w:'76px',align:'center',render:v=>`<span style="font-weight:700;color:${v>=90?'var(--ok)':v>=70?'var(--warn)':'var(--err)'}">${v}</span>`},
-    {key:'price',label:'가격(20%)',w:'76px',align:'center'},{key:'response',label:'대응(10%)',w:'76px',align:'center'},
-    {key:'total',label:'종합점수',w:'80px',align:'center',render:v=>`<span style="font-weight:800;font-size:14px;color:${v>=90?'var(--ok)':v>=70?'var(--warn)':'var(--err)'}">${v}</span>`},
-    {key:'grade',label:'등급',w:'56px',align:'center',render:v=>{const c={A:'bgrn',B:'bblu',C:'bamb',D:'bred'};return`<span class="badge ${c[v]||'bgry'}" style="font-size:13px;font-weight:800">${v}</span>`}},
-    {key:'ppm',label:'PPM',w:'66px',align:'right',render:v=>`<span style="font-weight:700;color:${v<500?'var(--ok)':v<2000?'var(--warn)':'var(--err)'}">${H.n(v)}</span>`},
-    {key:'complaint',label:'클레임',w:'60px',align:'center',render:v=>`<span style="${v>0?'color:var(--err);font-weight:700':''}">${v}건</span>`},
-  ],data,onRow:row=>Pages._sqmEvalDetail(row)});
-},
-_sqmEvalDetail(row){
-  const gc={A:'#059669',B:'#2563eb',C:'#d97706',D:'#dc2626'};
-  const gl={A:'우수 (계속 거래)',B:'양호 (유지)',C:'주의 (개선 요청)',D:'부적격 (거래 중단 검토)'};
-  Modal.open({title:`⭐ 업체 평가 상세 — ${row.vendor_name}`,size:'mlg',
-    body:`<div style="text-align:center;margin-bottom:18px">
-      <div style="display:inline-block;background:${gc[row.grade]||'#475569'};color:#fff;border-radius:50%;width:68px;height:68px;line-height:68px;font-size:28px;font-weight:900">${row.grade}</div>
-      <div style="font-size:12px;margin-top:7px;color:var(--tm)">${gl[row.grade]||''}</div>
-      <div style="font-size:22px;font-weight:800;color:${row.total>=90?'var(--ok)':row.total>=70?'var(--warn)':'var(--err)'}">${row.total}점</div>
-    </div>
-    <div class="g2" style="margin-bottom:14px">
-      ${[['품질(40%)',row.quality,'var(--ok)'],['납기(30%)',row.delivery,'#3b82f6'],['가격(20%)',row.price,'#8b5cf6'],['대응(10%)',row.response,'#f59e0b']].map(([lbl,val,color])=>`
-      <div style="padding:12px;background:var(--bg);border-radius:var(--r)"><div style="font-size:12px;color:var(--tm);margin-bottom:5px">${lbl}</div>
-      <div style="background:#e5e7eb;border-radius:999px;height:8px;margin-bottom:4px"><div style="background:${color};width:${val}%;height:100%;border-radius:999px"></div></div>
-      <div style="font-size:17px;font-weight:700;color:${color}">${val}점</div></div>`).join('')}
-    </div>
-    <div class="ir"><div class="il">PPM</div><div class="iv" style="font-weight:700;color:${row.ppm<500?'var(--ok)':row.ppm<2000?'var(--warn)':'var(--err)'}">${H.n(row.ppm)} PPM</div></div>
-    <div class="ir"><div class="il">클레임</div><div class="iv" style="${row.complaint>0?'color:var(--err);font-weight:700':''}">${row.complaint}건</div></div>
-    <div class="ir"><div class="il">평가기간/일</div><div class="iv">${H.e(row.period)} / ${row.eval_date}</div></div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Toast.show('평가서 인쇄(더미)','info')">🖨️ 인쇄</button>`});
-},
-_sqmEvalForm(){Modal.open({title:'⭐ 업체 평가 등록',size:'mlg',body:`<div class="fg2">
-  <div class="fgroup"><label class="fl req">거래처</label><select class="fc"><option value="">선택</option>${DB.vendors.map(v=>`<option>${H.e(v.vendor_name)}</option>`).join('')}</select></div>
-  <div class="fgroup"><label class="fl req">평가기간</label><input class="fc" placeholder="2026-Q2"></div>
-  <div class="fgroup"><label class="fl req">품질 점수 (40%)</label><input class="fc" type="number" min="0" max="100"></div>
-  <div class="fgroup"><label class="fl req">납기 점수 (30%)</label><input class="fc" type="number" min="0" max="100"></div>
-  <div class="fgroup"><label class="fl req">가격 점수 (20%)</label><input class="fc" type="number" min="0" max="100"></div>
-  <div class="fgroup"><label class="fl req">대응 점수 (10%)</label><input class="fc" type="number" min="0" max="100"></div>
-  <div class="fgroup"><label class="fl">PPM</label><input class="fc" type="number" value="0"></div>
-  <div class="fgroup"><label class="fl">클레임 건수</label><input class="fc" type="number" value="0"></div>
-  <div class="fgroup"><label class="fl">평가일</label><input class="fc" type="date" value="${H.today()}"></div>
-  <div class="fgroup"><label class="fl">평가자</label><select class="fc"><option value="">선택</option>${DB.users.map(u=>`<option>${H.e(u.name)}</option>`).join('')}</select></div>
-</div>`,foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('평가가 등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`})},
-sqm_audit(){
-  const w=document.getElementById('pw');const data=DB2.sqm_audit;
-  w.innerHTML=`<div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">🔎</div><div><div class="sd-val">${data.length}</div><div class="sd-lbl">심사 건수</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${data.filter(d=>d.status==='완료').length}</div><div class="sd-lbl">완료</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">📅</div><div><div class="sd-val">${data.filter(d=>d.status==='예정').length}</div><div class="sd-lbl">예정</div></div></div>
-  </div>
-  <div class="ph" style="margin-top:14px"><div><div class="ptit">🔎 공급업체 심사</div><div class="psub">정기·수시 공급업체 심사 계획 및 결과 관리</div></div>
-    <div class="pac"><button class="btn bpri btn-f2" onclick="Pages._sqmAuditForm()">+ 심사 등록 <span class="kbd">F2</span></button></div>
-  </div><div id="sauditTbl"></div>`;
-  Tbl.render({el:'#sauditTbl',cols:[
-    {key:'vendor_name',label:'거래처명'},{key:'audit_type',label:'심사유형',w:'70px',render:v=>`<span class="badge ${v==='정기'?'bblu':'bamb'}">${H.e(v)}</span>`},
-    {key:'plan_date',label:'계획일',w:'86px'},{key:'actual_date',label:'실시일',w:'86px',render:v=>v||'-'},
-    {key:'auditor',label:'심사자',w:'70px'},{key:'score',label:'점수',w:'60px',align:'center',render:v=>v?`<span style="font-weight:700;color:${v>=85?'var(--ok)':v>=70?'var(--warn)':'var(--err)'}">${v}</span>`:'-'},
-    {key:'findings',label:'지적사항'},{key:'status',label:'상태',w:'60px',render:v=>`<span class="badge ${v==='완료'?'bgrn':'bamb'}">${H.e(v)}</span>`},
-    {key:'next_date',label:'차기심사일',w:'86px',render:v=>v||'-'},
-  ],data,onDel:async(ids)=>{
-        const numIds=ids.map(Number);
-        data=data.filter(r=>!numIds.includes(Number(r.id)));
-        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
-        render?.();
-      }});
-},
-_sqmAuditForm(){Modal.open({title:'🔎 업체 심사 등록',size:'mlg',body:`<div class="fg2">
-  <div class="fgroup"><label class="fl req">거래처</label><select class="fc"><option value="">선택</option>${DB.vendors.map(v=>`<option>${H.e(v.vendor_name)}</option>`).join('')}</select></div>
-  <div class="fgroup"><label class="fl req">심사유형</label><select class="fc"><option>정기</option><option>특별</option><option>수시</option></select></div>
-  <div class="fgroup"><label class="fl req">계획일</label><input class="fc" type="date" value="${H.today()}"></div>
-  <div class="fgroup"><label class="fl">실시일</label><input class="fc" type="date"></div>
-  <div class="fgroup"><label class="fl">심사자</label><select class="fc"><option value="">선택</option>${DB.users.map(u=>`<option>${H.e(u.name)}</option>`).join('')}</select></div>
-  <div class="fgroup"><label class="fl">점수 (0~100)</label><input class="fc" type="number" min="0" max="100"></div>
-  <div class="fgroup ff"><label class="fl">지적사항</label><textarea class="fc" rows="2"></textarea></div>
-  <div class="fgroup"><label class="fl">차기 심사일</label><input class="fc" type="date"></div>
-</div>`,foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('심사가 등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`})},
-sqm_dash(){
-  const w=document.getElementById('pw');const evals=DB2.sqm_eval;
-  const gc={A:'#059669',B:'#2563eb',C:'#d97706',D:'#dc2626'};
-  w.innerHTML=`<div class="ph"><div><div class="ptit">📊 SQM 대시보드</div><div class="psub">공급업체 품질 종합 현황</div></div></div>
-  <div class="stat-dash" style="margin-bottom:16px">
-    ${['A','B','C','D'].map(g=>{const cnt=evals.filter(e=>e.grade===g).length;return`<div class="sd-card"><div class="sd-icon" style="background:${gc[g]}22;color:${gc[g]};font-size:20px;font-weight:900">${g}</div><div><div class="sd-val" style="color:${gc[g]}">${cnt}</div><div class="sd-lbl">등급 ${g}</div></div></div>`}).join('')}
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">📉</div><div><div class="sd-val">${Math.round(evals.reduce((s,e)=>s+e.ppm,0)/evals.length).toLocaleString()}</div><div class="sd-lbl">평균 PPM</div></div></div>
-  </div>
-  <div class="g2" style="margin-bottom:13px">
-    <div class="card"><div class="ch"><div class="ct">⭐ 업체별 종합 점수</div></div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${evals.sort((a,b)=>b.total-a.total).map(e=>`<div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
-            <span style="font-weight:600">${H.e(e.vendor_name)}</span>
-            <span style="display:flex;gap:8px;align-items:center"><span class="badge ${e.grade==='A'?'bgrn':e.grade==='B'?'bblu':e.grade==='C'?'bamb':'bred'}" style="font-size:12px;font-weight:800">${e.grade}</span><strong style="color:${e.total>=90?'var(--ok)':e.total>=70?'var(--warn)':'var(--err)'}">${e.total}점</strong></span>
-          </div>
-          <div style="background:#e5e7eb;border-radius:999px;height:8px"><div style="background:${gc[e.grade]};width:${e.total}%;height:100%;border-radius:999px"></div></div>
-        </div>`).join('')}
-      </div>
-    </div>
-    <div class="card"><div class="ch"><div class="ct">🔴 업체별 PPM</div></div>
-      <div style="display:flex;align-items:flex-end;gap:14px;height:140px;padding:0 10px">
-        ${evals.map(e=>{const h=Math.round((e.ppm/5000)*120);const col=e.ppm<500?'var(--ok)':e.ppm<2000?'var(--warn)':'var(--err)';return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="font-size:11px;font-weight:700;color:${col}">${H.n(e.ppm)}</div><div style="width:100%;background:${col};height:${h}px;border-radius:4px 4px 0 0;min-height:4px"></div><div style="font-size:10px;color:var(--tm);text-align:center">${H.e(e.vendor_name.substring(0,4))}</div></div>`}).join('')}
-      </div>
-      <div style="border-top:2px solid var(--bd);margin:0 10px"></div>
-    </div>
-  </div>`;
-},
-});
+/* [v2.120] E: SQM 구버전 블록 완전 제거
+   원인: 이 위치에 있던 구버전(프로토타입) SQM 모듈
+   (sqm_eval/sqm_audit/sqm_dash/_sqmEvalForm/_sqmAuditForm/_sqmEvalDetail)이
+   qms-pages.js 로드 이후 다시 로드되면서 v2.116~v2.119에서 구현한
+   최신 SQM 기능(거래처 자연어검색, F3 인라인필터, 등간격 컬럼,
+   메일 단순화, hard delete 등)을 전부 덮어쓰고 있었음.
+   해결: 구버전 블록 완전 삭제. 최신 구현은 qms-pages.js에 위치. */
 
 /* ══ C: SPC ══ */
 Object.assign(Pages,{
