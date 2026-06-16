@@ -85,7 +85,8 @@ async home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <div class="hw-hdr-sub">Quality Management System · v2.394</div>
+          <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
+          <div class="hw-hdr-sub">Quality Management System · v2.113</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -2852,7 +2853,7 @@ _EQUIP_COLS:[
   {key:'last',          label:'최근교정일', req:false, sample:'2026-01-01'},
   {key:'next',          label:'차기교정일', req:false, sample:'2026-07-01'},
   {key:'active',        label:'사용여부',   req:false, sample:'사용'},
-  {key:'fixture_type',  label:'고정구분',   req:false, sample:'측정기기'},          /* [v2.111] */
+  {key:'fixture_type',  label:'계측기구분',   req:false, sample:'측정기기'},          /* [v2.111] */
   {key:'purpose',       label:'사용용도',   req:false, sample:'외경,내경,깊이'},    /* [v2.111] */
   {key:'cal_method',    label:'교정구분',   req:false, sample:'사외교정'},          /* [v2.111] */
   {key:'cal_cycle',     label:'교정주기(년)',req:false, sample:'1'},                /* [v2.111] */
@@ -2980,7 +2981,7 @@ _equipRenderPreview(raw){
     'K_차기교정일':'next',
     '사용여부':'active','활성여부':'active',
     'L_사용여부':'active',
-    '고정구분':'fixture_type','구분':'fixture_type',                      /* [v2.111] */
+    '계측기구분':'fixture_type','구분':'fixture_type',                      /* [v2.111] */
     '사용용도':'purpose','용도':'purpose',                                /* [v2.111] */
     '교정구분':'cal_method','교정방법':'cal_method',                      /* [v2.111] */
     '교정주기':'cal_cycle','교정주기(년)':'cal_cycle',                    /* [v2.111] */
@@ -3100,79 +3101,25 @@ async equip(){
       <button class="btn btn-xl-up bpri" onclick="Pages._equipUploadOpen()" title="계측기 엑셀 일괄등록">📤 엑셀 일괄등록</button>
       <button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._eqPrint()" title="계측기 관리대장 인쇄">🖨️ 관리대장 인쇄</button>
     </div></div>
-    <div class="tbar">
-      <div class="sw2"><input type="text" id="eqSrch" placeholder="코드, 계측기명 검색..." oninput="Pages._eqFilter()"></div>
-      <select class="fsel" id="eqStat" onchange="Pages._eqFilter()"><option value="">전체 상태</option><option>정상</option><option>교정중</option><option>교정만료</option><option>폐기</option></select>
-      <button class="btn bout bsm" data-sp="equip" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>
+    <div class="tbar" style="flex-wrap:wrap;gap:6px;align-items:center">
+      <!-- ★ [v2.113] F3 의존 제거: 인라인 필터 드롭다운 방식으로 교체 ★ -->
+      <div class="sw2"><input type="text" id="eqSrch" placeholder="코드·계측기명·제조사 검색..." oninput="Pages._eqFilter()"></div>
+      <select class="fsel" id="eqFixType" onchange="Pages._eqFilter()" title="계측기구분"><option value="">계측기구분 전체</option><option>측정기기</option><option>시험기기</option><option>검사기기</option><option>기타</option></select>
+      <select class="fsel" id="eqCalM" onchange="Pages._eqFilter()" title="교정구분"><option value="">교정구분 전체</option><option>사내교정</option><option>사외교정</option></select>
+      <select class="fsel" id="eqStat" onchange="Pages._eqFilter()" title="상태"><option value="">상태 전체</option><option>정상</option><option>교정중</option><option>교정만료</option><option>폐기</option></select>
+      <span style="font-size:11px;color:var(--tm);white-space:nowrap">최근교정일</span>
+      <input type="date" class="fsel" id="eqLastFrom" onchange="Pages._eqFilter()" style="width:120px" title="최근교정일 시작">
+      <span style="font-size:11px;color:var(--tm)">~</span>
+      <input type="date" class="fsel" id="eqLastTo"   onchange="Pages._eqFilter()" style="width:120px" title="최근교정일 종료">
+      <span style="font-size:11px;color:var(--tm);white-space:nowrap">차기교정일</span>
+      <input type="date" class="fsel" id="eqNextFrom" onchange="Pages._eqFilter()" style="width:120px" title="차기교정일 시작">
+      <span style="font-size:11px;color:var(--tm)">~</span>
+      <input type="date" class="fsel" id="eqNextTo"   onchange="Pages._eqFilter()" style="width:120px" title="차기교정일 종료">
+      <button class="btn bout bsm" onclick="Pages._eqFilterReset()" title="필터 초기화">↺ 초기화</button>
     </div>
     <div id="eqTbl"></div>`;
-  Tbl.render({el:'#eqTbl',cols:[
-    /* [v2.111] 컬럼 순서: 기존 + v2.110 신규 컬럼 통합 */
-    {key:'code',         label:'계측기코드',  req:true,  w:'96px'},
-    {key:'name',         label:'계측기명',    req:true,  w:'130px'},
-    {key:'model',        label:'모델번호',               w:'100px'},
-    {key:'serial_no',    label:'제조번호',               w:'100px'},
-    {key:'maker',        label:'제조사',                  w:'80px'},
-    {key:'range',        label:'측정범위',               w:'100px'},
-    {key:'res',          label:'분해능',                  w:'70px'},
-    {key:'loc',          label:'보관위치',               w:'80px'},
-    {key:'operator',     label:'사용자',                  w:'72px'},
-    {key:'last',         label:'최근교정일',             w:'96px'},
-    {key:'next',         label:'차기교정일',             w:'96px',
-      render:v=>{
-        if(!v) return '-';
-        const d=Math.ceil((new Date(v)-new Date())/(864e5));
-        const cls=d<0?'bred':d<30?'bamb':'';
-        const tag=d<0?' (만료)':d<=30?' (D-'+d+')':'';
-        return cls?'<span class="badge '+cls+'">'+v+tag+'</span>':(v+tag);
-      }},
-    {key:'active',   label:'사용여부',   w:'68px', align:'center',
-      render:v=>`<span class="badge ${v===0||v==='0'||v==='불용'?'bred':'bgrn'}" style="pointer-events:none">${v===0||v==='0'||v==='불용'?'불용':'사용'}</span>`},
-    {key:'status',   label:'상태',       w:'66px',
-      render:(v,row)=>{
-        const s=H.equipStatus(row.next||null);
-        const cls=s==='정상'?'bgrn':s==='교정중'?'bamb':'bred';
-        return `<span class="badge ${cls}">${s}</span>`;
-      }},
-    {key:'cal_method',   label:'교정구분',   w:'72px', align:'center',   /* [v2.111] */
-      render:v=>v?`<span class="badge bblu" style="font-size:10px">${v}</span>`:'<span style="color:var(--tl);font-size:11px">-</span>'},
-    {key:'cal_cycle',    label:'교정주기',   w:'64px', align:'center',   /* [v2.111] */
-      render:v=>v?`${v}년`:'-'},
-    {key:'fixture_type', label:'고정구분',   w:'76px',                   /* [v2.111] */
-      render:v=>v||'-'},
-    {key:'purpose',      label:'사용용도',   w:'110px',                  /* [v2.111] */
-      render:v=>v||'-'},
-    {key:'purchase_date',label:'구입일',     w:'88px',                   /* [v2.111] */
-      render:v=>v||'-'},
-    {key:'inactive_reason',label:'불용사유', w:'100px',                  /* [v2.111] */
-      render:v=>v||'-'},
-    {key:'file_url', label:'파일',       w:'64px', align:'center',  /* [v2.394] */
-      render:(v,row)=>v
-        ?`<button class="btn bxs bblu" style="font-size:10px;padding:1px 7px"
-            onclick="event.stopPropagation();Pages._equipFilePreview('${H.e(v)}','${H.e(row?.code||'')}')">📎 보기</button>`
-        :'<span style="color:var(--tl);font-size:11px">-</span>'},
-  ],data:DB.equip,onDel:async(ids)=>{
-      /* [v2.394] 삭제 경고 팝업 — 계측기 */
-      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
-      const _doDelete=async()=>{
-        const numIds=ids.map(Number);
-        /* [v2.394] SB 삭제 + 로컬 동기화 */
-        if(_sb){
-          /* [v2.394] 소프트 삭제 */
-          const res=await SB._softDelete('equipment',numIds);
-          if(!res.ok) return;
-        }
-        DB.equip=DB.equip.filter(e=>!numIds.includes(Number(e.id)));
-        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
-        Pages.equip();
-      };
-      Modal.confirm({
-        title:'🗑️ 계측기 삭제 확인',
-        msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div>'+`<div style="font-size:14px;font-weight:700;margin:6px 0">선택한 <b style="color:#dc2626">${ids.length}건</b>의 계측기를 삭제합니다.</div>`+'<div style="font-size:12px;color:#64748b">삭제된 데이터는 복구가 어렵습니다. 계속하시겠습니까?</div></div>',
-        danger:true,
-        onOk:_doDelete
-      });
-    },onRow:row=>Pages._equipCalDetail(row.id)});
+  /* [v2.113] 컬럼 정의 단일화 — _eqRender() 한 곳에서 관리 */
+  Pages._eqRender(DB.equip);
 }
 ,
 /* [v2.394] 계측기 상세 팝업 — row 데이터 연결 */
@@ -3235,7 +3182,7 @@ _eqForm(row=null){
       +'<option value="0"'+optSel(!!row&&row.active===0)+'>불용</option>'
       +'</select></div>'
       /* [v2.110] 계측기 이력카드용 11개 필드 추가 */
-      +'<div class="fgroup"><label class="fl">고정구분</label>'
+      +'<div class="fgroup"><label class="fl">계측기구분</label>'
       +'<input id="ef_fixture_type" class="fc" value="'+H.e(row?.fixture_type||'')+'" placeholder="측정기기"></div>'
       +'<div class="fgroup"><label class="fl">Code_No</label>'
       +'<input id="ef_code_no" class="fc" value="'+H.e(row?.code_no||'')+'" placeholder="500-182-30"></div>'
@@ -3900,31 +3847,61 @@ _calCostChart(){
     (top5.length?'<div><div style="font-size:11px;font-weight:600;color:var(--tm);margin-bottom:8px">계측기별 Top5</div>'+equipBars+'</div>':'')+
     '</div></div>';
 },
-/* [v2.394 P4-6] 계측기 실시간 검색/필터 */
+/* [v2.113] 계측기 실시간 필터 — 인라인 드롭다운 방식 (SearchPop 의존 제거)
+   필터 항목: 텍스트검색 / 계측기구분 / 교정구분 / 상태 / 최근교정일 범위 / 차기교정일 범위 */
 _eqFilter(){
-  const q=(document.getElementById('eqSrch')?.value||'').toLowerCase();
-  const st=document.getElementById('eqStat')?.value||'';
-  /* [v2.394] status null 방어 — 실시간 재계산 */
-  const filtered=DB.equip.filter(e=>{
-    const mQ=!q||(e.code||'').toLowerCase().includes(q)||(e.name||'').toLowerCase().includes(q)
-           ||(e.maker||'').toLowerCase().includes(q)||(e.model||'').toLowerCase().includes(q);
-    /* [v2.394] next 기준 실시간 재계산 */
-    const realStatus=H.equipStatus(e.next||null);
-    const mS=!st||realStatus===st;
-    return mQ&&mS;
+  const q        =(document.getElementById('eqSrch')?.value||'').toLowerCase();
+  const fixType  = document.getElementById('eqFixType')?.value||'';
+  const calM     = document.getElementById('eqCalM')?.value||'';
+  const st       = document.getElementById('eqStat')?.value||'';
+  const lastFrom = document.getElementById('eqLastFrom')?.value||'';
+  const lastTo   = document.getElementById('eqLastTo')?.value||'';
+  const nextFrom = document.getElementById('eqNextFrom')?.value||'';
+  const nextTo   = document.getElementById('eqNextTo')?.value||'';
+
+  const filtered = DB.equip.filter(e=>{
+    const realStatus = H.equipStatus(e.next||null);
+    if(q && ![(e.code||''),(e.name||''),(e.maker||''),(e.model||''),(e.serial_no||''),
+              (e.loc||''),(e.operator||'')].some(v=>v.toLowerCase().includes(q))) return false;
+    if(fixType && (e.fixture_type||'')!==fixType) return false;
+    if(calM   && (e.cal_method||'')!==calM)       return false;
+    if(st     && realStatus!==st)                  return false;
+    if(lastFrom && (e.last||'') < lastFrom)        return false;
+    if(lastTo   && (e.last||'') > lastTo)          return false;
+    if(nextFrom && (e.next||'') < nextFrom)        return false;
+    if(nextTo   && (e.next||'') > nextTo)          return false;
+    return true;
   });
+  /* 필터 결과를 메인 equip() 와 동일한 컬럼 정의로 렌더 */
+  Pages._eqRender(filtered);
+},
+/* [v2.113] 필터 초기화 */
+_eqFilterReset(){
+  ['eqSrch','eqFixType','eqCalM','eqStat','eqLastFrom','eqLastTo','eqNextFrom','eqNextTo']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  Pages._eqRender(DB.equip);
+},
+/* [v2.113] 공통 렌더 함수 — equip()과 _eqFilter() 모두 이 함수 호출
+   ★ 컬럼 정의를 여기 한 곳에서만 관리 (중복 방지) ★ */
+_eqRender(data){
   Tbl.render({el:'#eqTbl',cols:[
-    /* [v2.394] 컬럼 순서: 요청사항 기준 재정의 + model 복구 */
-    {key:'code',     label:'계측기코드', req:true, w:'96px'},
-    {key:'name',     label:'계측기명', req:true,   w:'130px'},
-    {key:'model',    label:'모델번호',   w:'100px'},
-    {key:'maker',    label:'제조사',     w:'80px'},
-    {key:'range',    label:'측정범위',   w:'100px'},
-    {key:'res',      label:'분해능',     w:'70px'},
-    {key:'loc',      label:'보관위치',   w:'80px'},
-    {key:'operator', label:'사용자',     w:'72px'},
-    {key:'last',     label:'최근교정일', w:'96px'},
-    {key:'next',     label:'차기교정일', w:'108px',
+    /* [v2.113] 확정 컬럼 순서: 계측기구분→교정구분→코드→명→모델→제조번호→제조사
+                →범위→분해능→위치→사용자→최근교정일→차기교정일→사용여부→상태→사용용도→구입일→불용사유→파일 */
+    {key:'fixture_type', label:'계측기구분', w:'80px',
+      render:v=>v||'-'},
+    {key:'cal_method',   label:'교정구분',   w:'72px', align:'center',
+      render:v=>v?`<span class="badge bblu" style="font-size:10px">${v}</span>`:'<span style="color:var(--tl);font-size:11px">-</span>'},
+    {key:'code',         label:'계측기코드', req:true,  w:'96px'},
+    {key:'name',         label:'계측기명',   req:true,  w:'130px'},
+    {key:'model',        label:'모델번호',              w:'100px'},
+    {key:'serial_no',    label:'제조번호',              w:'100px'},
+    {key:'maker',        label:'제조사',                w:'80px'},
+    {key:'range',        label:'측정범위',              w:'100px'},
+    {key:'res',          label:'분해능',                w:'70px'},
+    {key:'loc',          label:'보관위치',              w:'80px'},
+    {key:'operator',     label:'사용자',                w:'72px'},
+    {key:'last',         label:'최근교정일',            w:'96px'},
+    {key:'next',         label:'차기교정일',            w:'96px',
       render:v=>{
         if(!v) return '-';
         const d=Math.ceil((new Date(v)-new Date())/(864e5));
@@ -3932,42 +3909,44 @@ _eqFilter(){
         const tag=d<0?' (만료)':d<=30?' (D-'+d+')':'';
         return cls?'<span class="badge '+cls+'">'+v+tag+'</span>':(v+tag);
       }},
-    {key:'active',   label:'사용여부',   w:'68px', align:'center',
-      render:v=>`<span class="badge ${v===0||v==='0'?'bred':'bgrn'}">${v===0||v==='0'?'불용':'사용'}</span>`},
-    {key:'status',   label:'상태',       w:'66px',
+    {key:'active',       label:'사용여부',  w:'68px', align:'center',
+      render:v=>`<span class="badge ${v===0||v==='0'||v==='불용'?'bred':'bgrn'}" style="pointer-events:none">${v===0||v==='0'||v==='불용'?'불용':'사용'}</span>`},
+    {key:'status',       label:'상태',      w:'66px',
       render:(v,row)=>{
         const s=H.equipStatus(row.next||null);
         const cls=s==='정상'?'bgrn':s==='교정중'?'bamb':'bred';
         return `<span class="badge ${cls}">${s}</span>`;
       }},
-    {key:'file_url', label:'파일',       w:'64px', align:'center',  /* [v2.394] */
+    {key:'purpose',      label:'사용용도',  w:'110px', render:v=>v||'-'},
+    {key:'purchase_date',label:'구입일',    w:'88px',  render:v=>v||'-'},
+    {key:'inactive_reason',label:'불용사유',w:'100px', render:v=>v||'-'},
+    {key:'file_url',     label:'파일',      w:'64px', align:'center',
       render:(v,row)=>v
         ?`<button class="btn bxs bblu" style="font-size:10px;padding:1px 7px"
             onclick="event.stopPropagation();Pages._equipFilePreview('${H.e(v)}','${H.e(row?.code||'')}')">📎 보기</button>`
         :'<span style="color:var(--tl);font-size:11px">-</span>'},
-  ],data:filtered,
-  /* [v2.394] onDel 복구 */
+  ],data,
   onDel:async(ids)=>{
-      /* [v2.394] 삭제 경고 팝업 — 계측기 */
-      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
-      const _doDelete=async()=>{
-        const numIds=ids.map(Number);
-    if(typeof _sb!=='undefined'&&_sb){
-      const {error}=await _sb.from('equipment').delete().in('id',numIds);
-      if(error){Toast.show('삭제 실패: '+error.message,'err');return;}
-    }
-    DB.equip=DB.equip.filter(e=>!numIds.includes(Number(e.id)));
-    Toast.show(numIds.length+'건 삭제되었습니다.','ok');
-    Pages.equip();
-      };
-      Modal.confirm({
-        title:'🗑️ 계측기 삭제 확인',
-        msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div>'+`<div style="font-size:14px;font-weight:700;margin:6px 0">선택한 <b style="color:#dc2626">${ids.length}건</b>의 계측기를 삭제합니다.</div>`+'<div style="font-size:12px;color:#64748b">삭제된 데이터는 복구가 어렵습니다. 계속하시겠습니까?</div></div>',
-        danger:true,
-        onOk:_doDelete
-      });
-    },
-  onRow:row=>Pages._eqDetail(row.id)});
+    if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+    const _doDelete=async()=>{
+      const numIds=ids.map(Number);
+      if(typeof _sb!=='undefined'&&_sb){
+        const {error}=await _sb.from('equipment').delete().in('id',numIds);
+        if(error){Toast.show('삭제 실패: '+error.message,'err');return;}
+      }
+      DB.equip=DB.equip.filter(e=>!numIds.includes(Number(e.id)));
+      Toast.show(numIds.length+'건 삭제되었습니다.','ok');
+      Pages.equip();
+    };
+    Modal.confirm({
+      title:'🗑️ 계측기 삭제 확인',
+      msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div>'+
+          `<div style="font-size:14px;font-weight:700;margin:6px 0">선택한 <b style="color:#dc2626">${ids.length}건</b>의 계측기를 삭제합니다.</div>`+
+          '<div style="font-size:12px;color:#64748b">삭제된 데이터는 복구가 어렵습니다. 계속하시겠습니까?</div></div>',
+      danger:true, onOk:_doDelete
+    });
+  },
+  onRow:row=>Pages._equipCalDetail(row.id)});
 },
 
 
@@ -10763,7 +10742,7 @@ async _equipCalDetail(id){
     ['최근교정일',row.last||'-'],['차기교정일',row.next||'-'],
     ['사용여부',row.active==0?'불용':'사용'],
     /* [v2.110] 이력카드 신규 11필드 */
-    ['고정구분',row.fixture_type||'-'],['Code_No',row.code_no||'-'],
+    ['계측기구분',row.fixture_type||'-'],['Code_No',row.code_no||'-'],
     ['제조번호',row.serial_no||'-'],['사용용도',row.purpose||'-'],
     ['교정구분',row.cal_method||'-'],['교정주기(년)',row.cal_cycle||'-'],
     ['구입일',row.purchase_date||'-'],['구입가격',row.purchase_cost?Number(row.purchase_cost).toLocaleString()+'원':'-'],
@@ -11468,7 +11447,7 @@ Object.assign(Pages,{
             '<option value="0"'+(row&&row.active==0?' selected':'')+'>불용</option>'+
           '</select></div>'+
         /* [v2.110] 계측기 이력카드용 10개 필드 추가 (특이사항=ecNote로 통합, 11번째) */
-        '<div class="fgroup"><label class="fl">고정구분</label>'+
+        '<div class="fgroup"><label class="fl">계측기구분</label>'+
           '<input class="fc" id="ecFixtureType" placeholder="예) 측정기기" value="'+H.e(row?row.fixture_type||'':'')+'"></div>'+
         '<div class="fgroup"><label class="fl">Code_No</label>'+
           '<input class="fc" id="ecCodeNo" placeholder="예) 500-182-30" value="'+H.e(row?row.code_no||'':'')+'"></div>'+
