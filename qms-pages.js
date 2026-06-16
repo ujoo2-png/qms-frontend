@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.118</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.119</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -12169,11 +12169,14 @@ _sqmEvalRefresh(){
     return mQ&&mG;
   });
   const GC={A:'#059669',B:'#2563eb',C:'#d97706',D:'#dc2626'};
+  /* [v2.119] 거래처명 컬럼 — 데이터 글자수에 비례한 동적 너비 (요청: "글자수가 많으면 넓은 너비") */
+  const vnMaxLen=Math.max(6,...filtered.map(r=>(r.vendor_name||'').length));
+  const vnWidth=Math.min(220,Math.max(100,vnMaxLen*15+24))+'px';
   Tbl.render({
     el:'#evalTbl',
     cols:[
-      /* [v2.116] 등간격 컬럼 너비 재정의 + 파일 컬럼 추가 */
-      {key:'vendor_name', label:'거래처명', req:true, w:'110px'},
+      /* [v2.116/v2.119] 컬럼 너비 — 거래처명은 동적, 나머지는 표시값 글자수 기준 고정폭 */
+      {key:'vendor_name', label:'거래처명', req:true, w:vnWidth},
       {key:'period',      label:'평가기간', w:'90px'},
       {key:'quality',     label:'품질(40%)',w:'78px',align:'center',
         render:v=>`<span style="font-weight:700;color:${v>=90?'#059669':v>=70?'#d97706':'#dc2626'}">${v||'-'}</span>`},
@@ -12423,11 +12426,16 @@ _auditRefresh(){
     const mS=!st||r.status===st;
     return mQ&&mS;
   });
+  /* [v2.119] 거래처명/지적사항 — 데이터 글자수에 비례한 동적 너비 */
+  const vnMaxLen=Math.max(6,...filtered.map(r=>(r.vendor_name||'').length));
+  const vnWidth=Math.min(220,Math.max(100,vnMaxLen*15+24))+'px';
+  const fdMaxLen=Math.max(8,...filtered.map(r=>(r.findings||'').length));
+  const fdWidth=Math.min(280,Math.max(100,fdMaxLen*9+24))+'px';
   Tbl.render({
     el:'#auditTbl',
     cols:[
-      /* [v2.116] 등간격 컬럼 너비 재정의 + 파일 컬럼 추가 */
-      {key:'vendor_name', label:'거래처명',  req:true, w:'120px'},
+      /* [v2.116/v2.119] 컬럼 너비 — 거래처명/지적사항은 동적, 나머지는 표시값 기준 고정폭 */
+      {key:'vendor_name', label:'거래처명',  req:true, w:vnWidth},
       {key:'audit_type',  label:'심사유형',  w:'90px', align:'center',
         render:v=>`<span class="badge ${v==='정기'?'bblu':v==='수시'?'bamb':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'plan_date',   label:'계획일',   w:'90px', req:true},
@@ -12435,7 +12443,7 @@ _auditRefresh(){
       {key:'auditor',     label:'심사자',   w:'80px'},
       {key:'score',       label:'점수',     w:'70px', align:'center',
         render:v=>v!=null?`<span style="font-weight:700;color:${v>=80?'#059669':v>=60?'#d97706':'#dc2626'}">${v}</span>`:'<span style="color:var(--tl)">-</span>'},
-      {key:'findings',    label:'지적사항', w:'140px'},
+      {key:'findings',    label:'지적사항', w:fdWidth},
       {key:'status',      label:'상태',     w:'80px', align:'center',
         render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='진행중'?'bblu':v==='보류'?'bred':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'next_date',   label:'차기심사',  w:'90px', render:v=>v||'-'},
