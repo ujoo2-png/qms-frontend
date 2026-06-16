@@ -2033,17 +2033,19 @@ var SearchPop=window.SearchPop={
     sqm_delivery:{title:'납품 이력 검색',
       fields:[
         {id:'sqd_vn',  label:'거래처명', type:'text', ph:'거래처명'},
+        {id:'sqd_tp',  label:'검사구분', type:'select', opts:['','수입','공정','구매','외주','최종']},
         {id:'sqd_cd',  label:'품목코드', type:'text', ph:'품목코드'},
         {id:'sqd_rs',  label:'판정',     type:'select', opts:['','합격','불합격']},
       ],
-      cols:['검사일','거래처','품목코드','품목명','LOT번호','판정'],
+      cols:['검사일','검사구분','거래처','품목코드','품목명','LOT번호','판정'],
       get:(f)=>(DB.inspections||[]).filter(r=>{
         if(f.sqd_vn&&!(r.vendor_name||'').includes(f.sqd_vn))return false;
+        if(f.sqd_tp&&r.type!==f.sqd_tp)return false;
         if(f.sqd_cd&&!(r.item_code||'').includes(f.sqd_cd))return false;
         if(f.sqd_rs&&r.result!==f.sqd_rs)return false;
         return true;
       }),
-      row:(r)=>[H.e(r.insp_date||'-'),H.e(r.vendor_name||'-'),H.e(r.item_code||'-'),H.e(r.item_name||'-'),H.e(r.lot_no||'-'),H.e(r.result||'-')],
+      row:(r)=>[H.e(r.insp_date||'-'),H.e(r.type||'-'),H.e(r.vendor_name||'-'),H.e(r.item_code||'-'),H.e(r.item_name||'-'),H.e(r.lot_no||'-'),H.e(r.result||'-')],
     },
     /* [v2.394] 8D Report + 반품/폐기 검색 */
     nc_8d:{title:'8D Report 검색',

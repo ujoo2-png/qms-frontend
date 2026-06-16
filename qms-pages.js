@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.121</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.122</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -12235,8 +12235,52 @@ _sqmEvalDetail(row){
     <div class="ir"><div class="il">클레임</div><div class="iv" style="${row.complaint>0?'color:var(--err);font-weight:700':''}">${row.complaint}건</div></div>
     <div class="ir"><div class="il">평가기간/일</div><div class="iv">${H.e(row.period)} / ${row.eval_date}</div></div>`,
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`+
+      `<button class="btn bgry bsm" onclick="Modal.close();Pages._sqmEvalForm(${JSON.stringify(row).replace(/"/g,'&quot;').replace(/</g,'\u003c')})">✏️ 수정</button>`+
       `<button class="btn bpri bsm" onclick="Pages._evalSendMail(${row.id})">📧 결과 통보</button>`+
-      `<button class="btn bpri" onclick="Toast.show('평가서 인쇄(더미)','info')">🖨️ 인쇄</button>`});
+      `<button class="btn bpri" onclick="Pages._sqmEvalPrint(${row.id})">🖨️ 인쇄</button>`});
+},
+/* [v2.122] 업체평가 상세 인쇄 — 더미 토스트를 실제 출력 창으로 교체 */
+_sqmEvalPrint(id){
+  const row=(DB.vendor_evals||[]).find(r=>r.id===id);
+  if(!row){Toast.show('평가 데이터를 찾을 수 없습니다.','err');return;}
+  const gc={A:'#059669',B:'#2563eb',C:'#d97706',D:'#dc2626'};
+  const gl={A:'우수 (계속 거래)',B:'양호 (유지)',C:'주의 (개선 요청)',D:'부적격 (거래 중단 검토)'};
+  const today=H.today();
+  const printWin=window.open('','_blank');
+  if(!printWin){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.','warn');return;}
+  printWin.document.write(`<!DOCTYPE html><html><head><title>업체 평가서 — ${H.e(row.vendor_name)}</title>
+  <style>
+    body{font-family:'Malgun Gothic',sans-serif;padding:24px;color:#1e293b;font-size:13px}
+    .pr-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1e293b;padding-bottom:10px;margin-bottom:18px}
+    .pr-title{font-size:20px;font-weight:800;letter-spacing:4px}
+    .pr-meta{font-size:11px;color:#64748b;text-align:right}
+    .pr-grade{text-align:center;margin-bottom:20px}
+    .pr-grade-circle{display:inline-block;width:70px;height:70px;line-height:70px;border-radius:50%;color:#fff;font-size:28px;font-weight:900;background:${gc[row.grade]||'#475569'}}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    th,td{border:1px solid #cbd5e1;padding:8px 10px;font-size:12px;text-align:center}
+    th{background:#f1f5f9}
+    @media print{button{display:none}}
+  </style></head><body>
+  <div class="pr-header">
+    <div class="pr-title">업 체 평 가 서</div>
+    <div class="pr-meta">출력일: ${today}</div>
+  </div>
+  <div class="pr-grade">
+    <div class="pr-grade-circle">${H.e(row.grade||'-')}</div>
+    <div style="margin-top:6px;font-size:12px;color:#64748b">${gl[row.grade]||''}</div>
+    <div style="font-size:18px;font-weight:800;margin-top:4px">${row.total??'-'}점</div>
+  </div>
+  <table>
+    <tr><th>거래처</th><td>${H.e(row.vendor_name||'-')}</td><th>평가기간</th><td>${H.e(row.period||'-')}</td></tr>
+    <tr><th>품질(40%)</th><td>${row.quality??'-'}점</td><th>납기(30%)</th><td>${row.delivery??'-'}점</td></tr>
+    <tr><th>가격(20%)</th><td>${row.price??'-'}점</td><th>대응(10%)</th><td>${row.response??'-'}점</td></tr>
+    <tr><th>PPM</th><td>${H.n(row.ppm)||0}</td><th>클레임</th><td>${row.complaint||0}건</td></tr>
+    <tr><th>평가일</th><td>${H.e(row.eval_date||'-')}</td><th>평가자</th><td>${H.e(row.evaluator||'-')}</td></tr>
+    <tr><th>비고</th><td colspan="3">${H.e(row.note||'-')}</td></tr>
+  </table>
+  <button onclick="window.print()" style="padding:8px 18px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer">🖨️ 인쇄</button>
+  </body></html>`);
+  printWin.document.close();
 },
 _sqmEvalForm(row=null){
   /* [v2.394] 업체 평가 등록/수정 폼 */
@@ -12529,7 +12573,7 @@ _sqmAuditDetail(row){
     title:`🔎 심사 상세 — ${H.e(row.vendor_name||'-')}`,
     size:'mlg',
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
-        +`<button class="btn bgry bsm" onclick="Modal.close();Pages._sqmAuditForm(${JSON.stringify(row).replace(/</g,'\u003c')})">✏️ 수정</button>`
+        +`<button class="btn bgry bsm" onclick="Modal.close();Pages._sqmAuditForm(${JSON.stringify(row).replace(/"/g,'&quot;').replace(/</g,'\u003c')})">✏️ 수정</button>`
         +(row.status!=='완료'?`<button class="btn bgrn bsm" onclick="Modal.close();Pages._auditStatusChange(${row.id})">→ 다음단계</button>`:'')
         +(row.status==='완료'?`<button class="btn bamb bsm" onclick="Modal.close();Pages._sqmAuditToEval(${row.id})" title="심사 결과를 업체평가에 자동 반영">⭐ 평가 등록</button>`:'')
         +`<button class="btn bpri bsm" onclick="Pages._auditSendMail(${row.id})">📧 결과 통보</button>`,
@@ -12700,8 +12744,16 @@ async _sqmAuditSave(){
     Toast.show('심사가 등록되었습니다.','ok');
   }
   Modal.close();
-  Pages._auditRefresh();
-  Pages._auditKanban();
+  /* [v2.122] 현재 페이지에 맞는 갱신 함수 호출 — sqm_plan 화면에서 등록 시
+     _auditRefresh/_auditKanban은 sqm_audit 화면 전용 엘리먼트라 아무 효과가
+     없어 F5 새로고침해야만 반영되던 버그 수정 */
+  const _curPage=sessionStorage.getItem('qms_page');
+  if(_curPage==='sqm_plan' && document.getElementById('planKanban')){
+    Pages._sqmPlanRefresh();
+  } else if(document.getElementById('auditTbl')){
+    Pages._auditRefresh();
+    Pages._auditKanban();
+  }
 },
 
 /* 심사 결과 메일 발송 [v2.394] — Gmail MCP 연동 */
@@ -13064,11 +13116,19 @@ async sqm_delivery(){
   w.innerHTML=`
     <div class="ph">
       <div><div class="ptit">🚚 납품 이력</div>
-        <div class="psub">거래처별 납품 검사 이력 · 합부율 · 부적합 현황</div></div>
+        <div class="psub">거래처명 기준으로 수입·공정·구매·외주·최종검사 5종 통합 조회</div></div>
     </div>
     <div class="tbar">
-      <div class="sw2"><input type="text" id="delivSearch" placeholder="거래처명, 품목코드, LOT번호 검색..."
+      <div class="sw2"><input type="text" id="delivSearch" placeholder="거래처명으로 검색 (필수) — 품목코드/LOT번호도 가능"
         oninput="Pages._delivRefresh()"></div>
+      <select class="fsel" id="delivTypeF" onchange="Pages._delivRefresh()">
+        <option value="">검사구분 전체</option>
+        <option value="수입">수입검사</option>
+        <option value="공정">공정검사</option>
+        <option value="구매">구매검사</option>
+        <option value="외주">외주검사</option>
+        <option value="최종">최종검사</option>
+      </select>
       <select class="fsel" id="delivResultF" onchange="Pages._delivRefresh()">
         <option value="">전체 판정</option>
         <option>합격</option><option>불합격</option>
@@ -13079,16 +13139,31 @@ async sqm_delivery(){
   Pages._delivRefresh();
 },
 
+/* [v2.122] 납품이력 — 거래처명 기준 검사 5종(수입/공정/구매/외주/최종) 통합 검색으로 재설계
+   변경전: 수입검사(type==='수입')만 대상이라 공정/구매/외주/최종 데이터는 조회 불가했음
+   변경후: 검사구분 필터(기본값 전체=5종 모두)로 type 제한 없이 조회,
+           거래처명 검색이 비어있으면 안내 메시지 표시(데이터량이 많아 거래처명 입력을 유도) */
 _delivRefresh(){
-  const q=(document.getElementById('delivSearch')?.value||'').toLowerCase();
+  const q=(document.getElementById('delivSearch')?.value||'').trim();
+  const ql=q.toLowerCase();
+  const tp=document.getElementById('delivTypeF')?.value||'';
   const rs=document.getElementById('delivResultF')?.value||'';
-  /* 수입검사 기준으로 납품 이력 표시 */
-  const insp=(DB.inspections||[]).filter(r=>r.type==='수입'||r.insp_type==='수입');
-  const filtered=insp.filter(r=>{
-    const mQ=!q||(r.vendor_name||r.item_name||'').toLowerCase().includes(q)
-      ||(r.item_code||'').toLowerCase().includes(q)||(r.lot_no||'').toLowerCase().includes(q);
+  /* [v2.122] 검사 5종(수입/공정/구매/외주/최종) 전체 대상 — type 필터는 선택사항 */
+  const allInsp=(DB.inspections||[]).filter(r=>['수입','공정','구매','외주','최종'].includes(r.type));
+  /* 거래처명 검색이 비어있으면 안내만 표시(전체 데이터가 많아 거래처명 입력을 유도) */
+  if(!q){
+    const tbl=document.getElementById('delivTbl');
+    if(tbl) tbl.innerHTML='<div style="text-align:center;padding:40px;color:var(--tm)">거래처명을 입력하면 해당 거래처의 수입·공정·구매·외주·최종검사 이력을 모두 조회합니다.</div>';
+    return;
+  }
+  const filtered=allInsp.filter(r=>{
+    const mQ=(r.vendor_name||'').toLowerCase().includes(ql)
+      ||(r.item_name||'').toLowerCase().includes(ql)
+      ||(r.item_code||'').toLowerCase().includes(ql)
+      ||(r.lot_no||'').toLowerCase().includes(ql);
+    const mT=!tp||r.type===tp;
     const mR=!rs||r.result===rs;
-    return mQ&&mR;
+    return mQ&&mT&&mR;
   });
   /* 합부율 계산 */
   const total=filtered.length;
@@ -13099,6 +13174,8 @@ _delivRefresh(){
     el:'#delivTbl',
     cols:[
       {key:'insp_date',   label:'검사일',   w:'90px', req:true},
+      {key:'type',        label:'검사구분', w:'80px', align:'center',
+        render:v=>`<span class="badge bblu" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'vendor_name', label:'거래처명'},
       {key:'item_code',   label:'품목코드', w:'100px'},
       {key:'item_name',   label:'품목명',   w:'130px'},
