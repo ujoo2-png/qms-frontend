@@ -3103,7 +3103,7 @@ async equip(){
     <div class="tbar">
       <div class="sw2"><input type="text" id="eqSrch" placeholder="코드, 계측기명 검색..." oninput="Pages._eqFilter()"></div>
       <select class="fsel" id="eqStat" onchange="Pages._eqFilter()"><option value="">전체 상태</option><option>정상</option><option>교정중</option><option>교정만료</option><option>폐기</option></select>
-      <button class="btn bout bsm" onclick="SearchPop.open('equip')" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>
+      <button class="btn bout bsm" data-sp="equip" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>
     </div>
     <div id="eqTbl"></div>`;
   Tbl.render({el:'#eqTbl',cols:[
@@ -13554,63 +13554,5 @@ nc_trend(){
    setupHotkeys(); 호출은 아래 init() 블록에서 qms-init.js가 담당 */
 /* REMOVED: function setupHotkeys(){...} */
 
-/* ══ 초기화 ══ */
-(function init(){
-  const dateFmt=()=>new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
-  const tbdEl=document.getElementById('tbd');if(tbdEl)tbdEl.textContent=dateFmt();
-  setInterval(()=>{const e=document.getElementById('tbd');if(e)e.textContent=dateFmt()},60000);
-  document.getElementById('lpw')?.addEventListener('keydown',e=>{if(e.key==='Enter')Auth.login()});
-  const bdot=document.getElementById('bdot');if(bdot)bdot.style.display='block';
-  setupHotkeys();
-
-  /* C안: F5 새로고침 후 로그인 상태 + 마지막 페이지 복원
-     1. sessionStorage에 저장된 로그인 정보 확인
-     2. 있으면 → 앱 진입 + 마지막 페이지로 이동
-     3. 파일 캐시는 FM.get() 호출 시 자동 복원 (lazy loading)
-     4. 없으면 → 로그인 화면 표시 */
-  const savedAuth = sessionStorage.getItem('qms_auth');
-  if(savedAuth){
-    try{
-      const {cur, u} = JSON.parse(savedAuth);
-      /* [v2.394 수정] 복원 시 저장된 사용자 정보로 표시 (admin 하드코딩 제거) */
-      Auth._cur = cur;
-      Auth._u   = u;
-      const roleLabel={'admin':'관','manager':'장','user':'사'};
-      ['uav','uname','urole','tbuser'].forEach((id,i)=>{
-        const el=document.getElementById(id);
-        if(el)el.textContent=[(u.name||u.username||'?')[0],u.name||u.username,roleLabel[u.role]||'사용자',u.name||u.username][i];
-      });
-      document.getElementById('loginOv').style.display='none';
-      document.getElementById('app').classList.remove('hidden');
-      /* [v2.394] 설정 메뉴: 세션 복원 시에도 admin만 표시 */
-      const sm=document.getElementById('ni_settings');
-      if(sm) sm.style.display=(u.role==='admin')?'':'none';
-      const savedPage = sessionStorage.getItem('qms_page') || 'home';
-      /* [v2.394] DB 일괄 로드 완료 후 페이지 이동 — 빈 DB로 렌더 방지 */
-      (async()=>{
-        try{
-          if(_sb){
-            const [eq,ca,it,nc,us,me,docs,cars,vd] = await Promise.all([
-              SB.getEquip(), SB.getCals(), SB.getItems(), SB.getNCs(),
-              SB.getUsers(), SB.getMentions(), SB.getDocs(), SB.getCars(),
-              SB.getVendors()
-            ]);
-            if(eq)   DB.equip   = eq;
-            if(ca)   DB.cals    = ca;
-            if(it)   DB.items   = it;
-            if(nc)   DB.nc      = nc;
-            if(us)   DB.users   = us;
-            if(me)   DB.mentions= me;
-            if(docs) DB.docs    = docs;
-            if(cars) DB.cars    = cars;
-            if(vd)   DB.vendors = vd;
-          }
-        }catch(e){ console.warn('[세션복원] DB 로드 오류:', e); }
-        Nav.go(savedPage);
-        if(savedPage !== 'home'){
-          Toast.show('마지막 화면으로 돌아왔습니다.','info',2000);
-        }
-      })();
-    }catch(e){}
-  }
-})();
+/* [v2.112] 초기화 블록 제거 — qms-init.js가 단독으로 담당
+   (이전 중복 init 블록이 setupHotkeys 2회 호출 + 세션복원 2회 실행 버그 유발) */
