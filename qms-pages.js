@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.117</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.118</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3443,6 +3443,7 @@ _equipMsaDetail(row){
     /* 변경이력 탭에 code 전달 */
     if(logPane) logPane._equip_code=row.code;
     if(!calPane) return;
+    try{
     if(!DB.cals||!DB.cals.length){const ld=await SB.getCals();if(ld)DB.cals=ld;}
     /* [v2.394 P2] cal_date 기준 내림차순 정렬 */
     const recs=(DB.cals||[]).filter(c=>(c.code===row.code||c.equip_code===row.code))
@@ -3470,7 +3471,7 @@ _equipMsaDetail(row){
           '<td style="padding:5px 8px">'+(c.next_date||c.next||'-')+'</td>'+
           '<td style="padding:5px 8px;text-align:right">'+(c.cost?(Number(c.cost).toLocaleString()):'—')+'</td>'+
           '<td style="padding:5px 8px;text-align:center;white-space:nowrap">'+
-          '<button class="btn bxs bgh" onclick="Pages._calForm(&quot;'+H.e(equip_code)+'&quot;,'+JSON.stringify(c).replace(/"/g,'&quot;')+')">수정</button> '+
+          '<button class="btn bxs bgh" onclick="Pages._calForm(&quot;'+H.e(row.code)+'&quot;,'+JSON.stringify(c).replace(/"/g,'&quot;')+')">수정</button> '+
           '<button class="btn bxs berr" onclick="Pages._calDel('+c.id+',&quot;'+H.e(row.code)+'&quot;)">삭제</button>'+
           '</td></tr>';
       });
@@ -3478,6 +3479,11 @@ _equipMsaDetail(row){
       calPane.innerHTML=t;
     }
     Cmt.render('#eqCmt','eq-'+row.id);
+    }catch(err){
+      /* [v2.118] 교정이력 렌더링 중 예외 발생 시 무한로딩 대신 에러 안내 표시 */
+      console.error('[_equipMsaDetail] 교정이력 로드 오류:',err);
+      calPane.innerHTML='<div style="color:#dc2626;font-size:12px;padding:12px 0">교정이력 로드 중 오류가 발생했습니다: '+(err.message||err)+'</div>';
+    }
   },80);
 },
 
