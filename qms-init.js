@@ -24,6 +24,14 @@ function setupHotkeys(){
       /* EMS 설비 페이지 → ems_eq로 통합 검색 */
       const EMS_PAGES=['eq_mgmt','eq_pm','eq_as','eq_cost','eq_manual',
                        'eq_machine_card','eq_dashboard','eq_dept'];
+      /* [v2.116] 협력사관리(SQM) 4개 메뉴 — 인라인 필터 검색창으로 직접 포커스
+         (SearchPop 팝업 의존 제거: v2.113 계측기 정책과 동일하게 통일) */
+      const SQM_SEARCH_IDS={sqm_plan:'planSearch',sqm_audit:'auditSearch',
+                             sqm_eval:'evalSearch',sqm_delivery:'delivSearch'};
+      if(SQM_SEARCH_IDS[page]){
+        document.getElementById(SQM_SEARCH_IDS[page])?.focus();
+        return;
+      }
       const spPage = EMS_PAGES.includes(page) ? 'ems_eq' : page;
       if(spPage && window.SearchPop && window.SearchPop._cfg[spPage]){
         window.SearchPop.open(spPage);

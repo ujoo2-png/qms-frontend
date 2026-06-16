@@ -1250,7 +1250,7 @@ const DB={
       price:Number(row.price)||0, response:Number(row.response)||0,
       total:Number(row.total)||0, grade:row.grade||'',
       ppm:Number(row.ppm)||0, complaint:Number(row.complaint)||0,
-      evaluator:row.evaluator||'', note:row.note||'',
+      evaluator:row.evaluator||'', note:row.note||'', file_url:row.file_url||null,
     };
     const {error}=await _sb.from('vendor_evals').insert(allowed);
     if(error){Toast.show('평가 저장 실패: '+error.message,'err');return{ok:false};}
@@ -1263,11 +1263,13 @@ const DB={
     if(error){Toast.show('평가 수정 실패: '+error.message,'err');return{ok:false};}
     return{ok:true};
   },
+  /* [v2.116] hard delete로 전환 (deleteVendorAudit와 동일 이유) */
   async deleteVendorEval(id){
     if(!_sb){DB.vendor_evals=(DB.vendor_evals||[]).filter(r=>r.id!==id);return{ok:true};}
-    const res=await SB._softDelete('vendor_evals',[id]);
+    const {error}=await _sb.from('vendor_evals').delete().eq('id',id);
+    if(error){Toast.show('평가 삭제 실패: '+error.message,'err');return{ok:false};}
     DB.vendor_evals=(DB.vendor_evals||[]).filter(r=>r.id!==id);
-    return res;
+    return{ok:true};
   },
 
   /* 업체 심사 */
@@ -1286,7 +1288,7 @@ const DB={
       score:Number(row.score)||null, findings:row.findings||'',
       corrective_req:row.corrective_req||'', status:row.status||'계획',
       next_date:row.next_date||null, notify_sent:row.notify_sent||false,
-      result_sent:row.result_sent||false,
+      result_sent:row.result_sent||false, file_url:row.file_url||null,
     };
     const {error}=await _sb.from('vendor_audits').insert(allowed);
     if(error){Toast.show('심사 저장 실패: '+error.message,'err');return{ok:false};}
@@ -1300,11 +1302,15 @@ const DB={
     const r=(DB.vendor_audits||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);
     return{ok:true};
   },
+  /* [v2.116] hard delete로 전환 — vendor_audits 테이블에 deleted_at 컬럼
+     부재 추정(v2.107 calibrations와 동일 패턴) → _softDelete 실패가 무시되어
+     화면상 삭제됐다가 새로고침 시 재출현하는 버그 수정 */
   async deleteVendorAudit(id){
     if(!_sb){DB.vendor_audits=(DB.vendor_audits||[]).filter(r=>r.id!==id);return{ok:true};}
-    const res=await SB._softDelete('vendor_audits',[id]);
+    const {error}=await _sb.from('vendor_audits').delete().eq('id',id);
+    if(error){Toast.show('심사 삭제 실패: '+error.message,'err');return{ok:false};}
     DB.vendor_audits=(DB.vendor_audits||[]).filter(r=>r.id!==id);
-    return res;
+    return{ok:true};
   },
 
   /* ── LOT 추적 [v2.394] ── */

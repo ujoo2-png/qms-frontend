@@ -40,7 +40,7 @@ async home(){
     {c:'mc-c3',icon:'📋',name:'검사 고도화',badge:0,
      subs:[{icon:'📋',label:'검사 기준서',page:'insp_std'},{icon:'📜',label:'검사 성적서',page:'insp_cert'},{icon:'🔗',label:'LOT 추적성',page:'lot_trace'},{icon:'🚫',label:'Hold 관리',page:'insp_hold'},{icon:'🔄',label:'재검사 관리',page:'insp_reinsp'}]},
     {c:'mc-c4',icon:'⭐',name:'공급업체 품질',badge:0,
-     subs:[{icon:'⭐',label:'업체 평가',page:'sqm_eval'},{icon:'🔎',label:'업체 심사',page:'sqm_audit'},{icon:'📅',label:'심사 계획 관리',page:'sqm_plan'},{icon:'🚚',label:'납품 이력',page:'sqm_delivery'},{icon:'📊',label:'SQM 대시보드',page:'sqm_dash'}]},
+     subs:[{icon:'📅',label:'심사 계획 관리',page:'sqm_plan'},{icon:'🔎',label:'업체 심사',page:'sqm_audit'},{icon:'⭐',label:'업체 평가',page:'sqm_eval'},{icon:'🚚',label:'납품 이력',page:'sqm_delivery'},{icon:'📊',label:'SQM 대시보드',page:'sqm_dash'}]},
     {c:'mc-c5',icon:'📈',name:'SPC 통계관리',badge:0,
      subs:[{icon:'📈',label:'관리도',page:'spc_chart'},{icon:'🎯',label:'Cp/Cpk',page:'spc_cpk'},{icon:'📊',label:'파레토 분석',page:'spc_pareto'}]},
     {c:'mc-c6',icon:'🔬',name:'계측기관리',badge:eqE,
@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.115</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.116</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -12127,7 +12127,7 @@ async sqm_eval(){
         <option value="">전체 등급</option>
         ${['A','B','C','D'].map(g=>`<option value="${g}">${g}등급 — ${GL[g]}</option>`).join('')}
       </select>
-      <button class="btn bout bsm" onclick="SearchPop.open('sqm_eval')">🔎 Search <span class="kbd">F3</span></button>
+      <button class="btn bout bsm" onclick="document.getElementById('evalSearch')?.focus()" title="검색창으로 이동">🔎 Search <span class="kbd">F3</span></button>
     </div>
     <div id="evalTbl"></div>`;
   Pages._sqmEvalRefresh();
@@ -12145,7 +12145,8 @@ _sqmEvalRefresh(){
   Tbl.render({
     el:'#evalTbl',
     cols:[
-      {key:'vendor_name', label:'거래처명', req:true},
+      /* [v2.116] 등간격 컬럼 너비 재정의 + 파일 컬럼 추가 */
+      {key:'vendor_name', label:'거래처명', req:true, w:'110px'},
       {key:'period',      label:'평가기간', w:'90px'},
       {key:'quality',     label:'품질(40%)',w:'78px',align:'center',
         render:v=>`<span style="font-weight:700;color:${v>=90?'#059669':v>=70?'#d97706':'#dc2626'}">${v||'-'}</span>`},
@@ -12163,14 +12164,18 @@ _sqmEvalRefresh(){
         render:v=>`<span style="${v>0?'color:#dc2626;font-weight:700':''}">${v||'0'}</span>`},
       {key:'eval_date',   label:'평가일',   w:'90px'},
       {key:'evaluator',   label:'평가자',   w:'70px'},
+      {key:'file_url',    label:'파일',     w:'64px',align:'center',
+        render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" class="btn bxs bblu" style="font-size:10px;padding:1px 7px;text-decoration:none">📎 보기</a>`:'<span style="color:var(--tl);font-size:11px">-</span>'},
     ],
     data:filtered,
     onRow:row=>Pages._sqmEvalDetail(row),
     onDel:async(ids)=>{
       const numIds=ids.map(Number);
       const _doDelete=async()=>{
-        for(const id of numIds) await SB.deleteVendorEval(id);
-        Toast.show(numIds.length+'건 삭제되었습니다.','ok');
+        let okCnt=0;
+        for(const id of numIds){const r=await SB.deleteVendorEval(id);if(r.ok)okCnt++;}
+        if(okCnt>0)Toast.show(okCnt+'건 삭제되었습니다.','ok');
+        if(okCnt<numIds.length)Toast.show((numIds.length-okCnt)+'건 삭제 실패','err');
         Pages._sqmEvalRefresh();
       };
       Modal.confirm({title:'🗑️ 평가 삭제',
@@ -12197,15 +12202,13 @@ _sqmEvalDetail(row){
     <div class="ir"><div class="il">PPM</div><div class="iv" style="font-weight:700;color:${row.ppm<500?'var(--ok)':row.ppm<2000?'var(--warn)':'var(--err)'}">${H.n(row.ppm)} PPM</div></div>
     <div class="ir"><div class="il">클레임</div><div class="iv" style="${row.complaint>0?'color:var(--err);font-weight:700':''}">${row.complaint}건</div></div>
     <div class="ir"><div class="il">평가기간/일</div><div class="iv">${H.e(row.period)} / ${row.eval_date}</div></div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Toast.show('평가서 인쇄(더미)','info')">🖨️ 인쇄</button>`});
+    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`+
+      `<button class="btn bpri bsm" onclick="Pages._evalSendMail(${row.id})">📧 결과 통보</button>`+
+      `<button class="btn bpri" onclick="Toast.show('평가서 인쇄(더미)','info')">🖨️ 인쇄</button>`});
 },
 _sqmEvalForm(row=null){
   /* [v2.394] 업체 평가 등록/수정 폼 */
   const isEdit=!!row;
-  const vendorOpts=(DB.vendors||[]).map(v=>
-    `<option value="${H.e(v.id||v.vendor_name)}" data-name="${H.e(v.vendor_name)}"
-      ${isEdit&&row.vendor_name===v.vendor_name?'selected':''}>${H.e(v.vendor_name)}</option>`
-  ).join('');
   const staffOpts=(DB.users||[]).map(u=>
     `<option value="${H.e(u.name||u.username)}"
       ${isEdit&&row.evaluator===(u.name||u.username)?'selected':''}>${H.e(u.name||u.username)}</option>`
@@ -12217,10 +12220,7 @@ _sqmEvalForm(row=null){
         +'<button class="btn bpri btn-f8" onclick="Pages._sqmEvalSave()">저장 <span class="kbd">F8</span></button>',
     body:`<div class="fg2">
       <div class="fgroup"><label class="fl req">거래처</label>
-        <select class="fc" id="evVendor"
-          onchange="const s=this.options[this.selectedIndex];document.getElementById('evVName').value=s.dataset.name||s.value">
-          <option value="">-- 선택 --</option>${vendorOpts}</select>
-        <input type="hidden" id="evVName" value="${H.e(isEdit?row.vendor_name||'':'')}">
+        ${Pages._sqmVendorAcField('evVendorInput','evVName',isEdit?row.vendor_name:'')}
       </div>
       <div class="fgroup"><label class="fl req">평가기간</label>
         <input class="fc" id="evPeriod" value="${isEdit?H.e(row.period||''):''}" placeholder="예) 2026-Q2">
@@ -12267,6 +12267,10 @@ _sqmEvalForm(row=null){
       <div class="fgroup" style="grid-column:1/-1"><label class="fl">비고</label>
         <textarea class="fc" id="evNote" rows="2">${H.e(isEdit?row.note||'':'')}</textarea>
       </div>
+      <div class="fgroup" style="grid-column:1/-1"><label class="fl">첨부파일</label>
+        <input class="fc" type="file" id="evFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="padding:5px;font-size:12px">
+        ${isEdit&&row.file_url?'<div style="margin-top:5px;font-size:12px"><a href="'+H.e(row.file_url)+'" target="_blank" style="color:#2563eb">📎 현재 파일 보기</a></div>':''}
+      </div>
     </div>`,
   });
   window._sqmEvalEditRow=row;
@@ -12287,21 +12291,30 @@ _sqmCalcTotal(){
 /* 업체 평가 저장 [v2.394] */
 async _sqmEvalSave(){
   const g=id=>document.getElementById(id)?.value||'';
-  const vName=g('evVName')||g('evVendor');
+  /* [v2.116] 자동완성 확정값(hidden evVName) 우선, 미확정 시 입력창 텍스트 그대로 사용 */
+  const vName=(g('evVName')||g('evVendorInput')).trim();
   const period=g('evPeriod').trim();
   const quality=Number(g('evQuality')),delivery=Number(g('evDelivery'));
   const price=Number(g('evPrice')),response=Number(g('evResponse'));
   const total=Number(g('evTotal'));
   const grade=g('evGrade');
   const evalDate=g('evDate');
-  if(!vName){Toast.show('거래처를 선택하세요.','warn');return;}
+  if(!vName){Toast.show('거래처를 입력하세요.','warn');return;}
   if(!period){Toast.show('평가기간을 입력하세요.','warn');return;}
   if(!quality&&!delivery){Toast.show('점수를 입력하세요.','warn');return;}
   if(!evalDate){Toast.show('평가일을 입력하세요.','warn');return;}
   const row=window._sqmEvalEditRow;
+  /* [v2.116] 첨부파일 업로드 처리 */
+  let file_url=row?.file_url||null;
+  const evFileEl=document.getElementById('evFile');
+  if(evFileEl?.files?.length){
+    const f=evFileEl.files[0];
+    const up=await SB.uploadFile('sqm_eval', f);
+    if(up?.url) file_url=up.url;
+  }
   const newRow={vendor_name:vName,period,quality,delivery,price,response,
     total,grade,ppm:Number(g('evPpm'))||0,complaint:Number(g('evComplaint'))||0,
-    eval_date:evalDate,evaluator:g('evEvaluator'),note:g('evNote')};
+    eval_date:evalDate,evaluator:g('evEvaluator'),note:g('evNote'),file_url};
   if(row?.id){
     const res=await SB.updateVendorEval(row.id,newRow);
     if(!res.ok) return;
@@ -12361,7 +12374,7 @@ async sqm_audit(){
         <option value="">전체 상태</option>
         ${['계획','진행중','완료','보류'].map(s=>`<option>${s}</option>`).join('')}
       </select>
-      <button class="btn bout bsm" onclick="SearchPop.open('sqm_audit')">🔎 <span class="kbd">F3</span></button>
+      <button class="btn bout bsm" onclick="document.getElementById('auditSearch')?.focus()" title="검색창으로 이동">🔎 <span class="kbd">F3</span></button>
     </div>
     <div class="stab-pane" data-tab="list" style="display:block"><div id="auditTbl"></div></div>
     <div class="stab-pane" data-tab="kanban" style="display:none"><div id="auditKanban"></div></div>`;
@@ -12386,26 +12399,31 @@ _auditRefresh(){
   Tbl.render({
     el:'#auditTbl',
     cols:[
-      {key:'vendor_name', label:'거래처명',  req:true},
-      {key:'audit_type',  label:'심사유형',  w:'70px',
+      /* [v2.116] 등간격 컬럼 너비 재정의 + 파일 컬럼 추가 */
+      {key:'vendor_name', label:'거래처명',  req:true, w:'120px'},
+      {key:'audit_type',  label:'심사유형',  w:'90px', align:'center',
         render:v=>`<span class="badge ${v==='정기'?'bblu':v==='수시'?'bamb':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'plan_date',   label:'계획일',   w:'90px', req:true},
       {key:'actual_date', label:'실시일',   w:'90px', render:v=>v||'-'},
-      {key:'auditor',     label:'심사자',   w:'72px'},
-      {key:'score',       label:'점수',     w:'60px', align:'center',
+      {key:'auditor',     label:'심사자',   w:'80px'},
+      {key:'score',       label:'점수',     w:'70px', align:'center',
         render:v=>v!=null?`<span style="font-weight:700;color:${v>=80?'#059669':v>=60?'#d97706':'#dc2626'}">${v}</span>`:'<span style="color:var(--tl)">-</span>'},
-      {key:'findings',    label:'지적사항'},
-      {key:'status',      label:'상태',     w:'68px',
+      {key:'findings',    label:'지적사항', w:'140px'},
+      {key:'status',      label:'상태',     w:'80px', align:'center',
         render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='진행중'?'bblu':v==='보류'?'bred':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'next_date',   label:'차기심사',  w:'90px', render:v=>v||'-'},
+      {key:'file_url',    label:'파일',     w:'64px', align:'center',
+        render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" class="btn bxs bblu" style="font-size:10px;padding:1px 7px;text-decoration:none">📎 보기</a>`:'<span style="color:var(--tl);font-size:11px">-</span>'},
     ],
     data:filtered,
     onRow:row=>Pages._sqmAuditDetail(row),
     onDel:async(ids)=>{
       const numIds=ids.map(Number);
       const _doDelete=async()=>{
-        for(const id of numIds) await SB.deleteVendorAudit(id);
-        Toast.show(numIds.length+'건 삭제','ok');
+        let okCnt=0;
+        for(const id of numIds){const r=await SB.deleteVendorAudit(id);if(r.ok)okCnt++;}
+        if(okCnt>0)Toast.show(okCnt+'건 삭제되었습니다.','ok');
+        if(okCnt<numIds.length)Toast.show((numIds.length-okCnt)+'건 삭제 실패','err');
         Pages._auditRefresh();
       };
       Modal.confirm({title:'🗑️ 심사 삭제',
@@ -12474,6 +12492,7 @@ _sqmAuditDetail(row){
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
         +`<button class="btn bgry bsm" onclick="Modal.close();Pages._sqmAuditForm(${JSON.stringify(row).replace(/</g,'\u003c')})">✏️ 수정</button>`
         +(row.status!=='완료'?`<button class="btn bgrn bsm" onclick="Modal.close();Pages._auditStatusChange(${row.id})">→ 다음단계</button>`:'')
+        +(row.status==='완료'?`<button class="btn bamb bsm" onclick="Modal.close();Pages._sqmAuditToEval(${row.id})" title="심사 결과를 업체평가에 자동 반영">⭐ 평가 등록</button>`:'')
         +`<button class="btn bpri bsm" onclick="Pages._auditSendMail(${row.id})">📧 결과 통보</button>`,
     body:`<div class="card" style="padding:16px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
       <div class="ir"><div class="il">거래처</div><div class="iv" style="font-weight:700">${H.e(row.vendor_name||'-')}</div></div>
@@ -12490,12 +12509,84 @@ _sqmAuditDetail(row){
   });
 },
 
+/* [v2.116] 협력사관리 고도화2 — 거래처 자연어검색 자동완성 공통 컴포넌트
+   심사 등록(_sqmAuditForm) / 평가 등록(_sqmEvalForm) 양쪽에서 공용으로 사용.
+   기존 <select> 방식은 거래처가 많아지면 찾기 어려워 텍스트 입력+검색 방식으로 교체.
+   inputId: 화면에 보이는 입력창 id / hiddenId: 확정된 거래처명을 담는 hidden input id */
+_sqmVendorAcField(inputId,hiddenId,curName){
+  const v=H.e(curName||'');
+  return `<div class="ac-wrap">
+    <input type="text" class="fc ac-input" id="${inputId}" autocomplete="off"
+      placeholder="거래처명을 입력해 검색 (예: 삼성, 엘지)" value="${v}"
+      oninput="Pages._sqmVendorAcInput('${inputId}','${hiddenId}')"
+      onfocus="Pages._sqmVendorAcInput('${inputId}','${hiddenId}')"
+      onblur="setTimeout(()=>{const d=document.getElementById('${inputId}_drop');if(d)d.classList.remove('show')},150)">
+    <div class="ac-drop" id="${inputId}_drop"></div>
+    <input type="hidden" id="${hiddenId}" value="${v}">
+  </div>`;
+},
+/* 입력값 기준 거래처 후보 검색 후 드롭다운 표시 */
+_sqmVendorAcInput(inputId,hiddenId){
+  const inp=document.getElementById(inputId);
+  const drop=document.getElementById(inputId+'_drop');
+  if(!inp||!drop) return;
+  const q=inp.value.trim().toLowerCase();
+  inp.classList.remove('ac-confirmed');
+  const hidden=document.getElementById(hiddenId);
+  if(hidden) hidden.value=''; /* 입력 중에는 확정 해제 */
+  const list=(DB.vendors||[]).filter(v=>!q||(v.vendor_name||'').toLowerCase().includes(q));
+  if(!list.length){
+    drop.innerHTML='<div class="ac-empty">일치하는 거래처가 없습니다</div>';
+    drop.classList.add('show');
+    return;
+  }
+  drop.innerHTML=list.slice(0,15).map(v=>
+    `<div class="ac-item" onmousedown="Pages._sqmVendorAcPick('${inputId}','${hiddenId}',${JSON.stringify(v.vendor_name).replace(/"/g,'&quot;')})">`+
+      H.e(v.vendor_name||'-')+
+      (v.ceo_name||v.biz_no?`<div class="ac-item-sub">${H.e(v.ceo_name||'')}${v.ceo_name&&v.biz_no?' · ':''}${H.e(v.biz_no||'')}</div>`:'')+
+    `</div>`
+  ).join('');
+  drop.classList.add('show');
+},
+/* 후보 클릭 시 확정 — input/hidden 값 동시 설정, 드롭다운 닫기 */
+_sqmVendorAcPick(inputId,hiddenId,name){
+  const inp=document.getElementById(inputId);
+  const hidden=document.getElementById(hiddenId);
+  const drop=document.getElementById(inputId+'_drop');
+  if(inp){inp.value=name;inp.classList.add('ac-confirmed');}
+  if(hidden) hidden.value=name;
+  if(drop) drop.classList.remove('show');
+},
+
+/* [v2.116] 심사→평가 자동연계 — 완료된 심사 데이터를 평가 등록 폼에 미리 채워서 전달
+   (보류 문서 제안사항: "심사 완료 시 거래처명/심사일 등 자동 전달") */
+_sqmAuditToEval(auditId){
+  const a=(DB.vendor_audits||[]).find(r=>r.id===auditId);
+  if(!a){Toast.show('심사 데이터를 찾을 수 없습니다.','err');return;}
+  const d=new Date(a.actual_date||a.plan_date||H.today());
+  const period=`${d.getFullYear()}-Q${Math.ceil((d.getMonth()+1)/3)}`;
+  const prefill={
+    vendor_name:a.vendor_name,
+    period,
+    eval_date:H.today(),
+    note:`[${a.audit_type||'정기'}심사 연계] 심사일 ${a.actual_date||a.plan_date||'-'} / 심사점수 ${a.score??'-'}점`+
+         (a.findings?` / 지적사항: ${a.findings}`:''),
+  };
+  Pages._sqmEvalForm(null);
+  /* 자동완성 입력창 + hidden 값 채우기는 모달 렌더 직후 수행 */
+  setTimeout(()=>{
+    const vi=document.getElementById('evVendorInput'),vh=document.getElementById('evVName');
+    if(vi) vi.value=prefill.vendor_name;
+    if(vh) vh.value=prefill.vendor_name;
+    const pe=document.getElementById('evPeriod'); if(pe) pe.value=prefill.period;
+    const ed=document.getElementById('evDate'); if(ed) ed.value=prefill.eval_date;
+    const nt=document.getElementById('evNote'); if(nt) nt.value=prefill.note;
+  },80);
+},
+
 /* 심사 등록/수정 폼 [v2.394] */
 _sqmAuditForm(row=null){
   const isEdit=!!row;
-  const vOpts=(DB.vendors||[]).map(v=>
-    `<option value="${H.e(v.vendor_name)}" ${isEdit&&row.vendor_name===v.vendor_name?'selected':''}>${H.e(v.vendor_name)}</option>`
-  ).join('');
   const uOpts=(DB.users||[]).map(u=>
     `<option value="${H.e(u.name||u.username)}" ${isEdit&&row.auditor===(u.name||u.username)?'selected':''}>${H.e(u.name||u.username)}</option>`
   ).join('');
@@ -12506,7 +12597,7 @@ _sqmAuditForm(row=null){
         +'<button class="btn bpri btn-f8" onclick="Pages._sqmAuditSave()">저장 <span class="kbd">F8</span></button>',
     body:`<div class="fg2">
       <div class="fgroup"><label class="fl req">거래처</label>
-        <select class="fc" id="auVendor"><option value="">-- 선택 --</option>${vOpts}</select></div>
+        ${Pages._sqmVendorAcField('auVendorInput','auVendor',isEdit?row.vendor_name:'')}</div>
       <div class="fgroup"><label class="fl req">심사유형</label>
         <select class="fc" id="auType">
           ${['정기','수시','특별','인증'].map(t=>`<option ${isEdit&&row.audit_type===t?'selected':''}>${t}</option>`).join('')}
@@ -12529,6 +12620,10 @@ _sqmAuditForm(row=null){
         <textarea class="fc" id="auFindings" rows="2">${H.e(isEdit?row.findings||'':'')}</textarea></div>
       <div class="fgroup" style="grid-column:1/-1"><label class="fl">시정조치 요청</label>
         <textarea class="fc" id="auCorrective" rows="2">${H.e(isEdit?row.corrective_req||'':'')}</textarea></div>
+      <div class="fgroup" style="grid-column:1/-1"><label class="fl">첨부파일</label>
+        <input class="fc" type="file" id="auFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="padding:5px;font-size:12px">
+        ${isEdit&&row.file_url?'<div style="margin-top:5px;font-size:12px"><a href="'+H.e(row.file_url)+'" target="_blank" style="color:#2563eb">📎 현재 파일 보기</a></div>':''}
+      </div>
     </div>`,
   });
   window._sqmAuditEditRow=row;
@@ -12537,16 +12632,25 @@ _sqmAuditForm(row=null){
 /* 심사 저장 [v2.394] */
 async _sqmAuditSave(){
   const g=id=>document.getElementById(id)?.value||'';
-  const vendor=g('auVendor').trim();
+  /* [v2.116] 자동완성 확정값(hidden) 우선, 미확정 시 입력창 텍스트 그대로 사용(직접입력 허용) */
+  const vendor=(g('auVendor')||g('auVendorInput')).trim();
   const planDate=g('auPlanDate');
-  if(!vendor){Toast.show('거래처를 선택하세요.','warn');return;}
+  if(!vendor){Toast.show('거래처를 입력하세요.','warn');return;}
   if(!planDate){Toast.show('계획일을 입력하세요.','warn');return;}
   const row=window._sqmAuditEditRow;
+  /* [v2.116] 첨부파일 업로드 처리 — 기존 교정등록(calFile)과 동일 패턴 */
+  let file_url=row?.file_url||null;
+  const auFileEl=document.getElementById('auFile');
+  if(auFileEl?.files?.length){
+    const f=auFileEl.files[0];
+    const up=await SB.uploadFile('sqm_audit', f);
+    if(up?.url) file_url=up.url;
+  }
   const newRow={vendor_name:vendor,audit_type:g('auType'),plan_date:planDate,
     actual_date:g('auActualDate')||null,auditor:g('auAuditor'),
     score:g('auScore')?Number(g('auScore')):null,
     status:g('auStatus')||'계획',next_date:g('auNextDate')||null,
-    findings:g('auFindings'),corrective_req:g('auCorrective')};
+    findings:g('auFindings'),corrective_req:g('auCorrective'),file_url};
   if(row?.id){
     const res=await SB.updateVendorAudit(row.id,newRow);
     if(!res.ok) return;
@@ -12611,28 +12715,82 @@ async _auditMailSend(){
   const body=document.getElementById('mailBody')?.value.trim();
   if(!to){Toast.show('수신 이메일을 입력하세요.','warn');return;}
   if(!subj){Toast.show('제목을 입력하세요.','warn');return;}
-  /* Gmail MCP 연동 — 없으면 mailto: 폴백 */
+  /* [v2.116] Gmail MCP 직접 fetch 방식 제거 — 브라우저에서 인증/CORS 문제로
+     항상 실패하던 코드였음. mailto: 직행으로 단순화.
+     ※ 향후 자동발송 필요 시: 이 블록을 EmailJS SDK 호출로 교체
+        (emailjs.send() — 클라이언트 단독으로 동작, 서버 불필요) */
   try{
-    const res=await fetch('https://gmailmcp.googleapis.com/mcp/v1',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'send_email',to,subject:subj,body,format:'text'})
-    });
-    if(res.ok){
-      /* 발송 이력 저장 */
-      const id=window._auditMailId;
-      if(id) await SB.updateVendorAudit(id,{result_sent:true,notify_sent:true});
-      Modal.close();
-      Toast.show('메일이 발송되었습니다.','ok');
-    } else {
-      throw new Error('발송 실패');
-    }
-  }catch(e){
-    /* 폴백: mailto: */
+    const id=window._auditMailId;
+    if(id) await SB.updateVendorAudit(id,{result_sent:true,notify_sent:true});
     const mailHref=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
     window.open(mailHref,'_blank');
     Modal.close();
     Toast.show('메일 앱이 열렸습니다. 직접 발송해 주세요.','info');
+  }catch(e){
+    Toast.show('메일 정보 저장 중 오류가 발생했습니다: '+(e.message||e),'err');
+  }
+},
+
+/* [v2.116] 업체평가 결과 통보 메일 — 보류 문서 제안사항 반영
+   (업체심사 _auditSendMail/_auditMailSend와 동일 패턴, 평가 전용) */
+async _evalSendMail(id){
+  const ev=(DB.vendor_evals||[]).find(r=>r.id===id);
+  if(!ev){Toast.show('평가 데이터를 찾을 수 없습니다.','err');return;}
+  const vendor=(DB.vendors||[]).find(v=>v.vendor_name===ev.vendor_name);
+  const email=vendor?.email||'';
+  Modal.open({
+    title:'📧 평가 결과 통보 메일',
+    size:'mlg',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
+        +'<button class="btn bpri" onclick="Pages._evalMailSend()">📧 발송</button>',
+    body:`<div class="fg2">
+      <div class="fgroup ff"><label class="fl req">수신 이메일</label>
+        <input class="fc" id="mailTo" value="${H.e(email)}" placeholder="vendor@company.com"></div>
+      <div class="fgroup ff"><label class="fl req">제목</label>
+        <input class="fc" id="mailSubj" value="[INNODIS QMS] ${H.e(ev.vendor_name)} 공급업체 평가 결과 통보 (${H.e(ev.period||'')})"></div>
+      <div class="fgroup" style="grid-column:1/-1"><label class="fl">내용</label>
+        <textarea class="fc" id="mailBody" rows="8">${H.e(`안녕하세요.
+
+INNODIS 품질관리팀에서 공급업체 평가 결과를 통보드립니다.
+
+◈ 평가 개요
+  - 업체명: ${ev.vendor_name}
+  - 평가기간: ${ev.period||'-'}
+  - 평가일: ${ev.eval_date||'-'}
+  - 종합점수: ${ev.total??'-'}점 (${ev.grade||'-'}등급)
+
+◈ 세부 점수
+  - 품질(40%): ${ev.quality??'-'}점
+  - 납기(30%): ${ev.delivery??'-'}점
+  - 가격(20%): ${ev.price??'-'}점
+  - 대응(10%): ${ev.response??'-'}점
+  - PPM: ${ev.ppm??0} / 클레임: ${ev.complaint??0}건
+
+◈ 비고
+${ev.note||'없음'}
+
+향후에도 지속적인 품질 향상에 협조해 주시기 바랍니다.
+
+INNODIS 품질관리팀 드림`)}</textarea></div>
+    </div>`,
+  });
+  window._evalMailId=id;
+},
+async _evalMailSend(){
+  const to=document.getElementById('mailTo')?.value.trim();
+  const subj=document.getElementById('mailSubj')?.value.trim();
+  const body=document.getElementById('mailBody')?.value.trim();
+  if(!to){Toast.show('수신 이메일을 입력하세요.','warn');return;}
+  if(!subj){Toast.show('제목을 입력하세요.','warn');return;}
+  try{
+    const id=window._evalMailId;
+    if(id) await SB.updateVendorEval(id,{notify_sent:true});
+    const mailHref=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+    window.open(mailHref,'_blank');
+    Modal.close();
+    Toast.show('메일 앱이 열렸습니다. 직접 발송해 주세요.','info');
+  }catch(e){
+    Toast.show('메일 정보 저장 중 오류가 발생했습니다: '+(e.message||e),'err');
   }
 },
 
@@ -12771,6 +12929,19 @@ async sqm_plan(){
       </div>
     </div>
 
+    <!-- [v2.116] 검색조건 + 퀵서치 + F3 추가 -->
+    <div class="tbar">
+      <div class="sw2"><input type="text" id="planSearch" placeholder="거래처명, 심사유형 검색..."
+        oninput="Pages._sqmPlanRefresh()"></div>
+      <select class="fsel" id="planStatusF" onchange="Pages._sqmPlanRefresh()">
+        <option value="">전체 상태</option>
+        ${['계획','진행중','완료','보류'].map(s=>`<option>${s}</option>`).join('')}
+      </select>
+      <button class="btn bout bsm" onclick="Pages._sqmPlanQuick('upcoming')" title="계획 상태만 보기">⏰ 임박심사</button>
+      <button class="btn bout bsm" onclick="Pages._sqmPlanQuick('')" title="필터 초기화">↺ 초기화</button>
+      <button class="btn bout bsm" onclick="document.getElementById('planSearch')?.focus()" title="검색창으로 이동">🔎 <span class="kbd">F3</span></button>
+    </div>
+
     <!-- 예정 심사 알림 -->
     ${upcoming.length?`<div class="card" style="margin-bottom:14px;border:1.5px solid #fde68a;background:#fefce8;padding:14px 18px">
       <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px">📅 예정된 심사 (${upcoming.length}건)</div>
@@ -12794,20 +12965,30 @@ async sqm_plan(){
       <div id="planKanban" style="padding:14px"></div>
     </div>`;
 
-  /* 칸반 렌더 */
+  Pages._sqmPlanRefresh();
+},
+/* [v2.116] 심사계획관리 — 검색/필터 적용 후 칸반 재렌더 */
+_sqmPlanRefresh(){
+  const q=(document.getElementById('planSearch')?.value||'').toLowerCase();
+  const st=document.getElementById('planStatusF')?.value||'';
+  const au=(DB.vendor_audits||[]).filter(a=>{
+    const mQ=!q||(a.vendor_name||'').toLowerCase().includes(q)||(a.audit_type||'').toLowerCase().includes(q);
+    const mS=!st||a.status===st;
+    return mQ&&mS;
+  });
   const el=document.getElementById('planKanban');
   if(el){
     const cols=['계획','진행중','완료','보류'];
     const CC={계획:'#2563eb',진행중:'#d97706',완료:'#059669',보류:'#dc2626'};
     let h='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">';
-    cols.forEach(st=>{
-      const items=au.filter(a=>a.status===st);
-      h+=`<div style="background:var(--bg2);border-radius:8px;border-top:3px solid ${CC[st]}">`;
-      h+=`<div style="padding:10px 14px;font-size:13px;font-weight:700;color:${CC[st]}">${st} <span style="background:${CC[st]};color:#fff;border-radius:20px;padding:1px 8px;font-size:11px">${items.length}</span></div>`;
+    cols.forEach(stKey=>{
+      const items=au.filter(a=>a.status===stKey);
+      h+=`<div style="background:var(--bg2);border-radius:8px;border-top:3px solid ${CC[stKey]}">`;
+      h+=`<div style="padding:10px 14px;font-size:13px;font-weight:700;color:${CC[stKey]}">${stKey} <span style="background:${CC[stKey]};color:#fff;border-radius:20px;padding:1px 8px;font-size:11px">${items.length}</span></div>`;
       h+='<div style="padding:4px 8px 8px">';
       items.forEach(a=>{
         h+=`<div class="card" style="padding:10px 12px;margin-bottom:8px;cursor:pointer"
-          onclick="Pages._sqmAuditDetail(${JSON.stringify(a).replace(/</g,'\u003c').replace(/"/g,'&quot;')})">
+          onclick="Pages._sqmAuditDetail(${JSON.stringify(a).replace(/</g,'\\u003c').replace(/"/g,'&quot;')})">
           <div style="font-size:12px;font-weight:700">${H.e(a.vendor_name||'-')}</div>
           <div style="font-size:11px;color:var(--tm);margin-top:3px">${H.e(a.audit_type||'-')} | ${H.e(a.plan_date||'-')}</div>
           ${a.score!=null?`<div style="font-size:11px;margin-top:3px">점수: <b>${a.score}</b></div>`:''}
@@ -12819,6 +13000,12 @@ async sqm_plan(){
     h+='</div>';
     el.innerHTML=h;
   }
+},
+/* [v2.116] 퀵서치 버튼 — 'upcoming': 계획 상태만, '': 전체 초기화 */
+_sqmPlanQuick(mode){
+  const sEl=document.getElementById('planSearch'); if(sEl) sEl.value='';
+  const stEl=document.getElementById('planStatusF'); if(stEl) stEl.value=mode==='upcoming'?'계획':'';
+  Pages._sqmPlanRefresh();
 },
 
 /* 납품 이력 [v2.394] */
@@ -12847,7 +13034,7 @@ async sqm_delivery(){
         <option value="">전체 판정</option>
         <option>합격</option><option>불합격</option>
       </select>
-      <button class="btn bout bsm" onclick="SearchPop.open('sqm_delivery')">🔎 <span class="kbd">F3</span></button>
+      <button class="btn bout bsm" onclick="document.getElementById('delivSearch')?.focus()" title="검색창으로 이동">🔎 <span class="kbd">F3</span></button>
     </div>
     <div id="delivTbl"></div>`;
   Pages._delivRefresh();
