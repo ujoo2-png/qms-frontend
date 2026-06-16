@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.113</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.114</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3103,55 +3103,26 @@ async equip(){
     </div></div>
     <div class="tbar" style="flex-wrap:wrap;gap:6px;align-items:center">
       <!-- ★ [v2.113] F3 의존 제거: 인라인 필터 드롭다운 방식으로 교체 ★ -->
-      <div class="sw2"><input type="text" id="eqSrch" placeholder="코드·계측기명·제조사 검색..." oninput="Pages._eqFilter()"></div>
-      <select class="fsel" id="eqFixType" onchange="Pages._eqFilter()" title="계측기구분"><option value="">계측기구분 전체</option><option>측정기기</option><option>시험기기</option><option>검사기기</option><option>기타</option></select>
-      <select class="fsel" id="eqCalM" onchange="Pages._eqFilter()" title="교정구분"><option value="">교정구분 전체</option><option>사내교정</option><option>사외교정</option></select>
-      <select class="fsel" id="eqStat" onchange="Pages._eqFilter()" title="상태"><option value="">상태 전체</option><option>정상</option><option>교정중</option><option>교정만료</option><option>폐기</option></select>
+      <div class="sw2"><input type="text" id="eqSrch" placeholder="코드·계측기명·제조사 검색..." oninput="Pages._equipMsaFilter()"></div>
+      <select class="fsel" id="eqFixType" onchange="Pages._equipMsaFilter()" title="계측기구분"><option value="">계측기구분 전체</option><option>측정기기</option><option>시험기기</option><option>검사기기</option><option>기타</option></select>
+      <select class="fsel" id="eqCalM" onchange="Pages._equipMsaFilter()" title="교정구분"><option value="">교정구분 전체</option><option>사내교정</option><option>사외교정</option></select>
+      <select class="fsel" id="eqStat" onchange="Pages._equipMsaFilter()" title="상태"><option value="">상태 전체</option><option>정상</option><option>교정중</option><option>교정만료</option><option>폐기</option></select>
       <span style="font-size:11px;color:var(--tm);white-space:nowrap">최근교정일</span>
-      <input type="date" class="fsel" id="eqLastFrom" onchange="Pages._eqFilter()" style="width:120px" title="최근교정일 시작">
+      <input type="date" class="fsel" id="eqLastFrom" onchange="Pages._equipMsaFilter()" style="width:120px" title="최근교정일 시작">
       <span style="font-size:11px;color:var(--tm)">~</span>
-      <input type="date" class="fsel" id="eqLastTo"   onchange="Pages._eqFilter()" style="width:120px" title="최근교정일 종료">
+      <input type="date" class="fsel" id="eqLastTo"   onchange="Pages._equipMsaFilter()" style="width:120px" title="최근교정일 종료">
       <span style="font-size:11px;color:var(--tm);white-space:nowrap">차기교정일</span>
-      <input type="date" class="fsel" id="eqNextFrom" onchange="Pages._eqFilter()" style="width:120px" title="차기교정일 시작">
+      <input type="date" class="fsel" id="eqNextFrom" onchange="Pages._equipMsaFilter()" style="width:120px" title="차기교정일 시작">
       <span style="font-size:11px;color:var(--tm)">~</span>
-      <input type="date" class="fsel" id="eqNextTo"   onchange="Pages._eqFilter()" style="width:120px" title="차기교정일 종료">
-      <button class="btn bout bsm" onclick="Pages._eqFilterReset()" title="필터 초기화">↺ 초기화</button>
+      <input type="date" class="fsel" id="eqNextTo"   onchange="Pages._equipMsaFilter()" style="width:120px" title="차기교정일 종료">
+      <button class="btn bout bsm" onclick="Pages._equipMsaFilterReset()" title="필터 초기화">↺ 초기화</button>
     </div>
     <div id="eqTbl"></div>`;
-  /* [v2.113] 컬럼 정의 단일화 — _eqRender() 한 곳에서 관리 */
-  Pages._eqRender(DB.equip);
-}
-,
-/* [v2.394] 계측기 상세 팝업 — row 데이터 연결 */
-_eqDetail(row){
-  if(!row) return;
-  const d=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
-  const statusColor=row.status==='교정만료'?'#ef4444':row.status==='교정중'?'#f59e0b':'#22c55e';
-  Modal.open({title:'🔬 계측기 상세',size:'mlg',
-    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'
-         +'<button class="btn bpri" id="eqDetailEdit">✏️ 수정</button>',
-    body:'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:13px">'
-      +'<div><span style="color:var(--tm)">계측기코드</span><div style="font-weight:700;margin-top:2px">'+H.e(row.code||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">계측기명</span><div style="font-weight:700;margin-top:2px">'+H.e(row.name||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">모델번호</span><div style="margin-top:2px">'+H.e(row.model||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">제조사</span><div style="margin-top:2px">'+H.e(row.maker||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">측정범위</span><div style="margin-top:2px">'+H.e(row.range||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">분해능</span><div style="margin-top:2px">'+H.e(row.res||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">보관위치</span><div style="margin-top:2px">'+H.e(row.loc||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">사용자</span><div style="margin-top:2px">'+H.e(row.operator||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">최근교정일</span><div style="margin-top:2px">'+H.e(row.last||'-')+'</div></div>'
-      +'<div><span style="color:var(--tm)">차기교정일</span><div style="margin-top:2px">'+H.e(row.next||'-')+(d!==null?'<span style="margin-left:6px;font-size:11px;color:'+statusColor+'">'+( d<0?'만료':'D-'+d)+'</span>':'')+'</div></div>'
-      +'<div><span style="color:var(--tm)">사용여부</span><div style="margin-top:2px"><span class="badge '+(row.active===0||row.active==='0'?'bred':'bgrn')+'">'+(row.active===0||row.active==='0'?'불용':'사용')+'</span></div></div>'
-      +'<div><span style="color:var(--tm)">상태</span><div style="margin-top:2px"><span class="badge" style="background:'+statusColor+';color:#fff">'+H.e(row.status||'-')+'</span></div></div>'
-      +'</div>',
-  });
-  setTimeout(()=>{
-    const b=document.getElementById('eqDetailEdit');
-    if(b) b.onclick=()=>{Modal.close();Pages._eqForm(row);};
-  },50);
+  /* [v2.113] 컬럼 정의 단일화 — _equipMsaRender() 한 곳에서 관리 */
+  Pages._equipMsaRender(DB.equip);
 },
-
-_eqForm(row=null){
+/* [v2.114] 구버전 _equipMsaDetail 제거, _equipMsaForm 연결 */
+_equipMsaForm(row=null){
   const isEdit=!!row;
   const optSel=c=>c?' selected':'';
   Modal.open({title:isEdit?'계측기 수정':'계측기 등록',size:'mlg',
@@ -3418,7 +3389,7 @@ _eqPrintExec(){
   printWin.document.close();
 },
 
-_eqDetail(row){
+_equipMsaDetail(row){
   /* [v2.394 Phase2] 탭 구조: 기본정보 / 교정이력 / 변경이력 */
   const sCls=H.equipStatus(row.next)==='교정만료'?'bred':H.equipStatus(row.next)==='교정중'?'bamb':'bgrn';
   const d2=row.next?Math.ceil((new Date(row.next)-new Date())/(864e5)):null;
@@ -3457,7 +3428,7 @@ _eqDetail(row){
     '<button class="btn bout" onclick="Modal.close()">닫기</button>'+
     '<button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._eqQR(&quot;'+H.e(row.code)+'&quot;,&quot;'+H.e(row.name)+'&quot;)">📱 QR</button>'+
     '<button class="btn bgh" onclick="Pages._calForm(&quot;'+H.e(row.code)+'&quot;)">📐 교정 등록</button>'+
-    '<button class="btn bpri" onclick="Pages._eqForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')" title="수정">✏️ 수정</button>';
+    '<button class="btn bpri" onclick="Pages._equipMsaForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')" title="수정">✏️ 수정</button>';
 
   Modal.open({title:'계측기 상세 — '+H.e(row.name),size:'mlg',body,foot});
 
@@ -3849,7 +3820,7 @@ _calCostChart(){
 },
 /* [v2.113] 계측기 실시간 필터 — 인라인 드롭다운 방식 (SearchPop 의존 제거)
    필터 항목: 텍스트검색 / 계측기구분 / 교정구분 / 상태 / 최근교정일 범위 / 차기교정일 범위 */
-_eqFilter(){
+_equipMsaFilter(){
   const q        =(document.getElementById('eqSrch')?.value||'').toLowerCase();
   const fixType  = document.getElementById('eqFixType')?.value||'';
   const calM     = document.getElementById('eqCalM')?.value||'';
@@ -3873,17 +3844,17 @@ _eqFilter(){
     return true;
   });
   /* 필터 결과를 메인 equip() 와 동일한 컬럼 정의로 렌더 */
-  Pages._eqRender(filtered);
+  Pages._equipMsaRender(filtered);
 },
 /* [v2.113] 필터 초기화 */
-_eqFilterReset(){
+_equipMsaFilterReset(){
   ['eqSrch','eqFixType','eqCalM','eqStat','eqLastFrom','eqLastTo','eqNextFrom','eqNextTo']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  Pages._eqRender(DB.equip);
+  Pages._equipMsaRender(DB.equip);
 },
-/* [v2.113] 공통 렌더 함수 — equip()과 _eqFilter() 모두 이 함수 호출
+/* [v2.113] 공통 렌더 함수 — equip()과 _equipMsaFilter() 모두 이 함수 호출
    ★ 컬럼 정의를 여기 한 곳에서만 관리 (중복 방지) ★ */
-_eqRender(data){
+_equipMsaRender(data){
   Tbl.render({el:'#eqTbl',cols:[
     /* [v2.113] 확정 컬럼 순서: 계측기구분→교정구분→코드→명→모델→제조번호→제조사
                 →범위→분해능→위치→사용자→최근교정일→차기교정일→사용여부→상태→사용용도→구입일→불용사유→파일 */
@@ -3946,7 +3917,7 @@ _eqRender(data){
       danger:true, onOk:_doDelete
     });
   },
-  onRow:row=>Pages._equipCalDetail(row.id)});
+  onRow:row=>Pages._equipMsaDetail(row)});
 },
 
 
