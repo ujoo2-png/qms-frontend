@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.116</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.117</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3412,15 +3412,17 @@ _equipMsaDetail(row){
     '<div class="ir"><div class="il">상태</div><div class="iv"><span class="badge '+sCls+'">'+H.e(H.equipStatus(row.next))+'</span></div></div>'+
     '</div>';
 
-  /* 탭 컨테이너 */
+  /* 탭 컨테이너 — [v2.117] 수리이력 탭 복구 (기존 _equipCalDetail에 있던 기능) */
   const body=
     '<div style="display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--bd)">'+
     '<button class="eq-dtab on" data-tab="info" onclick="Pages._eqDTab(this)" style="padding:6px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--pri);border-bottom:2px solid var(--pri);margin-bottom:-2px">📋 기본정보</button>'+
     '<button class="eq-dtab" data-tab="cal" onclick="Pages._eqDTab(this)" style="padding:6px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--tm)">📐 교정이력</button>'+
+    '<button class="eq-dtab" data-tab="repair" onclick="Pages._eqDTab(this)" style="padding:6px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--tm)">🔧 수리이력</button>'+
     '<button class="eq-dtab" data-tab="log" onclick="Pages._eqDTab(this)" style="padding:6px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--tm)">📝 변경이력</button>'+
     '</div>'+
     '<div id="eqDPane_info">'+infoHtml+'</div>'+
     '<div id="eqDPane_cal" style="display:none"><div class="spin"></div></div>'+
+    '<div id="eqDPane_repair" style="display:none"><div id="eqDetailRepair"><div class="spin"></div></div></div>'+
     '<div id="eqDPane_log" style="display:none"><div class="spin"></div></div>'+
     '<div id="eqCmt" style="margin-top:12px"></div>';
 
@@ -3488,10 +3490,17 @@ _eqDTab(btn){
     b.classList.toggle('on',on);
   });
   const tab=btn.dataset.tab;
-  ['info','cal','log'].forEach(t=>{
+  ['info','cal','repair','log'].forEach(t=>{
     const p=document.getElementById('eqDPane_'+t);
     if(p) p.style.display=t===tab?'block':'none';
   });
+  /* [v2.117] 수리이력 탭: 첫 진입 시 로드 */
+  if(tab==='repair'){
+    const repairPane=document.getElementById('eqDPane_repair');
+    if(repairPane&&repairPane.querySelector('.spin')){
+      Pages._loadEquipRepairs();
+    }
+  }
   /* 변경이력 탭: 첫 진입 시 로드 */
   if(tab==='log'){
     const logPane=document.getElementById('eqDPane_log');
@@ -3499,6 +3508,18 @@ _eqDTab(btn){
       Pages._loadEquipLogs(logPane);
     }
   }
+},
+/* [v2.117] 수리이력 탭 최초 진입 시 비동기 로드 — window._curEqRow 기준 */
+async _loadEquipRepairs(){
+  const row=window._curEqRow;
+  if(!row){const el=document.getElementById('eqDetailRepair');if(el)el.innerHTML='<div style="color:var(--tm);font-size:12px;padding:12px">계측기 정보를 찾을 수 없습니다.</div>';return;}
+  try{
+    window._curRepairs=(typeof SB!=='undefined'&&SB.getRepairs)?await SB.getRepairs(row.code):[];
+  }catch(e){
+    window._curRepairs=[];
+    Toast.show('수리이력 로드 실패: '+(e.message||e),'err');
+  }
+  Pages._repairRenderList();
 },
 
 async _loadEquipLogs(pane){
