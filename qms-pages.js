@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.114</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.115</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3426,11 +3426,13 @@ _equipMsaDetail(row){
 
   const foot=
     '<button class="btn bout" onclick="Modal.close()">닫기</button>'+
+    '<button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._equipMsaHistoryCardOpen(this)">🪪 이력카드</button>'+
     '<button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._eqQR(&quot;'+H.e(row.code)+'&quot;,&quot;'+H.e(row.name)+'&quot;)">📱 QR</button>'+
     '<button class="btn bgh" onclick="Pages._calForm(&quot;'+H.e(row.code)+'&quot;)">📐 교정 등록</button>'+
     '<button class="btn bpri" onclick="Pages._equipMsaForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')" title="수정">✏️ 수정</button>';
 
   Modal.open({title:'계측기 상세 — '+H.e(row.name),size:'mlg',body,foot});
+  window._curEqRow=row; /* [v2.115] 이력카드 버튼용 현재 row 보관 */
 
   /* 교정이력 + 댓글 비동기 로드 */
   setTimeout(async()=>{
@@ -3613,6 +3615,23 @@ cal(){
         onOk:_doDelete
       });
     }});
+},
+/* [v2.115] 계측기 상세 팝업 — 이력카드 버튼 핸들러
+   window._curEqRow(현재 상세 row) 기준으로 수리이력 비동기 로드 후 이력카드 출력 */
+async _equipMsaHistoryCardOpen(btn){
+  const row=window._curEqRow;
+  if(!row){Toast.show('계측기 정보를 찾을 수 없습니다.','err');return;}
+  const origText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='로딩 중...';}
+  try{
+    window._curRepairs=(typeof SB!=='undefined'&&SB.getRepairs)?await SB.getRepairs(row.code):[];
+    if(!DB.cals||!DB.cals.length){const ld=await SB.getCals();if(ld)DB.cals=ld;}
+    Pages._equipMsaHistoryCard(row);
+  }catch(e){
+    Toast.show('이력카드 데이터 로드 실패: '+(e.message||e),'err');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=origText;}
+  }
 },
 _calForm(equip_code, calRow){
   /* [v2.394 Phase2] 교정 등록/수정 폼 */
@@ -10732,7 +10751,7 @@ async _equipCalDetail(id){
   Modal.open({title:'🔬 계측기 상세 — '+H.e(row.name||'-'),size:'mlg',
     foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'+
          (row.file_url?'<a href="'+H.e(row.file_url)+'" target="_blank" class="btn bblu bsm">📎 파일 보기</a>':'')+
-         '<button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._eqHistoryCard(window._curEqRow)">🪪 이력카드</button>'+
+         '<button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._equipMsaHistoryCard(window._curEqRow)">🪪 이력카드</button>'+
          '<button class="btn bpri bsm" onclick="Modal.close();Pages._equipCalForm('+id+')">✏️ 수정</button>',
     body:'<div class="stabs" style="margin-bottom:10px">'+
       '<button class="stab-btn on" data-tab="basic" onclick="Pages._eqDetailTab(\'basic\',this)">📋 기본정보</button>'+
@@ -10832,7 +10851,7 @@ async _repairDel(id){
   window._curRepairs=await SB.getRepairs(row.code);
   Pages._repairRenderList();
 },
-_eqHistoryCard(row){
+_equipMsaHistoryCard(row){
   var code=row.code;
   var esc=function(s){return H.e(String(s==null?'':s));};
   var cals=(DB.cals||[]).filter(function(c){return c.equip_code===code;})
