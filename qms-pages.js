@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.127</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.128</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -369,17 +369,29 @@ async _setUserRole(userId, newRole){
   Toast.show(`${username} 권한이 ${{admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'}[newRole]||newRole}으로 변경되었습니다.`,'ok');
 },
 
+/* [v2.128] 메뉴별 접근 권한 — 그룹 단위 전체 켜기/끄기 */
+_permToggleGroup(groupIdx,role){
+  const g=(window._menuGroupsRef||[])[groupIdx];
+  if(!g) return;
+  const chks=g.pages.map(p=>document.querySelector(`.permChk[data-page="${p.page}"][data-role="${role}"]`));
+  const allOn=chks.every(c=>c&&c.checked);
+  const next=!allOn;
+  g.pages.forEach((p,i)=>{
+    App.perms[`${p.page}_${role}`]=next;
+    if(chks[i]) chks[i].checked=next;
+  });
+},
 /* 접근 권한 저장 (sessionStorage, v2.394) */
 /* [v2.394] perms 저장 — sessionStorage + SB users 테이블 */
-_savePerms(){
+async _savePerms(){
   try{
     const permsStr=JSON.stringify(App.perms||{});
     sessionStorage.setItem('qms_perms',permsStr);
-    /* SB users 테이블에도 저장 (perms 컬럼) */
-    if(typeof _sb!=='undefined'&&_sb&&Auth._u?.id){
-      /* [v2.65 S5] .eq('id','system') → Auth._u?.id 수정 */
-      if(Auth._u?.id) _sb.from('users').update({perms:permsStr}).eq('id',Auth._u.id).then(()=>{});
-    }
+    /* [v2.128] 전역 설정 테이블(app_settings)에 저장 — 모든 사용자/세션 공통 적용.
+       기존엔 로그인한 관리자 개인의 users.perms에 저장되어 다른 사용자/세션에서
+       보이지 않고, 다시 읽어오는 코드도 없어 sessionStorage만으로 동작하던 버그 수정 */
+    const res=await SB.saveRolePerms(App.perms||{});
+    if(!res.ok) return;
     Toast.show('권한 설정이 저장되었습니다.','ok');
   }catch(e){Toast.show('저장 실패: '+e.message,'err');}
 },
@@ -909,7 +921,8 @@ _iForm(row=null){
       <div class="fgroup"><label class="fl">주 거래처</label>
         <div style="position:relative">
           <input class="fc" id="ivn" list="ivnList" placeholder="직접 입력 또는 목록에서 선택" 
-            value="${H.e(row?.vendor_name||DB.vendors.find(v=>v.id===row?.vendor_id)?.vendor_name||'')}">
+            value="${H.e(row?.vendor_name||DB.vendors.find(v=>v.id===row?.vendor_id)?.vendor_name||'')}"
+            oninput="(function(){var v=document.getElementById('ivn').value.trim();var ok=(DB.vendors||[]).some(function(x){return x.vendor_name===v;});document.getElementById('ivn').style.borderColor=ok?'var(--pri)':'';document.getElementById('ivn').style.background=ok?'#eff6ff':'';})()">
           <datalist id="ivnList">
             ${DB.vendors.map(v=>`<option value="${H.e(v.vendor_name)}">`).join('')}
           </datalist>
@@ -7734,6 +7747,12 @@ async settings(){
     const fresh=await SB.getUsers();
     if(fresh&&fresh.length>0) DB.users=fresh;
   }
+  /* [v2.128] 메뉴별 접근 권한 — 전역 설정(app_settings)에서 최신값 로드.
+     sessionStorage 캐시만 있던 경우(다른 세션/재로그인) 서버값으로 갱신 */
+  try{
+    const rolePerms=await SB.getRolePerms();
+    if(rolePerms) App.perms=rolePerms;
+  }catch(e){console.warn('[settings] role_perms 로드 실패',e);}
   const isAdmin=Auth._u?.role==='admin';
   /* [v2.65] 공지사항 최신 로드 — Supabase 영속화
      [버그수정] RLS 오류/네트워크 오류 시 App.notices(더미) 유지
@@ -7758,27 +7777,71 @@ async settings(){
 
   const MENU_GROUPS=[
     {group:'기준정보', pages:[
-      {page:'items',    label:'품목 등록'},
-      {page:'vendors',  label:'거래처 등록'},
+      {page:'items',     label:'품목 등록'},
+      {page:'vendors',   label:'거래처 등록'},
+      {page:'users',     label:'사원관리'},
     ]},
     {group:'품질관리', pages:[
       {page:'quality_dash', label:'품질현황 대시보드'},
-      {page:'insp_in',  label:'수입검사'},
-      {page:'insp_pr',  label:'공정검사'},
-      {page:'insp_pu',  label:'구매검사'},
-      {page:'insp_ou',  label:'외주검사'},
-      {page:'insp_fi',  label:'최종검사'},
-      {page:'nc',       label:'부적합 관리'},
+      {page:'insp_in',   label:'수입검사'},
+      {page:'insp_pr',   label:'공정검사'},
+      {page:'insp_pu',   label:'구매검사'},
+      {page:'insp_ou',   label:'외주검사'},
+      {page:'insp_fi',   label:'최종검사'},
+      {page:'nc',        label:'부적합 관리'},
+      {page:'nc_8d',     label:'8D Report'},
+      {page:'nc_dispose',label:'반품/폐기 처리'},
+      {page:'nc_trend',  label:'불량 트렌드'},
+    ]},
+    {group:'검사 고도화', pages:[
+      {page:'insp_std',  label:'검사 기준서'},
+      {page:'insp_cert', label:'검사 성적서'},
+      {page:'lot_trace', label:'LOT 추적성'},
+      {page:'insp_hold', label:'Hold 관리'},
+      {page:'insp_reinsp',label:'재검사 관리'},
+    ]},
+    {group:'공급업체 품질', pages:[
+      {page:'sqm_plan',    label:'심사계획관리'},
+      {page:'sqm_audit',   label:'업체 심사'},
+      {page:'sqm_eval',    label:'업체 평가'},
+      {page:'sqm_delivery',label:'납품이력'},
+      {page:'sqm_dash',    label:'SQM 대시보드'},
+    ]},
+    {group:'SPC 통계관리', pages:[
+      {page:'spc_chart',  label:'관리도'},
+      {page:'spc_cpk',    label:'공정능력 (Cp/Cpk)'},
+      {page:'spc_pareto', label:'파레토 분석'},
     ]},
     {group:'계측기관리', pages:[
-      {page:'equip',    label:'장비 현황'},
-      {page:'cal',      label:'교정 관리'},
+      {page:'equip',          label:'계측기 등록'},
+      {page:'cal',            label:'교정 관리'},
+      {page:'msa',            label:'MSA 분석'},
+      {page:'eq_mgmt',        label:'설비 등록 관리'},
+      {page:'eq_pm',          label:'예방정비(PM)'},
+      {page:'eq_as',          label:'고장/AS 관리'},
+      {page:'eq_cost',        label:'유지보수 비용'},
+      {page:'eq_manual',      label:'설비 매뉴얼'},
+      {page:'eq_machine_card',label:'마이머신카드'},
+      {page:'eq_dashboard',   label:'OEE/KPI 대시보드'},
+      {page:'eq_dept',        label:'부서별 보유현황'},
     ]},
     {group:'문서관리', pages:[
-      {page:'docs',     label:'문서 목록'},
-      {page:'car',      label:'시정조치'},
+      {page:'docs',             label:'문서 목록'},
+      {page:'doc_history_home', label:'개정 이력'},
+      {page:'doc_search',       label:'지식 검색'},
+      {page:'doc_recommend',    label:'연관 문서'},
+      {page:'doc_dashboard',    label:'현황 대시보드'},
+      {page:'doc_distribution', label:'배포 관리'},
+      {page:'doc_review_cycle', label:'검토 주기'},
+      {page:'doc_approval',     label:'결재함'},
+      {page:'rec',              label:'기록 관리'},
+    ]},
+    {group:'개선활동', pages:[
+      {page:'car',   label:'시정조치 (CAR)'},
+      {page:'audit', label:'내부심사'},
     ]},
   ];
+  window._menuGroupsRef=MENU_GROUPS; /* [v2.128] _permToggleGroup에서 참조용 */
   const ROLES=['admin','manager','user','viewer'];
   const ROLE_LABEL={admin:'관리자',manager:'매니저',user:'사용자',viewer:'뷰어'};
   const ROLE_COLOR={admin:'background:#7c3aed;color:#fff',manager:'background:#2563eb;color:#fff',
@@ -7873,14 +7936,21 @@ async settings(){
           <th style="min-width:100px">메뉴</th>
           ${ROLES.map(r=>`<th style="width:72px;text-align:center">${ROLE_LABEL[r]}</th>`).join('')}
         </tr></thead>
-        <tbody>${MENU_GROUPS.map(g=>`
-          <tr><td colspan="5" style="background:var(--bg2);font-weight:700;padding:6px 10px;font-size:11px;color:var(--tm)">${g.group}</td></tr>
+        <tbody>${MENU_GROUPS.map((g,gi)=>`
+          <tr><td style="background:var(--bg2);font-weight:700;padding:6px 10px;font-size:11px;color:var(--tm)">${g.group}</td>
+          ${ROLES.map(r=>r==='admin'
+            ?`<td style="background:var(--bg2);text-align:center">-</td>`
+            :`<td style="background:var(--bg2);text-align:center">
+                <button type="button" class="btn bxs bout" style="font-size:9px;padding:2px 5px"
+                  onclick="Pages._permToggleGroup(${gi},'${r}')" title="${g.group} 전체 켜기/끄기">전체</button>
+              </td>`).join('')}
+          </tr>
           ${g.pages.map(p=>`<tr>
             <td style="padding-left:18px">${p.label}</td>
             ${ROLES.map(r=>`<td style="text-align:center">
               ${r==='admin'
                 ?`<span title="관리자는 항상 접근 가능">✅</span>`
-                :`<input type="checkbox" ${getPerm(p.page,r)?'checked':''}
+                :`<input type="checkbox" class="permChk" data-page="${p.page}" data-role="${r}" ${getPerm(p.page,r)?'checked':''}
                    onchange="App.perms['${permKey(p.page,r)}']=this.checked">`}
             </td>`).join('')}
           </tr>`).join('')}`).join('')}
@@ -13780,10 +13850,10 @@ _disposePrint(){
     @page{size:210mm 297mm;margin:0}
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Malgun Gothic',sans-serif}
-    .page{width:210mm;height:297mm;position:relative;page-break-after:always}
+    .page{width:210mm;height:297mm;position:relative;page-break-after:always;page-break-inside:avoid;overflow:hidden}
     .page:last-child{page-break-after:auto}
-    .half{height:148.5mm;padding:10mm 14mm;position:relative;display:flex;flex-direction:column}
-    .cut-line{position:relative;border-top:1px dashed #94a3b8;height:0}
+    .half{height:148mm;padding:9mm 14mm;position:relative;display:flex;flex-direction:column;overflow:hidden;page-break-inside:avoid}
+    .cut-line{position:relative;border-top:1px dashed #94a3b8;height:0;line-height:0;font-size:0}
     .cut-line .scissors{position:absolute;background:#fff;padding:0 6px;font-size:11px;color:#64748b;left:50%;top:0;transform:translate(-50%,-50%)}
     .doc-title{display:flex;align-items:center;border-bottom:2px solid #1e293b;padding-bottom:6px;margin-bottom:10px;gap:10px}
     .logo-wrap{flex:0 0 auto}

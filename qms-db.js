@@ -1297,6 +1297,27 @@ const SB={
     DB.disposals=(DB.disposals||[]).filter(r=>r.id!==id);
     return{ok:true};
   },
+
+  /* ── 메뉴별 접근 권한 [v2.128] ── */
+  /* 역할(admin/manager/user/viewer)별 메뉴 접근 권한은 개인 계정이 아닌
+     전역 설정이므로, 로그인 사용자 개인의 users.perms가 아니라
+     별도 app_settings(key/value) 테이블에 저장 — 모든 사용자/세션에서
+     동일하게 적용되고, 재로그인해도 유지됨 */
+  async getRolePerms(){
+    if(!_sb) return null;
+    try{
+      const {data,error}=await _sb.from('app_settings').select('value').eq('key','role_perms').maybeSingle();
+      if(error||!data) return null;
+      return typeof data.value==='string'?JSON.parse(data.value):data.value;
+    }catch(e){console.warn('[SB] role_perms 조회 실패',e);return null;}
+  },
+  async saveRolePerms(perms){
+    if(!_sb) return{ok:true};
+    const payload={key:'role_perms', value:JSON.stringify(perms||{})};
+    const {error}=await _sb.from('app_settings').upsert(payload,{onConflict:'key'});
+    if(error){Toast.show('권한 저장 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true};
+  },
 };
 
 /* ══ 전역 상태 ══ *//* ══ DB ══ */
