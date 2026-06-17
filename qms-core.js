@@ -252,9 +252,18 @@ const Auth={
   },
 
   /* 로그인 성공 공통 처리 */
-  _doLoginSuccess(user){
+  async _doLoginSuccess(user){
     this._cur='user'; this._u=user;
     sessionStorage.setItem('qms_auth',JSON.stringify({cur:'user',u:user}));
+    /* [v2.129] 회사 로고 복원 — app_settings(logo_url)에서 로드.
+       기존엔 base64를 App.logo(메모리)에만 저장해 영속화/복원이 전혀
+       없었음. 처음 한 번만 영속 저장소에서 읽어와 적용 */
+    try{
+      if(typeof SB!=='undefined'&&SB.getAppSetting){
+        const logoUrl=await SB.getAppSetting('logo_url');
+        if(logoUrl) applyLogo(logoUrl);
+      }
+    }catch(e){console.warn('[Auth] 로고 복원 실패',e);}
     const roleLabel={'admin':'관','manager':'장','user':'사'};
     ['uav','uname','urole','tbuser'].forEach((el,i)=>{
       const e=document.getElementById(el);

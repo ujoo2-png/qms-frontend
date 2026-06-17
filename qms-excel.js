@@ -15,13 +15,31 @@ Pages._uploadLogo =function(inp){Cfg.uploadLogo(inp);};
 Pages._removeLogo =function(){Cfg.deleteLogo();};
 /* ══ 설정 액션 ══ */
 var Cfg=window.Cfg={
-  uploadLogo(inp){
+  async uploadLogo(inp){
     const f=inp.files[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=e=>{applyLogo(e.target.result);Toast.show('로고가 등록되었습니다.','ok');Pages.settings()};
-    r.readAsDataURL(f);
+    Toast.show('로고 업로드 중...','info',1500);
+    const up=await SB.uploadFile('logo', f);
+    if(!up){
+      /* [v2.129] SB 연동 실패(로컬 환경 등) 시 기존 방식(base64, 휘발성)으로 폴백 */
+      const r=new FileReader();
+      r.onload=e=>{applyLogo(e.target.result);Toast.show('로고가 등록되었습니다. (임시 — 저장소 미연동)','warn');Pages.settings()};
+      r.readAsDataURL(f);
+      return;
+    }
+    const res=await SB.saveAppSetting('logo_url', up.url);
+    if(!res.ok){Toast.show('로고는 업로드됐지만 설정 저장에 실패했습니다.','warn');}
+    applyLogo(up.url);
+    Toast.show('로고가 등록되었습니다.','ok');
+    Pages.settings();
   },
-  deleteLogo(){Modal.confirm({title:'로고 삭제',msg:'로고를 삭제하시겠습니까?',danger:true,onOk:()=>{applyLogo(null);Toast.show('삭제되었습니다.','ok');Pages.settings()}})},
+  async deleteLogo(){
+    Modal.confirm({title:'로고 삭제',msg:'로고를 삭제하시겠습니까?',danger:true,onOk:async()=>{
+      await SB.saveAppSetting('logo_url','');
+      applyLogo(null);
+      Toast.show('삭제되었습니다.','ok');
+      Pages.settings();
+    }});
+  },
   noticeForm(idx=null){
     const n=idx!=null?App.notices[idx]:{title:'',body:'',author:'관리자',date:H.today(),expire:'',show:true};
     Modal.open({title:idx!=null?'공지 수정':'공지 등록',size:'mmd',

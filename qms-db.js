@@ -1318,6 +1318,22 @@ const SB={
     if(error){Toast.show('권한 저장 실패: '+error.message,'err');return{ok:false};}
     return{ok:true};
   },
+
+  /* ── 범용 전역 설정 키-값 [v2.129] — 로고 URL 등 재사용 가능 ── */
+  async getAppSetting(key){
+    if(!_sb) return null;
+    try{
+      const {data,error}=await _sb.from('app_settings').select('value').eq('key',key).maybeSingle();
+      if(error||!data) return null;
+      return data.value;
+    }catch(e){console.warn('[SB] app_settings 조회 실패',e);return null;}
+  },
+  async saveAppSetting(key,value){
+    if(!_sb) return{ok:true};
+    const {error}=await _sb.from('app_settings').upsert({key,value},{onConflict:'key'});
+    if(error){return{ok:false,error};}
+    return{ok:true};
+  },
 };
 
 /* ══ 전역 상태 ══ *//* ══ DB ══ */
