@@ -311,9 +311,13 @@ const SB={
   /* 멘션 삭제 (soft delete: deleted_at 기록) */
   async deleteMention(id){
     if(!_sb){DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};}
-    /* [v2.394] 소프트 삭제 — deleted_at 설정 (복구 가능) */
-    const res=await SB._softDelete('mentions', [id]);
-    if(!res.ok) return {ok:false};
+    /* [v2.125] soft delete -> hard delete 전환. 멘션함에는 삭제 복구 기능이
+       없어 soft delete(deleted_at)를 쓸 이유가 없었고, mentions 테이블에
+       deleted_at 컬럼이 없으면 조용히 실패해 "삭제 버튼을 눌러도 다음
+       단계로 안 넘어가는" 것처럼 보이는 버그가 발생했음(메모리 학습원칙
+       #16과 동일 패턴) */
+    const {error}=await _sb.from('mentions').delete().eq('id',id);
+    if(error){Toast.show('삭제 실패: '+error.message,'err');return {ok:false};}
     DB.mentions=DB.mentions.filter(m=>m.id!==id);return {ok:true};
   },
 

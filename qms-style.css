@@ -324,7 +324,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .hw-notice-meta{font-size:10px;color:#94a3b8;margin-top:3px;display:flex;gap:8px}
 
 /* ══ 사이드바 로고 ══ */
-.sb-logo-img{height:22px;max-width:100px;object-fit:contain;filter:brightness(0) invert(1)}
+.sb-logo-img{height:44px;max-width:200px;object-fit:contain;filter:brightness(0) invert(1)}
 .sb-logo-def{font-size:13px;font-weight:800;color:#fff}
 
 /* ══ 홈 프로필 버튼 + 로그아웃 버튼 (A안: 나란히) ══ */

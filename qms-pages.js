@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.124</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.125</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -6875,10 +6875,19 @@ async _mentionBulkDel(){
     msg:`<div style="text-align:center"><div style="font-size:28px">⚠️</div><div style="font-size:14px;font-weight:700;margin:8px 0">선택한 <b style="color:#dc2626">${ids.length}건</b>을 삭제합니다.</div></div>`,
     danger:true,
     onOk:async()=>{
-      for(const id of ids) await SB.deleteMention(id);
-      DB.mentions=(DB.mentions||[]).filter(m=>!ids.includes(m.id));
+      const failed=[];
+      for(const id of ids){
+        const res=await SB.deleteMention(id);
+        if(!res.ok) failed.push(id);
+      }
+      const okIds=ids.filter(id=>!failed.includes(id));
+      DB.mentions=(DB.mentions||[]).filter(m=>!okIds.includes(m.id));
       Pages._updateMentionBadge();
-      Toast.show(ids.length+'건 삭제되었습니다.','ok');
+      if(failed.length){
+        Toast.show(`${okIds.length}건 삭제, ${failed.length}건 실패`,'warn');
+      } else {
+        Toast.show(ids.length+'건 삭제되었습니다.','ok');
+      }
       Pages._mentionRefresh();
     }
   });
@@ -13630,6 +13639,8 @@ _dispRefresh(){
       {key:'ref_nc',     label:'부적합번호', w:'120px'},
       {key:'item_code',  label:'품목코드',   w:'90px'},
       {key:'item_name',  label:'품목명',     req:true},
+      {key:'responsible',label:'귀책처',     w:'100px'},
+      {key:'lot_no',     label:'LOT번호',    w:'100px', render:v=>v||'-'},
       {key:'qty',        label:'수량',       w:'60px', align:'right'},
       {key:'type',       label:'처리유형',   w:'70px',
         render:v=>`<span class="badge ${v==='반품'?'bred':v==='폐기'?'bamb':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
@@ -13660,12 +13671,19 @@ _disposeForm(row=null){
     body:'<div class="fg2">'
       +'<div class="fgroup"><label class="fl req">처리번호</label>'
       +'<input class="fc" id="dp_no" value="'+H.e(row?.no||('DISP-'+Date.now().toString().slice(-6)))+'"></div>'
-      +'<div class="fgroup"><label class="fl">부적합 참조번호</label>'
-      +'<input class="fc" id="dp_ref" value="'+H.e(row?.ref_nc||'')+'"></div>'
+      +'<div class="fgroup"><label class="fl">연계 부적합</label>'
+      +'<select class="fc" id="dp_ref" onchange="Pages._disposeFromNc(this.value)">'
+      +'<option value="">선택 안 함 (직접 입력)</option>'
+      +(DB.nc||[]).map(function(n){return '<option value="'+H.e(n.no)+'"'+(row?.ref_nc===n.no?' selected':'')+'>'+H.e(n.no)+' — '+H.e(n.item||n.item_name||'')+'</option>';}).join('')
+      +'</select></div>'
       +'<div class="fgroup"><label class="fl req">품목코드</label>'
       +'<input class="fc" id="dp_code" value="'+H.e(row?.item_code||'')+'"></div>'
       +'<div class="fgroup"><label class="fl req">품목명</label>'
       +'<input class="fc" id="dp_name" value="'+H.e(row?.item_name||'')+'"></div>'
+      +'<div class="fgroup"><label class="fl">귀책처</label>'
+      +'<input class="fc" id="dp_resp" value="'+H.e(row?.responsible||'')+'" placeholder="예) ㈜부품공급사"></div>'
+      +'<div class="fgroup"><label class="fl">LOT번호 <span style="font-size:10px;color:var(--tm)">(선택)</span></label>'
+      +'<input class="fc" id="dp_lot" value="'+H.e(row?.lot_no||'')+'"></div>'
       +'<div class="fgroup"><label class="fl">수량</label>'
       +'<input class="fc" id="dp_qty" type="number" value="'+(row?.qty||'')+'"></div>'
       +'<div class="fgroup"><label class="fl req">처리유형</label>'
@@ -13688,6 +13706,18 @@ _disposeForm(row=null){
         +'<button class="btn bpri" onclick="Pages._disposeSave(window._disposeEditRow)">'+( isEdit?'💾 수정':'✅ 등록')+'</button>',
   });
   window._disposeEditRow=row||null;
+},
+/* [v2.125] 연계 부적합 선택 시 품목코드/품목명/귀책처/LOT번호 자동 채우기 */
+_disposeFromNc(no){
+  if(!no) return;
+  const nc=(DB.nc||[]).find(n=>n.no===no);
+  if(!nc){Toast.show('해당 부적합 데이터를 찾을 수 없습니다.','warn');return;}
+  const set=(id,val)=>{const el=document.getElementById(id);if(el&&val) el.value=val;};
+  set('dp_code', nc.item_code);
+  set('dp_name', nc.item);
+  set('dp_resp', nc.responsible);
+  set('dp_lot',  nc.lot_no);
+  Toast.show('부적합 정보가 자동으로 채워졌습니다.','info',1800);
 },
 
 /* 반품/폐기 인쇄 [v2.394] */
@@ -13745,6 +13775,7 @@ _disposeSave(row=null){
   const newRow={
     id:row?.id||Date.now(),
     no, ref_nc:g('dp_ref'), item_code:code, item_name:name,
+    responsible:g('dp_resp'), lot_no:g('dp_lot'),
     qty:Number(document.getElementById('dp_qty')?.value)||0,
     type, proc_date:g('dp_date'), handler:g('dp_handler'),
     status:g('dp_status'), note:g('dp_note'),
@@ -13767,7 +13798,7 @@ _disposeDetail(row){
     title:`♻️ 처리이력 상세 — ${H.e(row.no||'-')}`,
     size:'mmd',
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>
-          <button class="btn bgry bsm" onclick="Modal.close();Pages._disposeForm(${JSON.stringify(row).replace(/</g,'\u003c')})">✏️ 수정</button>`,
+          <button class="btn bgry bsm" onclick="Modal.close();Pages._disposeForm(${JSON.stringify(row).replace(/"/g,'&quot;').replace(/</g,'\u003c')})">✏️ 수정</button>`,
     body:`<div class="card" style="padding:14px 18px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
         <div class="ir"><div class="il">처리번호</div><div class="iv" style="font-weight:700">${H.e(row.no||'-')}</div></div>
@@ -13784,19 +13815,6 @@ _disposeDetail(row){
     </div>`,
   });
 },
-_disposeForm(){Modal.open({title:'♻️ 반품/폐기 등록',size:'mlg',body:`<div class="fg2">
-  <div class="fgroup"><label class="fl req">연계 부적합</label><select class="fc"><option value="">선택</option>${DB.nc.map(n=>`<option>${H.e(n.no)}</option>`).join('')}</select></div>
-  <div class="fgroup"><label class="fl req">처리일</label><input class="fc" type="date" value="${H.today()}"></div>
-  <div class="fgroup"><label class="fl req">품목</label><select class="fc"><option value="">선택</option>${DB.items.map(i=>`<option>${H.e(i.item_name)}</option>`).join('')}</select></div>
-  <div class="fgroup"><label class="fl req">LOT번호</label><input class="fc"></div>
-  <div class="fgroup"><label class="fl req">총 수량</label><input class="fc" type="number" value="0"></div>
-  <div class="fgroup"><label class="fl req">처리방법</label><select class="fc"><option>반품</option><option>폐기</option><option>재작업</option><option>특채</option></select></div>
-  <div class="fgroup"><label class="fl">반품 수량</label><input class="fc" type="number" value="0"></div>
-  <div class="fgroup"><label class="fl">폐기 수량</label><input class="fc" type="number" value="0"></div>
-  <div class="fgroup"><label class="fl">재작업 수량</label><input class="fc" type="number" value="0"></div>
-  <div class="fgroup"><label class="fl">처리 비용(원)</label><input class="fc" type="number" value="0"></div>
-  <div class="fgroup ff"><label class="fl">비고</label><textarea class="fc" rows="2"></textarea></div>
-</div>`,foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('처리가 등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`})},
 nc_trend(){
   const w=document.getElementById('pw');
   const months=['1월','2월','3월','4월','5월'];
