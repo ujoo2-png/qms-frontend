@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.123</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.124</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3123,6 +3123,7 @@ async equip(){
 },
 /* [v2.114] 구버전 _equipMsaDetail 제거, _equipMsaForm 연결 */
 _equipMsaForm(row=null){
+  window._efFileDeleted=false;
   const isEdit=!!row;
   const optSel=c=>c?' selected':'';
   Modal.open({title:isEdit?'계측기 수정':'계측기 등록',size:'mlg',
@@ -3183,10 +3184,10 @@ _equipMsaForm(row=null){
       +'<label class="fl">첨부파일 <span style="font-size:10px;color:var(--tm)">(PDF·이미지·문서)</span></label>'
       +'<input class="fc" type="file" id="eqFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="padding:5px;font-size:12px">'
       +(row&&row.file_url
-        ?'<div style="margin-top:5px;font-size:12px;display:flex;align-items:center;gap:8px">'
+        ?'<div style="margin-top:5px;font-size:12px;display:flex;align-items:center;gap:8px" id="efFileWrap">'
           +'<span style="color:var(--tm)">현재 파일:</span>'
           +'<a href="'+H.e(row.file_url)+'" target="_blank" style="color:#2563eb">📎 파일 보기</a>'
-          +'<button type="button" class="btn bxs berr" style="font-size:10px;padding:2px 8px"'
+          +'<button type="button" class="btn bxs berr" style="font-size:10px;padding:2px 8px" onclick="Pages._equipMsaFileDelete()">🗑️ 삭제</button>'
           +'</div>'
         :'')
       +'</div></div>',
@@ -3216,9 +3217,9 @@ async _equipMsaSave(row){
     cal_cycle:g('ef_cal_cycle')||null, purchase_date:g('ef_purchase_date')||null,
     purchase_cost:g('ef_purchase_cost')||null, inactive_reason:g('ef_inactive_reason'),
     accessories:g('ef_accessories'), note:g('ef_note'),
-    file_url:row?.file_url||null,
+    file_url:window._efFileDeleted?null:(row?.file_url||null),
   };
-  /* 첨부파일 업로드 */
+  /* 첨부파일 업로드 — 새 파일을 선택하면 삭제 플래그보다 우선 적용 */
   const fileEl=document.getElementById('eqFile');
   if(fileEl?.files?.length){
     const up=await SB.uploadFile('equip', fileEl.files[0]);
@@ -3226,9 +3227,18 @@ async _equipMsaSave(row){
   }
   const res=row?.id?await SB.updateEquip(row.id,data):await SB.addEquip(data);
   if(!res.ok){return;}
+  window._efFileDeleted=false;
   Toast.show(row?.id?'계측기가 수정되었습니다.':'계측기가 등록되었습니다.','ok');
   Modal.close();
   await Pages.equip();
+},
+/* [v2.124] 계측기 수정 폼 — 기존 첨부파일 삭제 (미완성 코드 완성, _equipCalFileDelete와 동일 패턴:
+   즉시 삭제하지 않고 플래그를 세워 저장 시점에 file_url을 null로 반영) */
+_equipMsaFileDelete(){
+  window._efFileDeleted=true;
+  const wrap=document.getElementById('efFileWrap');
+  if(wrap) wrap.innerHTML='<span style="color:#d97706">⚠️ 저장 시 기존 파일이 삭제됩니다.</span>';
+  Toast.show('저장 시 파일이 삭제됩니다.','warn');
 },
 async _eqSave(orig){
   const g=id=>(document.getElementById(id)?.value||'').trim();
