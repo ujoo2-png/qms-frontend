@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.126</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.127</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -13674,19 +13674,28 @@ _dispRefresh(){
 /* 반품/폐기 등록/수정 폼 [v2.394] */
 _disposeForm(row=null){
   const isEdit=!!row;
+  /* [v2.127] 처리번호 자동 일련번호 — "반폐-YYYYMMDD-NNN" (부적합관리와 동일 패턴) */
+  const nextDispNo=()=>{
+    const today=H.today().replace(/-/g,'');
+    const todayDisps=(DB.disposals||[]).filter(d=>(d.no||'').startsWith('반폐-'+today));
+    return `반폐-${today}-${String(todayDisps.length+1).padStart(3,'0')}`;
+  };
   Modal.open({
     title:isEdit?'♻️ 처리이력 수정':'♻️ 반품/폐기 처리 등록',
     size:'mmd',
     body:'<div class="fg2">'
       +'<div class="fgroup"><label class="fl req">처리번호</label>'
-      +'<input class="fc" id="dp_no" value="'+H.e(row?.no||('DISP-'+Date.now().toString().slice(-6)))+'"></div>'
+      +'<input class="fc" id="dp_no" value="'+H.e(row?.no||nextDispNo())+'" readonly></div>'
       +'<div class="fgroup"><label class="fl">연계 부적합</label>'
       +'<select class="fc" id="dp_ref" onchange="Pages._disposeFromNc(this.value)">'
       +'<option value="">선택 안 함 (직접 입력)</option>'
       +(DB.nc||[]).map(function(n){return '<option value="'+H.e(n.no)+'"'+(row?.ref_nc===n.no?' selected':'')+'>'+H.e(n.no)+' — '+H.e(n.item||n.item_name||'')+'</option>';}).join('')
       +'</select></div>'
-      +'<div class="fgroup"><label class="fl req">품목코드</label>'
-      +'<input class="fc" id="dp_code" value="'+H.e(row?.item_code||'')+'"></div>'
+      +'<div class="fgroup" style="grid-column:1/-1"><label class="fl req">품목코드 <span style="font-size:10px;color:var(--tm)">직접 입력 또는 검색</span></label>'
+      +'<input class="fc" id="dp_code" list="dpItemList" value="'+H.e(row?.item_code||'')+'" placeholder="코드 또는 품목명으로 검색..."'
+      +' oninput="(function(){var v=document.getElementById(\'dp_code\').value.split(\' — \')[0].trim();var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||\'\')===(v);});if(it){document.getElementById(\'dp_name\').value=it.name||it.item_name||\'\';document.getElementById(\'dp_name\').style.color=\'var(--pri)\';}else{document.getElementById(\'dp_name\').style.color=\'\';}})()"'
+      +' onblur="(function(){var v=document.getElementById(\'dp_code\').value.split(\' — \')[0].trim();if(!v)return;var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||\'\')===(v);});if(!it&&v)Toast.show(\'미등록 품목코드입니다. 기준정보 > 품목 등록에서 확인하세요.\',\'warn\');})()"></div>'
+      +'<datalist id="dpItemList">'+(DB.items||[]).map(function(it){return '<option value="'+H.e(it.item_code||it.code||'')+'">'+H.e((it.item_code||it.code||'')+' — '+(it.name||it.item_name||''))+'</option>';}).join('')+'</datalist>'
       +'<div class="fgroup"><label class="fl req">품목명</label>'
       +'<input class="fc" id="dp_name" value="'+H.e(row?.item_name||'')+'"></div>'
       +'<div class="fgroup"><label class="fl">귀책처</label>'
@@ -13736,26 +13745,73 @@ _disposePrint(){
   const ids=checked.length>0?checked.map(c=>Number(c.value)):null;
   const data=(DB.disposals||[]).filter(r=>ids?ids.includes(r.id):true);
   if(!data.length){Toast.show('인쇄할 항목을 선택하거나 목록에 데이터가 있어야 합니다.','warn');return;}
-  const rows=data.map(function(r,i){
-    return '<tr>'
-      +'<td>'+(i+1)+'</td><td>'+(r.no||'-')+'</td><td>'+(r.ref_nc||'-')+'</td>'
-      +'<td>'+(r.item_code||'-')+'</td><td>'+(r.item_name||'-')+'</td><td>'+(r.qty||0)+'</td>'
-      +'<td>'+(r.type||'-')+'</td><td>'+(r.proc_date||'-')+'</td>'
-      +'<td>'+(r.handler||'-')+'</td><td>'+(r.status||'-')+'</td>'
-      +'</tr>';
-  }).join('');
-  const html='<!DOCTYPE html><html><head><meta charset="utf-8">'
-    +'<title>반품/폐기 처리 현황</title>'
-    +'<style>body{font-family:sans-serif;font-size:12px}'
-    +'table{width:100%;border-collapse:collapse}'
-    +'th,td{border:1px solid #ccc;padding:5px 8px;text-align:center}'
-    +'th{background:#f1f5f9;font-weight:600}h2{text-align:center}</style></head>'
-    +'<body><h2>♻️ 반품/폐기 처리 현황</h2>'
-    +'<p style="text-align:right">출력일: '+H.today()+'</p>'
-    +'<table><thead><tr>'
-    +'<th>No</th><th>처리번호</th><th>부적합번호</th><th>품목코드</th><th>품목명</th>'
-    +'<th>수량</th><th>유형</th><th>처리일</th><th>처리자</th><th>상태</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table></body></html>';
+  /* [v2.127] 인수인계서 — A4 세로 1장에 동일 양식 상/하 A5 2매(절취선), 회사로고, 서명란 */
+  const logo=App.logo?`<img src="${App.logo}" style="height:30px;object-fit:contain">`:'<strong style="font-size:14px">INNODIS</strong>';
+  const today=H.today();
+  const typeBadgeCls=t=>t==='반품'?'return':t==='폐기'?'dispose':t==='재작업'?'rework':'special';
+  const half=r=>`
+    <div class="half">
+      <div class="doc-title">
+        <div class="logo-wrap">${logo}</div>
+        <div class="title-wrap"><h1>반품 / 폐기 인수인계서</h1></div>
+        <div class="meta">출력일: ${H.e(today)}</div>
+      </div>
+      <table class="info">
+        <tr><th>처리번호</th><td>${H.e(r.no||'-')}</td><th>부적합번호</th><td>${H.e(r.ref_nc||'-')}</td></tr>
+        <tr><th>품목코드</th><td>${H.e(r.item_code||'-')}</td><th>품목명</th><td>${H.e(r.item_name||'-')}</td></tr>
+        <tr><th>귀책처</th><td>${H.e(r.responsible||'-')}</td><th>LOT번호</th><td>${H.e(r.lot_no||'-')}</td></tr>
+        <tr><th>처리유형</th><td><span class="badge ${typeBadgeCls(r.type)}">${H.e(r.type||'-')}</span></td><th>수량</th><td>${H.n(r.qty||0)}</td></tr>
+        <tr><th>처리일</th><td>${H.e(r.proc_date||'-')}</td><th>처리자</th><td>${H.e(r.handler||'-')}</td></tr>
+      </table>
+      <div class="note-box"><div class="lbl">비고</div>${H.e(r.note||'-')}</div>
+      <div class="sign-area">
+        <div class="sign-box"><span class="role-lbl">인계자</span><span class="sign-line">(서명)</span></div>
+        <div class="sign-box"><span class="role-lbl">인수자</span><span class="sign-line">(서명)</span></div>
+      </div>
+    </div>`;
+  const pages=data.map(r=>`
+    <div class="page">
+      ${half(r)}
+      <div class="cut-line"><span class="scissors">✂ 절취선 ✂</span></div>
+      ${half(r)}
+    </div>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>반품/폐기 인수인계서</title>
+  <style>
+    @page{size:210mm 297mm;margin:0}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Malgun Gothic',sans-serif}
+    .page{width:210mm;height:297mm;position:relative;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+    .half{height:148.5mm;padding:10mm 14mm;position:relative;display:flex;flex-direction:column}
+    .cut-line{position:relative;border-top:1px dashed #94a3b8;height:0}
+    .cut-line .scissors{position:absolute;background:#fff;padding:0 6px;font-size:11px;color:#64748b;left:50%;top:0;transform:translate(-50%,-50%)}
+    .doc-title{display:flex;align-items:center;border-bottom:2px solid #1e293b;padding-bottom:6px;margin-bottom:10px;gap:10px}
+    .logo-wrap{flex:0 0 auto}
+    .title-wrap{flex:1;text-align:center}
+    .doc-title h1{font-size:18px;font-weight:800;letter-spacing:3px}
+    .meta{flex:0 0 auto;font-size:10px;color:#64748b;white-space:nowrap}
+    table.info{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:8px;table-layout:fixed}
+    table.info th{background:#f8fafc;border:1px solid #cbd5e1;padding:5px 7px;text-align:center;width:78px;font-weight:700;color:#334155}
+    table.info td{border:1px solid #cbd5e1;padding:5px 8px}
+    .note-box{border:1px solid #cbd5e1;border-top:none;padding:6px 8px;font-size:11px;min-height:28px;color:#475569}
+    .note-box .lbl{font-size:9.5px;color:#94a3b8;margin-bottom:2px}
+    .sign-area{margin-top:auto;display:flex;gap:10px}
+    .sign-box{flex:1;border:1px solid #cbd5e1;border-radius:4px;padding:8px 10px;display:flex;align-items:center;gap:10px}
+    .sign-box .role-lbl{font-size:11px;font-weight:700;color:#334155;white-space:nowrap}
+    .sign-box .sign-line{flex:1;border-bottom:1px solid #94a3b8;height:26px}
+    .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:3px;font-weight:700}
+    .badge.return{background:#fee2e2;color:#991b1b}
+    .badge.dispose{background:#fef3c7;color:#92400e}
+    .badge.rework{background:#dbeafe;color:#1e40af}
+    .badge.special{background:#f3e8ff;color:#6b21a8}
+    @media print{.no-print{display:none}}
+  </style></head>
+  <body>
+  <div class="no-print" style="position:fixed;top:8px;right:8px;z-index:10">
+    <button onclick="window.print()" style="padding:8px 18px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer">🖨️ 인쇄</button>
+  </div>
+  ${pages}
+  </body></html>`;
   /* [v2.394] 팝업 차단 우회 — blob URL 방식 */
   const blob=new Blob([html],{type:'text/html'});
   const url=URL.createObjectURL(blob);
