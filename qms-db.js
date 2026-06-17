@@ -997,9 +997,14 @@ const SB={
       created_by:    row.created_by||Auth.cur()?.username||'system',
     };
     if(!_sb){const id=Math.max(0,...(DB.repairs||[]).map(r=>r.id||0))+1;DB.repairs=DB.repairs||[];DB.repairs.push({id,...allowed});return{ok:true,id};}
-    const {data,error}=await _sb.from('equip_repairs').insert(allowed).select().single();
+    /* [v2.123] .select().single() 제거 — anon 키는 SELECT 권한이 없어
+       RLS 정책 위반(401)으로 항상 실패하던 버그. 다른 add* 함수들과
+       동일하게 insert만 하고 error만 체크하는 패턴으로 통일.
+       호출측(_repairSave)은 등록 후 getRepairs()로 목록을 재조회하므로
+       id 반환이 필요 없음 */
+    const {error}=await _sb.from('equip_repairs').insert(allowed);
     if(error){Toast.show('수리이력 저장 실패: '+error.message,'err');return{ok:false};}
-    return{ok:true,id:data.id};
+    return{ok:true};
   },
   async updateRepair(id,patch){
     if(!_sb){const r=(DB.repairs||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}

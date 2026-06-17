@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.122</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.123</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -3193,7 +3193,42 @@ _equipMsaForm(row=null){
     foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
       +'<button class="btn bpri" id="ef_ok">'+(isEdit?'💾 수정':'✅ 등록')+'</button>',
   });
-  setTimeout(()=>{const b=document.getElementById('ef_ok');if(b)b.onclick=()=>Pages._eqSave(row||null);},50);
+  setTimeout(()=>{const b=document.getElementById('ef_ok');if(b)b.onclick=()=>Pages._equipMsaSave(row||null);},50);
+},
+/* [v2.123] 계측기(MSA) 저장 — _equipMsaForm이 잘못 EMS의 _eqSave를 호출하던 버그 수정.
+   _eqSave는 SB.updateEquipment/addEquipment(제조설비 전용, efName/efDept 등 id 기대)를
+   호출하는 함수라 계측기 폼의 ef_name/ef_code 같은 id와 전혀 매칭되지 않았음
+   (그래서 항상 "설비명을 입력하세요" 오류). SB.addEquip/updateEquip(계측기 전용,
+   code/name/loc/operator/fixture_type 등 허용 컬럼)을 호출하도록 신규 작성 */
+async _equipMsaSave(row){
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const code=g('ef_code'),name=g('ef_name');
+  if(!code){Toast.show('계측기코드를 입력하세요.','warn');return;}
+  if(!name){Toast.show('계측기명을 입력하세요.','warn');return;}
+  const data={
+    code, name,
+    model:g('ef_model'), maker:g('ef_maker'), range:g('ef_range'), res:g('ef_res'),
+    loc:g('ef_loc'), operator:g('ef_operator'),
+    last:g('ef_last')||null, next:g('ef_next')||null,
+    active:Number(document.getElementById('ef_active')?.value||1),
+    fixture_type:g('ef_fixture_type'), code_no:g('ef_code_no'), serial_no:g('ef_serial_no'),
+    purpose:g('ef_purpose'), cal_method:g('ef_cal_method'),
+    cal_cycle:g('ef_cal_cycle')||null, purchase_date:g('ef_purchase_date')||null,
+    purchase_cost:g('ef_purchase_cost')||null, inactive_reason:g('ef_inactive_reason'),
+    accessories:g('ef_accessories'), note:g('ef_note'),
+    file_url:row?.file_url||null,
+  };
+  /* 첨부파일 업로드 */
+  const fileEl=document.getElementById('eqFile');
+  if(fileEl?.files?.length){
+    const up=await SB.uploadFile('equip', fileEl.files[0]);
+    if(up?.url) data.file_url=up.url;
+  }
+  const res=row?.id?await SB.updateEquip(row.id,data):await SB.addEquip(data);
+  if(!res.ok){return;}
+  Toast.show(row?.id?'계측기가 수정되었습니다.':'계측기가 등록되었습니다.','ok');
+  Modal.close();
+  await Pages.equip();
 },
 async _eqSave(orig){
   const g=id=>(document.getElementById(id)?.value||'').trim();
@@ -13157,10 +13192,11 @@ _delivRefresh(){
     return;
   }
   const filtered=allInsp.filter(r=>{
-    const mQ=(r.vendor_name||'').toLowerCase().includes(ql)
-      ||(r.item_name||'').toLowerCase().includes(ql)
-      ||(r.item_code||'').toLowerCase().includes(ql)
-      ||(r.lot_no||'').toLowerCase().includes(ql);
+    /* [v2.123] 거래처명(vendor) 우선 단독 검색 — inspections 테이블 실제 컬럼은
+       vendor_name이 아니라 vendor임(addInspection 저장 로직과 동일하게 통일).
+       이전엔 item_code/lot_no와 OR로 묶여 거래처명이 아닌 다른 필드로
+       매칭되는 것처럼 보이던 버그 수정 */
+    const mQ=(r.vendor||'').toLowerCase().includes(ql);
     const mT=!tp||r.type===tp;
     const mR=!rs||r.result===rs;
     return mQ&&mT&&mR;
@@ -13170,13 +13206,15 @@ _delivRefresh(){
   const pass=filtered.filter(r=>r.result==='합격').length;
   const passRate=total>0?(pass/total*100).toFixed(1):'N/A';
 
+  const vnMaxLen=Math.max(6,...filtered.map(r=>(r.vendor||'').length));
+  const vnWidth=Math.min(180,Math.max(90,vnMaxLen*15+24))+'px';
   Tbl.render({
     el:'#delivTbl',
     cols:[
       {key:'insp_date',   label:'검사일',   w:'90px', req:true},
       {key:'type',        label:'검사구분', w:'80px', align:'center',
         render:v=>`<span class="badge bblu" style="font-size:10px">${H.e(v||'-')}</span>`},
-      {key:'vendor_name', label:'거래처명'},
+      {key:'vendor',      label:'거래처명', w:vnWidth},
       {key:'item_code',   label:'품목코드', w:'100px'},
       {key:'item_name',   label:'품목명',   w:'130px'},
       {key:'lot_no',      label:'LOT번호',  w:'120px'},
