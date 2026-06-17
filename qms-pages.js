@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.125</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.126</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -13573,7 +13573,9 @@ _8dForm(){
   </div>`,foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
     <button class="btn bpri btn-f8" onclick="Pages._8dSave()">등록 <span class="kbd">F8</span></button>`});
 },
-nc_dispose(){
+async nc_dispose(){
+  /* [v2.126] Supabase 연동 — 항상 최신 데이터 로드 */
+  try{const d=await SB.getDisposals();if(Array.isArray(d))DB.disposals=d;}catch(e){console.warn('[nc_dispose]',e);}
   /* [v2.394] 반품/폐기처리 — DB.disposals 기반, tbar+F3+F2+onRow */
   const w=document.getElementById('pw');
   const data=(DB.disposals||[]);
@@ -13653,8 +13655,15 @@ _dispRefresh(){
     onRow:row=>Pages._disposeDetail(row),
     onDel:async(ids)=>{
       const _del=async()=>{
-        DB.disposals=(DB.disposals||[]).filter(r=>!ids.includes(r.id));
-        Pages._dispRefresh();Toast.show(ids.length+'건 삭제','ok');
+        const failed=[];
+        for(const id of ids){
+          const res=await SB.deleteDisposal(id);
+          if(!res.ok) failed.push(id);
+        }
+        const okIds=ids.filter(id=>!failed.includes(id));
+        DB.disposals=(DB.disposals||[]).filter(r=>!okIds.includes(r.id));
+        Pages._dispRefresh();
+        Toast.show(failed.length?`${okIds.length}건 삭제, ${failed.length}건 실패`:ids.length+'건 삭제','ok');
       };
       Modal.confirm({title:'🗑️ 처리이력 삭제',msg:'선택한 처리이력을 삭제합니다.',danger:true,onOk:_del});
     }
@@ -13766,26 +13775,27 @@ _disposePrint(){
 },
 
 /* 반품/폐기 저장 [v2.394] */
-_disposeSave(row=null){
+async _disposeSave(row=null){
   const g=id=>document.getElementById(id)?.value.trim()||'';
   const no=g('dp_no'), code=g('dp_code'), name=g('dp_name'), type=g('dp_type');
   if(!no){Toast.show('처리번호를 입력하세요.','warn');return;}
   if(!name){Toast.show('품목명을 입력하세요.','warn');return;}
   if(!type){Toast.show('처리유형을 선택하세요.','warn');return;}
-  const newRow={
-    id:row?.id||Date.now(),
+  const data={
     no, ref_nc:g('dp_ref'), item_code:code, item_name:name,
     responsible:g('dp_resp'), lot_no:g('dp_lot'),
     qty:Number(document.getElementById('dp_qty')?.value)||0,
     type, proc_date:g('dp_date'), handler:g('dp_handler'),
     status:g('dp_status'), note:g('dp_note'),
   };
+  const res=row?.id?await SB.updateDisposal(row.id,data):await SB.addDisposal(data);
+  if(!res.ok) return;
   if(!DB.disposals) DB.disposals=[];
   if(row?.id){
     const idx=DB.disposals.findIndex(r=>r.id===row.id);
-    if(idx>=0) DB.disposals[idx]=newRow;
+    if(idx>=0) DB.disposals[idx]={...row,...data};
   } else {
-    DB.disposals.unshift(newRow);
+    DB.disposals.unshift({id:res.id||Date.now(),...data});
   }
   Modal.close();
   Toast.show(row?'수정되었습니다.':'등록되었습니다.','ok');

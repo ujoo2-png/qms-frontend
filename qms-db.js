@@ -1254,6 +1254,49 @@ const SB={
     DB.vendor_audits=(DB.vendor_audits||[]).filter(r=>r.id!==id);
     return{ok:true};
   },
+
+  /* ── 반품/폐기 처리 [v2.126] ── */
+  async getDisposals(){
+    if(!_sb) return DB.disposals||[];
+    const data=await this._sbFetchAll('disposals','proc_date',false);
+    if(data===null){console.warn('[SB] disposals 조회 실패');return [];}
+    return data;
+  },
+  async addDisposal(row){
+    const allowed={
+      no:           row.no||'',
+      ref_nc:       row.ref_nc||'',
+      item_code:    row.item_code||'',
+      item_name:    row.item_name||'',
+      responsible:  row.responsible||'',
+      lot_no:       row.lot_no||'',
+      qty:          row.qty!=null?Number(row.qty):0,
+      type:         row.type||'',
+      proc_date:    row.proc_date||null,
+      handler:      row.handler||'',
+      status:       row.status||'대기',
+      note:         row.note||'',
+      created_by:   row.created_by||Auth.cur()?.username||'system',
+    };
+    if(!_sb){const id=Date.now();DB.disposals=DB.disposals||[];DB.disposals.unshift({id,...allowed});return{ok:true,id};}
+    /* [v2.126] .select() 미사용 — anon 키는 SELECT 권한이 없어 RLS 오류 방지 */
+    const {error}=await _sb.from('disposals').insert(allowed);
+    if(error){Toast.show('처리 등록 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true};
+  },
+  async updateDisposal(id,patch){
+    if(!_sb){const r=(DB.disposals||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
+    const {error}=await _sb.from('disposals').update(patch).eq('id',id);
+    if(error){Toast.show('처리 수정 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true};
+  },
+  async deleteDisposal(id){
+    if(!_sb){DB.disposals=(DB.disposals||[]).filter(r=>r.id!==id);return{ok:true};}
+    const {error}=await _sb.from('disposals').delete().eq('id',id);
+    if(error){Toast.show('처리 삭제 실패: '+error.message,'err');return{ok:false};}
+    DB.disposals=(DB.disposals||[]).filter(r=>r.id!==id);
+    return{ok:true};
+  },
 };
 
 /* ══ 전역 상태 ══ *//* ══ DB ══ */
