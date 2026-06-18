@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.133</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.134</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -1828,6 +1828,15 @@ async _insp(type){
   let data=DB.inspections.filter(r=>r.type===key);
   let fromV='',toV='';
 
+  /* [v2.134] 최초 등록일 / 최근 update일 — 목록 위 우측 끝단 표시용 */
+  const dateRange=(()=>{
+    if(!data.length) return null;
+    const created=data.map(r=>r.created_at).filter(Boolean).sort();
+    const updated=data.map(r=>r.updated_at||r.created_at).filter(Boolean).sort();
+    if(!created.length) return null;
+    return {first:created[0].slice(0,10), last:updated[updated.length-1].slice(0,10)};
+  })();
+
   const render=()=>{
     /* [v2.394 복원] 로컬 필터 방식 */
     const sv=(document.getElementById('inspSV')?.value||'').trim();
@@ -1914,6 +1923,12 @@ async _insp(type){
         onclick="ExcelMgr.openUploadAll('${type}')" title="통합 일괄등록">🗂️ 통합 일괄등록</button>
     </div>
   </div>
+  ${dateRange?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <div style="font-size:11px;color:var(--tm);background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;line-height:1.7;text-align:right">
+      <div>최초 등록일: <b style="color:var(--tx)">${dateRange.first}</b></div>
+      <div>최근 update: <b style="color:var(--tx)">${dateRange.last}</b></div>
+    </div>
+  </div>`:''}
   <!-- 날짜 퀵버튼 + 기간 검색 -->
   <div class="tbar" style="flex-wrap:wrap;gap:5px;height:auto;padding:8px 14px">
     <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
@@ -1935,20 +1950,6 @@ async _insp(type){
   /* 동적 렌더 함수 등록 */
   Pages[`_inspRender_${type}`]=render;
   render();
-  /* [v2.65] 날짜 범위 배지 — tbar 마지막에 직접 삽입 */
-  var _dates=(rows||[]).map(function(r){return r.insp_date||r.date||'';}).filter(Boolean).sort();
-  var _minD=_dates[0]||null, _maxD=_dates[_dates.length-1]||null;
-  if(_minD&&_maxD){
-    var _tbar=w.querySelector('.tbar');
-    if(_tbar&&!_tbar.querySelector('.date-badge-insp')){
-      var _badge=document.createElement('div');
-      _badge.className='date-badge-insp';
-      _badge.style.cssText='font-size:11px;color:var(--tm);background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;line-height:1.7;text-align:right;margin-left:auto';
-      _badge.innerHTML='<div>최초 등록일: <b style="color:#1e293b">'+_minD+'</b></div><div>최근 update: <b style="color:#1e293b">'+_maxD+'</b></div>';
-      _tbar.appendChild(_badge);
-    }
-  }
-
 },
 
 /* ════════════════════════════════════════════════════════════════
@@ -4221,12 +4222,15 @@ _docFiltered:function(){
 /* ── 목록 렌더링 — Tbl.render (체크박스+정렬 기본 내장) ── */
 _docRender:function(){
   var rows=Pages._docFiltered();
+  /* [v2.134 EQS] 문서번호 헤더 너비 글자수 비례 동적 조정 */
+  var docNoMaxLen=Math.max(8,...rows.map(r=>(r.doc_no||'').length));
+  var docNoW=Math.min(160,Math.max(100,docNoMaxLen*9+24))+'px';
   Tbl.render({
     el:'#docTbl',
     cols:[
-      {key:'doc_no',        label:'문서번호',   w:'130px',
+      {key:'doc_no',        label:'문서번호',   w:docNoW,
         render:function(v,row){
-          return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';
+          return'<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';
         }},
       {key:'title',         label:'제목',
         render:function(v,row){
@@ -4305,7 +4309,7 @@ _docKanban:function(){
             'onmouseover="this.style.borderColor=\''+col.brdClr+'\';this.style.boxShadow=\'0 3px 10px rgba(0,0,0,.09)\';this.style.transform=\'translateY(-1px)\'" '+
             'onmouseout="this.style.borderColor=\'var(--brd)\';this.style.boxShadow=\'\';this.style.transform=\'\'">'+
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'+
-              '<span style="font-family:monospace;font-size:10px;font-weight:700;color:'+col.hdrClr+';background:'+col.hdrBg+';padding:1px 5px;border-radius:3px">'+H.e(r.doc_no||'-')+'</span>'+
+              '<span style="font-family:monospace;font-size:13px;font-weight:700;color:'+col.hdrClr+';background:'+col.hdrBg+';padding:1px 5px;border-radius:3px">'+H.e(r.doc_no||'-')+'</span>'+
               '<span style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px">'+H.e(r.current_ver||'-')+'</span>'+
             '</div>'+
             '<div style="font-weight:600;font-size:12px;line-height:1.4;margin-bottom:6px;color:var(--text)">'+H.e(r.title||'-')+'</div>'+
@@ -5236,7 +5240,7 @@ _dhRender:function(){
   Tbl.render({el:'#dhTbl',
     cols:[
       {key:'doc_no',        label:'문서번호',   w:docNoW,
-        render:function(v,row){return '<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Nav.go(&quot;docs&quot;)">'+(H.e(v)||'-')+'</span>';}},
+        render:function(v,row){return '<span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Nav.go(&quot;docs&quot;)">'+(H.e(v)||'-')+'</span>';}},
       {key:'title',         label:'문서명',      w:'*'},
       {key:'doc_type',      label:'유형',        w:'80px',
         render:function(v){return H.e(Pages._DT[v]||v||'-');}},
@@ -5284,7 +5288,7 @@ async doc_history(docId){
       '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;overflow:hidden">'+
         '<div style="background:linear-gradient(135deg,#1a5fa8 0%,#2563eb 100%);padding:14px 18px;color:#fff">'+
           '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
-            '<span style="font-family:monospace;font-size:12px;font-weight:700;background:rgba(255,255,255,.22);padding:3px 10px;border-radius:6px">'+H.e(doc.doc_no||'-')+'</span>'+
+            '<span style="font-family:monospace;font-size:13px;font-weight:700;background:rgba(255,255,255,.22);padding:3px 10px;border-radius:6px">'+H.e(doc.doc_no||'-')+'</span>'+
             '<span style="font-size:15px;font-weight:700">'+H.e(doc.title||'-')+'</span>'+
             '<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+
               '<span style="background:rgba(255,255,255,.22);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px">'+(Pages._DT[doc.doc_type]||doc.doc_type||'-')+'</span>'+
@@ -5407,7 +5411,7 @@ _dsSearch:function(kw){
   rows.forEach(function(r){
     html+='<div style="background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:14px 16px;cursor:pointer" onclick="Pages.doc_history('+r.id+')" onmouseover="this.style.borderColor=\'#93c5fd\';this.style.background=\'#eff6ff\'" onmouseout="this.style.borderColor=\'var(--brd)\';this.style.background=\'var(--card)\'">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">'+
-        '<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8">'+H.e(r.doc_no||'-')+'</span>'+
+        '<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">'+H.e(r.doc_no||'-')+'</span>'+
         '<span style="font-weight:600;font-size:14px">'+H.e(r.title)+'</span>'+
         Pages._dBadge(r.status)+
         '<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span>'+
@@ -5429,6 +5433,9 @@ async doc_distribution(){
   var docs=[];var summary={byAction:{},byDoc:[],total:0};
   try{docs=await SB.getDocMaster();summary=await SB.getDistLogSummary();}catch(e){}
   var ba=summary.byAction||{};var totalCnt=summary.total||0;
+  /* [v2.134 EQS] TOP10 표 문서번호 헤더 너비 글자수 비례 동적 조정 */
+  var top10NoMaxLen=Math.max(8,...(summary.byDoc||[]).map(d=>(d.doc_no||'').length));
+  var top10NoW=Math.min(160,Math.max(100,top10NoMaxLen*9+24));
   w.innerHTML=
     '<div class="stat-dash">'+
     '<div class="sd-card" style="cursor:pointer" onclick="Pages._distFilter(\'all\')">'+
@@ -5482,13 +5489,13 @@ async doc_distribution(){
         (summary.byDoc&&summary.byDoc.length
           ?'<table style="width:100%;border-collapse:collapse;font-size:13px">'+
             '<thead><tr style="background:var(--bg2)"><th style="padding:9px 12px;width:36px;font-weight:700;color:var(--muted)">순위</th>'+
-            '<th style="padding:9px 12px;width:120px;font-weight:700;color:var(--muted)">문서번호</th><th style="padding:9px 12px;font-weight:700;color:var(--muted)">제목</th>'+
+            '<th style="padding:9px 12px;width:'+top10NoW+'px;font-weight:700;color:var(--muted)">문서번호</th><th style="padding:9px 12px;font-weight:700;color:var(--muted)">제목</th>'+
             '<th style="padding:9px 12px;text-align:right;width:60px;font-weight:700;color:var(--muted)">이용수</th></tr></thead><tbody>'+
             summary.byDoc.map(function(d,i){
               return'<tr style="border-bottom:1px solid var(--brd)">'+
                 '<td style="padding:9px 12px;text-align:center;font-weight:700;color:'+(i<3?'#d6952f':'var(--muted)')+'">'+
                   (i<3?['🥇','🥈','🥉'][i]:i+1)+'</td>'+
-                '<td style="padding:9px 12px;font-family:monospace;font-size:12px;color:#3b82c4">'+H.e(d.doc_no)+'</td>'+
+                '<td style="padding:9px 12px;font-family:monospace;font-size:13px;color:#3b82c4">'+H.e(d.doc_no)+'</td>'+
                 '<td style="padding:9px 12px">'+H.e(d.title)+'</td>'+
                 '<td style="padding:9px 12px;text-align:right;font-weight:700">'+d.count+'</td></tr>';
             }).join('')+'</tbody></table>'
@@ -5526,14 +5533,17 @@ _distRender:function(rows){
       expires_at:r.expires_at?new Date(r.expires_at).toLocaleString('ko-KR'):'',
     };
   });
+  /* [v2.134 EQS] 문서번호 헤더 너비 글자수 비례 동적 조정 */
+  var distNoMaxLen=Math.max(8,...data.map(r=>(r.doc_no||'').length));
+  var distNoW=Math.min(160,Math.max(100,distNoMaxLen*9+24))+'px';
   Tbl.render({el:'#distTbl',cols:[
     {key:'created_at',  label:'일시',       w:'140px'},
-    {key:'doc_no',      label:'문서번호',   w:'120px',render:function(v){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8">'+H.e(v)+'</span>';}},
+    {key:'doc_no',      label:'문서번호',   w:distNoW,render:function(v){return'<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">'+H.e(v)+'</span>';}},
     {key:'doc_title',   label:'문서 제목'},
     {key:'action',      label:'액션',       w:'100px',align:'center',render:function(v){return'<span class="badge '+(cls[v]||'bgry')+'" style="font-size:10px">'+(lb[v]||H.e(v))+'</span>';}},
     {key:'user_name',   label:'사용자',     w:'80px'},
     {key:'dept',        label:'부서',       w:'70px'},
-    {key:'share_token', label:'공유토큰',   w:'100px',render:function(v){return v?'<span style="font-family:monospace;font-size:10px;color:var(--muted)">'+H.e(v.slice(0,8))+'...</span>':'-';}},
+    {key:'share_token', label:'공유토큰',   w:'100px',render:function(v){return v?'<span style="font-family:monospace;font-size:13px;color:var(--muted)">'+H.e(v.slice(0,8))+'...</span>':'-';}},
     {key:'expires_at',  label:'만료일',     w:'120px',render:function(v){return v?'<span style="font-size:11px">'+H.e(v)+'</span>':'-';}},
   ],data:data});
 },
@@ -5654,8 +5664,11 @@ _rcApplyFilter:function(){
 },
 _rcRender:function(rows){
   var cycleOpts=function(cur){return['monthly','quarterly','biannual','annual'].map(function(k){return'<option value="'+k+'"'+(cur===k?' selected':'')+'>'+{monthly:'매월',quarterly:'분기',biannual:'반기',annual:'연간'}[k]+'</option>';}).join('');};
+  /* [v2.134 EQS] 문서번호 헤더 너비 글자수 비례 동적 조정 */
+  var rcNoMaxLen=Math.max(8,...(rows||[]).map(r=>(r.doc_no||'').length));
+  var rcNoW=Math.min(160,Math.max(100,rcNoMaxLen*9+24))+'px';
   Tbl.render({el:'#rcTbl',cols:[
-    {key:'doc_no',        label:'문서번호',   w:'120px',render:function(v,row){return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';}},
+    {key:'doc_no',        label:'문서번호',   w:rcNoW,render:function(v,row){return'<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';}},
     {key:'title',         label:'제목',       render:function(v,row){return'<span style="font-weight:500;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';}},
     {key:'review_cycle',  label:'검토 주기',  w:'100px',align:'center',
       render:function(v,row){return'<select class="fsel" style="font-size:11px;padding:2px 4px" onchange="Pages._rcUpdateCycle('+row.id+',this.value)">'+cycleOpts(v)+'</select>';}},
@@ -5841,7 +5854,7 @@ _rcLoadRecommend:function(docId){
         'onmouseover="this.style.borderColor=\'#93c5fd\';this.style.background=\'#eff6ff\'" '+
         'onmouseout="this.style.borderColor=\'var(--brd)\';this.style.background=\'var(--card)\'">'+
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">'+
-          '<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8">'+H.e(r.doc_no||'-')+'</span>'+
+          '<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">'+H.e(r.doc_no||'-')+'</span>'+
           '<span style="font-weight:600;font-size:13px;flex:1">'+H.e(r.title||'-')+'</span>'+
           Pages._dBadge(r.status)+
           '<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span>'+
@@ -5894,7 +5907,7 @@ _rcTagFilter:function(tag){
         'onmouseover="this.style.borderColor=\'#93c5fd\';this.style.background=\'#eff6ff\'" '+
         'onmouseout="this.style.borderColor=\'var(--brd)\';this.style.background=\'var(--card)\'">'+
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+
-          '<span style="font-family:monospace;font-size:10px;font-weight:700;color:#1a5fa8">'+H.e(r.doc_no||'-')+'</span>'+
+          '<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">'+H.e(r.doc_no||'-')+'</span>'+
           Pages._dBadge(r.status)+
         '</div>'+
         '<div style="font-weight:600;font-size:12px;margin-bottom:6px;line-height:1.4">'+H.e(r.title||'-')+'</div>'+
@@ -5956,6 +5969,9 @@ async doc_dashboard(){
   var recent=rows.slice().sort(function(a,b){
     return new Date(b.created_at||0)-new Date(a.created_at||0);
   }).slice(0,5);
+  /* [v2.134 EQS] 문서번호 헤더 너비 글자수 비례 동적 조정 */
+  var recentNoMaxLen=Math.max(8,...recent.map(r=>(r.doc_no||'').length));
+  var recentNoW=Math.min(160,Math.max(100,recentNoMaxLen*9+24));
 
   w.innerHTML=
     '<div class="ph"><div>'+
@@ -6024,7 +6040,7 @@ async doc_dashboard(){
       (recent.length
         ?'<table style="width:100%;border-collapse:collapse;font-size:13px">'+
           '<thead><tr style="background:var(--bg2)">'+
-            '<th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--muted);width:140px;border-radius:8px 0 0 8px">문서번호</th>'+
+            '<th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--muted);width:'+recentNoW+'px;border-radius:8px 0 0 8px">문서번호</th>'+
             '<th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--muted)">제목</th>'+
             '<th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--muted);width:84px">버전</th>'+
             '<th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--muted);width:84px">상태</th>'+
@@ -6473,12 +6489,15 @@ _recKwFilter:function(kw){
   Pages._recRender(rows);
 },
 _recRender:function(rows){
+  /* [v2.134 EQS] 기록번호 헤더 너비 글자수 비례 동적 조정 */
+  var recNoMaxLen=Math.max(8,...(rows||[]).map(r=>(r.doc_no||'').length));
+  var recNoW=Math.min(160,Math.max(100,recNoMaxLen*9+24))+'px';
   Tbl.render({
     el:'#recTbl',
     cols:[
-      {key:'doc_no',        label:'기록번호',   w:'130px',
+      {key:'doc_no',        label:'기록번호',   w:recNoW,
         render:function(v,row){
-          return'<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';
+          return'<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';
         }},
       {key:'title',         label:'제목',
         render:function(v,row){
