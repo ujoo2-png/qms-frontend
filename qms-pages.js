@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.131</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.132</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -4343,6 +4343,7 @@ _docDetail:function(row){
     foot:
       '<button class="btn bout" onclick="Modal.close()">닫기</button>'+
       '<button class="btn bout" onclick="Modal.close();Pages.doc_history('+row.id+')">🕐 이력</button>'+
+      '<button class="btn bout" onclick="Modal.close();Pages._docForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')">✏️ 수정</button>'+
       '<button class="btn bpri" onclick="Modal.close();Pages._docRevForm('+row.id+')">✏️ 개정 기안</button>',
   });
 },
@@ -4355,7 +4356,7 @@ _docForm:function(editDoc){
     var dtOpts=Object.entries(Pages._DT).map(function(e){
       return'<option value="'+e[0]+'"'+(editDoc&&editDoc.doc_type===e[0]?' selected':'')+'>'+e[1]+'</option>';
     }).join('');
-    Modal.open({title:'신규 문서 등록',size:'mlg',body:
+    Modal.open({title:editDoc?'✏️ 문서 수정 — '+H.e(editDoc.doc_no||''):'신규 문서 등록',size:'mlg',body:
       '<div class="fg2">'+
       '<div class="fgroup"><label class="fl req">문서번호</label><input class="fc" id="fnDocNo" placeholder="예: QP-001" value="'+H.e(editDoc?editDoc.doc_no:'')+'"></div>'+
       '<div class="fgroup"><label class="fl req">문서 제목</label><input class="fc" id="fnTitle" placeholder="예: 수입검사 절차서" value="'+H.e(editDoc?editDoc.title:'')+'"></div>'+
@@ -4373,7 +4374,7 @@ _docForm:function(editDoc){
         '<div id="fnFilePreview" style="font-size:11px;color:var(--tm);margin-top:3px"></div>'+
       '</div>'+
       '</div>',
-    foot:'<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri" onclick="Pages._docSave(null)">등록</button>'});
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri" onclick="Pages._docSave('+(editDoc?editDoc.id:'null')+')">'+(editDoc?'수정 저장':'등록')+'</button>'});
   });
 },
 _docSave:async function(editId){
@@ -4386,7 +4387,27 @@ _docSave:async function(editId){
            category:document.getElementById('fnCat')?.value||null,
            review_cycle:document.getElementById('fnCycle')?.value||'annual',
            dept:document.getElementById('fnDept')?.value?.trim()||null,
-           tags:tags,status:'draft',current_ver:'v1.0'};
+           tags:tags};
+  /* [v2.132] 수정 모드 — doc_master 기본 정보만 UPDATE, 신규 버전/결재 요청 로직은 건너뜀 */
+  if(editId){
+    var ur=await SB.updateDocMaster(editId,row); if(!ur.ok)return;
+    var fInpE=document.getElementById('fnFile');
+    var existUrlE=document.getElementById('fnExistingFileUrl')?.value||'';
+    var existNameE=document.getElementById('fnExistingFileName')?.value||'';
+    if(fInpE&&fInpE.files&&fInpE.files[0]){
+      try{
+        var upE=await SB.uploadFile('docs',fInpE.files[0]);
+        if(upE&&upE.url){ await SB.updateDocMaster(editId,{file_url:upE.url,file_name:fInpE.files[0].name}); }
+        else { Toast.show('파일 업로드 실패: Storage [docs] 버킷을 확인하세요.','err'); }
+      }catch(e){Toast.show('파일 업로드 오류: '+e.message,'warn');}
+    } else if(existUrlE){
+      await SB.updateDocMaster(editId,{file_url:existUrlE,file_name:existNameE});
+    }
+    Toast.show('문서가 수정되었습니다.','ok'); Modal.close();
+    var freshE=await SB.getDocMaster(); if(freshE&&freshE.length) window._docRows=freshE; Pages._docRender(); Pages._docKanban();
+    return;
+  }
+  row.status='draft'; row.current_ver='v1.0';
   /* [v2.65 D1-2] r.id 직접 사용 — getDocMaster 타이밍 이슈 해소 */
   var r=await SB.addDocMaster(row); if(!r.ok)return;
   var newDoc=r.id ? {id:r.id,doc_no:docNo} : (await SB.getDocMaster()).find(function(d){return d.doc_no===docNo;});
@@ -5359,7 +5380,7 @@ async doc_search(){
     '<div style="font-size:12px;color:var(--muted)">문서번호 · 제목 · 태그 통합 실시간 검색</div></div></div>'+
     '<div style="margin-bottom:16px"><input type="text" id="dsKw" style="width:100%;padding:12px 16px;border:2px solid var(--brd);border-radius:10px;font-size:15px;background:var(--bg);color:var(--text);box-sizing:border-box" placeholder="🔍 문서 제목, 번호, 태그를 입력하세요..." oninput="Pages._dsSearch(this.value)" autofocus></div>'+
     '<div id="dsResult"><div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px">🔍</div><div>검색어를 입력하면 바로 결과가 표시됩니다.</div></div></div>';
-  if(!window._docRows||!window._docRows.length) window._docRows=await SB.getDocs();
+  if(!window._docRows||!window._docRows.length) window._docRows=await SB.getDocMaster();
 },
 _dsSearch:function(kw){
   var el=document.getElementById('dsResult');
@@ -5394,7 +5415,7 @@ async doc_distribution(){
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   var docs=[];var summary={byAction:{},byDoc:[],total:0};
-  try{docs=await SB.getDocs();summary=await SB.getDistLogSummary();}catch(e){}
+  try{docs=await SB.getDocMaster();summary=await SB.getDistLogSummary();}catch(e){}
   var ba=summary.byAction||{};var totalCnt=summary.total||0;
   w.innerHTML=
     '<div class="stat-dash">'+
@@ -5563,7 +5584,7 @@ async doc_review_cycle(){
   var w=document.getElementById('pw');
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   var rows=[];
-  try{rows=await SB.getDocs();}catch(e){}
+  try{rows=await SB.getDocMaster();}catch(e){}
   var today=new Date();
   var expired=[],d7=[],d30=[];
   rows.forEach(function(r){
@@ -5688,7 +5709,7 @@ async doc_recommend(){
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
 
   var rows=[];
-  try{ rows=await SB.getDocs(); }catch(e){}
+  try{ rows=await SB.getDocMaster(); }catch(e){}
 
   /* 태그 빈도 집계 */
   var tagMap={};
@@ -5895,7 +5916,7 @@ async doc_dashboard(){
   w.innerHTML='<div class="es" style="margin:60px auto"><div class="es-icon">⏳</div><div>대시보드 로딩 중...</div></div>';
 
   var rows=[];
-  try{ rows=await SB.getDocs(); }catch(e){}
+  try{ rows=await SB.getDocMaster(); }catch(e){}
 
   /* ── 집계 ── */
   var total=rows.length;
@@ -5927,57 +5948,57 @@ async doc_dashboard(){
   w.innerHTML=
     '<div class="ph"><div>'+
       '<div class="ptit">📊 문서 현황 대시보드</div>'+
-      '<div style="font-size:12px;color:var(--muted)">ISO 9001 문서화된 정보 관리 현황</div>'+
+      '<div style="font-size:13px;color:var(--muted);margin-top:2px">ISO 9001 문서화된 정보 관리 현황</div>'+
     '</div><div class="pac">'+
       '<button class="btn bout bsm" onclick="Pages._dashRefresh()">🔄 새로고침</button>'+
     '</div></div>'+
 
     /* ① KPI 카드 */
-    '<div class="stat-dash" style="margin-bottom:20px">'+
+    '<div class="stat-dash" style="margin-bottom:22px">'+
       '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'\',\'all\')">'+
-        '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📄</div>'+
+        '<div class="sd-icon" style="background:#e8f4fd;color:#3b82c4">📄</div>'+
         '<div><div class="sd-val">'+total+'</div><div class="sd-lbl">전체 문서</div></div>'+
       '</div>'+
       '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'active\',\'유효\')">'+
-        '<div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div>'+
+        '<div class="sd-icon" style="background:#e3f6ec;color:#3fa873">✅</div>'+
         '<div><div class="sd-val">'+byStatus.active+'</div><div class="sd-lbl">유효(Active)</div></div>'+
       '</div>'+
       '<div class="sd-card" style="cursor:pointer" onclick="Pages._docStatClick(\'in_review\',\'검토중\')">'+
-        '<div class="sd-icon" style="background:#dbeafe;color:#2563eb">🔄</div>'+
+        '<div class="sd-icon" style="background:#e7eefc;color:#4a7cd4">🔄</div>'+
         '<div><div class="sd-val">'+byStatus.in_review+'</div><div class="sd-lbl">검토중</div></div>'+
       '</div>'+
       '<div class="sd-card" style="cursor:pointer" onclick="Pages.doc_review_cycle()">'+
-        '<div class="sd-icon" style="background:'+(expiring>0?'#fee2e2':'#f0fdf4')+';color:'+(expiring>0?'#dc2626':'#059669')+'">'+
+        '<div class="sd-icon" style="background:'+(expiring>0?'#fbe9ea':'#e3f6ec')+';color:'+(expiring>0?'#cd5b63':'#3fa873')+'">'+
           (expiring>0?'⚠️':'✅')+
         '</div>'+
-        '<div><div class="sd-val" style="color:'+(expiring>0?'#dc2626':'#059669')+'">'+expiring+'</div>'+
+        '<div><div class="sd-val" style="color:'+(expiring>0?'#cd5b63':'#3fa873')+'">'+expiring+'</div>'+
         '<div class="sd-lbl">D-30 만료임박</div></div>'+
       '</div>'+
     '</div>'+
 
     /* ② 차트 영역 */
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">'+
 
       /* 유형별 분포 */
-      '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px">'+
-        '<div style="font-size:13px;font-weight:600;margin-bottom:12px">📂 유형별 분포</div>'+
+      '<div style="background:var(--card);border:1px solid var(--brd);border-radius:14px;padding:20px">'+
+        '<div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text)">📂 유형별 분포</div>'+
         '<div id="dashTypeChart"></div>'+
       '</div>'+
 
       /* 상태별 현황 + 심사준비율 */
-      '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px">'+
-        '<div style="font-size:13px;font-weight:600;margin-bottom:12px">📊 상태별 현황</div>'+
+      '<div style="background:var(--card);border:1px solid var(--brd);border-radius:14px;padding:20px">'+
+        '<div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text)">📊 상태별 현황</div>'+
         '<div id="dashStatusChart"></div>'+
         /* 심사 준비율 게이지 */
-        '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--brd)">'+
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-            '<span style="font-size:12px;font-weight:600">🏅 심사 준비율</span>'+
-            '<span style="font-size:16px;font-weight:500;color:'+(readyPct>=80?'#059669':readyPct>=60?'#d97706':'#dc2626')+'">'+readyPct+'%</span>'+
+        '<div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--brd)">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+            '<span style="font-size:13px;font-weight:700;color:var(--text)">🏅 심사 준비율</span>'+
+            '<span style="font-size:18px;font-weight:700;color:'+(readyPct>=80?'#3fa873':readyPct>=60?'#d6952f':'#cd5b63')+'">'+readyPct+'%</span>'+
           '</div>'+
-          '<div style="height:10px;background:var(--brd);border-radius:5px;overflow:hidden">'+
-            '<div style="height:100%;background:'+(readyPct>=80?'#059669':readyPct>=60?'#f59e0b':'#ef4444')+';width:'+readyPct+'%;border-radius:5px;transition:width .6s ease"></div>'+
+          '<div style="height:12px;background:var(--bg2);border-radius:6px;overflow:hidden">'+
+            '<div style="height:100%;background:'+(readyPct>=80?'#5fbf94':readyPct>=60?'#e3ab52':'#e08089')+';width:'+readyPct+'%;border-radius:6px;transition:width .6s ease"></div>'+
           '</div>'+
-          '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+
+          '<div style="font-size:12px;color:var(--muted);margin-top:6px">'+
             '유효 '+byStatus.active+'건 / (유효+검토중) '+readyBase+'건 기준'+
           '</div>'+
         '</div>'+
@@ -5986,30 +6007,30 @@ async doc_dashboard(){
     '</div>'+
 
     /* ③ 최근 등록/개정 */
-    '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px">'+
-      '<div style="font-size:13px;font-weight:600;margin-bottom:12px">🕐 최근 등록/개정 문서</div>'+
+    '<div style="background:var(--card);border:1px solid var(--brd);border-radius:14px;padding:20px">'+
+      '<div style="font-size:14px;font-weight:700;margin-bottom:14px;color:var(--text)">🕐 최근 등록/개정 문서</div>'+
       (recent.length
-        ?'<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        ?'<table style="width:100%;border-collapse:collapse;font-size:13px">'+
           '<thead><tr style="background:var(--bg2)">'+
-            '<th style="padding:8px 12px;text-align:left;font-weight:600;color:var(--muted);width:130px">문서번호</th>'+
-            '<th style="padding:8px 12px;text-align:left;font-weight:600;color:var(--muted)">제목</th>'+
-            '<th style="padding:8px 12px;text-align:center;font-weight:600;color:var(--muted);width:80px">버전</th>'+
-            '<th style="padding:8px 12px;text-align:center;font-weight:600;color:var(--muted);width:80px">상태</th>'+
-            '<th style="padding:8px 12px;text-align:right;font-weight:600;color:var(--muted);width:120px">등록일</th>'+
+            '<th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--muted);width:140px;border-radius:8px 0 0 8px">문서번호</th>'+
+            '<th style="padding:10px 14px;text-align:left;font-weight:700;color:var(--muted)">제목</th>'+
+            '<th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--muted);width:84px">버전</th>'+
+            '<th style="padding:10px 14px;text-align:center;font-weight:700;color:var(--muted);width:84px">상태</th>'+
+            '<th style="padding:10px 14px;text-align:right;font-weight:700;color:var(--muted);width:124px;border-radius:0 8px 8px 0">등록일</th>'+
           '</tr></thead><tbody>'+
           recent.map(function(r){
             return'<tr style="border-bottom:1px solid var(--brd)" onmouseover="this.style.background=\'var(--hover)\'" onmouseout="this.style.background=\'\'">'+
-              '<td style="padding:8px 12px"><span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+r.id+')">'+H.e(r.doc_no||'-')+'</span></td>'+
-              '<td style="padding:8px 12px;font-weight:500;cursor:pointer" onclick="Pages.doc_history('+r.id+')">'+H.e(r.title||'-')+'</td>'+
-              '<td style="padding:8px 12px;text-align:center"><span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span></td>'+
-              '<td style="padding:8px 12px;text-align:center">'+Pages._dBadge(r.status)+'</td>'+
-              '<td style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted)">'+
+              '<td style="padding:11px 14px"><span style="font-family:monospace;font-size:12.5px;font-weight:700;color:#3b82c4;cursor:pointer" onclick="Pages.doc_history('+r.id+')">'+H.e(r.doc_no||'-')+'</span></td>'+
+              '<td style="padding:11px 14px;font-weight:500;cursor:pointer" onclick="Pages.doc_history('+r.id+')">'+H.e(r.title||'-')+'</td>'+
+              '<td style="padding:11px 14px;text-align:center"><span style="background:#ede9fe;color:#6d4fb8;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px">'+H.e(r.current_ver||'-')+'</span></td>'+
+              '<td style="padding:11px 14px;text-align:center">'+Pages._dBadge(r.status)+'</td>'+
+              '<td style="padding:11px 14px;text-align:right;font-size:12px;color:var(--muted)">'+
                 (r.created_at?new Date(r.created_at).toLocaleDateString('ko-KR'):'-')+
               '</td>'+
             '</tr>';
           }).join('')+
           '</tbody></table>'
-        :'<div style="padding:24px;text-align:center;color:var(--muted)">등록된 문서가 없습니다.</div>')+
+        :'<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">등록된 문서가 없습니다.</div>')+
     '</div>';
 
   /* 차트 렌더 (약간의 딜레이로 DOM 완성 후 실행) */
@@ -6028,47 +6049,47 @@ _dashRenderCharts:function(){
   if(typeEl){
     var entries=Object.entries(byType).sort(function(a,b){return b[1]-a[1];});
     var maxVal=entries.length?entries[0][1]:1;
-    var colors=['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0891b2'];
+    var colors=['#4a7cd4','#3fa873','#d6952f','#8b6fcf','#cd5b63','#3b9cb0'];
     typeEl.innerHTML=entries.map(function(e,i){
       var pct=Math.round((e[1]/maxVal)*100);
-      return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
-        '<div style="width:64px;font-size:11px;color:var(--muted);text-align:right;flex-shrink:0">'+H.e(e[0])+'</div>'+
-        '<div style="flex:1;height:18px;background:var(--bg2);border-radius:4px;overflow:hidden">'+
-          '<div style="height:100%;background:'+(colors[i%colors.length])+';width:'+pct+'%;border-radius:4px;transition:width .5s ease;display:flex;align-items:center;padding-left:6px">'+
-            '<span style="font-size:10px;color:#fff;font-weight:600;white-space:nowrap">'+e[1]+'건</span>'+
+      return'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+        '<div style="width:78px;font-size:12.5px;color:var(--muted);text-align:right;flex-shrink:0;font-weight:500">'+H.e(e[0])+'</div>'+
+        '<div style="flex:1;height:22px;background:var(--bg2);border-radius:6px;overflow:hidden">'+
+          '<div style="height:100%;background:'+(colors[i%colors.length])+';width:'+pct+'%;border-radius:6px;transition:width .5s ease;display:flex;align-items:center;padding-left:8px">'+
+            '<span style="font-size:11.5px;color:#fff;font-weight:700;white-space:nowrap">'+e[1]+'건</span>'+
           '</div>'+
         '</div>'+
       '</div>';
-    }).join('')||'<div style="color:var(--muted);font-size:12px">데이터 없음</div>';
+    }).join('')||'<div style="color:var(--muted);font-size:13px">데이터 없음</div>';
   }
 
   /* ② 상태별 현황 — 컬러 스택 바 */
   var statusEl=document.getElementById('dashStatusChart');
   if(statusEl){
     var statusDef=[
-      {key:'active',    label:'유효',   clr:'#059669'},
-      {key:'in_review', label:'검토중', clr:'#2563eb'},
-      {key:'draft',     label:'초안',   clr:'#94a3b8'},
-      {key:'obsolete',  label:'폐기',   clr:'#dc2626'},
+      {key:'active',    label:'유효',   clr:'#5fbf94'},
+      {key:'in_review', label:'검토중', clr:'#5e8ddb'},
+      {key:'draft',     label:'초안',   clr:'#b6bfca'},
+      {key:'obsolete',  label:'폐기',   clr:'#e08089'},
     ];
     var total2=Object.values(byStatus).reduce(function(s,v){return s+v;},0)||1;
 
     statusEl.innerHTML=
       /* 스택 바 */
-      '<div style="height:24px;border-radius:6px;overflow:hidden;display:flex;margin-bottom:10px">'+
+      '<div style="height:28px;border-radius:8px;overflow:hidden;display:flex;margin-bottom:14px">'+
         statusDef.filter(function(s){return byStatus[s.key]>0;}).map(function(s){
           var pct=Math.round((byStatus[s.key]/total2)*100);
           return'<div style="background:'+s.clr+';width:'+pct+'%;display:flex;align-items:center;justify-content:center" title="'+s.label+': '+byStatus[s.key]+'건">'+
-            (pct>8?'<span style="font-size:10px;color:#fff;font-weight:600">'+pct+'%</span>':'')+
+            (pct>8?'<span style="font-size:11.5px;color:#fff;font-weight:700">'+pct+'%</span>':'')+
           '</div>';
         }).join('')+
       '</div>'+
       /* 범례 */
-      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
+      '<div style="display:flex;flex-wrap:wrap;gap:12px">'+
         statusDef.map(function(s){
-          return'<div style="display:flex;align-items:center;gap:4px">'+
-            '<div style="width:10px;height:10px;border-radius:2px;background:'+s.clr+'"></div>'+
-            '<span style="font-size:11px;color:var(--muted)">'+s.label+' '+byStatus[s.key]+'</span>'+
+          return'<div style="display:flex;align-items:center;gap:6px">'+
+            '<div style="width:11px;height:11px;border-radius:3px;background:'+s.clr+'"></div>'+
+            '<span style="font-size:12.5px;color:var(--muted);font-weight:500">'+s.label+' '+byStatus[s.key]+'</span>'+
           '</div>';
         }).join('')+
       '</div>';
