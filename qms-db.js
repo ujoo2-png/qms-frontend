@@ -1189,6 +1189,7 @@ const SB={
     const allowed={
       vendor_id:row.vendor_id||null, vendor_name:row.vendor_name||'',
       period:row.period||'', eval_date:row.eval_date||null,
+      audit_id:row.audit_id||null,
       quality:Number(row.quality)||0, delivery:Number(row.delivery)||0,
       price:Number(row.price)||0, response:Number(row.response)||0,
       total:Number(row.total)||0, grade:row.grade||'',
@@ -1240,7 +1241,10 @@ const SB={
   },
   async updateVendorAudit(id,patch){
     if(!_sb){const r=(DB.vendor_audits||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
-    const {error}=await _sb.from('vendor_audits').update({...patch,updated_at:new Date().toISOString()}).eq('id',id);
+    /* [v2.135] score를 숫자로 명시 변환 — 문자열 소수점이 그대로 전달되어 integer 타입 오류 발생 방지 */
+    const safe={...patch};
+    if(safe.score!=null) safe.score=parseFloat(safe.score)||null;
+    const {error}=await _sb.from('vendor_audits').update({...safe,updated_at:new Date().toISOString()}).eq('id',id);
     if(error){Toast.show('심사 수정 실패: '+error.message,'err');return{ok:false};}
     const r=(DB.vendor_audits||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);
     return{ok:true};

@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.134</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.136</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -1828,13 +1828,12 @@ async _insp(type){
   let data=DB.inspections.filter(r=>r.type===key);
   let fromV='',toV='';
 
-  /* [v2.134] 최초 등록일 / 최근 update일 — 목록 위 우측 끝단 표시용 */
+  /* [v2.135] 최초/최근 검사일 — 검사일(insp_date) 기준 */
   const dateRange=(()=>{
     if(!data.length) return null;
-    const created=data.map(r=>r.created_at).filter(Boolean).sort();
-    const updated=data.map(r=>r.updated_at||r.created_at).filter(Boolean).sort();
-    if(!created.length) return null;
-    return {first:created[0].slice(0,10), last:updated[updated.length-1].slice(0,10)};
+    const dates=data.map(r=>r.insp_date).filter(Boolean).sort();
+    if(!dates.length) return null;
+    return {first:dates[0].slice(0,10), last:dates[dates.length-1].slice(0,10)};
   })();
 
   const render=()=>{
@@ -1925,8 +1924,8 @@ async _insp(type){
   </div>
   ${dateRange?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
     <div style="font-size:11px;color:var(--tm);background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;line-height:1.7;text-align:right">
-      <div>최초 등록일: <b style="color:var(--tx)">${dateRange.first}</b></div>
-      <div>최근 update: <b style="color:var(--tx)">${dateRange.last}</b></div>
+      <div>최초 검사일: <b style="color:var(--tx)">${dateRange.first}</b></div>
+      <div>최근 검사일: <b style="color:var(--tx)">${dateRange.last}</b></div>
     </div>
   </div>`:''}
   <!-- 날짜 퀵버튼 + 기간 검색 -->
@@ -12342,7 +12341,7 @@ async sqm_eval(){
       <div><div class="ptit">⭐ 공급업체 평가</div>
         <div class="psub">품질·납기·가격·대응 종합평가 — A/B/C/D 등급 관리</div></div>
       <div class="pac">
-        <button class="btn bpri btn-f2" onclick="Pages._sqmEvalForm()">+ 평가 등록 <span class="kbd">F2</span></button>
+        <button class="btn bpri btn-f2" onclick="Pages._sqmAuditPickForEval()">+ 평가 등록 <span class="kbd">F2</span></button>
       </div>
     </div>
     <div class="tbar">
@@ -12394,6 +12393,10 @@ _sqmEvalRefresh(){
         render:v=>`<span style="${v>0?'color:#dc2626;font-weight:700':''}">${v||'0'}</span>`},
       {key:'eval_date',   label:'평가일',   w:'90px'},
       {key:'evaluator',   label:'평가자',   w:'70px'},
+      {key:'audit_id',    label:'등록방식', w:'82px',align:'center',
+        render:v=>v
+          ?`<span class="badge bblu" style="font-size:11px">🔗 심사연계</span>`
+          :`<span class="badge bgry" style="font-size:11px">📝 직접등록</span>`},
       {key:'file_url',    label:'파일',     w:'64px',align:'center',
         render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" class="btn bxs bblu" style="font-size:10px;padding:1px 7px;text-decoration:none">📎 보기</a>`:'<span style="color:var(--tl);font-size:11px">-</span>'},
       {key:'_mail',       label:'메일',     w:'58px',align:'center',
@@ -12550,6 +12553,7 @@ _sqmEvalForm(row=null){
     </div>`,
   });
   window._sqmEvalEditRow=row;
+  if(!isEdit) window._sqmEvalAuditId=null; /* [v2.136] 직접 등록 시 audit_id 초기화 */
   if(isEdit) setTimeout(()=>Pages._sqmCalcTotal(),80);
 },
 
@@ -12590,7 +12594,8 @@ async _sqmEvalSave(){
   }
   const newRow={vendor_name:vName,period,quality,delivery,price,response,
     total,grade,ppm:Number(g('evPpm'))||0,complaint:Number(g('evComplaint'))||0,
-    eval_date:evalDate,evaluator:g('evEvaluator'),note:g('evNote'),file_url};
+    eval_date:evalDate,evaluator:g('evEvaluator'),note:g('evNote'),file_url,
+    audit_id:window._sqmEvalAuditId||null};
   if(row?.id){
     const res=await SB.updateVendorEval(row.id,newRow);
     if(!res.ok) return;
@@ -12843,27 +12848,71 @@ _sqmVendorAcPick(inputId,hiddenId,name){
 
 /* [v2.116] 심사→평가 자동연계 — 완료된 심사 데이터를 평가 등록 폼에 미리 채워서 전달
    (보류 문서 제안사항: "심사 완료 시 거래처명/심사일 등 자동 전달") */
+/* [v2.136] 업체평가 등록 진입점 — 심사 목록 선택 팝업 (ISO 9001 프로세스 준수)
+   흐름: 심사계획 → 실사(audit) → 결과점수 입력 → 업체평가 반영
+   심사 선택 시 거래처명·기간·심사점수(→품질항목)·심사일 자동 채워짐
+   직접 등록도 가능하도록 "심사 연계 없이 등록" 버튼 유지 */
+_sqmAuditPickForEval(){
+  const audits=(DB.vendor_audits||[]).filter(a=>a.status==='완료').sort((a,b)=>{
+    return (b.actual_date||b.plan_date||'').localeCompare(a.actual_date||a.plan_date||'');
+  });
+  const rows=audits.map(a=>{
+    const d=a.actual_date||a.plan_date||'-';
+    return `<tr style="cursor:pointer" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"
+      onclick="Modal.close();Pages._sqmAuditToEval(${a.id})">
+      <td style="padding:9px 12px;font-family:monospace;font-size:12px;color:#3b82c4;font-weight:700">${H.e(a.vendor_name||'-')}</td>
+      <td style="padding:9px 12px">${H.e(a.audit_type||'-')}</td>
+      <td style="padding:9px 12px;text-align:center">${H.e(d)}</td>
+      <td style="padding:9px 12px;text-align:center;font-weight:700;color:${(a.score||0)>=80?'var(--ok)':(a.score||0)>=60?'#d97706':'var(--err)'}">
+        ${a.score!=null?a.score+'점':'-'}</td>
+      <td style="padding:9px 12px;text-align:center"><span class="badge bgrn">완료</span></td>
+    </tr>`;
+  }).join('');
+  Modal.open({title:'⭐ 업체평가 등록 — 심사 결과 선택',size:'mlg',
+    body:`<div style="font-size:13px;color:var(--muted);margin-bottom:12px;padding:8px 12px;background:var(--bg2);border-radius:8px">
+        📋 완료된 심사를 선택하면 거래처·심사점수가 자동으로 채워집니다.
+      </div>
+      ${rows.length
+        ?`<table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:var(--bg2)">
+            <th style="padding:9px 12px;text-align:left;font-weight:700;color:var(--muted)">거래처</th>
+            <th style="padding:9px 12px;text-align:left;font-weight:700;color:var(--muted)">심사유형</th>
+            <th style="padding:9px 12px;text-align:center;font-weight:700;color:var(--muted)">실시일</th>
+            <th style="padding:9px 12px;text-align:center;font-weight:700;color:var(--muted)">점수</th>
+            <th style="padding:9px 12px;text-align:center;font-weight:700;color:var(--muted)">상태</th>
+          </tr></thead><tbody>${rows}</tbody></table>`
+        :`<div style="text-align:center;padding:40px;color:var(--muted)">
+          <div style="font-size:32px;margin-bottom:8px">📋</div>
+          <div>완료된 심사가 없습니다.</div>
+          <div style="font-size:12px;margin-top:4px">심사계획 → 실사 완료 후 평가를 등록하거나, 아래 버튼으로 직접 등록하세요.</div>
+        </div>`}`,
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+      <button class="btn bout" onclick="Modal.close();Pages._sqmEvalForm()">📝 심사 연계 없이 직접 등록</button>`,
+  });
+},
 _sqmAuditToEval(auditId){
   const a=(DB.vendor_audits||[]).find(r=>r.id===auditId);
   if(!a){Toast.show('심사 데이터를 찾을 수 없습니다.','err');return;}
   const d=new Date(a.actual_date||a.plan_date||H.today());
   const period=`${d.getFullYear()}-Q${Math.ceil((d.getMonth()+1)/3)}`;
-  const prefill={
-    vendor_name:a.vendor_name,
-    period,
-    eval_date:H.today(),
-    note:`[${a.audit_type||'정기'}심사 연계] 심사일 ${a.actual_date||a.plan_date||'-'} / 심사점수 ${a.score??'-'}점`+
-         (a.findings?` / 지적사항: ${a.findings}`:''),
-  };
+  const note=`[${a.audit_type||'정기'}심사 연계] 심사일 ${a.actual_date||a.plan_date||'-'} / 심사점수 ${a.score??'-'}점`+
+              (a.findings?` / 지적사항: ${a.findings}`:'');
   Pages._sqmEvalForm(null);
-  /* 자동완성 입력창 + hidden 값 채우기는 모달 렌더 직후 수행 */
+  window._sqmEvalAuditId=auditId; /* [v2.136] 심사→평가 연계 추적 */
+  /* [v2.136] 모달 렌더 직후 심사 데이터 자동 채움
+     심사 점수 → 품질 항목 (심사는 품질 관점 실사), 나머지 항목은 수동 입력 */
   setTimeout(()=>{
-    const vi=document.getElementById('evVendorInput'),vh=document.getElementById('evVName');
-    if(vi) vi.value=prefill.vendor_name;
-    if(vh) vh.value=prefill.vendor_name;
-    const pe=document.getElementById('evPeriod'); if(pe) pe.value=prefill.period;
-    const ed=document.getElementById('evDate'); if(ed) ed.value=prefill.eval_date;
-    const nt=document.getElementById('evNote'); if(nt) nt.value=prefill.note;
+    const vi=document.getElementById('evVendorInput'), vh=document.getElementById('evVName');
+    if(vi) vi.value=a.vendor_name||'';
+    if(vh) vh.value=a.vendor_name||'';
+    const pe=document.getElementById('evPeriod'); if(pe) pe.value=period;
+    const ed=document.getElementById('evDate');   if(ed) ed.value=a.actual_date||H.today();
+    const nt=document.getElementById('evNote');   if(nt) nt.value=note;
+    /* 심사 점수 → 품질 항목 자동 채움 */
+    if(a.score!=null){
+      const eq=document.getElementById('evQuality');
+      if(eq){eq.value=a.score; Pages._sqmCalcTotal();}
+    }
   },80);
 },
 
