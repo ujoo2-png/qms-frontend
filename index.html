@@ -20,7 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- [v2.110] QR 코드 생성 — 마이머신카드 출력용 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<link rel="stylesheet" href="qms-style.css?v=2.129">
+<link rel="stylesheet" href="qms-style.css?v=2.130">
 <!-- Supabase JS SDK CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -80,7 +80,7 @@
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.129</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.130</div>
         </div>
       </div>
     </div>
@@ -233,7 +233,7 @@
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.129</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.130</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
   </div>
 </div>
 
@@ -244,7 +244,7 @@
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.129</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.130</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -410,12 +410,12 @@
 
 
 <!-- QMS 분리 파일 로드 순서: db → core → pages → excel → init -->
-<script src="qms-db.js?v=2.129"></script>
-<script src="qms-core.js?v=2.129"></script>
-<script src="qms-pages.js?v=2.129"></script>
-<script src="qms-excel.js?v=2.129"></script>
+<script src="qms-db.js?v=2.130"></script>
+<script src="qms-core.js?v=2.130"></script>
+<script src="qms-pages.js?v=2.130"></script>
+<script src="qms-excel.js?v=2.130"></script>
   <script>/* Cfg 전역 보장 */if(typeof window.Cfg==='undefined'&&typeof Cfg!=='undefined')window.Cfg=Cfg;if(typeof window.ExcelMgr==='undefined'&&typeof ExcelMgr!=='undefined')window.ExcelMgr=ExcelMgr;</script>
-<script src="qms-init.js?v=2.129"></script>
+<script src="qms-init.js?v=2.130"></script>
 
 
 <script type="text/plain" id="ncCarPrintTpl">

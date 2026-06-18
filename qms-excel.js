@@ -220,25 +220,40 @@ const DB2={
 };
 /* ══ B: 검사 고도화 ══ */
 Object.assign(Pages,{
-insp_std(){
-  const w=document.getElementById('pw');const data=DB2.insp_std;
+async insp_std(){
+  const w=document.getElementById('pw');
+  /* [v2.130] Supabase 연동 — DB2 더미데이터 대신 실제 insp_std 테이블 사용 */
+  const list=await SB.getInspStd();
+  DB.insp_std=list;
+  const data=list.map(d=>{
+    let items=[];
+    try{items=typeof d.insp_items==='string'?JSON.parse(d.insp_items||'[]'):(d.insp_items||[]);}catch(e){items=[];}
+    return {...d, criteria:items};
+  });
   w.innerHTML=`<div class="stat-dash">
     <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div><div><div class="sd-val">${data.length}</div><div class="sd-lbl">등록 기준서</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">🔍</div><div><div class="sd-val">${data.filter(d=>d.insp_type==='수입').length}</div><div class="sd-lbl">수입</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">✅</div><div><div class="sd-val">${data.filter(d=>d.insp_type==='출하').length}</div><div class="sd-lbl">출하</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">✅</div><div><div class="sd-val">${data.filter(d=>d.insp_type==='최종'||d.insp_type==='출하').length}</div><div class="sd-lbl">최종</div></div></div>
   </div>
   <div class="ph" style="margin-top:14px"><div><div class="ptit">📋 검사 기준서</div><div class="psub">품목별 검사항목·기준·AQL 설정</div></div>
     <div class="pac"><button class="btn bpri btn-f2" onclick="Pages._inspStdForm()">+ 기준서 등록 <span class="kbd">F2</span></button></div>
   </div>
   <div class="tbar"><div class="sw2"><input type="text" placeholder="품목코드, 품목명 검색..."></div>
-    <select class="fsel"><option value="">전체 유형</option><option>수입</option><option>공정</option><option>출하</option></select>
+    <select class="fsel"><option value="">전체 유형</option><option>전체</option><option>수입</option><option>공정</option><option>구매</option><option>외주</option><option>최종</option><option>고객</option></select>
   </div><div id="stdTbl"></div>`;
+  /* [v2.130] 헤더 너비 글자수 비례 동적 조정 */
+  const codeMaxLen=Math.max(6,...data.map(r=>(r.item_code||'').length));
+  const nameMaxLen=Math.max(6,...data.map(r=>(r.item_name||'').length));
+  const codeW=Math.min(140,Math.max(90,codeMaxLen*9+24))+'px';
+  const nameW=Math.min(220,Math.max(110,nameMaxLen*13+24))+'px';
   Tbl.render({el:'#stdTbl',cols:[
-    {key:'item_code',label:'품목코드',w:'100px'},{key:'item_name',label:'품목명'},
-    {key:'insp_type',label:'검사유형',w:'78px',render:v=>`<span class="badge bblu">${H.e(v)}</span>`},
-    {key:'criteria',label:'항목수',w:'70px',align:'center',render:v=>`<strong>${v.length}개</strong>`},
-    {key:'aql',label:'AQL',w:'58px',align:'center'},{key:'sample_level',label:'검사수준',w:'75px',align:'center'},
-    {key:'rev',label:'Rev',w:'55px',align:'center'},{key:'updated',label:'개정일',w:'88px'},{key:'author',label:'작성자',w:'72px'},
+    {key:'item_code',label:'품목코드',w:codeW},{key:'item_name',label:'품목명',w:nameW},
+    {key:'insp_type',label:'검사유형',w:'78px',render:v=>`<span class="badge bblu">${H.e(v||'-')}</span>`},
+    {key:'insp_method',label:'검사구분',w:'80px',render:v=>`<span class="badge ${v==='무검사'?'bgry':v==='전수검사'?'bred':'bblu'}">${H.e(v||'-')}</span>`},
+    {key:'criteria',label:'항목수',w:'70px',align:'center',render:v=>`<strong>${(v||[]).length}개</strong>`},
+    {key:'aql',label:'AQL',w:'58px',align:'center'},{key:'insp_level',label:'검사수준',w:'75px',align:'center'},
+    {key:'rev',label:'Rev',w:'55px',align:'center'},{key:'effective_date',label:'개정일',w:'88px'},{key:'created_by',label:'작성자',w:'72px'},
+    {key:'file_url',label:'파일',w:'60px',align:'center',render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()">📎</a>`:'-'},
   ],data,onRow:row=>Pages._inspStdDetail(row)});
 },
 _inspStdDetail(row){
@@ -246,31 +261,89 @@ _inspStdDetail(row){
     body:`<div class="g2" style="margin-bottom:14px">
       <div><div class="ir"><div class="il">품목코드</div><div class="iv" style="font-family:'JetBrains Mono',monospace">${H.e(row.item_code)}</div></div>
       <div class="ir"><div class="il">품목명</div><div class="iv"><strong>${H.e(row.item_name)}</strong></div></div>
-      <div class="ir"><div class="il">검사유형</div><div class="iv"><span class="badge bblu">${H.e(row.insp_type)}</span></div></div></div>
-      <div><div class="ir"><div class="il">AQL</div><div class="iv">${H.e(row.aql)}</div></div>
-      <div class="ir"><div class="il">검사수준</div><div class="iv">${H.e(row.sample_level)}</div></div>
-      <div class="ir"><div class="il">개정번호/일</div><div class="iv">Rev.${H.e(row.rev)} / ${row.updated}</div></div></div>
+      <div class="ir"><div class="il">검사유형</div><div class="iv"><span class="badge bblu">${H.e(row.insp_type||'-')}</span></div></div>
+      <div class="ir"><div class="il">검사구분</div><div class="iv"><span class="badge ${row.insp_method==='무검사'?'bgry':row.insp_method==='전수검사'?'bred':'bblu'}">${H.e(row.insp_method||'-')}</span></div></div></div>
+      <div><div class="ir"><div class="il">AQL</div><div class="iv">${H.e(row.aql||'-')}</div></div>
+      <div class="ir"><div class="il">검사수준</div><div class="iv">${H.e(row.insp_level||'-')}</div></div>
+      <div class="ir"><div class="il">개정번호/일</div><div class="iv">Rev.${H.e(row.rev||'-')} / ${H.e(row.effective_date||'-')}</div></div>
+      <div class="ir"><div class="il">첨부파일</div><div class="iv">${row.file_url?`<a href="${H.e(row.file_url)}" target="_blank">📎 ${H.e(row.file_name||'파일보기')}</a>`:'-'}</div></div></div>
     </div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:9px">📌 검사 항목 (${row.criteria.length}개)</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:9px">📌 검사 항목 (${(row.criteria||[]).length}개)</div>
     <div class="xl-result"><table><thead><tr><th>No</th><th>검사항목</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>검사빈도</th></tr></thead>
-    <tbody>${row.criteria.map(c=>`<tr><td style="text-align:center">${c.no}</td><td><strong>${H.e(c.item)}</strong></td><td>${H.e(c.method)}</td><td>${H.e(c.spec)}</td><td style="text-align:center">${H.e(c.unit)}</td><td style="text-align:center;color:var(--err)">${H.e(c.usl)}</td><td style="text-align:center;color:var(--acc)">${H.e(c.lsl)}</td><td style="text-align:center">${H.e(c.freq)}</td></tr>`).join('')}</tbody></table></div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Toast.show('수정 기능 — 추가 개발 예정','info')">수정</button>`});
+    <tbody>${(row.criteria||[]).map(c=>`<tr><td style="text-align:center">${c.no}</td><td><strong>${H.e(c.item)}</strong></td><td>${H.e(c.method)}</td><td>${H.e(c.spec)}</td><td style="text-align:center">${H.e(c.unit)}</td><td style="text-align:center;color:var(--err)">${H.e(c.usl)}</td><td style="text-align:center;color:var(--acc)">${H.e(c.lsl)}</td><td style="text-align:center">${H.e(c.freq)}</td></tr>`).join('')}</tbody></table></div>`,
+    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button><button class="btn bpri" onclick="Modal.close();Pages._inspStdForm(${JSON.stringify(row).replace(/"/g,'&quot;')})">✏️ 수정</button>`});
 },
-_inspStdForm(){
-  Modal.open({title:'📋 검사 기준서 등록',size:'mxl',
+_inspStdForm(row=null){
+  const isEdit=!!row;
+  const itemDatalist=(DB.items||[]).map(it=>`<option value="${H.e(it.item_code)}">${H.e(it.item_code)} — ${H.e(it.item_name)}</option>`).join('');
+  const inspTypes=['전체','수입','공정','구매','외주','최종','고객'];
+  const inspMethods=['무검사','전수검사','샘플링'];
+  const criteria=row?.criteria||[];
+  const critRows=criteria.length?criteria:[{no:1,item:'',method:'',spec:'',unit:'',usl:'',lsl:'',freq:''}];
+  Modal.open({title:isEdit?'📋 검사 기준서 수정':'📋 검사 기준서 등록',size:'mxl',
     body:`<div class="fg2">
-      <div class="fgroup"><label class="fl req">품목</label><select class="fc"><option value="">선택</option>${DB.items.map(i=>`<option>${H.e(i.item_code)}-${H.e(i.item_name)}</option>`).join('')}</select></div>
-      <div class="fgroup"><label class="fl req">검사유형</label><select class="fc"><option>수입</option><option>공정</option><option>출하</option></select></div>
-      <div class="fgroup"><label class="fl">AQL</label><select class="fc">${['0.065','0.1','0.25','0.4','0.65','1.0','1.5','2.5'].map(v=>`<option>${v}</option>`).join('')}</select></div>
-      <div class="fgroup"><label class="fl">검사수준</label><select class="fc"><option>I</option><option selected>II</option><option>III</option></select></div>
-      <div class="fgroup"><label class="fl">개정번호</label><input class="fc" value="1.0"></div>
-      <div class="fgroup"><label class="fl">개정일</label><input class="fc" type="date" value="${H.today()}"></div>
+      <input type="hidden" id="stdId" value="${row?.id||''}">
+      <div class="fgroup" style="grid-column:1/-1">
+        <label class="fl req">품목코드 <span style="font-size:10px;color:var(--tm)">직접 입력 또는 검색</span></label>
+        <input class="fc" id="stdItemCode" list="stdItemList"
+          value="${H.e(row?.item_code||'')}"
+          placeholder="코드 또는 품목명으로 검색..."
+          oninput="(function(){var v=document.getElementById('stdItemCode').value.split(' — ')[0].trim();var it=(DB.items||[]).find(function(x){return(x.item_code||'')===(v);});if(it){document.getElementById('stdItemName').value=it.item_name||'';document.getElementById('stdItemName').style.color='var(--pri)';}else{document.getElementById('stdItemName').style.color='';}})()"
+          onblur="(function(){var v=document.getElementById('stdItemCode').value.split(' — ')[0].trim();if(!v)return;var it=(DB.items||[]).find(function(x){return(x.item_code||'')===(v);});if(!it&&v)Toast.show('미등록 품목코드입니다. 기준정보 > 품목 등록에서 확인하세요.','warn');})()">
+        <datalist id="stdItemList">${itemDatalist}</datalist>
+      </div>
+      <div class="fgroup"><label class="fl req">품목명</label>
+        <input class="fc" id="stdItemName" value="${H.e(row?.item_name||'')}"></div>
+      <div class="fgroup"><label class="fl req">검사유형</label>
+        <select class="fc" id="stdInspType">${inspTypes.map(t=>`<option ${row?.insp_type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="fgroup"><label class="fl req">검사구분</label>
+        <select class="fc" id="stdInspMethod">${inspMethods.map(m=>`<option ${row?.insp_method===m?'selected':''}>${m}</option>`).join('')}</select></div>
+      <div class="fgroup"><label class="fl">AQL</label><select class="fc" id="stdAql">${['0.065','0.1','0.25','0.4','0.65','1.0','1.5','2.5'].map(v=>`<option ${row?.aql===v?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div class="fgroup"><label class="fl">검사수준</label><select class="fc" id="stdLevel"><option ${row?.insp_level==='I'?'selected':''}>I</option><option ${!row||row?.insp_level==='II'?'selected':''}>II</option><option ${row?.insp_level==='III'?'selected':''}>III</option></select></div>
+      <div class="fgroup"><label class="fl">개정번호</label><input class="fc" id="stdRev" value="${H.e(row?.rev||'1.0')}"></div>
+      <div class="fgroup"><label class="fl">개정일</label><input class="fc" id="stdRevDate" type="date" value="${H.e(row?.effective_date||H.today())}"></div>
+      <div class="fgroup" style="grid-column:1/-1"><label class="fl">파일 첨부</label>
+        <input class="fc" id="stdFile" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+        ${row?.file_url?`<div style="margin-top:5px;font-size:12px"><a href="${H.e(row.file_url)}" target="_blank">📎 ${H.e(row.file_name||'첨부파일')}</a></div>`:''}</div>
     </div>
     <div style="margin-top:14px"><div style="font-size:13px;font-weight:700;margin-bottom:9px">검사 항목</div>
     <table class="ctbl"><thead><tr><th>No</th><th>항목</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>빈도</th><th></th></tr></thead>
-    <tbody id="stdBody"><tr><td style="text-align:center;color:var(--tm)">1</td><td><input class="fc" placeholder="외관"></td><td><input class="fc" placeholder="육안"></td><td><input class="fc"></td><td><input class="fc" style="width:50px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" style="width:65px"></td><td><input class="fc" placeholder="전수"></td><td><button onclick="this.closest('tr').remove()" style="color:var(--err)">✕</button></td></tr></tbody></table>
+    <tbody id="stdBody">${critRows.map((c,i)=>`<tr><td style="text-align:center;color:var(--tm)">${i+1}</td><td><input class="fc" value="${H.e(c.item||'')}" placeholder="외관"></td><td><input class="fc" value="${H.e(c.method||'')}" placeholder="육안"></td><td><input class="fc" value="${H.e(c.spec||'')}"></td><td><input class="fc" style="width:50px" value="${H.e(c.unit||'')}"></td><td><input class="fc" style="width:65px" value="${H.e(c.usl||'')}"></td><td><input class="fc" style="width:65px" value="${H.e(c.lsl||'')}"></td><td><input class="fc" value="${H.e(c.freq||'')}" placeholder="전수"></td><td><button onclick="this.closest('tr').remove()" style="color:var(--err)">✕</button></td></tr>`).join('')}</tbody></table>
     <button class="btn bsm bout" style="margin-top:7px" onclick="Pages._addStdRow()">+ 항목 추가</button></div>`,
-    foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('기준서가 등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`});
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Pages._inspStdSave()">${isEdit?'💾 수정':'✅ 등록'} <span class="kbd">F8</span></button>`});
+},
+/* [v2.130] 검사 기준서 저장 — Supabase 연동(addInspStd/updateInspStd) */
+async _inspStdSave(){
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const id=g('stdId');
+  const itemCode=g('stdItemCode').split(' — ')[0].trim();
+  const itemName=g('stdItemName');
+  if(!itemCode){Toast.show('품목코드는 필수입니다.','warn');return;}
+  if(!itemName){Toast.show('품목명을 입력하세요.','warn');return;}
+  const criteria=[...document.querySelectorAll('#stdBody tr')].map((tr,i)=>{
+    const inps=tr.querySelectorAll('input');
+    return {no:i+1,item:inps[0]?.value||'',method:inps[1]?.value||'',spec:inps[2]?.value||'',
+      unit:inps[3]?.value||'',usl:inps[4]?.value||'',lsl:inps[5]?.value||'',freq:inps[6]?.value||''};
+  }).filter(c=>c.item);
+  const data={
+    item_code:itemCode, item_name:itemName,
+    insp_type:g('stdInspType'), insp_method:g('stdInspMethod'),
+    insp_items:JSON.stringify(criteria),
+    aql:g('stdAql'), insp_level:g('stdLevel'),
+    rev:g('stdRev'), effective_date:g('stdRevDate')||null,
+    created_by:Auth._u?.name||Auth._u?.username||'',
+  };
+  /* 파일 업로드 */
+  const fileEl=document.getElementById('stdFile');
+  if(fileEl?.files?.length){
+    const up=await SB.uploadFile('insp_std', fileEl.files[0]);
+    if(up){data.file_url=up.url;data.file_name=up.name;}
+  }
+  const res=id?await SB.updateInspStd(Number(id),data):await SB.addInspStd(data);
+  if(!res.ok) return;
+  Toast.show(id?'기준서가 수정되었습니다.':'기준서가 등록되었습니다.','ok');
+  Modal.close();
+  Pages.insp_std();
 },
 _addStdRow(){
   const b=document.getElementById('stdBody');if(!b)return;

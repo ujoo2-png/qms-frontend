@@ -1070,6 +1070,7 @@ const SB={
       item_code:     row.item_code||'',
       item_name:     row.item_name||'',
       insp_type:     row.insp_type||'수입',
+      insp_method:   row.insp_method||'',
       insp_items:    row.insp_items||'[]',
       aql:           row.aql||null,
       insp_level:    row.insp_level||'II',
@@ -1090,7 +1091,7 @@ const SB={
     if(!_sb){const r=DB.insp_std?.find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
     /* [v2.91] 실제 컬럼만 필터 */
     const allowed={};
-    const cols=['item_code','item_name','insp_type','insp_items',
+    const cols=['item_code','item_name','insp_type','insp_method','insp_items',
       'aql','insp_level','sample_size','rev','rev_date','effective_date',
       'created_by','file_url','file_name'];
     cols.forEach(k=>{ if(patch[k]!==undefined) allowed[k]=patch[k]; });
@@ -1331,7 +1332,7 @@ const SB={
   async saveAppSetting(key,value){
     if(!_sb) return{ok:true};
     const {error}=await _sb.from('app_settings').upsert({key,value},{onConflict:'key'});
-    if(error){return{ok:false,error};}
+    if(error){console.warn('[SB] app_settings 저장 실패:',error.message);return{ok:false,error};}
     return{ok:true};
   },
 };
