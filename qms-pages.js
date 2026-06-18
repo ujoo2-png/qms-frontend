@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.132</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.133</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -4343,7 +4343,7 @@ _docDetail:function(row){
     foot:
       '<button class="btn bout" onclick="Modal.close()">닫기</button>'+
       '<button class="btn bout" onclick="Modal.close();Pages.doc_history('+row.id+')">🕐 이력</button>'+
-      '<button class="btn bout" onclick="Modal.close();Pages._docForm('+JSON.stringify(row).replace(/"/g,'&quot;')+')">✏️ 수정</button>'+
+      '<button class="btn bout" onclick="Modal.close();Pages.'+(row.doc_type==='record'?'_recForm':'_docForm')+'('+JSON.stringify(row).replace(/"/g,'&quot;')+')">✏️ 수정</button>'+
       '<button class="btn bpri" onclick="Modal.close();Pages._docRevForm('+row.id+')">✏️ 개정 기안</button>',
   });
 },
@@ -4362,7 +4362,13 @@ _docForm:function(editDoc){
       '<div class="fgroup"><label class="fl req">문서 제목</label><input class="fc" id="fnTitle" placeholder="예: 수입검사 절차서" value="'+H.e(editDoc?editDoc.title:'')+'"></div>'+
       '<div class="fgroup"><label class="fl req">문서 유형</label><select class="fc" id="fnType">'+dtOpts+'</select></div>'+
       '<div class="fgroup"><label class="fl">분류</label><select class="fc" id="fnCat"><option value="">선택 안함</option>'+Object.keys(Pages._DC).map(function(x){return'<option value="'+x+'"'+(editDoc&&editDoc.category===x?' selected':'')+'>'+Pages._DC[x]+'</option>';}).join('')+'</select></div>'+
-      '<div class="fgroup"><label class="fl">검토 주기</label><select class="fc" id="fnCycle"><option value="annual">연간</option><option value="biannual">반기</option><option value="quarterly">분기</option><option value="monthly">매월</option></select></div>'+
+      '<div class="fgroup"><label class="fl">검토 주기</label><select class="fc" id="fnCycle">'+
+        ['annual','biannual','quarterly','monthly'].map(function(c){
+          var lbl={annual:'연간',biannual:'반기',quarterly:'분기',monthly:'매월'}[c];
+          return '<option value="'+c+'"'+(editDoc&&editDoc.review_cycle===c?' selected':(!editDoc&&c==='annual'?' selected':''))+'>'+lbl+'</option>';
+        }).join('')+
+      '</select></div>'+
+      '<div class="fgroup"><label class="fl">다음 검토일</label><input class="fc" id="fnNextReview" type="date" value="'+H.e(editDoc?(editDoc.next_review_at||''):'')+'"></div>'+
       '<div class="fgroup"><label class="fl">담당 부서</label><input class="fc" id="fnDept" value="'+H.e(editDoc?editDoc.dept:'')+'"></div>'+
       '<div class="fgroup ff"><label class="fl">태그</label><input class="fc" id="fnTags" placeholder="쉼표로 구분 (예: ISO9001, 품질관리)" value="'+H.e(editDoc?(editDoc.tags||[]).join(', '):'')+'"></div>'+
       '<div class="fgroup"><label class="fl">최종 결재자</label><select class="fc" id="fnApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
@@ -4386,6 +4392,7 @@ _docSave:async function(editId){
   var row={doc_no:docNo,title:title,doc_type:document.getElementById('fnType')?.value,
            category:document.getElementById('fnCat')?.value||null,
            review_cycle:document.getElementById('fnCycle')?.value||'annual',
+           next_review_at:document.getElementById('fnNextReview')?.value||null,
            dept:document.getElementById('fnDept')?.value?.trim()||null,
            tags:tags};
   /* [v2.132] 수정 모드 — doc_master 기본 정보만 UPDATE, 신규 버전/결재 요청 로직은 건너뜀 */
@@ -4532,7 +4539,7 @@ async doc_approval(){
   }
   w.innerHTML=
     '<div class="ph"><div><div class="ptit">✍️ 내 결재함</div>'+
-    '<div style="font-size:12px;color:var(--muted)">문서 결재 대기 목록</div></div></div>'+
+    '<div style="font-size:13px;color:var(--muted)">문서 결재 대기 목록</div></div></div>'+
     '<div id="approvalList"><div class="es"><div class="es-icon">⏳</div><div>조회 중...</div></div></div>';
 
   var el=document.getElementById('approvalList');
@@ -4607,9 +4614,9 @@ async doc_approval(){
             '</div>'+
           '</div>'+
         '</div>'+
-        '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:var(--bg2);border-radius:6px">📝 '+H.e(summary)+'</div>'+
+        '<div style="font-size:13px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:var(--bg2);border-radius:6px">📝 '+H.e(summary)+'</div>'+
         '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
-          '<input type="text" id="cmt_'+a.id+'" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--brd);border-radius:6px;font-size:12px;background:var(--bg)" placeholder="의견 입력 (반려 시 필수)">'+
+          '<input type="text" id="cmt_'+a.id+'" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--brd);border-radius:6px;font-size:13px;background:var(--bg)" placeholder="의견 입력 (반려 시 필수)">'+
           '<button class="btn bgrn bsm" onclick="Pages._doApprove('+a.id+','+(ver.doc_id||0)+','+(ver.id||0)+',\''+H.e(verNo).replace(/'/g,"\\'")+'\','+meId+')">✅ 승인</button>'+
           '<button class="btn bred bsm" onclick="Pages._doReject('+a.id+')">❌ 반려</button>'+
           '<button class="btn bout bsm" onclick="Pages.doc_history('+(ver.doc_id||0)+')">🕐 이력</button>'+
@@ -5221,16 +5228,21 @@ _dhRender:function(){
       &&(!tp||h.doc_type===tp)
       &&(!yr||(h.created_at||'').startsWith(yr));
   });
+  /* [v2.133] 헤더 너비 글자수 비례 동적 조정 */
+  const docNoMaxLen=Math.max(8,...rows.map(r=>(r.doc_no||'').length));
+  const summaryMaxLen=Math.max(6,...rows.map(r=>(r.change_summary||'').length));
+  const docNoW=Math.min(160,Math.max(100,docNoMaxLen*9+24))+'px';
+  const summaryW=Math.min(260,Math.max(120,summaryMaxLen*12+24))+'px';
   Tbl.render({el:'#dhTbl',
     cols:[
-      {key:'doc_no',        label:'문서번호',   w:'120px',
+      {key:'doc_no',        label:'문서번호',   w:docNoW,
         render:function(v,row){return '<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Nav.go(&quot;docs&quot;)">'+(H.e(v)||'-')+'</span>';}},
       {key:'title',         label:'문서명',      w:'*'},
       {key:'doc_type',      label:'유형',        w:'80px',
         render:function(v){return H.e(Pages._DT[v]||v||'-');}},
       {key:'ver_no',        label:'버전',        w:'72px',
         render:function(v){return '<span class="badge bblu">'+H.e(v)+'</span>';}},
-      {key:'change_summary',label:'변경 요약',   w:'180px'},
+      {key:'change_summary',label:'변경 요약',   w:summaryW},
       {key:'created_at',    label:'개정일',      w:'96px'},
       {key:'status',        label:'상태',        w:'80px',
         render:function(v){
@@ -5377,7 +5389,7 @@ async doc_search(){
   var w=document.getElementById('pw');
   w.innerHTML=
     '<div class="ph"><div><div class="ptit">🔍 지식 검색 허브</div>'+
-    '<div style="font-size:12px;color:var(--muted)">문서번호 · 제목 · 태그 통합 실시간 검색</div></div></div>'+
+    '<div style="font-size:13px;color:var(--muted)">문서번호 · 제목 · 태그 통합 실시간 검색</div></div></div>'+
     '<div style="margin-bottom:16px"><input type="text" id="dsKw" style="width:100%;padding:12px 16px;border:2px solid var(--brd);border-radius:10px;font-size:15px;background:var(--bg);color:var(--text);box-sizing:border-box" placeholder="🔍 문서 제목, 번호, 태그를 입력하세요..." oninput="Pages._dsSearch(this.value)" autofocus></div>'+
     '<div id="dsResult"><div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px">🔍</div><div>검색어를 입력하면 바로 결과가 표시됩니다.</div></div></div>';
   if(!window._docRows||!window._docRows.length) window._docRows=await SB.getDocMaster();
@@ -5391,7 +5403,7 @@ _dsSearch:function(kw){
            (r.tags||[]).some(function(t){return t.toLowerCase().includes(kw.toLowerCase());});
   });
   if(!rows.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:32px">📭</div><div>\''+H.e(kw)+'\' 검색 결과가 없습니다.</div></div>';return;}
-  var html='<div style="font-size:12px;color:var(--muted);margin-bottom:10px">\'<b>'+H.e(kw)+'</b>\' 검색 결과 <b>'+rows.length+'</b>건</div><div style="display:flex;flex-direction:column;gap:8px">';
+  var html='<div style="font-size:13px;color:var(--muted);margin-bottom:10px">\'<b>'+H.e(kw)+'</b>\' 검색 결과 <b>'+rows.length+'</b>건</div><div style="display:flex;flex-direction:column;gap:8px">';
   rows.forEach(function(r){
     html+='<div style="background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:14px 16px;cursor:pointer" onclick="Pages.doc_history('+r.id+')" onmouseover="this.style.borderColor=\'#93c5fd\';this.style.background=\'#eff6ff\'" onmouseout="this.style.borderColor=\'var(--brd)\';this.style.background=\'var(--card)\'">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">'+
@@ -5434,18 +5446,18 @@ async doc_distribution(){
     '</div>'+
     '<div class="ph" style="margin-top:14px"><div>'+
       '<div class="ptit">📤 배포 관리</div>'+
-      '<div style="font-size:12px;color:var(--muted)">열람·다운로드·공유 이력 (최근 30일)</div>'+
+      '<div style="font-size:13px;color:var(--muted)">열람·다운로드·공유 이력 (최근 30일)</div>'+
     '</div></div>'+
     '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-end">'+
       '<div style="flex:1;min-width:200px">'+
-        '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">문서 선택</div>'+
+        '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">문서 선택</div>'+
         '<select class="fsel" id="distDocSel" style="width:100%;padding:8px 10px" onchange="Pages._distLoadLog(this.value)">'+
           '<option value="">— 전체 문서 이력 —</option>'+
           docs.map(function(d){return'<option value="'+d.id+'">'+H.e(d.doc_no)+' '+H.e(d.title)+'</option>';}).join('')+
         '</select>'+
       '</div>'+
       '<div>'+
-        '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">외부 공유 링크</div>'+
+        '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">외부 공유 링크</div>'+
         '<div style="display:flex;gap:6px">'+
           '<select class="fsel" id="distShareHours" style="width:110px">'+
             '<option value="24">24시간</option><option value="72" selected>72시간</option>'+
@@ -5465,22 +5477,22 @@ async doc_distribution(){
     '</div>'+
     '<div id="distTbl"></div>'+
     '<div style="margin-top:20px">'+
-      '<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--muted)">📈 최근 30일 인기 문서 TOP 10</div>'+
+      '<div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--text)">📈 최근 30일 인기 문서 TOP 10</div>'+
       '<div style="border:1px solid var(--brd);border-radius:8px;overflow:hidden">'+
         (summary.byDoc&&summary.byDoc.length
-          ?'<table style="width:100%;border-collapse:collapse;font-size:12px">'+
-            '<thead><tr style="background:var(--bg2)"><th style="padding:8px 12px;width:36px">순위</th>'+
-            '<th style="padding:8px 12px;width:120px">문서번호</th><th style="padding:8px 12px">제목</th>'+
-            '<th style="padding:8px 12px;text-align:right;width:60px">이용수</th></tr></thead><tbody>'+
+          ?'<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+            '<thead><tr style="background:var(--bg2)"><th style="padding:9px 12px;width:36px;font-weight:700;color:var(--muted)">순위</th>'+
+            '<th style="padding:9px 12px;width:120px;font-weight:700;color:var(--muted)">문서번호</th><th style="padding:9px 12px;font-weight:700;color:var(--muted)">제목</th>'+
+            '<th style="padding:9px 12px;text-align:right;width:60px;font-weight:700;color:var(--muted)">이용수</th></tr></thead><tbody>'+
             summary.byDoc.map(function(d,i){
               return'<tr style="border-bottom:1px solid var(--brd)">'+
-                '<td style="padding:7px 12px;text-align:center;font-weight:700;color:'+(i<3?'#f59e0b':'var(--muted)')+'">'+
+                '<td style="padding:9px 12px;text-align:center;font-weight:700;color:'+(i<3?'#d6952f':'var(--muted)')+'">'+
                   (i<3?['🥇','🥈','🥉'][i]:i+1)+'</td>'+
-                '<td style="padding:7px 12px;font-family:monospace;font-size:11px;color:#1a5fa8">'+H.e(d.doc_no)+'</td>'+
-                '<td style="padding:7px 12px">'+H.e(d.title)+'</td>'+
-                '<td style="padding:7px 12px;text-align:right;font-weight:700">'+d.count+'</td></tr>';
+                '<td style="padding:9px 12px;font-family:monospace;font-size:12px;color:#3b82c4">'+H.e(d.doc_no)+'</td>'+
+                '<td style="padding:9px 12px">'+H.e(d.title)+'</td>'+
+                '<td style="padding:9px 12px;text-align:right;font-weight:700">'+d.count+'</td></tr>';
             }).join('')+'</tbody></table>'
-          :'<div style="padding:24px;text-align:center;color:var(--muted)">아직 배포 이력이 없습니다.</div>')+
+          :'<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">아직 배포 이력이 없습니다.</div>')+
       '</div>'+
     '</div>';
   window._distRows=[];window._distActionF='';window._distKw='';
@@ -5595,21 +5607,21 @@ async doc_review_cycle(){
   w.innerHTML=
     '<div class="stat-dash">'+
     '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'expired\')">'+
-      '<div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚨</div>'+
+      '<div class="sd-icon" style="background:#fbe9ea;color:#cd5b63">🚨</div>'+
       '<div><div class="sd-val">'+expired.length+'</div><div class="sd-lbl">만료됨</div></div></div>'+
     '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'d7\')">'+
-      '<div class="sd-icon" style="background:#fef3c7;color:#d97706">⚠️</div>'+
+      '<div class="sd-icon" style="background:#fbeed4;color:#d6952f">⚠️</div>'+
       '<div><div class="sd-val">'+d7.length+'</div><div class="sd-lbl">D-7 이내</div></div></div>'+
     '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'d30\')">'+
-      '<div class="sd-icon" style="background:#fef9c3;color:#ca8a04">📅</div>'+
+      '<div class="sd-icon" style="background:#fdf6dd;color:#bf932e">📅</div>'+
       '<div><div class="sd-val">'+d30.length+'</div><div class="sd-lbl">D-30 이내</div></div></div>'+
     '<div class="sd-card" style="cursor:pointer" onclick="Pages._rcFilter(\'all\')">'+
-      '<div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>'+
+      '<div class="sd-icon" style="background:#e8f4fd;color:#3b82c4">📋</div>'+
       '<div><div class="sd-val">'+rows.filter(function(r){return r.status==="active";}).length+'</div><div class="sd-lbl">전체 유효</div></div></div>'+
     '</div>'+
     '<div class="ph" style="margin-top:14px"><div>'+
       '<div class="ptit">🔔 검토 주기 관리</div>'+
-      '<div style="font-size:12px;color:var(--muted)">만료 임박 문서 현황 및 검토 주기 설정</div>'+
+      '<div style="font-size:13px;color:var(--muted)">만료 임박 문서 현황 및 검토 주기 설정</div>'+
     '</div><div class="pac">'+
       '<button class="btn bred bsm" onclick="Pages._rcSendAlert(7)">🚨 D-7 긴급알림</button>'+
       '<button class="btn bamb bsm" onclick="Pages._rcSendAlert(30)">🔔 D-30 알림발송</button>'+
@@ -5723,12 +5735,12 @@ async doc_recommend(){
   w.innerHTML=
     '<div class="ph"><div>'+
       '<div class="ptit">💡 연관 문서 추천</div>'+
-      '<div style="font-size:12px;color:var(--muted)">태그 기반 연관 문서 탐색 · 유사 문서 추천</div>'+
+      '<div style="font-size:13px;color:var(--muted)">태그 기반 연관 문서 탐색 · 유사 문서 추천</div>'+
     '</div></div>'+
 
     /* ① 문서 선택 */
     '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px 18px;margin-bottom:16px">'+
-      '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">📄 기준 문서 선택</div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📄 기준 문서 선택</div>'+
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'+
         '<select class="fsel" id="rcDocSel" style="flex:1;min-width:220px;padding:9px 12px" onchange="Pages._rcLoadRecommend(this.value)">'+
           '<option value="">— 문서를 선택하세요 —</option>'+
@@ -5750,7 +5762,7 @@ async doc_recommend(){
 
     /* ③ 태그 클라우드 */
     '<div style="margin-top:20px">'+
-      '<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--muted)">🏷️ 전체 태그 현황 <span style="font-size:11px;font-weight:400">(클릭 시 해당 태그 문서 표시)</span></div>'+
+      '<div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text)">🏷️ 전체 태그 현황 <span style="font-size:12px;font-weight:400;color:var(--muted)">(클릭 시 해당 태그 문서 표시)</span></div>'+
       '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
         tagList.map(function(e){
           var t=e[0], cnt=e[1];
@@ -6501,23 +6513,32 @@ _recRender:function(rows){
     onRow:function(row){if(row)Pages._docDetail(row);},
   });
 },
-_recForm:function(){
+_recForm:function(editRec){
+  editRec=editRec||null;
   SB.getUsers().then(function(users){
     var uOpts=users.map(function(u){return'<option value="'+u.id+'">'+H.e(u.name||u.username)+'('+H.e(u.dept||'')+')</option>';}).join('');
-    Modal.open({title:'기록 등록',size:'mlg',body:
+    var catOpts=['품질','생산','구매','안전','환경','기타'].map(function(x){
+      return'<option'+(editRec&&editRec.category===x?' selected':'')+'>'+x+'</option>';
+    }).join('');
+    var cycleOpts=['annual','quarterly','monthly'].map(function(c){
+      var lbl={annual:'연간',quarterly:'분기',monthly:'매월'}[c];
+      return '<option value="'+c+'"'+(editRec&&editRec.review_cycle===c?' selected':(!editRec&&c==='annual'?' selected':''))+'>'+lbl+'</option>';
+    }).join('');
+    Modal.open({title:editRec?'✏️ 기록 수정 — '+H.e(editRec.doc_no||''):'기록 등록',size:'mlg',body:
       '<div class="fg2">'+
-      '<div class="fgroup"><label class="fl req">기록 번호</label><input class="fc" id="fnDocNo" placeholder="예: REC-001"></div>'+
-      '<div class="fgroup"><label class="fl req">기록 제목</label><input class="fc" id="fnTitle" placeholder="예: 수입검사 성적서"></div>'+
+      '<div class="fgroup"><label class="fl req">기록 번호</label><input class="fc" id="fnDocNo" placeholder="예: REC-001" value="'+H.e(editRec?editRec.doc_no:'')+'"></div>'+
+      '<div class="fgroup"><label class="fl req">기록 제목</label><input class="fc" id="fnTitle" placeholder="예: 수입검사 성적서" value="'+H.e(editRec?editRec.title:'')+'"></div>'+
       '<div class="fgroup" style="display:none"><select class="fc" id="fnType"><option value="record" selected>기록</option></select></div>'+
-      '<div class="fgroup"><label class="fl">분류</label><select class="fc" id="fnCat"><option value="">선택 안함</option>'+['품질','생산','구매','안전','환경','기타'].map(function(x){return'<option>'+x+'</option>';}).join('')+'</select></div>'+
-      '<div class="fgroup"><label class="fl">검토 주기</label><select class="fc" id="fnCycle"><option value="annual">연간</option><option value="quarterly">분기</option><option value="monthly">매월</option></select></div>'+
-      '<div class="fgroup"><label class="fl">담당 부서</label><input class="fc" id="fnDept"></div>'+
-      '<div class="fgroup ff"><label class="fl">태그</label><input class="fc" id="fnTags" placeholder="쉼표로 구분 (예: 검사기록, 품질)"></div>'+
+      '<div class="fgroup"><label class="fl">분류</label><select class="fc" id="fnCat"><option value="">선택 안함</option>'+catOpts+'</select></div>'+
+      '<div class="fgroup"><label class="fl">검토 주기</label><select class="fc" id="fnCycle">'+cycleOpts+'</select></div>'+
+      '<div class="fgroup"><label class="fl">다음 검토일</label><input class="fc" id="fnNextReview" type="date" value="'+H.e(editRec?(editRec.next_review_at||''):'')+'"></div>'+
+      '<div class="fgroup"><label class="fl">담당 부서</label><input class="fc" id="fnDept" value="'+H.e(editRec?editRec.dept:'')+'"></div>'+
+      '<div class="fgroup ff"><label class="fl">태그</label><input class="fc" id="fnTags" placeholder="쉼표로 구분 (예: 검사기록, 품질)" value="'+H.e(editRec?(editRec.tags||[]).join(', '):'')+'"></div>'+
       '<div class="fgroup"><label class="fl">결재자</label><select class="fc" id="fnApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
       '<div class="fgroup ff"><label class="fl">비고</label><input class="fc" id="fnSummary"></div>'+
       '</div>',
     foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
-         '<button class="btn bpri" onclick="Pages._docSave(null)">등록</button>'});
+         '<button class="btn bpri" onclick="Pages._docSave('+(editRec?editRec.id:'null')+')">'+(editRec?'수정 저장':'등록')+'</button>'});
   });
 },
 /* ── 시정조치 ── */
