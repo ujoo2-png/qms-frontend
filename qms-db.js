@@ -1335,6 +1335,28 @@ const SB={
     if(error){console.warn('[SB] app_settings 저장 실패:',error.message);return{ok:false,error};}
     return{ok:true};
   },
+
+  /* ── 문서별 다중 첨부파일 [v2.131] — FM 모듈 doc-* 키 영속화 ── */
+  async getDocFiles(docId){
+    if(!_sb) return [];
+    const {data,error}=await _sb.from('doc_files').select('*').eq('doc_id',docId).order('id');
+    if(error){console.warn('[SB] doc_files 조회 실패:',error.message);return [];}
+    return data||[];
+  },
+  async addDocFile(docId,file){
+    if(!_sb) return{ok:false};
+    const allowed={doc_id:docId, name:file.name||'', path:file.path||null,
+      url:file.url||null, size:file.size||'', file_date:file.date||H.today()};
+    const {error}=await _sb.from('doc_files').insert(allowed);
+    if(error){console.warn('[SB] doc_files 저장 실패:',error.message);return{ok:false,error};}
+    return{ok:true};
+  },
+  async deleteDocFile(docId,path){
+    if(!_sb) return{ok:false};
+    const {error}=await _sb.from('doc_files').delete().eq('doc_id',docId).eq('path',path);
+    if(error){console.warn('[SB] doc_files 삭제 실패:',error.message);return{ok:false};}
+    return{ok:true};
+  },
 };
 
 /* ══ 전역 상태 ══ *//* ══ DB ══ */

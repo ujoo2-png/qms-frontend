@@ -921,7 +921,18 @@ const FM={
   },
 
   /* ── 파일 관리 모달 ── */
-  modal(k){
+  async modal(k){
+    /* [v2.131] 문서관리 — DB(doc_files)에서 최신 파일 목록 동기화.
+       doc-new(아직 문서ID 없는 임시 상태)는 제외, doc-{id} 형태만 대상 */
+    const docMatch=/^doc-(\d+)$/.exec(k);
+    if(docMatch&&typeof SB!=='undefined'&&SB.getDocFiles){
+      try{
+        const docId=Number(docMatch[1]);
+        const rows=await SB.getDocFiles(docId);
+        App.files[k]=rows.map(r=>({name:r.name,path:r.path,url:r.url,size:r.size,date:r.file_date}));
+        this._saveCache(k);
+      }catch(e){console.warn('[FM] doc_files 동기화 실패',e);}
+    }
     const files=this.get(k);
     const fileListHtml=files.length===0
       ?`<div style="text-align:center;padding:22px;color:var(--tm)">
@@ -1019,11 +1030,16 @@ const FM={
     document.getElementById('tcont')?.querySelectorAll('.toast').forEach(e=>e.remove());
     Toast.show(`${rawFiles.length}개 업로드 중...`,'info',60000);
 
+    const docMatch=/^doc-(\d+)$/.exec(k);
     for(const f of rawFiles){
       /* Supabase Storage 업로드 시도 */
       const uploaded=await SB.uploadFile(k,f);
       if(uploaded){
         App.files[k].push(uploaded);
+        /* [v2.131] 문서관리 — DB(doc_files)에도 영속 기록 */
+        if(docMatch&&typeof SB!=='undefined'&&SB.addDocFile){
+          try{await SB.addDocFile(Number(docMatch[1]),uploaded);}catch(e){console.warn('[FM] doc_files 저장 실패',e);}
+        }
       } else {
         /* 폴백: 로컬 ObjectURL 생성
            - Supabase 미연결 또는 업로드 실패 시 사용
@@ -1064,6 +1080,11 @@ const FM={
         const f=App.files[k]?.[i];
         // Supabase Storage 삭제
         if(f?.path) await SB.deleteFile(f.path);
+        /* [v2.131] 문서관리 — doc_files DB 레코드도 삭제 */
+        const docMatch=/^doc-(\d+)$/.exec(k);
+        if(docMatch&&f?.path&&typeof SB!=='undefined'&&SB.deleteDocFile){
+          try{await SB.deleteDocFile(Number(docMatch[1]),f.path);}catch(e){console.warn('[FM] doc_files 삭제 실패',e);}
+        }
         // 로컬 목록에서 제거
         if(App.files[k]) App.files[k].splice(i,1);
         // 캐시 갱신

@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.130</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.131</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -4367,8 +4367,8 @@ _docForm:function(editDoc){
       '<div class="fgroup"><label class="fl">최종 결재자</label><select class="fc" id="fnApprover"><option value="">선택 안함</option>'+uOpts+'</select></div>'+
       '<div class="fgroup ff"><label class="fl">개정 사유</label><input class="fc" id="fnSummary" placeholder="신규 등록 시 생략 가능"></div>'+
       '<div class="fgroup ff"><label class="fl">첨부 파일</label>'+
-        '<input type="hidden" id="fnExistingFileUrl" value="'+(editDoc&&row?H.e(row.file_url||''):'')+'">'+
-        '<input type="hidden" id="fnExistingFileName" value="'+(editDoc&&row?H.e(row.file_name||''):'')+'">'+
+        '<input type="hidden" id="fnExistingFileUrl" value="'+(editDoc?H.e(editDoc.file_url||''):'')+'">'+
+        '<input type="hidden" id="fnExistingFileName" value="'+(editDoc?H.e(editDoc.file_name||''):'')+'">'+
         '<input type="file" id="fnFile" style="width:100%;margin-top:4px;font-size:12px" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png,.zip,.hwp">'+
         '<div id="fnFilePreview" style="font-size:11px;color:var(--tm);margin-top:3px"></div>'+
       '</div>'+
@@ -4424,6 +4424,10 @@ _docSave:async function(editId){
     if(App.files['doc-new']&&App.files['doc-new'].length){
       App.files['doc-'+newDoc.id]=App.files['doc-new'];
       delete App.files['doc-new'];
+      /* [v2.131] doc-new로 미리 업로드된 파일들을 DB(doc_files)에 영속 기록 */
+      for(const f of App.files['doc-'+newDoc.id]){
+        if(f.path){ try{await SB.addDocFile(newDoc.id,f);}catch(e){console.warn('[doc] doc_files 저장 실패',e);} }
+      }
     }
   }
   Toast.show('문서가 등록되었습니다.','ok'); Modal.close();
@@ -6904,6 +6908,17 @@ async _mentionBulkDel(){
       Pages._mentionRefresh();
     }
   });
+},
+/* [v2.131] 개별 멘션 삭제 — 호출만 있고 정의가 없어 TypeError 발생하던 버그 수정 */
+_mentionDel(id){
+  Modal.confirm({title:'🗑️ 멘션 삭제',msg:'이 멘션을 삭제하시겠습니까?',danger:true,onOk:async()=>{
+    const res=await SB.deleteMention(id);
+    if(!res.ok) return;
+    DB.mentions=(DB.mentions||[]).filter(m=>m.id!==id);
+    Pages._updateMentionBadge();
+    Toast.show('삭제되었습니다.','ok');
+    Pages._mentionRefresh();
+  }});
 },
 
 /* 보관 토글 [v2.394] */
