@@ -1189,12 +1189,14 @@ const SB={
     const allowed={
       vendor_id:row.vendor_id||null, vendor_name:row.vendor_name||'',
       period:row.period||'', eval_date:row.eval_date||null,
+      eval_no:row.eval_no||null,
       audit_id:row.audit_id||null,
-      quality:Number(row.quality)||0, delivery:Number(row.delivery)||0,
-      price:Number(row.price)||0, response:Number(row.response)||0,
-      total:Number(row.total)||0, grade:row.grade||'',
+      quality:parseFloat(row.quality)||0, delivery:parseFloat(row.delivery)||0,
+      price:parseFloat(row.price)||0, response:parseFloat(row.response)||0,
+      total:parseFloat(row.total)||0, grade:row.grade||'',
       ppm:Number(row.ppm)||0, complaint:Number(row.complaint)||0,
       evaluator:row.evaluator||'', note:row.note||'', file_url:row.file_url||null,
+      writer:row.writer||'',
     };
     const {error}=await _sb.from('vendor_evals').insert(allowed);
     if(error){Toast.show('평가 저장 실패: '+error.message,'err');return{ok:false};}

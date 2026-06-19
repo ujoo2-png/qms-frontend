@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.136</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.137</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -12375,6 +12375,7 @@ _sqmEvalRefresh(){
     el:'#evalTbl',
     cols:[
       /* [v2.116/v2.119] 컬럼 너비 — 거래처명은 동적, 나머지는 표시값 글자수 기준 고정폭 */
+      {key:'eval_no',     label:'등록번호', w:'120px', render:v=>v?`<span style="font-family:monospace;font-size:12px;color:#3b82c4;font-weight:700">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
       {key:'vendor_name', label:'거래처명', req:true, w:vnWidth},
       {key:'period',      label:'평가기간', w:'90px'},
       {key:'quality',     label:'품질(40%)',w:'78px',align:'center',
@@ -12393,6 +12394,7 @@ _sqmEvalRefresh(){
         render:v=>`<span style="${v>0?'color:#dc2626;font-weight:700':''}">${v||'0'}</span>`},
       {key:'eval_date',   label:'평가일',   w:'90px'},
       {key:'evaluator',   label:'평가자',   w:'70px'},
+      {key:'writer',      label:'작성자',   w:'70px'},
       {key:'audit_id',    label:'등록방식', w:'82px',align:'center',
         render:v=>v
           ?`<span class="badge bblu" style="font-size:11px">🔗 심사연계</span>`
@@ -12543,6 +12545,10 @@ _sqmEvalForm(row=null){
         <select class="fc" id="evEvaluator">
           <option value="">-- 선택 --</option>${staffOpts}</select>
       </div>
+      <div class="fgroup"><label class="fl req">작성자</label>
+        <select class="fc" id="evWriter">
+          <option value="">-- 선택 --</option>${(DB.users||[]).map(u=>{const nm=H.e(u.name||u.username);const cur=isEdit?row.writer:Auth._u?.name||Auth._u?.username||'';return`<option value="${nm}" ${nm===H.e(cur)?'selected':''}>${nm}</option>`;}).join('')}</select>
+      </div>
       <div class="fgroup" style="grid-column:1/-1"><label class="fl">비고</label>
         <textarea class="fc" id="evNote" rows="2">${H.e(isEdit?row.note||'':'')}</textarea>
       </div>
@@ -12574,9 +12580,10 @@ async _sqmEvalSave(){
   /* [v2.116] 자동완성 확정값(hidden evVName) 우선, 미확정 시 입력창 텍스트 그대로 사용 */
   const vName=(g('evVName')||g('evVendorInput')).trim();
   const period=g('evPeriod').trim();
-  const quality=Number(g('evQuality')),delivery=Number(g('evDelivery'));
-  const price=Number(g('evPrice')),response=Number(g('evResponse'));
-  const total=Number(g('evTotal'));
+  /* [v2.137] 소수점 허용: Number() → parseFloat() */
+  const quality=parseFloat(g('evQuality'))||0, delivery=parseFloat(g('evDelivery'))||0;
+  const price=parseFloat(g('evPrice'))||0, response=parseFloat(g('evResponse'))||0;
+  const total=parseFloat(g('evTotal'))||0;
   const grade=g('evGrade');
   const evalDate=g('evDate');
   if(!vName){Toast.show('거래처를 입력하세요.','warn');return;}
@@ -12584,6 +12591,24 @@ async _sqmEvalSave(){
   if(!quality&&!delivery){Toast.show('점수를 입력하세요.','warn');return;}
   if(!evalDate){Toast.show('평가일을 입력하세요.','warn');return;}
   const row=window._sqmEvalEditRow;
+  /* [v2.137] 2.2 중복 등록 방지 — 거래처+평가기간 조합 체크 (수정 모드 제외) */
+  if(!row?.id){
+    const dup=(DB.vendor_evals||[]).find(e=>
+      e.vendor_name===vName && e.period===period
+    );
+    if(dup){
+      Toast.show(`이미 등록된 평가입니다. (${vName} / ${period}) 수정 버튼으로 변경해 주세요.`,'warn');
+      return;
+    }
+  }
+  /* [v2.137] 자동 등록번호 생성 — EVAL-YYYYMMDD-NNN */
+  let eval_no=row?.eval_no||null;
+  if(!eval_no){
+    const today=H.today().replace(/-/g,'');
+    const todayEvals=(DB.vendor_evals||[]).filter(e=>(e.eval_no||'').startsWith('EVAL-'+today));
+    const seq=String(todayEvals.length+1).padStart(3,'0');
+    eval_no=`EVAL-${today}-${seq}`;
+  }
   /* [v2.116] 첨부파일 업로드 처리 */
   let file_url=row?.file_url||null;
   const evFileEl=document.getElementById('evFile');
@@ -12592,9 +12617,10 @@ async _sqmEvalSave(){
     const up=await SB.uploadFile('sqm_eval', f);
     if(up?.url) file_url=up.url;
   }
-  const newRow={vendor_name:vName,period,quality,delivery,price,response,
-    total,grade,ppm:Number(g('evPpm'))||0,complaint:Number(g('evComplaint'))||0,
+  const newRow={eval_no,vendor_name:vName,period,quality,delivery,price,response,
+    total,grade,ppm:parseFloat(g('evPpm'))||0,complaint:Number(g('evComplaint'))||0,
     eval_date:evalDate,evaluator:g('evEvaluator'),note:g('evNote'),file_url,
+    writer:g('evWriter'),
     audit_id:window._sqmEvalAuditId||null};
   if(row?.id){
     const res=await SB.updateVendorEval(row.id,newRow);
@@ -12684,8 +12710,16 @@ _auditRefresh(){
   const fdWidth=Math.min(280,Math.max(100,fdMaxLen*9+24))+'px';
   Tbl.render({
     el:'#auditTbl',
+    rowStyle:(row)=>{
+      const today=new Date().toISOString().slice(0,10);
+      if(row.plan_date && row.plan_date > today && row.status!=='완료'){
+        return 'background:rgba(219,234,254,0.45);'; /* 계획일 미래 = 예정, 파란 음영 */
+      }
+      return '';
+    },
     cols:[
-      /* [v2.116/v2.119] 컬럼 너비 — 거래처명/지적사항은 동적, 나머지는 표시값 기준 고정폭 */
+      {key:'status',      label:'상태',     w:'80px', align:'center',
+        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='진행중'?'bblu':v==='보류'?'bred':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'vendor_name', label:'거래처명',  req:true, w:vnWidth},
       {key:'audit_type',  label:'심사유형',  w:'90px', align:'center',
         render:v=>`<span class="badge ${v==='정기'?'bblu':v==='수시'?'bamb':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
@@ -12695,8 +12729,6 @@ _auditRefresh(){
       {key:'score',       label:'점수',     w:'70px', align:'center',
         render:v=>v!=null?`<span style="font-weight:700;color:${v>=80?'#059669':v>=60?'#d97706':'#dc2626'}">${v}</span>`:'<span style="color:var(--tl)">-</span>'},
       {key:'findings',    label:'지적사항', w:fdWidth},
-      {key:'status',      label:'상태',     w:'80px', align:'center',
-        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='진행중'?'bblu':v==='보류'?'bred':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'next_date',   label:'차기심사',  w:'90px', render:v=>v||'-'},
       {key:'file_url',    label:'파일',     w:'64px', align:'center',
         render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" class="btn bxs bblu" style="font-size:10px;padding:1px 7px;text-decoration:none">📎 보기</a>`:'<span style="color:var(--tl);font-size:11px">-</span>'},

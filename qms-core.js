@@ -646,7 +646,8 @@ const Tbl={
     const ths=`<th class="tc"><input type="checkbox" onchange="Tbl.chkAll(this)"></th><th class="tn">No</th>${cols.map(col=>`<th style="${col.w?`width:${col.w}`:''}${col.align?`;text-align:${col.align}`:''}${col.key?';cursor:pointer;user-select:none':''}" onclick="${col.key?`Tbl._sort('${col.key}')`:''}">` +`<span style="${col.req?'color:#dc2626;font-weight:700':''}">` +col.label+`</span>${col.req?'<span style="color:#dc2626"> *</span>':''}${col.key?sortArrow(col.key):''}</th>`).join('')}`;
     const trs=slice.length===0
       ?`<tr><td colspan="${cols.length+2}" style="text-align:center;padding:36px;color:var(--tm)">데이터가 없습니다.</td></tr>`
-      :slice.map((row,i)=>`<tr data-id="${row.id}">
+      :slice.map((row,i)=>`<tr data-id="${row.id}" class="${opts.rowClass?opts.rowClass(row,i):''}"
+          style="${opts.rowStyle?opts.rowStyle(row,i):''}">
           <td class="tc"><input type="checkbox" class="rck" value="${row.id}" onchange="Tbl.onChk()"></td>
           <td class="tn">${(page-1)*ps+i+1}</td>
           ${cols.map(col=>{const v=row[col.key];const dv=(col.key==='updated_at'&&v&&v===row['created_at'])?'':v;return`<td style="${col.align?`text-align:${col.align}`:''}${onRow?';cursor:pointer':''}" onclick="${onRow?`Tbl._onRow(${row.id})`:''}">` +`${col.render?col.render(dv,row):H.e(dv??'')}</td>`;}).join('')}
@@ -2014,50 +2015,85 @@ var SearchPop=window.SearchPop={
 
     sqm_eval:{title:'업체 평가 검색',
       fields:[
-        {id:'sqe_vn',  label:'거래처명', type:'text', ph:'거래처명'},
-        {id:'sqe_gr',  label:'등급',     type:'select', opts:['','A','B','C','D']},
-        {id:'sqe_per', label:'평가기간', type:'text', ph:'예) 2026-Q2'},
+        {id:'sqe_vn',  label:'거래처명',      type:'text',   ph:'거래처명'},
+        {id:'sqe_gr',  label:'등급',          type:'select', opts:['','A','B','C','D']},
+        {id:'sqe_per', label:'평가기간',      type:'text',   ph:'예) 2026-Q2'},
+        {id:'sqe_no',  label:'등록번호',      type:'text',   ph:'EVAL-'},
+        {id:'sqe_evr', label:'평가자',        type:'text',   ph:'평가자명'},
+        {id:'sqe_wtr', label:'작성자',        type:'text',   ph:'작성자명'},
+        {id:'sqe_df',  label:'평가일(시작)',  type:'date'},
+        {id:'sqe_dt',  label:'평가일(종료)',  type:'date'},
       ],
-      cols:['거래처','평가기간','종합점수','등급','PPM','클레임'],
+      cols:['등록번호','거래처','평가기간','종합점수','등급','평가자','작성자','평가일'],
       get:(f)=>(DB.vendor_evals||[]).filter(r=>{
         if(f.sqe_vn &&!(r.vendor_name||'').includes(f.sqe_vn))return false;
         if(f.sqe_gr && r.grade!==f.sqe_gr)return false;
         if(f.sqe_per&&!(r.period||'').includes(f.sqe_per))return false;
+        if(f.sqe_no &&!(r.eval_no||'').includes(f.sqe_no))return false;
+        if(f.sqe_evr&&!(r.evaluator||'').includes(f.sqe_evr))return false;
+        if(f.sqe_wtr&&!(r.writer||'').includes(f.sqe_wtr))return false;
+        if(f.sqe_df&&(r.eval_date||'')<f.sqe_df)return false;
+        if(f.sqe_dt&&(r.eval_date||'')>f.sqe_dt)return false;
         return true;
       }),
-      row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.period||'-'),H.e(String(r.total||'-')),H.e(r.grade||'-'),H.e(String(r.ppm||'0')),H.e(String(r.complaint||'0'))],
+      row:(r)=>[H.e(r.eval_no||'-'),H.e(r.vendor_name||'-'),H.e(r.period||'-'),
+        H.e(String(r.total||'-')),H.e(r.grade||'-'),H.e(r.evaluator||'-'),
+        H.e(r.writer||'-'),H.e(r.eval_date||'-')],
     },
 
     sqm_plan:{title:'심사 계획 검색',
       fields:[
-        {id:'sqp_vn', label:'거래처명', type:'text', ph:'거래처명'},
-        {id:'sqp_tp', label:'심사유형', type:'select', opts:['','정기','수시','특별','인증']},
-        {id:'sqp_st', label:'상태',     type:'select', opts:['','계획','진행중','완료','보류']},
+        {id:'sqp_vn', label:'거래처명',      type:'text',   ph:'거래처명'},
+        {id:'sqp_tp', label:'심사유형',      type:'select', opts:['','정기','수시','특별','인증']},
+        {id:'sqp_st', label:'상태',          type:'select', opts:['','계획','진행중','완료','보류']},
+        {id:'sqp_adr',label:'심사자',        type:'text',   ph:'심사자명'},
+        {id:'sqp_pf', label:'계획일(시작)',  type:'date'},
+        {id:'sqp_pt', label:'계획일(종료)',  type:'date'},
       ],
-      cols:['거래처','심사유형','계획일','상태'],
+      cols:['거래처','심사유형','계획일','심사자','상태'],
       get:(f)=>(DB.vendor_audits||[]).filter(r=>{
         if(f.sqp_vn&&!(r.vendor_name||'').includes(f.sqp_vn))return false;
         if(f.sqp_tp&&r.audit_type!==f.sqp_tp)return false;
         if(f.sqp_st&&r.status!==f.sqp_st)return false;
+        if(f.sqp_adr&&!(r.auditor||'').includes(f.sqp_adr))return false;
+        if(f.sqp_pf&&(r.plan_date||'')<f.sqp_pf)return false;
+        if(f.sqp_pt&&(r.plan_date||'')>f.sqp_pt)return false;
         return true;
       }),
-      row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.audit_type||'-'),H.e(r.plan_date||'-'),H.e(r.status||'-')],
+      row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.audit_type||'-'),H.e(r.plan_date||'-'),H.e(r.auditor||'-'),H.e(r.status||'-')],
     },
 
     sqm_audit:{title:'업체 심사 검색',
       fields:[
-        {id:'sqa_vn',  label:'거래처명', type:'text', ph:'거래처명'},
-        {id:'sqa_tp',  label:'심사유형', type:'select', opts:['','정기','수시','특별','인증']},
-        {id:'sqa_st',  label:'상태',     type:'select', opts:['','계획','진행중','완료','보류']},
+        {id:'sqa_vn',   label:'거래처명',      type:'text',   ph:'거래처명'},
+        {id:'sqa_tp',   label:'심사유형',      type:'select', opts:['','정기','수시','특별','인증']},
+        {id:'sqa_st',   label:'상태',          type:'select', opts:['','계획','진행중','완료','보류']},
+        {id:'sqa_adr',  label:'심사자',        type:'text',   ph:'심사자명'},
+        {id:'sqa_pf',   label:'계획일(시작)',  type:'date'},
+        {id:'sqa_pt',   label:'계획일(종료)',  type:'date'},
+        {id:'sqa_af',   label:'실시일(시작)',  type:'date'},
+        {id:'sqa_at',   label:'실시일(종료)',  type:'date'},
+        {id:'sqa_nf',   label:'차기심사(시작)',type:'date'},
+        {id:'sqa_nt',   label:'차기심사(종료)',type:'date'},
       ],
-      cols:['거래처','심사유형','계획일','심사자','점수','상태'],
+      cols:['상태','거래처','심사유형','계획일','실시일','심사자','점수','차기심사'],
       get:(f)=>(DB.vendor_audits||[]).filter(r=>{
         if(f.sqa_vn&&!(r.vendor_name||'').includes(f.sqa_vn))return false;
         if(f.sqa_tp&&r.audit_type!==f.sqa_tp)return false;
         if(f.sqa_st&&r.status!==f.sqa_st)return false;
+        if(f.sqa_adr&&!(r.auditor||'').includes(f.sqa_adr))return false;
+        if(f.sqa_pf&&(r.plan_date||'')  <f.sqa_pf)return false;
+        if(f.sqa_pt&&(r.plan_date||'')  >f.sqa_pt)return false;
+        if(f.sqa_af&&(r.actual_date||'')<f.sqa_af)return false;
+        if(f.sqa_at&&(r.actual_date||'')>f.sqa_at)return false;
+        if(f.sqa_nf&&(r.next_date||'')  <f.sqa_nf)return false;
+        if(f.sqa_nt&&(r.next_date||'')  >f.sqa_nt)return false;
         return true;
       }),
-      row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.audit_type||'-'),H.e(r.plan_date||'-'),H.e(r.auditor||'-'),H.e(String(r.score??'-')),H.e(r.status||'-')],
+      row:(r)=>[
+        `<span class="badge ${r.status==='완료'?'bgrn':r.status==='진행중'?'bblu':r.status==='보류'?'bred':'bgry'}" style="font-size:10px">${H.e(r.status||'-')}</span>`,
+        H.e(r.vendor_name||'-'),H.e(r.audit_type||'-'),H.e(r.plan_date||'-'),
+        H.e(r.actual_date||'-'),H.e(r.auditor||'-'),H.e(String(r.score??'-')),H.e(r.next_date||'-')],
     },
 
     sqm_delivery:{title:'납품 이력 검색',
