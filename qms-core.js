@@ -618,7 +618,7 @@ const Tbl={
   /* [v2.394] 정렬 상태 저장 */
   _sortKey:null, _sortDir:1,
 
-  render({el,cols,data,onDel,onRow,ps=20,page=1}={}){
+  render({el,cols,data,onDel,onRow,rowStyle,rowClass,ps=20,page=1}={}){
     const c=typeof el==='string'?document.querySelector(el):el;
     if(!c)return;
     /* 정렬 적용 */
@@ -646,8 +646,7 @@ const Tbl={
     const ths=`<th class="tc"><input type="checkbox" onchange="Tbl.chkAll(this)"></th><th class="tn">No</th>${cols.map(col=>`<th style="${col.w?`width:${col.w}`:''}${col.align?`;text-align:${col.align}`:''}${col.key?';cursor:pointer;user-select:none':''}" onclick="${col.key?`Tbl._sort('${col.key}')`:''}">` +`<span style="${col.req?'color:#dc2626;font-weight:700':''}">` +col.label+`</span>${col.req?'<span style="color:#dc2626"> *</span>':''}${col.key?sortArrow(col.key):''}</th>`).join('')}`;
     const trs=slice.length===0
       ?`<tr><td colspan="${cols.length+2}" style="text-align:center;padding:36px;color:var(--tm)">데이터가 없습니다.</td></tr>`
-      :slice.map((row,i)=>`<tr data-id="${row.id}" class="${opts.rowClass?opts.rowClass(row,i):''}"
-          style="${opts.rowStyle?opts.rowStyle(row,i):''}">
+      :slice.map((row,i)=>`<tr data-id="${row.id}" class="${rowClass?rowClass(row,i):''}" style="${rowStyle?rowStyle(row,i):''}">
           <td class="tc"><input type="checkbox" class="rck" value="${row.id}" onchange="Tbl.onChk()"></td>
           <td class="tn">${(page-1)*ps+i+1}</td>
           ${cols.map(col=>{const v=row[col.key];const dv=(col.key==='updated_at'&&v&&v===row['created_at'])?'':v;return`<td style="${col.align?`text-align:${col.align}`:''}${onRow?';cursor:pointer':''}" onclick="${onRow?`Tbl._onRow(${row.id})`:''}">` +`${col.render?col.render(dv,row):H.e(dv??'')}</td>`;}).join('')}
