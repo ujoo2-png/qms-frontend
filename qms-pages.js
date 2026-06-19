@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.139</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.140</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -2779,6 +2779,9 @@ _ncDetail(row){
     dday=`<span class="badge ${cls}" style="margin-left:8px">${diff<0?'D+'+Math.abs(diff):'D-'+diff}</span>`;
   }
 
+  /* 연계된 CAR 있는지 확인 */
+  const linkedCar=(DB.cars||[]).filter(c=>c.nc_id===row.id||c.nc_no===row.no);
+
   window._ncRow=row;
   Modal.open({
     title:`⚠️ 부적합 상세 — ${H.e(row.no||'-')}`,
@@ -2786,33 +2789,41 @@ _ncDetail(row){
     foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
         +`<button class="btn bgh bsm" onclick="Pages._ncPrint(window._ncRow)">🖨️ 인쇄</button>`
         +`<button class="btn bgh" onclick="Modal.close();Pages._ncForm(window._ncRow)">✏️ 수정</button>`
+        +`<button class="btn bamb" onclick="Modal.close();Pages._carForm(null,{nc_id:window._ncRow.id,nc_no:window._ncRow.no,title:window._ncRow.desc||window._ncRow.title||'',item_code:window._ncRow.item_code||'',item:window._ncRow.item||''})">🔧 CAR 발행</button>`
         +`<button class="btn bpri" onclick="Pages._ncStatusChange(window._ncRow?.id)">🔄 상태 변경</button>`,
     body:`
       <div class="psteps">${stBar}</div>
+      ${linkedCar.length?`<div style="background:#ede9fe;border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px">
+        🔧 연계 CAR: ${linkedCar.map(c=>`<span style="font-family:monospace;font-weight:700;color:#7c3aed;cursor:pointer" onclick="Modal.close();Nav.go('car')">${H.e(c.no)}</span> <span class="badge ${c.status==='완료'?'bgrn':'bamb'}" style="font-size:10px">${H.e(c.status)}</span>`).join(' / ')}
+      </div>`:''}
       <div class="card" style="margin:12px 0;padding:14px 18px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
           <div class="ir"><div class="il">부적합번호</div>
-            <div class="iv" style="font-family:monospace;font-weight:700">${H.e(row.no||'-')}</div></div>
+            <div class="iv" style="font-family:monospace;font-weight:700;font-size:13px">${H.e(row.no||'-')}</div></div>
           <div class="ir"><div class="il">유형</div>
             <div class="iv"><span class="badge bblu">${H.e(row.type||'-')}</span></div></div>
           <div class="ir"><div class="il">발생일</div>
             <div class="iv">${H.e(row.date||'-')}</div></div>
           <div class="ir"><div class="il">처리기한</div>
             <div class="iv">${H.e(row.due_date||'-')}${dday}</div></div>
+          <div class="ir"><div class="il">품목코드</div>
+            <div class="iv" style="font-family:monospace;font-size:13px">${H.e(row.item_code||'-')}</div></div>
           <div class="ir"><div class="il">품목명</div>
             <div class="iv">${H.e(row.item||'-')}</div></div>
           <div class="ir"><div class="il">수량</div>
-            <div class="iv">${row.qty?H.n(row.qty)+'ea':'-'}</div></div>
+            <div class="iv">${row.insp_qty?H.n(row.insp_qty)+'개 검사 / 불량 '+H.n(row.bad_qty||0)+'개':'-'}</div></div>
+          <div class="ir"><div class="il">담당자</div>
+            <div class="iv">${H.e(row.assignee||'-')}</div></div>
           <div class="ir" style="grid-column:1/-1"><div class="il">부적합 내용</div>
             <div class="iv">${H.e(row.desc||'-')}</div></div>
           <div class="ir" style="grid-column:1/-1"><div class="il">원인 분석</div>
             <div class="iv">${H.e(row.cause||'미작성')}</div></div>
           <div class="ir" style="grid-column:1/-1"><div class="il">조치 내용</div>
             <div class="iv">${H.e(row.action||'미작성')}</div></div>
-          <div class="ir"><div class="il">담당자</div>
-            <div class="iv">${H.e(row.assignee||'-')}</div></div>
           <div class="ir"><div class="il">등록자</div>
             <div class="iv">${H.e(row.created_by||'-')}</div></div>
+          ${row.file_url?`<div class="ir"><div class="il">첨부파일</div>
+            <div class="iv"><a href="${H.e(row.file_url)}" target="_blank" class="btn bxs bblu bsm">📎 파일 보기</a></div></div>`:''}
         </div>
       </div>
       <div id="ncCmt"></div>`,
@@ -6561,66 +6572,504 @@ _recForm:function(editRec){
   });
 },
 /* ── 시정조치 ── */
-car(){
+/* ════ 개선활동 — 시정조치(CAR) [v2.139 전면재작성] ════
+   흐름: 부적합 등록 → 부적합통보서 발행 → 대책접수 → 대책실시 → 유효성 평가
+   NC 연계: NC 상세에서 "CAR 발행" 버튼 → nc_id/nc_no 자동 채움
+   ═══════════════════════════════════════════════════════ */
+async car(){
   const w=document.getElementById('pw');
-  const carByStatus={접수:0,처리중:0,완료:0};DB.cars.forEach(c=>{if(carByStatus[c.status]!==undefined)carByStatus[c.status]++});
-  const carBySrc={};DB.cars.forEach(c=>{carBySrc[c.src]=(carBySrc[c.src]||0)+1});
-  w.innerHTML=`<div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🔧</div><div><div class="sd-val">${DB.cars.length}</div><div class="sd-lbl">전체 CAR</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#f1f5f9;color:#64748b">📋</div><div><div class="sd-val">${carByStatus['접수']}</div><div class="sd-lbl">접수</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⏳</div><div><div class="sd-val">${carByStatus['처리중']}</div><div class="sd-lbl">처리중</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div><div><div class="sd-val">${carByStatus['완료']}</div><div class="sd-lbl">완료</div></div></div>
-    ${Object.entries(carBySrc).map(([s,n])=>`<div class="sd-card sd-sm"><div class="sd-lbl">${s}</div><div class="sd-val" style="font-size:17px">${n}</div></div>`).join('')}
+  w.innerHTML='<div class="spin"></div>';
+  const fresh=await SB.getCars();
+  if(fresh&&fresh.length>=0) DB.cars=fresh;
+  const data=DB.cars||[];
+  const total=data.length;
+  const byStatus={접수:0,대책접수:0,대책실시:0,유효성평가:0,완료:0};
+  data.forEach(c=>{if(byStatus[c.status]!==undefined)byStatus[c.status]++;});
+  const open=data.filter(c=>c.status!=='완료').length;
+
+  /* EQS 동적 너비 */
+  const noMaxLen=Math.max(8,...data.map(r=>(r.no||'').length));
+  const noW=Math.min(160,Math.max(120,noMaxLen*9+24))+'px';
+  const titMaxLen=Math.max(10,...data.map(r=>(r.title||'').length));
+  const titW='*';
+
+  w.innerHTML=`
+  <div class="stat-dash">
+    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🔧</div>
+      <div><div class="sd-val">${total}</div><div class="sd-lbl">전체 CAR</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">🔴</div>
+      <div><div class="sd-val">${open}</div><div class="sd-lbl">미결</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>
+      <div><div class="sd-val">${byStatus['대책접수']||0}</div><div class="sd-lbl">대책접수</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">⚙️</div>
+      <div><div class="sd-val">${byStatus['대책실시']||0}</div><div class="sd-lbl">대책실시</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div>
+      <div><div class="sd-val">${byStatus['완료']||0}</div><div class="sd-lbl">완료</div></div></div>
   </div>
-  <div class="ph" style="margin-top:14px"><div><div class="ptit">🔧 시정조치 (CAR)</div></div><div class="pac"><button class="btn bpri btn-f2" onclick="Pages._carForm()">+ CAR 등록 <span class="kbd">F2</span></button></div></div>
-    <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('car')" title="엑셀 양식 내려받기">📥 양식 내려받기</button><button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('car')" title="엑셀 일괄등록">📤 자료 일괄등록</button>
-    <div class="tbar"><div class="sw2"><input type="text" placeholder="CAR번호, 제목..."></div>
-      <select class="fsel"><option value="">전체 상태</option><option>접수</option><option>처리중</option><option>완료</option></select>
-      <button class="btn bout bsm" onclick="SearchPop.open('car')" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>
-    </div><div id="carTbl"></div>`;
-  Tbl.render({el:'#carTbl',cols:[
-    {key:'no',label:'CAR번호',w:'142px'},{key:'src',label:'발생원',w:'72px',render:v=>`<span class="badge bpur">${H.e(v)}</span>`},
-    {key:'title',label:'제목'},{key:'open',label:'개시일',w:'86px'},{key:'due',label:'완료기한',w:'86px'},
-    {key:'assignee',label:'담당자',w:'72px'},
-    {key:'status',label:'상태',w:'66px',render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='처리중'?'bamb':'bgry'}">${H.e(v)}</span>`},
-  ],data:DB.cars,onDel:async(ids)=>{
-      /* [v2.394] 삭제 경고 팝업 — 시정조치 */
-      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
-      const _doDelete=async()=>{
-        const numIds=ids.map(Number);
-        DB.cars=DB.cars.filter(r=>!numIds.includes(Number(r.id)));
-        Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
-        Pages.car?.();
-      };
-      Modal.confirm({
-        title:'🗑️ 시정조치 삭제 확인',
-        msg:'<div style="text-align:center"><div style="font-size:28px">⚠️</div>'+`<div style="font-size:14px;font-weight:700;margin:6px 0">선택한 <b style="color:#dc2626">${ids.length}건</b>의 시정조치를 삭제합니다.</div>`+'<div style="font-size:12px;color:#64748b">삭제된 데이터는 복구가 어렵습니다. 계속하시겠습니까?</div></div>',
-        danger:true,
-        onOk:_doDelete
-      });
-    },onRow:row=>Pages._carDetail(row)});
+  <div class="ph" style="margin-top:14px">
+    <div><div class="ptit">🔧 시정조치 (CAR)</div>
+      <div style="font-size:13px;color:var(--muted)">부적합 → 대책접수 → 대책실시 → 유효성 평가</div></div>
+    <div class="pac">
+      <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('car')" title="엑셀 양식">📥 양식</button>
+      <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('car')" title="엑셀 일괄등록">📤 일괄등록</button>
+      <button class="btn bpri btn-f2" onclick="Pages._carForm()">+ CAR 등록 <span class="kbd">F2</span></button>
+    </div>
+  </div>
+  <div class="tbar">
+    <div class="sw2">
+      <input type="text" id="carSearch" placeholder="CAR번호, 제목, 품목, 담당자 검색..."
+        oninput="Pages._carRender()" value="">
+    </div>
+    <select class="fsel" id="carSrcF" onchange="Pages._carRender()">
+      <option value="">전체 발생원</option>
+      ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option>${s}</option>`).join('')}
+    </select>
+    <select class="fsel" id="carStatusF" onchange="Pages._carRender()">
+      <option value="">전체 상태</option>
+      ${['접수','대책접수','대책실시','유효성평가','완료'].map(s=>`<option>${s}</option>`).join('')}
+    </select>
+    <button class="btn bout bsm" onclick="SearchPop.open('car')" title="통합검색 (F3)">🔎 <span class="kbd">F3</span></button>
+  </div>
+  <div id="carTbl"></div>`;
+
+  Pages._carRender();
 },
-_carForm(){Modal.open({title:'CAR 등록',size:'mlg',body:`<div class="fg2">
-  <div class="fgroup"><label class="fl req">발생원</label><select class="fc">${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option>${s}</option>`).join('')}</select></div>
-  <div class="fgroup"><label class="fl req">개시일</label><input class="fc" type="date" value="${H.today()}"></div>
-  <div class="fgroup ff"><label class="fl req">제목</label><input class="fc"></div>
-  <div class="fgroup ff"><label class="fl">발생 내용</label><textarea class="fc" rows="2"></textarea></div>
-  <div class="fgroup ff"><label class="fl">근본 원인 (5-Why)</label><textarea class="fc" rows="2"></textarea></div>
-  <div class="fgroup ff"><label class="fl">시정 조치</label><textarea class="fc" rows="2"></textarea></div>
-  <div class="fgroup ff"><label class="fl">예방 조치</label><textarea class="fc" rows="2"></textarea></div>
-  <div class="fgroup"><label class="fl">담당자</label><select class="fc"><option value="">선택</option>${DB.users.map(u=>`<option>${H.e(u.name)}</option>`).join('')}</select></div>
-  <div class="fgroup"><label class="fl">완료 기한</label><input class="fc" type="date"></div>
-</div>`,foot:`<button class="btn bout" onclick="Modal.close()">취소</button><button class="btn bpri btn-f8" onclick="Toast.show('등록되었습니다.','ok');Modal.close()">등록 <span class="kbd">F8</span></button>`})},
-_carDetail(row){Modal.open({title:`CAR — ${row.no}`,size:'mlg',
-  body:`<div class="psteps">${['접수','처리중','검증','완료'].map((s,i)=>`<div class="pst"><div class="psd ${row.status===s?'ac':i<['접수','처리중','검증','완료'].indexOf(row.status)?'dn':''}">${i+1}</div><div class="psl ${row.status===s?'ac':''}">${s}</div></div>`).join('')}</div>
-  <div class="ir"><div class="il">CAR번호</div><div class="iv" style="font-family:'JetBrains Mono',monospace">${H.e(row.no)}</div></div>
-  <div class="ir"><div class="il">발생원</div><div class="iv"><span class="badge bpur">${H.e(row.src)}</span></div></div>
-  <div class="ir"><div class="il">제목</div><div class="iv"><strong>${H.e(row.title)}</strong></div></div>
-  <div class="ir"><div class="il">기간</div><div class="iv">${row.open} ~ ${row.due}</div></div>
-  <div class="ir"><div class="il">담당자</div><div class="iv">${H.e(row.assignee)}</div></div>
-  <div id="carCmt"></div>`,
-  foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
-});setTimeout(()=>Cmt.render('#carCmt',`car-${row.id}`),80)},
+
+/* ── CAR 목록 렌더 ── */
+_carRender(){
+  const data=DB.cars||[];
+  const q=(document.getElementById('carSearch')?.value||'').toLowerCase();
+  const src=document.getElementById('carSrcF')?.value||'';
+  const st=document.getElementById('carStatusF')?.value||'';
+  const filtered=data.filter(c=>{
+    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
+    if(src&&c.src!==src)return false;
+    if(st&&c.status!==st)return false;
+    return true;
+  });
+  const noMaxLen=Math.max(8,...filtered.map(r=>(r.no||'').length));
+  const noW=Math.min(160,Math.max(120,noMaxLen*9+24))+'px';
+  Tbl.render({
+    el:'#carTbl',
+    rowStyle:(row)=>{
+      if(row.status==='완료') return '';
+      if(row.due){
+        const d=Math.ceil((new Date(row.due)-new Date())/86400000);
+        if(d<0) return 'background:rgba(254,226,226,0.5);';
+        if(d<=3) return 'background:rgba(254,243,199,0.5);';
+      }
+      return '';
+    },
+    cols:[
+      {key:'status',   label:'상태',    w:'76px', align:'center',
+        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='유효성평가'?'bblu':v==='대책실시'?'bamb':v==='대책접수'?'bpur':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'no',       label:'CAR번호', w:noW, req:true,
+        render:v=>`<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
+      {key:'src',      label:'발생원',  w:'72px',
+        render:v=>`<span class="badge bpur" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'nc_no',    label:'NC참조',  w:'120px',
+        render:v=>v?`<span style="font-family:monospace;font-size:12px;color:#7c3aed;cursor:pointer" onclick="Nav.go('nc')">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'title',    label:'제목',    w:'*'},
+      {key:'item_code',label:'품목코드',w:'90px',
+        render:v=>v?`<span style="font-family:monospace;font-size:13px;color:#64748b">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'item',     label:'품목명',  w:'100px'},
+      {key:'open',     label:'개시일',  w:'88px'},
+      {key:'due',      label:'완료기한',w:'88px',
+        render:v=>{
+          if(!v) return '<span style="color:var(--tl)">-</span>';
+          const d=Math.ceil((new Date(v)-new Date())/86400000);
+          const cls=d<0?'bred':d<=3?'bamb':'bgrn';
+          return`<span class="badge ${cls}" style="font-size:10px">${v}</span>`;
+        }},
+      {key:'assignee', label:'담당자',  w:'70px'},
+      {key:'file_url', label:'파일',    w:'46px', align:'center',
+        render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" style="font-size:14px">📎</a>`:'<span style="color:var(--tl)">-</span>'},
+    ],
+    data:filtered,
+    onRow:row=>Pages._carDetail(row),
+    onDel:async(ids)=>{
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({title:'🗑️ CAR 삭제 확인',
+        msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 CAR를 삭제합니다.<br><small style="color:#64748b">삭제된 데이터는 복구가 어렵습니다.</small>`,
+        danger:true,
+        onOk:async()=>{
+          const numIds=ids.map(Number);
+          if(_sb){
+            for(const id of numIds){const {error}=await _sb.from('corrective_actions').delete().eq('id',id);if(error){Toast.show('삭제 실패: '+error.message,'err');return;}}
+          }
+          DB.cars=(DB.cars||[]).filter(c=>!numIds.includes(Number(c.id)));
+          Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+          Pages._carRender();
+        }
+      });
+    }
+  });
+},
+
+/* ── CAR 등록/수정 폼 [v2.139] ── */
+_carForm(row=null, prefillNc=null){
+  const isEdit=!!row;
+  const today=H.today();
+  const nextNo=(()=>{
+    const d=today.replace(/-/g,'');
+    const todayCars=(DB.cars||[]).filter(c=>(c.no||'').startsWith('CAR-'+d));
+    return`CAR-${d}-${String(todayCars.length+1).padStart(3,'0')}`;
+  })();
+  const itemDatalist=(DB.items||[]).map(it=>
+    `<option value="${H.e(it.item_code||it.code||'')}">${H.e((it.item_code||it.code||'')+' — '+(it.name||it.item_name||''))}</option>`
+  ).join('');
+  const userOpts=(DB.users||[]).filter(u=>u.active!==false).map(u=>{
+    const nm=H.e(u.name||u.username);
+    const sel=(isEdit&&row.assignee===nm)||(!isEdit&&(Auth._u?.name||Auth._u?.username)===nm)?'selected':'';
+    return`<option value="${nm}" ${sel}>${nm}${u.dept?' ('+H.e(u.dept)+')':''}</option>`;
+  }).join('');
+  const steps=['접수','대책접수','대책실시','유효성평가','완료'];
+  const statusOpts=steps.map(s=>`<option value="${s}" ${(isEdit&&row.status===s)||(!isEdit&&s==='접수')?'selected':''}>${s}</option>`).join('');
+
+  /* NC 연계 프리필 */
+  const pf=prefillNc||{};
+  const v=(key,fb='')=>isEdit?(row[key]||fb):(pf[key]||fb);
+
+  Modal.open({title:isEdit?`✏️ CAR 수정 — ${row.no}`:'+ CAR 등록',size:'mxl',
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>`
+        +`<button class="btn bpri btn-f8" onclick="Pages._carSave(${isEdit?row.id:'null'})">💾 저장 <span class="kbd">F8</span></button>`,
+    body:`<div class="fg2">
+      <input type="hidden" id="carId" value="${isEdit?row.id:''}">
+      <input type="hidden" id="carNcId" value="${v('nc_id')}">
+      <div class="fgroup">
+        <label class="fl">CAR번호</label>
+        <input class="fc" id="carNo" value="${H.e(v('no',nextNo))}" ${isEdit?'readonly':''}
+          style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">발생원 *</b></label>
+        <select class="fc" id="carSrc">
+          ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option value="${s}" ${v('src','부적합')===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fgroup">
+        <label class="fl">NC 참조번호</label>
+        <input class="fc" id="carNcNo" value="${H.e(v('nc_no'))}"
+          placeholder="NC-20260601-001" style="font-family:monospace;font-size:13px;color:#7c3aed">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">개시일 *</b></label>
+        <input class="fc" type="date" id="carOpen" value="${H.e(v('open',today))}">
+      </div>
+      <div class="fgroup" style="grid-column:1/-1">
+        <label class="fl req"><b style="color:#e11d48">제목 *</b></label>
+        <input class="fc" id="carTitle" value="${H.e(v('title'))}" placeholder="시정조치 제목 입력">
+      </div>
+      <div class="fgroup" style="grid-column:1/-1">
+        <label class="fl req"><b style="color:#e11d48">품목코드 *</b> <span style="font-size:10px;color:var(--tm)">직접입력 또는 검색</span></label>
+        <input class="fc" id="carItemCode" list="carItemList" value="${H.e(v('item_code'))}"
+          placeholder="코드 또는 품목명으로 검색..."
+          oninput="(function(){var v=document.getElementById('carItemCode').value.split(' — ')[0].trim();var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||'')===v;});if(it){document.getElementById('carItem').value=it.name||it.item_name||'';document.getElementById('carItem').style.color='var(--pri)';}else{document.getElementById('carItem').style.color='';}})()"
+          onblur="(function(){var v=document.getElementById('carItemCode').value.split(' — ')[0].trim();if(!v)return;var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||'')===v;});if(!it&&v)Toast.show('미등록 품목코드입니다.','warn');})()">
+        <datalist id="carItemList">${itemDatalist}</datalist>
+      </div>
+      <div class="fgroup">
+        <label class="fl">품목명 <span style="font-size:10px;color:var(--tm)">자동완성</span></label>
+        <input class="fc" id="carItem" value="${H.e(v('item'))}" placeholder="품목코드 입력 시 자동 입력" style="background:var(--bg2)">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">담당자 *</b></label>
+        <select class="fc" id="carAssignee"><option value="">선택</option>${userOpts}</select>
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">완료 기한 *</b></label>
+        <input class="fc" type="date" id="carDue" value="${H.e(v('due',H.addDays(today,14)))}">
+      </div>
+      <div class="fgroup">
+        <label class="fl">상태</label>
+        <select class="fc" id="carStatus">${statusOpts}</select>
+      </div>
+    </div>
+    <div style="margin-top:14px;border-top:1px solid var(--brd);padding-top:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">📋 대책 내용 (단계별 입력)</div>
+      <div class="fg1" style="gap:10px">
+        <div class="fgroup ff"><label class="fl">① 문제 기술 (D2)</label>
+          <textarea class="fc" id="carD2" rows="2" placeholder="부적합 현상 및 문제 내용 상세 기술">${H.e(v('d2_desc'))}</textarea></div>
+        <div class="fgroup ff"><label class="fl">② 임시 대책 (D3)</label>
+          <textarea class="fc" id="carD3" rows="2" placeholder="즉각적 임시 조치 내용">${H.e(v('d3_action'))}</textarea></div>
+        <div class="fgroup ff"><label class="fl">③ 근본 원인 분석 (D4 — 5-Why)</label>
+          <div style="display:grid;gap:6px;margin-top:4px">
+            ${[1,2,3,4,5].map(n=>`<input class="fc" id="carWhy${n}" value="${H.e(v('d4_why'+n))}" placeholder="Why ${n}: ${n===1?'왜 발생했는가?':n===2?'왜 그 원인이 발생했는가?':n===3?'왜 막지 못했는가?':n===4?'왜 관리 기준이 없었는가?':'근본 원인은 무엇인가?'}">`).join('')}
+          </div>
+        </div>
+        <div class="fgroup ff"><label class="fl">④ 대책 실시 (D5)</label>
+          <textarea class="fc" id="carD5" rows="2" placeholder="실시한 시정조치 내용">${H.e(v('d5_action'))}</textarea></div>
+        <div class="fgroup">
+          <label class="fl">대책 실시일 (D5)</label>
+          <input class="fc" type="date" id="carD5Date" value="${H.e(v('d5_date'))}">
+        </div>
+        <div class="fgroup ff"><label class="fl">⑤ 유효성 평가 (D6)</label>
+          <textarea class="fc" id="carD6" rows="2" placeholder="시정조치 효과 확인 결과">${H.e(v('d6_verify'))}</textarea></div>
+        <div class="fgroup">
+          <label class="fl">유효성 평가 결과</label>
+          <select class="fc" id="carD6Result">
+            ${['','유효','일부유효','무효'].map(r=>`<option value="${r}" ${v('d6_result')===r?'selected':''}>${r||'선택'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fgroup">
+          <label class="fl">유효성 평가일</label>
+          <input class="fc" type="date" id="carD6Date" value="${H.e(v('d6_date'))}">
+        </div>
+        <div class="fgroup ff"><label class="fl">⑥ 재발 방지 (D7)</label>
+          <textarea class="fc" id="carD7" rows="2" placeholder="수평전개 및 재발 방지 대책">${H.e(v('d7_prevent'))}</textarea></div>
+        <div class="fgroup">
+          <label class="fl">비고</label>
+          <input class="fc" id="carNote" value="${H.e(v('note'))}" placeholder="비고">
+        </div>
+        <div class="fgroup">
+          <label class="fl">첨부파일</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${isEdit&&row.file_url
+              ?`<a href="${H.e(row.file_url)}" target="_blank" class="btn bxs bblu bsm">📎 현재 파일</a>
+                 <button type="button" class="btn bxs bred bsm" onclick="window._carFileDel=true;this.style.display='none';this.nextElementSibling.textContent='(삭제 예정)'">🗑️ 삭제</button>
+                 <span style="font-size:11px;color:var(--muted)"></span>`:''}
+            <label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px dashed var(--brd);border-radius:6px;cursor:pointer;font-size:13px;color:var(--muted)">
+              📁 파일 선택<input type="file" id="carFile" accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.jpeg,.png,.zip" style="display:none"
+                onchange="this.parentElement.querySelector('span')||this.parentElement.insertAdjacentHTML('beforeend','<span style=\\'font-size:11px;color:var(--pri)\\'>');this.closest('label').nextElementSibling&&(this.closest('label').nextElementSibling.textContent=this.files[0]?.name||'')">
+            </label>
+            <span style="font-size:11px;color:var(--pri)"></span>
+          </div>
+        </div>
+      </div>
+    </div>`
+  });
+},
+
+/* ── CAR 저장 [v2.139] ── */
+async _carSave(editId){
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const title=g('carTitle');
+  const src=g('carSrc');
+  const open=g('carOpen');
+  const due=g('carDue');
+  const assignee=g('carAssignee');
+  const itemCode=g('carItemCode').split(' — ')[0].trim();
+  if(!title){Toast.show('제목을 입력하세요.','warn');return;}
+  if(!open){Toast.show('개시일을 입력하세요.','warn');return;}
+  if(!assignee){Toast.show('담당자를 선택하세요.','warn');return;}
+
+  /* 파일 업로드 */
+  let file_url=editId?(DB.cars||[]).find(c=>c.id===editId)?.file_url||null:null;
+  if(window._carFileDel){file_url=null;window._carFileDel=false;}
+  const fileEl=document.getElementById('carFile');
+  if(fileEl?.files?.length){
+    const up=await SB.uploadFile('car',fileEl.files[0]);
+    if(up?.url) file_url=up.url;
+    else Toast.show('파일 업로드 실패. 저장은 계속됩니다.','warn');
+  }
+
+  const row={
+    no:g('carNo'), src, title,
+    nc_id:document.getElementById('carNcId')?.value||null,
+    nc_no:g('carNcNo')||null,
+    item_code:itemCode||null, item:g('carItem')||null,
+    open, due:due||null, assignee, status:g('carStatus')||'접수',
+    d2_desc:g('carD2')||null, d3_action:g('carD3')||null,
+    d4_why1:g('carWhy1')||null, d4_why2:g('carWhy2')||null,
+    d4_why3:g('carWhy3')||null, d4_why4:g('carWhy4')||null,
+    d4_why5:g('carWhy5')||null,
+    d5_action:g('carD5')||null, d5_date:g('carD5Date')||null,
+    d6_verify:g('carD6')||null, d6_result:g('carD6Result')||null, d6_date:g('carD6Date')||null,
+    d7_prevent:g('carD7')||null,
+    note:g('carNote')||null, file_url,
+    created_by:Auth._u?.name||Auth._u?.username||'',
+  };
+
+  if(editId){
+    const res=await SB.updateCar(editId,row);
+    if(!res?.ok) return;
+    const idx=(DB.cars||[]).findIndex(c=>c.id===editId);
+    if(idx>=0) DB.cars[idx]={...DB.cars[idx],...row};
+    Toast.show('CAR가 수정되었습니다.','ok');
+  } else {
+    const res=await SB.addCar(row);
+    if(!res?.ok) return;
+    Toast.show('CAR가 등록되었습니다.','ok');
+  }
+  Modal.close();
+  Pages._carRender();
+},
+
+/* ── CAR 상세 팝업 [v2.139] ── */
+_carDetail(row){
+  if(!row||typeof row!=='object'){Toast.show('데이터를 불러올 수 없습니다.','err');return;}
+  window._carRow=row;
+  const steps=['접수','대책접수','대책실시','유효성평가','완료'];
+  const si=steps.indexOf(row.status||'접수');
+  const stBar=steps.map((s,i)=>
+    `<div class="pst"><div class="psd ${i===si?'ac':i<si?'dn':''}">${i+1}</div>
+     <div class="psl ${i===si?'ac':''}" style="font-size:11px">${s}</div></div>`
+  ).join('');
+  const dday=(()=>{
+    if(!row.due) return '';
+    const d=Math.ceil((new Date(row.due)-new Date())/86400000);
+    const cls=d<0?'bred':d<=3?'bamb':'bgrn';
+    return`<span class="badge ${cls}" style="margin-left:8px">${d<0?'D+'+Math.abs(d):'D-'+d}</span>`;
+  })();
+  const why=([row.d4_why1,row.d4_why2,row.d4_why3,row.d4_why4,row.d4_why5].filter(Boolean));
+  Modal.open({
+    title:`🔧 CAR 상세 — ${H.e(row.no||'-')}`,size:'mxl',
+    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
+        +`<button class="btn bout bsm" onclick="Pages._carPrint(window._carRow)">🖨️ 인쇄</button>`
+        +`<button class="btn bout" onclick="Modal.close();Pages._carForm(window._carRow)">✏️ 수정</button>`
+        +`<button class="btn bpri" onclick="Pages._carNextStep(window._carRow)">▶ 다음 단계</button>`,
+    body:`
+      <div class="psteps">${stBar}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+        <div>
+          <div class="ir"><div class="il">CAR번호</div>
+            <div class="iv" style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">${H.e(row.no||'-')}</div></div>
+          <div class="ir"><div class="il">발생원</div>
+            <div class="iv"><span class="badge bpur" style="font-size:11px">${H.e(row.src||'-')}</span></div></div>
+          ${row.nc_no?`<div class="ir"><div class="il">NC 참조</div>
+            <div class="iv"><span style="font-family:monospace;font-size:13px;color:#7c3aed;cursor:pointer" onclick="Modal.close();Nav.go('nc')">${H.e(row.nc_no)}</span></div></div>`:''}
+          <div class="ir"><div class="il">품목코드</div>
+            <div class="iv" style="font-family:monospace;font-size:13px">${H.e(row.item_code||'-')}</div></div>
+          <div class="ir"><div class="il">품목명</div>
+            <div class="iv">${H.e(row.item||'-')}</div></div>
+          <div class="ir"><div class="il">제목</div>
+            <div class="iv"><strong>${H.e(row.title||'-')}</strong></div></div>
+        </div>
+        <div>
+          <div class="ir"><div class="il">담당자</div>
+            <div class="iv">${H.e(row.assignee||'-')}</div></div>
+          <div class="ir"><div class="il">개시일</div>
+            <div class="iv">${H.e(row.open||'-')}</div></div>
+          <div class="ir"><div class="il">완료기한</div>
+            <div class="iv">${H.e(row.due||'-')}${dday}</div></div>
+          ${row.d5_date?`<div class="ir"><div class="il">대책 실시일</div>
+            <div class="iv">${H.e(row.d5_date)}</div></div>`:''}
+          ${row.d6_date?`<div class="ir"><div class="il">유효성 평가일</div>
+            <div class="iv">${H.e(row.d6_date)} <span class="badge ${row.d6_result==='유효'?'bgrn':row.d6_result==='무효'?'bred':'bamb'}" style="font-size:11px">${H.e(row.d6_result||'미평가')}</span></div></div>`:''}
+          ${row.file_url?`<div class="ir"><div class="il">첨부파일</div>
+            <div class="iv"><a href="${H.e(row.file_url)}" target="_blank" class="btn bxs bblu bsm">📎 파일 보기</a></div></div>`:''}
+        </div>
+      </div>
+      ${row.d2_desc?`<div class="ir" style="margin-top:10px"><div class="il">① 문제 기술</div><div class="iv">${H.e(row.d2_desc)}</div></div>`:''}
+      ${row.d3_action?`<div class="ir"><div class="il">② 임시 대책</div><div class="iv">${H.e(row.d3_action)}</div></div>`:''}
+      ${why.length?`<div class="ir"><div class="il">③ 근본원인<br><small style="font-size:10px">(5-Why)</small></div>
+        <div class="iv"><ol style="margin:0;padding-left:18px">${why.map(w=>`<li style="font-size:13px;margin-bottom:4px">${H.e(w)}</li>`).join('')}</ol></div></div>`:''}
+      ${row.d5_action?`<div class="ir"><div class="il">④ 대책 실시</div><div class="iv">${H.e(row.d5_action)}</div></div>`:''}
+      ${row.d6_verify?`<div class="ir"><div class="il">⑤ 유효성 평가</div><div class="iv">${H.e(row.d6_verify)}</div></div>`:''}
+      ${row.d7_prevent?`<div class="ir"><div class="il">⑥ 재발 방지</div><div class="iv">${H.e(row.d7_prevent)}</div></div>`:''}
+      ${row.note?`<div class="ir"><div class="il">비고</div><div class="iv">${H.e(row.note)}</div></div>`:''}
+      <div id="carCmt" style="margin-top:14px"></div>`
+  });
+  setTimeout(()=>{if(typeof Cmt!=='undefined')Cmt.render('#carCmt',`car-${row.id}`);},80);
+},
+
+/* ── CAR 다음 단계 ── */
+async _carNextStep(row){
+  const steps=['접수','대책접수','대책실시','유효성평가','완료'];
+  const cur=steps.indexOf(row.status||'접수');
+  if(cur>=steps.length-1){Toast.show('이미 완료 상태입니다.','info');return;}
+  const next=steps[cur+1];
+  Modal.confirm({title:'▶ 단계 진행',
+    msg:`<strong>${H.e(row.no)}</strong>의 상태를<br><b>${H.e(row.status)}</b> → <b style="color:var(--pri)">${next}</b>으로 진행하시겠습니까?`,
+    onOk:async()=>{
+      const res=await SB.updateCar(row.id,{status:next});
+      if(!res?.ok){Toast.show('상태 변경 실패','err');return;}
+      const idx=(DB.cars||[]).findIndex(c=>c.id===row.id);
+      if(idx>=0) DB.cars[idx].status=next;
+      window._carRow={...row,status:next};
+      Modal.close();
+      Toast.show(`"${next}"으로 진행되었습니다.`,'ok');
+      Pages._carRender();
+    }
+  });
+},
+
+/* ── CAR 인쇄 [v2.139] ── */
+_carPrint(row){
+  if(!row){Toast.show('인쇄할 CAR 데이터가 없습니다.','warn');return;}
+  const w=window.open('','_blank','width=1000,height=780,scrollbars=yes');
+  if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
+  const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const why=[row.d4_why1,row.d4_why2,row.d4_why3,row.d4_why4,row.d4_why5];
+  const steps=['접수','대책접수','대책실시','유효성평가','완료'];
+  const si=steps.indexOf(row.status||'접수');
+  const stepsHtml=steps.map((s,i)=>`<td style="text-align:center;background:${i===si?'#dce6f1':i<si?'#e8f5e9':'#fff'};font-weight:${i===si?'bold':'normal'}">${i+1}.${s}</td>`).join('');
+  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>시정조치요청서(CAR) — ${e(row.no)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}
+body{background:#fff;color:#000;font-size:9pt;padding:0}
+@page{size:A4 portrait;margin:10mm 12mm}
+@media print{.no-print{display:none!important}}
+.wrap{width:186mm;margin:0 auto}
+h1{font-size:14pt;font-weight:bold;text-align:center;padding:8px 0;letter-spacing:2px;border-bottom:2pt solid #000;margin-bottom:8px}
+table{border-collapse:collapse;width:100%;margin-bottom:6px}
+td,th{border:.7pt solid #444;padding:3px 6px;vertical-align:middle;font-size:8.5pt}
+.lb{background:#dce6f1;font-weight:bold;white-space:nowrap;width:80px;text-align:center}
+.area{vertical-align:top;padding:4px 6px;min-height:40px}
+.sign td{height:32px;text-align:center}
+.step td{padding:4px;font-size:8pt}
+.hdr{background:#dce6f1;font-weight:bold;text-align:center;font-size:8pt}
+.print-btn{position:fixed;bottom:20px;right:20px;padding:10px 20px;background:#1a5fa8;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer}
+</style></head><body>
+<div class="wrap">
+  <h1>시 정 조 치 요 청 서 (C.A.R)</h1>
+  <!-- 결재란 -->
+  <table class="sign" style="margin-bottom:8px">
+    <tr><td class="hdr" rowspan="2" style="width:60px">작성</td>
+        <td class="hdr" style="width:60px">검토</td>
+        <td class="hdr" style="width:60px">승인</td>
+        <td class="lb" style="width:70px">문서번호</td>
+        <td>IPD-CAR-01</td>
+        <td class="lb" style="width:60px">발행일</td>
+        <td>${e(row.open||'')}</td></tr>
+    <tr><td></td><td></td>
+        <td class="lb">CAR번호</td>
+        <td style="font-family:monospace;font-weight:bold;color:#1a5fa8">${e(row.no)}</td>
+        <td class="lb">진행 상태</td>
+        <td>${e(row.status||'접수')}</td></tr>
+  </table>
+  <!-- 진행 단계 -->
+  <table class="step" style="margin-bottom:8px"><tr class="hdr"><td colspan="5" class="hdr">■ 진행 단계</td></tr><tr>${stepsHtml}</tr></table>
+  <!-- 기본 정보 -->
+  <table>
+    <tr><td class="lb">발생원</td><td>${e(row.src||'')}</td>
+        <td class="lb">NC 참조</td><td style="font-family:monospace;color:#7c3aed">${e(row.nc_no||'-')}</td></tr>
+    <tr><td class="lb">품목코드</td><td style="font-family:monospace">${e(row.item_code||'-')}</td>
+        <td class="lb">품목명</td><td>${e(row.item||'-')}</td></tr>
+    <tr><td class="lb">담당자</td><td>${e(row.assignee||'')}</td>
+        <td class="lb">완료기한</td><td>${e(row.due||'-')}</td></tr>
+    <tr><td class="lb">제목</td><td colspan="3"><b>${e(row.title||'')}</b></td></tr>
+  </table>
+  <!-- 단계별 내용 -->
+  <table style="margin-top:6px">
+    <tr><td class="hdr" colspan="2">① 문제 기술 (D2)</td></tr>
+    <tr><td colspan="2" class="area" style="min-height:44px">${e(row.d2_desc||'')}</td></tr>
+    <tr><td class="hdr" colspan="2">② 임시 대책 (D3)</td></tr>
+    <tr><td colspan="2" class="area">${e(row.d3_action||'')}</td></tr>
+    <tr><td class="hdr" colspan="2">③ 근본 원인 분석 (D4 — 5-Why)</td></tr>
+    ${why.map((w,i)=>`<tr><td class="lb">Why ${i+1}</td><td class="area">${e(w||'')}</td></tr>`).join('')}
+    <tr><td class="hdr">④ 대책 실시 (D5)</td><td class="hdr">실시일: ${e(row.d5_date||'')}</td></tr>
+    <tr><td colspan="2" class="area">${e(row.d5_action||'')}</td></tr>
+    <tr><td class="hdr">⑤ 유효성 평가 (D6)</td>
+        <td class="hdr">평가일: ${e(row.d6_date||'')} / 결과: ${e(row.d6_result||'미평가')}</td></tr>
+    <tr><td colspan="2" class="area">${e(row.d6_verify||'')}</td></tr>
+    <tr><td class="hdr" colspan="2">⑥ 재발 방지 / 수평전개 (D7)</td></tr>
+    <tr><td colspan="2" class="area">${e(row.d7_prevent||'')}</td></tr>
+  </table>
+  ${row.note?`<table style="margin-top:4px"><tr><td class="lb">비고</td><td>${e(row.note)}</td></tr></table>`:''}
+  <table style="margin-top:8px;font-size:7.5pt">
+    <tr><td style="background:#dce6f1;width:33%">㈜이노디스 — IPD-CAR-01(Rev01)</td>
+        <td style="background:#dce6f1;text-align:center">시정조치요청서</td>
+        <td style="background:#dce6f1;text-align:right">A4(210×297mm)</td></tr>
+  </table>
+</div>
+<button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄</button>
+</body></html>`;
+  w.document.open();w.document.write(html);w.document.close();
+},
+
+
 audit(){document.getElementById('pw').innerHTML=`<div class="ph"><div><div class="ptit">🔎 내부심사</div></div><div class="pac"><button class="btn bpri btn-f2">+ 심사 등록 <span class="kbd">F2</span></button></div></div><div class="card"><div class="es"><div class="es-icon">🔎</div><div>내부심사 — 백엔드 연동 후 활성화</div></div></div>`},
 
 /* ── 멘션함 ── */

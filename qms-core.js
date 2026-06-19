@@ -2076,6 +2076,32 @@ var SearchPop=window.SearchPop={
       row:(r)=>[H.e(r.vendor_name||'-'),H.e(r.audit_type||'-'),H.e(r.plan_date||'-'),H.e(r.auditor||'-'),H.e(r.status||'-')],
     },
 
+    car:{title:'CAR(시정조치) 검색',
+      fields:[
+        {id:'car_q',  label:'CAR번호/제목', type:'text',   ph:'번호 또는 제목'},
+        {id:'car_src',label:'발생원',        type:'select', opts:['','부적합','내부심사','고객불만','외부심사','기타']},
+        {id:'car_st', label:'상태',          type:'select', opts:['','접수','대책접수','대책실시','유효성평가','완료']},
+        {id:'car_adr',label:'담당자',        type:'text',   ph:'담당자명'},
+        {id:'car_ncn',label:'NC참조번호',    type:'text',   ph:'NC-'},
+        {id:'car_df', label:'개시일(시작)',  type:'date'},
+        {id:'car_dt', label:'개시일(종료)',  type:'date'},
+      ],
+      cols:['상태','CAR번호','발생원','NC참조','제목','담당자','개시일','완료기한'],
+      get:(f)=>(DB.cars||[]).filter(r=>{
+        if(f.car_q&&![r.no||'',r.title||''].join(' ').toLowerCase().includes(f.car_q.toLowerCase()))return false;
+        if(f.car_src&&r.src!==f.car_src)return false;
+        if(f.car_st&&r.status!==f.car_st)return false;
+        if(f.car_adr&&!(r.assignee||'').includes(f.car_adr))return false;
+        if(f.car_ncn&&!(r.nc_no||'').includes(f.car_ncn))return false;
+        if(f.car_df&&(r.open||'')<f.car_df)return false;
+        if(f.car_dt&&(r.open||'')>f.car_dt)return false;
+        return true;
+      }),
+      row:(r)=>[
+        `<span class="badge ${r.status==='완료'?'bgrn':r.status==='유효성평가'?'bblu':r.status==='대책실시'?'bamb':'bgry'}" style="font-size:10px">${H.e(r.status||'-')}</span>`,
+        H.e(r.no||'-'),H.e(r.src||'-'),H.e(r.nc_no||'-'),H.e(r.title||'-'),H.e(r.assignee||'-'),H.e(r.open||'-'),H.e(r.due||'-')],
+    },
+
     sqm_audit:{title:'업체 심사 검색',
       fields:[
         {id:'sqa_vn',   label:'거래처명',      type:'text',   ph:'거래처명'},

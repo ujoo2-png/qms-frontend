@@ -839,11 +839,33 @@ const SB={
     return data;
   },
   async addCar(row){
-    if(!_sb){const id=Math.max(0,...DB.cars.map(c=>c.id))+1;DB.cars.push({id,...row});return{ok:true,id};}
-    /* .select() 미사용: RLS 오류 방지 (v2.394) */
-    const {error}=await _sb.from('corrective_actions').insert(row);
+    if(!_sb){const id=Math.max(0,...(DB.cars||[]).map(c=>c.id))+1;if(!DB.cars)DB.cars=[];DB.cars.push({id,...row});return{ok:true,id};}
+    const allowed={
+      no:row.no||'', src:row.src||'부적합', title:row.title||'',
+      nc_id:row.nc_id||null, nc_no:row.nc_no||null,
+      item_code:row.item_code||null, item:row.item||null,
+      open:row.open||null, due:row.due||null,
+      assignee:row.assignee||'', dept:row.dept||'',
+      status:row.status||'접수',
+      /* 5단계 워크플로 필드 */
+      d1_team:row.d1_team||null,          /* ①대책접수: 팀 구성 */
+      d2_desc:row.d2_desc||null,          /* ①문제 기술 */
+      d3_action:row.d3_action||null,      /* ②임시 대책 */
+      d4_cause:row.d4_cause||null,        /* ③근본 원인 */
+      d4_why1:row.d4_why1||null, d4_why2:row.d4_why2||null,
+      d4_why3:row.d4_why3||null, d4_why4:row.d4_why4||null,
+      d4_why5:row.d4_why5||null,
+      d5_action:row.d5_action||null,      /* ④대책 실시 */
+      d5_date:row.d5_date||null,
+      d6_verify:row.d6_verify||null,      /* ⑤유효성 평가 */
+      d6_result:row.d6_result||null, d6_date:row.d6_date||null,
+      d7_prevent:row.d7_prevent||null,    /* ⑤재발 방지 */
+      note:row.note||null, file_url:row.file_url||null,
+      created_by:row.created_by||'',
+    };
+    const {error}=await _sb.from('corrective_actions').insert(allowed);
     if(error){Toast.show('CAR 저장 실패: '+error.message,'err');return{ok:false};}
-    DB.cars.push({id:Date.now(),...row});return{ok:true};
+    if(!DB.cars)DB.cars=[];DB.cars.push({id:Date.now(),...allowed});return{ok:true};
   },
   async updateCar(id,patch){
     if(!_sb){const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
