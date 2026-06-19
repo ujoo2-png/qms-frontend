@@ -253,8 +253,23 @@ async insp_std(){
     {key:'criteria',label:'항목수',w:'70px',align:'center',render:v=>`<strong>${(v||[]).length}개</strong>`},
     {key:'aql',label:'AQL',w:'58px',align:'center'},{key:'insp_level',label:'검사수준',w:'75px',align:'center'},
     {key:'rev',label:'Rev',w:'55px',align:'center'},{key:'effective_date',label:'개정일',w:'88px'},{key:'created_by',label:'작성자',w:'72px'},
-    {key:'file_url',label:'파일',w:'60px',align:'center',render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()">📎</a>`:'-'},
-  ],data,onRow:row=>Pages._inspStdDetail(row)});
+    {key:'file_url',label:'파일',w:'60px',align:'center',render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:#f97316;border-radius:50%;color:#fff;font-size:13px;text-decoration:none" title="첨부파일 보기">📄</a>`:'<span style="color:var(--tl);font-size:11px">—</span>'},
+  ],data,onDel:async(ids)=>{
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({title:'🗑️ 기준서 삭제',
+        msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 검사기준서를 삭제합니다.`,
+        danger:true,onOk:async()=>{
+          const numIds=ids.map(Number);
+          if(typeof _sb!=='undefined'&&_sb){
+            for(const id of numIds){await SB.updateInspStd(id,{deleted_at:new Date().toISOString()});}
+          }
+          DB.insp_std=(DB.insp_std||[]).filter(r=>!numIds.includes(Number(r.id)));
+          Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+          Pages.insp_std();
+        }
+      });
+    },
+    onRow:row=>Pages._inspStdDetail(row)});
 },
 _inspStdDetail(row){
   Modal.open({title:`📋 검사 기준서 — ${row.item_name}`,size:'mxl',
@@ -304,7 +319,13 @@ _inspStdForm(row=null){
       <div class="fgroup"><label class="fl">개정일</label><input class="fc" id="stdRevDate" type="date" value="${H.e(row?.effective_date||H.today())}"></div>
       <div class="fgroup" style="grid-column:1/-1"><label class="fl">파일 첨부</label>
         <input class="fc" id="stdFile" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-        ${row?.file_url?`<div style="margin-top:5px;font-size:12px"><a href="${H.e(row.file_url)}" target="_blank">📎 ${H.e(row.file_name||'첨부파일')}</a></div>`:''}</div>
+        ${row?.file_url
+          ?`<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <a href="${H.e(row.file_url)}" target="_blank" class="btn bxs bblu bsm">📎 ${H.e(row.file_name||'현재 파일')}</a>
+              <button type="button" class="btn bxs bred bsm" onclick="window._stdFileDel=true;this.style.display='none';this.nextElementSibling.textContent='(삭제 예정)'">🗑️ 삭제</button>
+              <span style="font-size:11px;color:var(--err)"></span>
+            </div>`
+          :''}</div>
     </div>
     <div style="margin-top:14px"><div style="font-size:13px;font-weight:700;margin-bottom:9px">검사 항목</div>
     <table class="ctbl"><thead><tr><th>No</th><th>항목</th><th>측정방법</th><th>규격/기준</th><th>단위</th><th>USL</th><th>LSL</th><th>빈도</th><th></th></tr></thead>
@@ -333,9 +354,12 @@ async _inspStdSave(){
     rev:g('stdRev'), effective_date:g('stdRevDate')||null,
     created_by:Auth._u?.name||Auth._u?.username||'',
   };
-  /* 파일 업로드 */
+  /* 파일 업로드 / 삭제 처리 */
   const fileEl=document.getElementById('stdFile');
-  if(fileEl?.files?.length){
+  if(window._stdFileDel){
+    data.file_url=null; data.file_name=null;
+    window._stdFileDel=false;
+  } else if(fileEl?.files?.length){
     const up=await SB.uploadFile('insp_std', fileEl.files[0]);
     if(up){data.file_url=up.url;data.file_name=up.name;}
   }
@@ -368,7 +392,19 @@ insp_cert(){
     {key:'insp_date',label:'검사일',w:'88px'},{key:'qty',label:'수량',w:'72px',align:'right',render:v=>H.n(v)},
     {key:'inspector',label:'검사자',w:'72px'},{key:'approver',label:'승인자',w:'72px'},
     {key:'final',label:'최종판정',w:'78px',align:'center',render:v=>H.inspBadge(v)},
-  ],data,onRow:row=>Pages._certDetail(row)});
+  ],data,onDel:async(ids)=>{
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({title:'🗑️ 성적서 삭제',
+        msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 검사성적서를 삭제합니다.`,
+        danger:true,onOk:()=>{
+          const numIds=ids.map(Number);
+          DB.insp_cert=(DB.insp_cert||[]).filter(r=>!numIds.includes(Number(r.id)));
+          Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+          Pages.insp_cert?.();
+        }
+      });
+    },
+    onRow:row=>Pages._certDetail(row)});
 },
 _certDetail(row){
   Modal.open({title:`📜 검사 성적서 — ${row.cert_no}`,size:'mxl',
@@ -411,7 +447,19 @@ lot_trace(){
     {key:'insp_result',label:'검사결과',w:'78px',align:'center',render:v=>H.inspBadge(v)},
     {key:'hold',label:'Hold',w:'62px',align:'center',render:v=>v?`<span class="badge bred">Hold</span>`:`<span class="badge bgrn">정상</span>`},
     {key:'used_in',label:'사용처',w:'62px',align:'center',render:v=>`<span style="font-weight:700;color:var(--pri)">${v.length}건</span>`},
-  ],data,onRow:row=>Pages._lotDetail(row)});
+  ],data,onDel:async(ids)=>{
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({title:'🗑️ LOT 삭제',
+        msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 LOT 추적 데이터를 삭제합니다.`,
+        danger:true,onOk:()=>{
+          const numIds=ids.map(Number);
+          DB.lot_trace=(DB.lot_trace||[]).filter(r=>!numIds.includes(Number(r.id)));
+          Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+          Pages.lot_trace?.();
+        }
+      });
+    },
+    onRow:row=>Pages._lotDetail(row)});
 },
 _lotDetail(row){
   Modal.open({title:`🔗 LOT 추적 — ${row.lot}`,size:'mlg',
@@ -483,7 +531,19 @@ reinsp(){
     {key:'reinsp_date',label:'재검사일',w:'86px'},{key:'qty',label:'수량',w:'58px',align:'right',render:v=>H.n(v)},
     {key:'reject_qty',label:'불합격',w:'58px',align:'right',render:v=>`<span style="color:var(--err);font-weight:700">${v}</span>`},
     {key:'inspector',label:'검사자',w:'70px'},{key:'result',label:'결과',w:'78px',render:v=>H.inspBadge(v)},
-  ],data,onRow:row=>Pages._reinspDetail(row)});
+  ],data,onDel:async(ids)=>{
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({title:'🗑️ 재검사 삭제',
+        msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 재검사 데이터를 삭제합니다.`,
+        danger:true,onOk:()=>{
+          const numIds=ids.map(Number);
+          DB.reinsp=(DB.reinsp||[]).filter(r=>!numIds.includes(Number(r.id)));
+          Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+          Pages.reinsp?.();
+        }
+      });
+    },
+    onRow:row=>Pages._reinspDetail(row)});
 },
 _reinspDetail(row){
   Modal.open({title:'재검사 상세',size:'mmd',
