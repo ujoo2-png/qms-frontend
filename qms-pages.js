@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.138</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.139</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -299,7 +299,8 @@ async home(){
 
 async _mentionReplySend(parentId){
   /* [v2.394 PhaseB] thread_id 기반 SB 스레드 저장 */
-  const text=(document.getElementById('rtext')?.value||'').trim();
+  /* [v2.139] rtext→rplyText 수정 — _mentionReply가 생성하는 textarea id와 일치시킴 */
+  const text=(document.getElementById('rplyText')?.value||'').trim();
   if(!text){Toast.show('내용을 입력하세요.','warn');return}
   const me=Auth._u;
   const meUser=DB.users.find(u=>u.username===(me?.username||Auth._cur))||{name:'관리자',dept:''};
@@ -327,13 +328,13 @@ async _mentionReplySend(parentId){
     if(!parent.replies) parent.replies=[];
     parent.replies.push({...row, id:res.id||Date.now()});
   }
-  document.getElementById('rtext').value='';
   Toast.show('답글이 전송되었습니다.','ok');
-  /* [v2.394] 입력창 초기화 + 배지 갱신 + 팝업 재렌더 */
-  const _rtEl=document.getElementById('rtext');
-  if(_rtEl) _rtEl.value='';
   TopNav.updateMentionBadge();
-  Pages._mentionReplyView(parentId);
+  /* [v2.139] _mentionReplyView 미정의 → Modal 닫고 목록 새로고침 */
+  Modal.close();
+  const fresh=await SB.getMentions();
+  if(Array.isArray(fresh)) DB.mentions=fresh;
+  Pages._mentionRefresh();
 },
 async _approveUser(userId, username){
   if(Auth._u?.role!=='admin'){Toast.show('관리자만 승인 가능합니다.','err');return}

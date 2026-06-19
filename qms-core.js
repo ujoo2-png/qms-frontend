@@ -314,6 +314,20 @@ const Auth={
           <div class="npi-m"><span>✍ ${H.e(n.author)}</span><span>📅 ${n.date} ~ ${n.expire}</span></div></div>`).join('');
       document.getElementById('npOverlay').classList.remove('hidden');
     } else { this.enterApp(); }
+    /* [v2.139] 멘션 실시간 폴링 — 30초마다 새 멘션 체크 + 배지 갱신
+       기존엔 멘션함 진입 시에만 DB 로드해서 다른 화면에서는 알림 배지가 갱신 안됐음 */
+    if(window._mentionPollTimer) clearInterval(window._mentionPollTimer);
+    window._mentionPollTimer=setInterval(async()=>{
+      if(!Auth._cur) return;
+      try{
+        const fresh=await SB.getMentions();
+        if(Array.isArray(fresh)){
+          DB.mentions=fresh;
+          Pages._updateMentionBadge&&Pages._updateMentionBadge();
+          TopNav.updateMentionBadge&&TopNav.updateMentionBadge();
+        }
+      }catch(e){/* 폴링 실패는 조용히 무시 */}
+    },30000);
   },
 
 

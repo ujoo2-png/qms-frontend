@@ -128,6 +128,19 @@ function setupHotkeys(){
         if(savedPage !== 'home'){
           Toast.show('마지막 화면으로 돌아왔습니다.','info',2000);
         }
+        /* [v2.139] 세션 복원 후에도 멘션 폴링 시작 */
+        if(window._mentionPollTimer) clearInterval(window._mentionPollTimer);
+        window._mentionPollTimer=setInterval(async()=>{
+          if(!Auth._cur) return;
+          try{
+            const fresh=await SB.getMentions();
+            if(Array.isArray(fresh)){
+              DB.mentions=fresh;
+              Pages._updateMentionBadge&&Pages._updateMentionBadge();
+              TopNav.updateMentionBadge&&TopNav.updateMentionBadge();
+            }
+          }catch(e){}
+        },30000);
       })();
     } catch(e){
       sessionStorage.removeItem('qms_auth');
