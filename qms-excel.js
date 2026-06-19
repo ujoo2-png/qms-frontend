@@ -398,7 +398,7 @@ insp_cert(){
         msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 검사성적서를 삭제합니다.`,
         danger:true,onOk:()=>{
           const numIds=ids.map(Number);
-          DB.insp_cert=(DB.insp_cert||[]).filter(r=>!numIds.includes(Number(r.id)));
+          DB2.insp_cert=data.filter(r=>!numIds.includes(Number(r.id)));
           Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
           Pages.insp_cert?.();
         }
@@ -453,7 +453,7 @@ lot_trace(){
         msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 LOT 추적 데이터를 삭제합니다.`,
         danger:true,onOk:()=>{
           const numIds=ids.map(Number);
-          DB.lot_trace=(DB.lot_trace||[]).filter(r=>!numIds.includes(Number(r.id)));
+          DB2.lot_trace=data.filter(r=>!numIds.includes(Number(r.id)));
           Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
           Pages.lot_trace?.();
         }
@@ -537,7 +537,7 @@ reinsp(){
         msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 재검사 데이터를 삭제합니다.`,
         danger:true,onOk:()=>{
           const numIds=ids.map(Number);
-          DB.reinsp=(DB.reinsp||[]).filter(r=>!numIds.includes(Number(r.id)));
+          DB2.reinsp=data.filter(r=>!numIds.includes(Number(r.id)));
           Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
           Pages.reinsp?.();
         }
