@@ -46,7 +46,7 @@ async home(){
     {c:'mc-c6',icon:'🔬',name:'계측기관리',badge:eqE,
      subs:[{icon:'🔬',label:'계측기 등록',page:'equip'},{icon:'📐',label:'교정 관리',page:'cal'},{icon:'📈',label:'MSA 분석',page:'msa'}]},
     {c:'mc-c7',icon:'📄',name:'문서관리',badge:0,
-     subs:[{icon:'📄',label:'문서 목록',page:'docs'},{icon:'✍️',label:'결재함',page:'doc_approval'},{icon:'🕐',label:'개정 이력',page:'doc_history_home'},{icon:'🔍',label:'지식 검색',page:'doc_search'},{icon:'📋',label:'기록 관리',page:'rec'},{icon:'💡',label:'연관 문서',page:'doc_recommend'},{icon:'📊',label:'현황 대시보드',page:'doc_dashboard'},{icon:'📤',label:'배포 관리',page:'doc_distribution'},{icon:'🔔',label:'검토 주기',page:'doc_review_cycle'}]},
+     subs:[{icon:'📊',label:'현황 대시보드',page:'doc_dashboard'},{icon:'📄',label:'문서 목록',page:'docs'},{icon:'✍️',label:'결재함',page:'doc_approval'},{icon:'🕐',label:'개정 이력',page:'doc_history_home'},{icon:'🔍',label:'지식 검색',page:'doc_search'},{icon:'📋',label:'기록 관리',page:'rec'},{icon:'💡',label:'연관 문서',page:'doc_recommend'},{icon:'📤',label:'배포 관리',page:'doc_distribution'},{icon:'🔔',label:'검토 주기',page:'doc_review_cycle'}]},
     {c:'mc-c8',icon:'🔧',name:'개선활동',badge:carO,
      subs:[{icon:'🔧',label:'시정조치(CAR)',page:'car'},{icon:'🔎',label:'내부심사',page:'audit'}]},
     /* [v2.65] 제조설비관리(EMS) 9번째 카드 */
@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.143</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.144</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -6083,12 +6083,80 @@ async doc_dashboard(){
           }).join('')+
           '</tbody></table>'
         :'<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">등록된 문서가 없습니다.</div>')+
-    '</div>';
+    '</div>'+
+
+    /* ④ 업무 흐름도 — 가로형, 각 박스 클릭 시 해당 메뉴로 이동 */
+    Pages._dashFlowSvg()+
+    '';
 
   /* 차트 렌더 (약간의 딜레이로 DOM 완성 후 실행) */
   window._dashByType=byType;
   window._dashByStatus=byStatus;
   setTimeout(function(){ Pages._dashRenderCharts(); }, 100);
+},
+
+/* [v2.144] 문서관리 업무 흐름도 — 가로형 SVG, 박스 클릭 시 Nav.go로 해당 메뉴 이동
+   작성(문서목록/기록관리) → 승인(결재함) → 확정(개정이력) → 활용(배포/검색/연관문서)
+   검토주기는 개정이력에서 분기되어 만료를 감시하는 역할로 별도 표시 */
+_dashFlowSvg(){
+  var C={blue:'#3b82c4',coral:'#cd5b63',teal:'#3fa873',amber:'#d6952f'};
+  var bg={blue:'#e8f4fd',coral:'#fbe9ea',teal:'#e3f6ec',amber:'#fdf3e3'};
+  function box(x,y,w,h,page,icon,title,sub,c){
+    return '<g style="cursor:pointer" onclick="Nav.go(\''+page+'\')">'+
+      '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="8" fill="'+bg[c]+'" stroke="'+C[c]+'" stroke-width="1" opacity="0.95"/>'+
+      '<text x="'+(x+w/2)+'" y="'+(y+22)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+C[c]+'">'+icon+' '+title+'</text>'+
+      '<text x="'+(x+w/2)+'" y="'+(y+40)+'" text-anchor="middle" font-size="11" fill="var(--muted)">'+sub+'</text>'+
+    '</g>';
+  }
+  function arrow(x1,y1,x2,y2,dashed){
+    var dash=dashed?' stroke-dasharray="4,3"':'';
+    return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="var(--brd)" stroke-width="1.5" marker-end="url(#dashArrow)"'+dash+'/>';
+  }
+  var svg=''+
+  '<div style="background:var(--card);border:1px solid var(--brd);border-radius:14px;padding:20px;margin-top:18px">'+
+    '<div style="font-size:14px;font-weight:700;margin-bottom:4px;color:var(--text)">🔀 문서관리 업무 흐름</div>'+
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:14px">박스를 클릭하면 해당 메뉴로 이동합니다</div>'+
+    '<div style="width:100%;overflow-x:auto">'+
+    '<svg viewBox="0 0 860 230" style="width:100%;min-width:760px;height:auto" preserveAspectRatio="xMinYMid meet">'+
+      '<defs><marker id="dashArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'+
+        '<path d="M1 1L8 5L1 9" fill="none" stroke="var(--brd)" stroke-width="1.6"/></marker></defs>'+
+
+      /* 단계 라벨 */
+      '<text x="40" y="14" font-size="11" font-weight="700" fill="var(--muted)">① 작성</text>'+
+      '<text x="260" y="14" font-size="11" font-weight="700" fill="var(--muted)">② 승인</text>'+
+      '<text x="430" y="14" font-size="11" font-weight="700" fill="var(--muted)">③ 확정</text>'+
+      '<text x="600" y="14" font-size="11" font-weight="700" fill="var(--muted)">④ 활용</text>'+
+
+      /* ① 작성 */
+      box(40,24,150,56,'docs','📄','문서 목록','등록 · 파일첨부','blue')+
+      box(40,96,150,56,'rec','📋','기록 관리','증빙 기록 등록','blue')+
+
+      /* 화살표: 작성 → 승인 */
+      arrow(190,52,256,52,false)+
+      arrow(190,124,256,52,false)+
+
+      /* ② 승인 */
+      box(260,24,150,56,'doc_approval','✍️','결재함','승인 · 반려','coral')+
+      arrow(410,52,426,52,false)+
+
+      /* ③ 확정 */
+      box(430,24,150,56,'doc_history_home','🕐','개정 이력','버전별 기록','coral')+
+      arrow(580,52,596,52,false)+
+
+      /* ④ 활용 (세로 3단) */
+      box(600,24,150,52,'doc_distribution','📤','배포 관리','열람 · 공유 이력','teal')+
+      box(600,84,150,52,'doc_search','🔍','지식 검색','통합 키워드 검색','teal')+
+      box(600,144,150,52,'doc_recommend','💡','연관 문서','태그 기반 추천','teal')+
+
+      /* 검토 주기 — 개정이력에서 분기되어 만료 감시 (점선) */
+      arrow(505,80,505,150,true)+
+      '<text x="515" y="118" font-size="10" fill="var(--muted)">감시</text>'+
+      box(430,154,150,56,'doc_review_cycle','🔔','검토 주기','만료 임박 알림','amber')+
+
+    '</svg>'+
+    '</div>'+
+  '</div>';
+  return svg;
 },
 
 /* 차트 렌더 */

@@ -1196,7 +1196,7 @@ const TopNav={
     ],
     'SPC 통계관리':[{label:'관리도',page:'spc_chart'},{label:'공정능력(Cp/Cpk)',page:'spc_cpk'},{label:'파레토 분석',page:'spc_pareto'}],
     '개선활동':    [{label:'시정조치(CAR)',page:'car'},{label:'내부심사',page:'audit'}],
-    '문서관리':    [{label:'문서 목록',page:'docs'},{label:'결재함',page:'doc_approval'},{label:'개정 이력',page:'doc_history_home'},{label:'지식 검색',page:'doc_search'},{label:'연관 문서',page:'doc_recommend'},{label:'현황 대시보드',page:'doc_dashboard'},{label:'배포 관리',page:'doc_distribution'},{label:'검토 주기',page:'doc_review_cycle'},{label:'기록 관리',page:'rec'}],
+    '문서관리':    [{label:'현황 대시보드',page:'doc_dashboard'},{label:'문서 목록',page:'docs'},{label:'결재함',page:'doc_approval'},{label:'개정 이력',page:'doc_history_home'},{label:'지식 검색',page:'doc_search'},{label:'기록 관리',page:'rec'},{label:'연관 문서',page:'doc_recommend'},{label:'배포 관리',page:'doc_distribution'},{label:'검토 주기',page:'doc_review_cycle'}],
   },
   /* 모듈 선택 */
   select(btn, mod){
