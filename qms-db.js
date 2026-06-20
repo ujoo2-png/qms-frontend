@@ -1368,7 +1368,13 @@ const SB={
   async getDocFiles(docId){
     if(!_sb) return [];
     const {data,error}=await _sb.from('doc_files').select('*').eq('doc_id',docId).order('id');
-    if(error){console.warn('[SB] doc_files 조회 실패:',error.message);return [];}
+    if(error){
+      console.warn('[SB] doc_files 조회 실패:',error.message);
+      if(error.message&&error.message.includes('row-level security')){
+        console.warn('[SB] doc_files RLS가 SELECT를 막고 있습니다. ALTER TABLE doc_files DISABLE ROW LEVEL SECURITY; 실행 필요');
+      }
+      return [];
+    }
     return data||[];
   },
   async addDocFile(docId,file){
@@ -1376,7 +1382,14 @@ const SB={
     const allowed={doc_id:docId, name:file.name||'', path:file.path||null,
       url:file.url||null, size:file.size||'', file_date:file.date||H.today()};
     const {error}=await _sb.from('doc_files').insert(allowed);
-    if(error){console.warn('[SB] doc_files 저장 실패:',error.message);return{ok:false,error};}
+    if(error){
+      console.warn('[SB] doc_files 저장 실패:',error.message);
+      if(error.message&&error.message.includes('row-level security')){
+        console.warn('[SB] doc_files RLS가 INSERT를 막고 있습니다. ALTER TABLE doc_files DISABLE ROW LEVEL SECURITY; 실행 필요');
+      }
+      if(typeof Toast!=='undefined') Toast.show('파일 정보 저장 실패(첨부파일 기록 안 됨): '+error.message,'err',5000);
+      return{ok:false,error};
+    }
     return{ok:true};
   },
   async deleteDocFile(docId,path){

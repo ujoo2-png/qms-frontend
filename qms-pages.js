@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.142</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.143</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -4260,7 +4260,15 @@ _docRender:function(){
         render:function(v,row){return H.e(v||'-')+' '+Pages._dDay(v);}},
       {key:'dept',          label:'부서',       w:'68px', align:'center'},
       {key:'id',            label:'파일',       w:'58px', align:'center',
-        render:function(v,row){return FM.btn('doc-'+v);}},
+        render:function(v,row){
+          /* [v2.143] doc_master.file_url(단일파일, v2.131 이전 등록분)도 인식 —
+             doc_files만 보던 FM.btn은 구버전 등록 파일을 표시 못했음 */
+          var k='doc-'+v;
+          if(row.file_url && !(App.files[k]&&App.files[k].length)){
+            App.files[k]=[{name:row.file_name||'첨부파일',path:null,url:row.file_url,size:'',date:''}];
+          }
+          return FM.btn(k);
+        }},
     ],
     data:rows,
     onDel:async function(ids){
@@ -5292,7 +5300,12 @@ async doc_history(docId){
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
       '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
     /* [v2.65] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
-    var filesBtnHtml=FM.btn('doc-'+docId);
+    /* [v2.143] doc_master.file_url(단일파일, 구버전 등록분)도 인식 */
+    var fKey='doc-'+docId;
+    if(doc.file_url && !(App.files[fKey]&&App.files[fKey].length)){
+      App.files[fKey]=[{name:doc.file_name||'첨부파일',path:null,url:doc.file_url,size:'',date:''}];
+    }
+    var filesBtnHtml=FM.btn(fKey);
     /* [v2.397.2 UI개선] 개정이력 문서 정보 배너 */
     document.getElementById('vDocInfo').innerHTML=
       /* 헤더: 그라디언트 배경 + 문서번호/제목/유형/버전 */
@@ -6522,7 +6535,15 @@ _recRender:function(rows){
         render:function(v){return H.e(v||'-')+' '+Pages._dDay(v);}},
       {key:'dept',          label:'부서',       w:'68px', align:'center'},
       {key:'id',            label:'파일',       w:'58px', align:'center',
-        render:function(v,row){return FM.btn('doc-'+v);}},
+        render:function(v,row){
+          /* [v2.143] doc_master.file_url(단일파일, v2.131 이전 등록분)도 인식 —
+             doc_files만 보던 FM.btn은 구버전 등록 파일을 표시 못했음 */
+          var k='doc-'+v;
+          if(row.file_url && !(App.files[k]&&App.files[k].length)){
+            App.files[k]=[{name:row.file_name||'첨부파일',path:null,url:row.file_url,size:'',date:''}];
+          }
+          return FM.btn(k);
+        }},
     ],
     data:rows,
     onDel:async function(ids){

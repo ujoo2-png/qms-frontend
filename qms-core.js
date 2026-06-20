@@ -943,8 +943,12 @@ const FM={
       try{
         const docId=Number(docMatch[1]);
         const rows=await SB.getDocFiles(docId);
-        App.files[k]=rows.map(r=>({name:r.name,path:r.path,url:r.url,size:r.size,date:r.file_date}));
-        this._saveCache(k);
+        /* [v2.143] doc_files가 비어있으면 목록에서 미리 채운 file_url(단일파일,
+           구버전 등록분) 정보를 보존. doc_files에 데이터가 있을 때만 그것으로 교체 */
+        if(rows.length>0){
+          App.files[k]=rows.map(r=>({name:r.name,path:r.path,url:r.url,size:r.size,date:r.file_date}));
+          this._saveCache(k);
+        }
       }catch(e){console.warn('[FM] doc_files 동기화 실패',e);}
     }
     const files=this.get(k);
