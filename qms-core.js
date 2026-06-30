@@ -1944,7 +1944,57 @@ var SearchPop=window.SearchPop={
         `<span class="badge ${r.active===0||r.active==='0'?'bred':'bgrn'}">${r.active===0||r.active==='0'?'불용':'사용'}</span>`,
       ]},
     cal:{title:'교정 검색',fields:[{id:'sc_code',label:'계측기코드',type:'text',ph:'EQ-001'},{id:'sc_name',label:'계측기명',type:'text',ph:'계측기명'},{id:'sc_agency',label:'교정기관',type:'text',ph:'교정기관'},{id:'sc_from',label:'교정일(시작)',type:'date'},{id:'sc_to',label:'교정일(종료)',type:'date'},{id:'sc_result',label:'결과',type:'select',opts:['','합격','부분합격','특채','보류','불합격']}],cols:['계측기코드','계측기명','교정일','교정기관','성적서번호','결과','차기교정일'],get:(f)=>DB.cals.filter(r=>{if(f.sc_code&&!r.code.includes(f.sc_code))return false;if(f.sc_name&&!r.name.includes(f.sc_name))return false;if(f.sc_agency&&!r.agency.includes(f.sc_agency))return false;if(f.sc_from&&r.date<f.sc_from)return false;if(f.sc_to&&r.date>f.sc_to)return false;if(f.sc_result&&r.result!==f.sc_result)return false;return true;}),row:(r)=>[H.e(r.code),H.e(r.name),H.e(r.date),H.e(r.agency),H.e(r.cert),`<span class="badge ${r.result==='합격'?'bgrn':'bred'}">${H.e(r.result)}</span>`,H.e(r.next)]},
-    docs:{title:'문서 검색',fields:[{id:'sd_type',label:'유형',type:'select',opts:['','절차서','지침서','양식','매뉴얼','규정']},{id:'sd_no',label:'문서번호',type:'text',ph:'QP-...'},{id:'sd_title',label:'제목',type:'text',ph:'문서 제목'},{id:'sd_author',label:'작성자',type:'text',ph:'작성자'},{id:'sd_status',label:'상태',type:'select',opts:['','초안','유효','폐기']}],cols:['문서번호','유형','제목','개정번호','발행일','작성자','상태'],get:(f)=>DB.docs.filter(r=>{if(f.sd_type&&r.type!==f.sd_type)return false;if(f.sd_no&&!r.no.includes(f.sd_no))return false;if(f.sd_title&&!r.title.includes(f.sd_title))return false;if(f.sd_author&&!r.author.includes(f.sd_author))return false;if(f.sd_status&&r.status!==f.sd_status)return false;return true;}),row:(r)=>[H.e(r.no),`<span class="badge bblu">${H.e(r.type)}</span>`,H.e(r.title),`Rev.${H.e(r.rev)}`,H.e(r.date),H.e(r.author),`<span class="badge ${r.status==='유효'?'bgrn':r.status==='초안'?'bamb':'bgry'}">${H.e(r.status)}</span>`]},
+    docs:{title:'문서 검색',
+      fields:[
+        {id:'sd_type',  label:'유형',   type:'select', opts:['']},
+        {id:'sd_no',    label:'문서번호',type:'text',   ph:'문서번호'},
+        {id:'sd_title', label:'제목',   type:'text',   ph:'문서 제목'},
+        {id:'sd_dept',  label:'담당부서',type:'text',   ph:'부서명'},
+        {id:'sd_status',label:'상태',   type:'select', opts:['','draft','in_review','active','obsolete']},
+      ],
+      cols:['문서번호','유형','제목','버전','상태','담당부서'],
+      get:(f)=>(window._docRows||[]).filter(r=>{
+        if(r.status==='deleted')return false;
+        if(f.sd_type&&r.doc_type!==f.sd_type)return false;
+        if(f.sd_no&&!(r.doc_no||'').toLowerCase().includes(f.sd_no.toLowerCase()))return false;
+        if(f.sd_title&&!(r.title||'').toLowerCase().includes(f.sd_title.toLowerCase()))return false;
+        if(f.sd_dept&&!(r.dept||'').toLowerCase().includes(f.sd_dept.toLowerCase()))return false;
+        if(f.sd_status&&r.status!==f.sd_status)return false;
+        return true;
+      }),
+      row:(r)=>{
+        const stLbl={draft:'초안',in_review:'검토중',active:'유효',obsolete:'폐기'};
+        const stCls={draft:'bgry',in_review:'bblu',active:'bgrn',obsolete:'bred'};
+        return[H.e(r.doc_no||'-'),H.e(Pages._DT?.[r.doc_type]||r.doc_type||'-'),H.e(r.title||'-'),
+          H.e(r.current_ver||'-'),`<span class="badge ${stCls[r.status]||'bgry'}">${stLbl[r.status]||r.status||'-'}</span>`,
+          H.e(r.dept||'-')];
+      },
+      onRow:(r)=>Pages.doc_history(r.id),
+    },
+    rec:{title:'기록 검색',
+      fields:[
+        {id:'sr_no',    label:'기록번호',type:'text',   ph:'기록번호'},
+        {id:'sr_title', label:'제목',   type:'text',   ph:'기록 제목'},
+        {id:'sr_dept',  label:'담당부서',type:'text',   ph:'부서명'},
+        {id:'sr_status',label:'상태',   type:'select', opts:['','draft','active']},
+      ],
+      cols:['기록번호','제목','버전','상태','담당부서'],
+      get:(f)=>(window._recRows||[]).filter(r=>{
+        if(f.sr_no&&!(r.doc_no||'').toLowerCase().includes(f.sr_no.toLowerCase()))return false;
+        if(f.sr_title&&!(r.title||'').toLowerCase().includes(f.sr_title.toLowerCase()))return false;
+        if(f.sr_dept&&!(r.dept||'').toLowerCase().includes(f.sr_dept.toLowerCase()))return false;
+        if(f.sr_status&&r.status!==f.sr_status)return false;
+        return true;
+      }),
+      row:(r)=>{
+        const stLbl={draft:'초안',active:'유효'};
+        const stCls={draft:'bgry',active:'bgrn'};
+        return[H.e(r.doc_no||'-'),H.e(r.title||'-'),H.e(r.current_ver||'-'),
+          `<span class="badge ${stCls[r.status]||'bgry'}">${stLbl[r.status]||r.status||'-'}</span>`,
+          H.e(r.dept||'-')];
+      },
+      onRow:(r)=>Pages.doc_history(r.id),
+    },
     car:{title:'시정조치 검색',fields:[{id:'sc2_src',label:'발생원',type:'select',opts:['','부적합','내부심사','고객불만','외부심사','기타']},{id:'sc2_no',label:'CAR번호',type:'text',ph:'CAR번호'},{id:'sc2_title',label:'제목',type:'text',ph:'제목 검색'},{id:'sc2_assignee',label:'담당자',type:'text',ph:'담당자'},{id:'sc2_status',label:'상태',type:'select',opts:['','접수','처리중','완료']},{id:'sc2_from',label:'개시일(시작)',type:'date'},{id:'sc2_to',label:'개시일(종료)',type:'date'}],cols:['CAR번호','발생원','제목','개시일','완료기한','담당자','상태'],get:(f)=>DB.cars.filter(r=>{if(f.sc2_src&&r.src!==f.sc2_src)return false;if(f.sc2_no&&!r.no.includes(f.sc2_no))return false;if(f.sc2_title&&!r.title.includes(f.sc2_title))return false;if(f.sc2_assignee&&!r.assignee.includes(f.sc2_assignee))return false;if(f.sc2_status&&r.status!==f.sc2_status)return false;if(f.sc2_from&&r.open<f.sc2_from)return false;if(f.sc2_to&&r.open>f.sc2_to)return false;return true;}),row:(r)=>[H.e(r.no),`<span class="badge bpur">${H.e(r.src)}</span>`,H.e(r.title),H.e(r.open),H.e(r.due),H.e(r.assignee),`<span class="badge ${r.status==='완료'?'bgrn':r.status==='처리중'?'bamb':'bgry'}">${H.e(r.status)}</span>`]},
 
     insp_std:{title:'검사 기준서 검색',
@@ -2273,7 +2323,16 @@ var SearchPop=window.SearchPop={
     const result=document.getElementById('spResult');
     document.getElementById('spInfo').textContent=`검색 결과: 총 ${data.length.toLocaleString()}건`;
     if(!data.length){result.innerHTML=`<div class="sp-empty"><div class="sp-empty-icon">📭</div><div style="font-weight:600;margin-bottom:4px">검색 결과가 없습니다.</div><div style="font-size:12px">조건을 변경해 보세요.</div></div>`;return}
-    result.innerHTML=`<table><thead><tr>${cfg.cols.map(c=>`<th>${H.e(c)}</th>`).join('')}</tr></thead><tbody>${data.map(r=>`<tr onclick="SearchPop.close()">${cfg.row(r).map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    result.innerHTML=`<table><thead><tr>${cfg.cols.map(c=>`<th>${H.e(c)}</th>`).join('')}</tr></thead><tbody>${data.map((r,i)=>`<tr onclick="SearchPop._rowClick(${i})">${cfg.row(r).map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    this._curData=data;
+  },
+
+  /* [v2.146] 행 클릭 — cfg.onRow가 있으면 호출 후 닫기, 없으면 기존처럼 닫기만 */
+  _rowClick(i){
+    const cfg=this._cfg[this._page];
+    const row=this._curData?.[i];
+    if(cfg?.onRow&&row) cfg.onRow(row);
+    this.close();
   },
 
   reset(){

@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.145</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.146</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -5285,7 +5285,7 @@ _dhRender:function(){
   Tbl.render({el:'#dhTbl',
     cols:[
       {key:'doc_no',        label:'문서번호',   w:docNoW,
-        render:function(v,row){return '<span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Nav.go(&quot;docs&quot;)">'+(H.e(v)||'-')+'</span>';}},
+        render:function(v,row){return '<span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--pri);cursor:pointer" onclick="Pages.doc_history('+(row.doc_id||0)+')">'+(H.e(v)||'-')+'</span>';}},
       {key:'title',         label:'문서명',      w:'*'},
       {key:'doc_type',      label:'유형',        w:'80px',
         render:function(v){return H.e(Pages._DT[v]||v||'-');}},
@@ -6592,7 +6592,7 @@ async rec(){
     '</div>'+
     '<div class="tbar">'+
       '<div class="sw2"><input type="text" id="recKw" placeholder="기록번호, 제목..." oninput="Pages._recKwFilter(this.value)"></div>'+
-      '<button class="btn bout bsm" onclick="SearchPop.open(\'docs\')" title="통합 검색 (F3)">🔎 Search <span class="kbd">F3</span></button>'+
+      '<button class="btn bout bsm" onclick="SearchPop.open(\'rec\')" title="통합 검색 (F3)">🔎 Search <span class="kbd">F3</span></button>'+
     '</div>'+
     '<div id="recTbl"></div>';
 
