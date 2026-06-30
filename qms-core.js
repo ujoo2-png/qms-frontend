@@ -1336,9 +1336,15 @@ const Nav={
   go(page){
     /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
     if(Auth._u) sessionStorage.setItem('qms_page', page);
-    /* [v2.394] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
+    /* [v2.65] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
     const _np=document.getElementById('npOverlay');
     if(_np&&!_np.classList.contains('hidden')) _np.classList.add('hidden');
+    /* [v2.147] 모달(gmo)/SearchPop(spOverlay)이 열려있는 상태로 페이지 전환 시
+       투명 오버레이가 화면에 남아 이후 모든 클릭을 가로채던 근본 문제 수정 */
+    const _gmo=document.getElementById('gmo');
+    if(_gmo&&!_gmo.classList.contains('hidden')) Modal.close();
+    const _sp=document.getElementById('spOverlay');
+    if(_sp&&!_sp.classList.contains('hidden')) SearchPop.close();
     /* [v2.394] 멘션함 이동 시 배지 업데이트 */
     if(page==='mentions') setTimeout(()=>TopNav.updateMentionBadge(),300);
 
@@ -2283,12 +2289,14 @@ var SearchPop=window.SearchPop={
     }}},
 
   open(page){
+    console.log('[SearchPop.open] 호출됨, page=',page,', cfg 존재=',!!this._cfg[page]);
     const cfg=this._cfg[page];
     if(!cfg){Toast.show('이 화면에서는 Search를 사용할 수 없습니다.','warn');return}
-    this._page=page;
-    document.getElementById('spTitle').textContent=cfg.title;
-    const cond=document.getElementById('spCond');
-    // sp-box 드래그 초기화 (열 때마다 중앙으로)
+    try{
+      this._page=page;
+      document.getElementById('spTitle').textContent=cfg.title;
+      const cond=document.getElementById('spCond');
+      // sp-box 드래그 초기화 (열 때마다 중앙으로)
     const spBox=document.querySelector('.sp-box');
     if(spBox){spBox.style.transform='';spBox.style.left='';spBox.style.top='';spBox.style.position='';}
     this._initDrag();
@@ -2313,6 +2321,10 @@ var SearchPop=window.SearchPop={
     document.getElementById('spInfo').textContent='';
     document.getElementById('spOverlay').classList.remove('hidden');
     setTimeout(()=>cond.querySelector('input,select')?.focus(),80);
+    }catch(e){
+      console.error('[SearchPop.open] 실패:',page,e);
+      Toast.show('검색창을 여는 중 오류가 발생했습니다: '+e.message,'err',5000);
+    }
   },
 
   search(){
