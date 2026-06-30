@@ -2166,6 +2166,34 @@ var SearchPop=window.SearchPop={
         H.e(r.no||'-'),H.e(r.src||'-'),H.e(r.nc_no||'-'),H.e(r.title||'-'),H.e(r.assignee||'-'),H.e(r.open||'-'),H.e(r.due||'-')],
     },
 
+    audit:{title:'내부심사 검색',
+      fields:[
+        {id:'sa_q',   label:'심사번호/범위', type:'text',   ph:'번호 또는 범위'},
+        {id:'sa_type',label:'유형',          type:'select', opts:['','정기','특별','추가']},
+        {id:'sa_st',  label:'상태',          type:'select', opts:['','계획','실시중','보고','완료']},
+        {id:'sa_dept',label:'피심사부서',    type:'text',   ph:'부서명'},
+        {id:'sa_adr', label:'심사원',        type:'text',   ph:'심사원명'},
+        {id:'sa_df',  label:'계획일(시작)',  type:'date'},
+        {id:'sa_dt',  label:'계획일(종료)',  type:'date'},
+      ],
+      cols:['상태','심사번호','유형','심사범위','피심사부서','계획일','심사원','발견사항'],
+      get:(f)=>(DB.audits||[]).filter(r=>{
+        if(f.sa_q&&![r.no||'',r.scope||''].join(' ').toLowerCase().includes(f.sa_q.toLowerCase()))return false;
+        if(f.sa_type&&r.audit_type!==f.sa_type)return false;
+        if(f.sa_st&&r.status!==f.sa_st)return false;
+        if(f.sa_dept&&!(r.auditee_dept||'').includes(f.sa_dept))return false;
+        if(f.sa_adr&&!(r.auditor||'').includes(f.sa_adr))return false;
+        if(f.sa_df&&(r.plan_date||'')<f.sa_df)return false;
+        if(f.sa_dt&&(r.plan_date||'')>f.sa_dt)return false;
+        return true;
+      }),
+      row:(r)=>[
+        `<span class="badge ${r.status==='완료'?'bgrn':r.status==='보고'?'bpur':r.status==='실시중'?'bamb':'bgry'}" style="font-size:10px">${H.e(r.status||'-')}</span>`,
+        H.e(r.no||'-'),H.e(r.audit_type||'-'),H.e(r.scope||'-'),H.e(r.auditee_dept||'-'),
+        H.e(r.plan_date||'-'),H.e(r.auditor||'-'),H.e(String(r.findings_count||0))],
+      onRow:(r)=>Pages._auditDetail(r),
+    },
+
     sqm_audit:{title:'업체 심사 검색',
       fields:[
         {id:'sqa_vn',   label:'거래처명',      type:'text',   ph:'거래처명'},

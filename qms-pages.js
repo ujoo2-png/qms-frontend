@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.148</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.149</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -7185,7 +7185,492 @@ td,th{border:.7pt solid #444;padding:3px 6px;vertical-align:middle;font-size:8.5
 },
 
 
-audit(){document.getElementById('pw').innerHTML=`<div class="ph"><div><div class="ptit">🔎 내부심사</div></div><div class="pac"><button class="btn bpri btn-f2">+ 심사 등록 <span class="kbd">F2</span></button></div></div><div class="card"><div class="es"><div class="es-icon">🔎</div><div>내부심사 — 백엔드 연동 후 활성화</div></div></div>`},
+/* ════ 개선활동 — 내부심사(Internal Audit) [v2.149 전면 신규개발] ════
+   흐름: 연간 심사계획 수립 → 심사 실시(체크리스트) → 부적합 발견사항 →
+        CAR 발행 연계 → 후속조치 확인 → 심사보고서 종결
+   ═══════════════════════════════════════════════════════════════ */
+async audit(){
+  const w=document.getElementById('pw');
+  w.innerHTML='<div class="spin"></div>';
+  const fresh=await SB.getAudits();
+  if(fresh&&fresh.length>=0) DB.audits=fresh;
+  const data=DB.audits||[];
+  const total=data.length;
+  const byStatus={계획:0,실시중:0,보고:0,완료:0};
+  data.forEach(a=>{if(byStatus[a.status]!==undefined)byStatus[a.status]++;});
+  const totalFindings=data.reduce((s,a)=>s+(a.findings_count||0),0);
+
+  const noMaxLen=Math.max(8,...data.map(r=>(r.no||'').length));
+  const noW=Math.min(160,Math.max(120,noMaxLen*9+24))+'px';
+
+  w.innerHTML=`
+  <div class="stat-dash">
+    <div class="sd-card"><div class="sd-icon" style="background:#e8f4fd;color:#3b82c4">🔎</div>
+      <div><div class="sd-val">${total}</div><div class="sd-lbl">전체 심사</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#e3f6ec;color:#3fa873">📅</div>
+      <div><div class="sd-val">${byStatus['계획']||0}</div><div class="sd-lbl">계획</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fdf3e3;color:#d6952f">🔍</div>
+      <div><div class="sd-val">${byStatus['실시중']||0}</div><div class="sd-lbl">실시중</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">📋</div>
+      <div><div class="sd-val">${byStatus['보고']||0}</div><div class="sd-lbl">보고</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fbe9ea;color:#cd5b63">⚠️</div>
+      <div><div class="sd-val">${totalFindings}</div><div class="sd-lbl">총 발견사항</div></div></div>
+  </div>
+  <div class="ph" style="margin-top:14px">
+    <div><div class="ptit">🔎 내부심사</div>
+      <div style="font-size:13px;color:var(--muted)">ISO 9001 9.2 — 계획 → 실시(체크리스트) → 발견사항 → CAR연계 → 종결</div></div>
+    <div class="pac">
+      <button class="btn bpri btn-f2" onclick="Pages._auditForm()">+ 심사 등록 <span class="kbd">F2</span></button>
+    </div>
+  </div>
+  <div class="tbar">
+    <div class="sw2">
+      <input type="text" id="auditSearch" placeholder="심사번호, 범위, 심사원, 피심사부서 검색..."
+        oninput="Pages._auditRender2()" value="">
+    </div>
+    <select class="fsel" id="auditTypeF" onchange="Pages._auditRender2()">
+      <option value="">전체 유형</option>
+      ${['정기','특별','추가'].map(s=>`<option>${s}</option>`).join('')}
+    </select>
+    <select class="fsel" id="auditStatusF" onchange="Pages._auditRender2()">
+      <option value="">전체 상태</option>
+      ${['계획','실시중','보고','완료'].map(s=>`<option>${s}</option>`).join('')}
+    </select>
+    <button class="btn bout bsm" onclick="SearchPop.open('audit')" title="통합검색 (F3)">🔎 <span class="kbd">F3</span></button>
+  </div>
+  <div id="auditTbl"></div>`;
+
+  Pages._auditRender2();
+},
+
+/* ── 내부심사 목록 렌더 ── */
+_auditRender2(){
+  const data=DB.audits||[];
+  const q=(document.getElementById('auditSearch')?.value||'').toLowerCase();
+  const tp=document.getElementById('auditTypeF')?.value||'';
+  const st=document.getElementById('auditStatusF')?.value||'';
+  const filtered=data.filter(a=>{
+    if(q&&![(a.no||''),(a.scope||''),(a.auditor||''),(a.auditee_dept||'')].join(' ').toLowerCase().includes(q))return false;
+    if(tp&&a.audit_type!==tp)return false;
+    if(st&&a.status!==st)return false;
+    return true;
+  });
+  const noMaxLen=Math.max(8,...filtered.map(r=>(r.no||'').length));
+  const noW=Math.min(160,Math.max(120,noMaxLen*9+24))+'px';
+  Tbl.render({
+    el:'#auditTbl',
+    rowStyle:(row)=>{
+      if(row.status==='완료') return '';
+      if(row.plan_date){
+        const today=new Date().toISOString().slice(0,10);
+        if(row.plan_date<today && row.status==='계획') return 'background:rgba(254,226,226,0.5);';
+      }
+      return '';
+    },
+    cols:[
+      {key:'status',     label:'상태',     w:'76px', align:'center',
+        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='보고'?'bpur':v==='실시중'?'bamb':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'no',         label:'심사번호', w:noW, req:true,
+        render:v=>`<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
+      {key:'audit_type', label:'유형',     w:'72px',
+        render:v=>`<span class="badge bblu" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'scope',      label:'심사 범위',w:'*'},
+      {key:'auditee_dept',label:'피심사부서',w:'100px'},
+      {key:'plan_date',  label:'계획일',   w:'88px'},
+      {key:'actual_date',label:'실시일',   w:'88px', render:v=>v||'-'},
+      {key:'auditor',    label:'심사원',   w:'80px'},
+      {key:'findings_count',label:'발견사항',w:'70px', align:'center',
+        render:v=>v?`<span class="badge bred" style="font-size:10px">${v}건</span>`:`<span style="color:var(--tl)">0</span>`},
+      {key:'file_url',   label:'파일',     w:'46px', align:'center',
+        render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" style="font-size:14px">📎</a>`:'<span style="color:var(--tl)">-</span>'},
+    ],
+    data:filtered,
+    onRow:row=>Pages._auditDetail(row),
+    onDel:async(ids)=>{
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({title:'🗑️ 내부심사 삭제 확인',
+        msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 내부심사 기록을 삭제합니다.<br><small style="color:#64748b">삭제된 데이터는 복구가 어렵습니다.</small>`,
+        danger:true,
+        onOk:async()=>{
+          const numIds=ids.map(Number);
+          if(_sb){
+            for(const id of numIds){const {error}=await _sb.from('internal_audits').delete().eq('id',id);if(error){Toast.show('삭제 실패: '+error.message,'err');return;}}
+          }
+          DB.audits=(DB.audits||[]).filter(a=>!numIds.includes(Number(a.id)));
+          Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+          Pages._auditRender2();
+        }
+      });
+    }
+  });
+},
+
+/* ── 내부심사 등록/수정 폼 [v2.149] ── */
+_auditForm(row=null){
+  const isEdit=!!row;
+  const today=H.today();
+  const nextNo=(()=>{
+    const d=today.replace(/-/g,'');
+    const todayAudits=(DB.audits||[]).filter(a=>(a.no||'').startsWith('IA-'+d));
+    return`IA-${d}-${String(todayAudits.length+1).padStart(3,'0')}`;
+  })();
+  const userOpts=(DB.users||[]).filter(u=>u.active!==false).map(u=>{
+    const nm=H.e(u.name||u.username);
+    const sel=(isEdit&&row.auditor===nm)||(!isEdit&&(Auth._u?.name||Auth._u?.username)===nm)?'selected':'';
+    return`<option value="${nm}" ${sel}>${nm}${u.dept?' ('+H.e(u.dept)+')':''}</option>`;
+  }).join('');
+  const steps=['계획','실시중','보고','완료'];
+  const statusOpts=steps.map(s=>`<option value="${s}" ${(isEdit&&row.status===s)||(!isEdit&&s==='계획')?'selected':''}>${s}</option>`).join('');
+
+  /* 체크리스트 항목 — 기본 ISO 9001 조항 템플릿, 수정 시 기존 값 복원 */
+  let checklist=[];
+  if(isEdit&&row.checklist){
+    try{checklist=JSON.parse(row.checklist);}catch(e){checklist=[];}
+  }
+  if(!checklist.length){
+    checklist=[
+      {clause:'4.4', item:'프로세스 운영 및 상호작용', result:'', note:''},
+      {clause:'7.5', item:'문서화된 정보 관리', result:'', note:''},
+      {clause:'8.5', item:'생산 및 서비스 제공 관리', result:'', note:''},
+      {clause:'8.7', item:'부적합 출력의 관리', result:'', note:''},
+      {clause:'9.1', item:'모니터링, 측정, 분석 및 평가', result:'', note:''},
+    ];
+  }
+  window._auditChecklist=checklist;
+
+  Modal.open({title:isEdit?`✏️ 내부심사 수정 — ${row.no}`:'+ 내부심사 등록',size:'mxl',
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>`
+        +`<button class="btn bpri btn-f8" onclick="Pages._auditSave(${isEdit?row.id:'null'})">💾 저장 <span class="kbd">F8</span></button>`,
+    body:`<div class="fg2">
+      <input type="hidden" id="auditId" value="${isEdit?row.id:''}">
+      <div class="fgroup">
+        <label class="fl">심사번호</label>
+        <input class="fc" id="auditNo" value="${H.e(row?.no||nextNo)}" ${isEdit?'readonly':''}
+          style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">심사유형 *</b></label>
+        <select class="fc" id="auditType">
+          ${['정기','특별','추가'].map(s=>`<option value="${s}" ${(row?.audit_type||'정기')===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">계획일 *</b></label>
+        <input class="fc" type="date" id="auditPlanDate" value="${H.e(row?.plan_date||today)}">
+      </div>
+      <div class="fgroup" style="grid-column:1/-1">
+        <label class="fl req"><b style="color:#e11d48">심사 범위 *</b></label>
+        <input class="fc" id="auditScope" value="${H.e(row?.scope||'')}" placeholder="예) 품질경영시스템 전반 / 생산 공정 / 검사 프로세스">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">피심사부서 *</b></label>
+        <input class="fc" id="auditDept" value="${H.e(row?.auditee_dept||'')}" placeholder="예) 생산팀, 품질팀">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">심사원 *</b></label>
+        <select class="fc" id="auditAuditor"><option value="">선택</option>${userOpts}</select>
+      </div>
+      <div class="fgroup">
+        <label class="fl">실시일</label>
+        <input class="fc" type="date" id="auditActualDate" value="${H.e(row?.actual_date||'')}">
+      </div>
+      <div class="fgroup">
+        <label class="fl">상태</label>
+        <select class="fc" id="auditStatus">${statusOpts}</select>
+      </div>
+    </div>
+    <div style="margin-top:14px;border-top:1px solid var(--brd);padding-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">📋 심사 체크리스트</div>
+        <button class="btn bout bxs" onclick="Pages._auditChecklistAdd()">+ 항목 추가</button>
+      </div>
+      <div id="auditChecklistArea"></div>
+    </div>
+    <div style="margin-top:14px;border-top:1px solid var(--brd);padding-top:14px">
+      <div class="fg1" style="gap:10px">
+        <div class="fgroup ff"><label class="fl">종합 결론</label>
+          <textarea class="fc" id="auditConclusion" rows="2" placeholder="심사 종합 평가 및 결론">${H.e(row?.conclusion||'')}</textarea></div>
+        <div class="fgroup">
+          <label class="fl">보고일</label>
+          <input class="fc" type="date" id="auditReportDate" value="${H.e(row?.report_date||'')}">
+        </div>
+        <div class="fgroup">
+          <label class="fl">첨부파일</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${isEdit&&row.file_url
+              ?`<a href="${H.e(row.file_url)}" target="_blank" class="btn bxs bblu bsm">📎 현재 파일</a>
+                 <button type="button" class="btn bxs bred bsm" onclick="window._auditFileDel=true;this.style.display='none';this.nextElementSibling.textContent='(삭제 예정)'">🗑️ 삭제</button>
+                 <span style="font-size:11px;color:var(--muted)"></span>`:''}
+            <label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px dashed var(--brd);border-radius:6px;cursor:pointer;font-size:13px;color:var(--muted)">
+              📁 파일 선택<input type="file" id="auditFile" accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.jpeg,.png" style="display:none"
+                onchange="this.closest('label').nextElementSibling&&(this.closest('label').nextElementSibling.textContent=this.files[0]?.name||'')">
+            </label>
+            <span style="font-size:11px;color:var(--pri)"></span>
+          </div>
+        </div>
+      </div>
+    </div>`
+  });
+  Pages._auditChecklistRender();
+},
+
+/* ── 체크리스트 렌더/조작 ── */
+_auditChecklistRender(){
+  const el=document.getElementById('auditChecklistArea');
+  if(!el) return;
+  const list=window._auditChecklist||[];
+  el.innerHTML=`<table class="ctbl" style="width:100%"><thead><tr>
+      <th style="width:60px">조항</th><th>점검 항목</th><th style="width:90px">판정</th><th>비고</th><th style="width:40px"></th>
+    </tr></thead><tbody>
+    ${list.map((c,i)=>`<tr>
+      <td><input class="fc" style="font-size:12px" value="${H.e(c.clause)}" onchange="window._auditChecklist[${i}].clause=this.value"></td>
+      <td><input class="fc" style="font-size:12px" value="${H.e(c.item)}" onchange="window._auditChecklist[${i}].item=this.value"></td>
+      <td><select class="fc" style="font-size:12px" onchange="window._auditChecklist[${i}].result=this.value">
+        ${['','적합','경미부적합','중대부적합','관찰사항'].map(r=>`<option value="${r}" ${c.result===r?'selected':''}>${r||'선택'}</option>`).join('')}
+      </select></td>
+      <td><input class="fc" style="font-size:12px" value="${H.e(c.note)}" onchange="window._auditChecklist[${i}].note=this.value"></td>
+      <td style="text-align:center"><button class="btn bxs bred" onclick="Pages._auditChecklistDel(${i})">✕</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+},
+_auditChecklistAdd(){
+  window._auditChecklist=window._auditChecklist||[];
+  window._auditChecklist.push({clause:'',item:'',result:'',note:''});
+  Pages._auditChecklistRender();
+},
+_auditChecklistDel(i){
+  window._auditChecklist.splice(i,1);
+  Pages._auditChecklistRender();
+},
+
+/* ── 내부심사 저장 [v2.149] ── */
+async _auditSave(editId){
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const scope=g('auditScope');
+  const planDate=g('auditPlanDate');
+  const dept=g('auditDept');
+  const auditor=g('auditAuditor');
+  if(!scope){Toast.show('심사 범위를 입력하세요.','warn');return;}
+  if(!planDate){Toast.show('계획일을 입력하세요.','warn');return;}
+  if(!dept){Toast.show('피심사부서를 입력하세요.','warn');return;}
+  if(!auditor){Toast.show('심사원을 선택하세요.','warn');return;}
+
+  /* 체크리스트에서 부적합/관찰사항 건수 집계 */
+  const checklist=window._auditChecklist||[];
+  const findingsCount=checklist.filter(c=>c.result==='경미부적합'||c.result==='중대부적합').length;
+
+  /* 파일 업로드 */
+  let file_url=editId?(DB.audits||[]).find(a=>a.id===editId)?.file_url||null:null;
+  if(window._auditFileDel){file_url=null;window._auditFileDel=false;}
+  const fileEl=document.getElementById('auditFile');
+  if(fileEl?.files?.length){
+    const up=await SB.uploadFile('audit',fileEl.files[0]);
+    if(up?.url) file_url=up.url;
+    else Toast.show('파일 업로드 실패. 저장은 계속됩니다.','warn');
+  }
+
+  const row={
+    no:g('auditNo'), audit_type:g('auditType'), scope, auditee_dept:dept,
+    plan_date:planDate, actual_date:g('auditActualDate')||null,
+    auditor, status:g('auditStatus')||'계획',
+    checklist:JSON.stringify(checklist), findings_count:findingsCount,
+    conclusion:g('auditConclusion')||null, report_date:g('auditReportDate')||null,
+    file_url, created_by:Auth._u?.name||Auth._u?.username||'',
+  };
+
+  if(editId){
+    const res=await SB.updateAudit(editId,row);
+    if(!res?.ok) return;
+    const idx=(DB.audits||[]).findIndex(a=>a.id===editId);
+    if(idx>=0) DB.audits[idx]={...DB.audits[idx],...row};
+    Toast.show('내부심사가 수정되었습니다.','ok');
+  } else {
+    const res=await SB.addAudit(row);
+    if(!res?.ok) return;
+    Toast.show('내부심사가 등록되었습니다.','ok');
+  }
+  Modal.close();
+  Pages._auditRender2();
+},
+
+/* ── 내부심사 상세 팝업 [v2.149] ── */
+_auditDetail(row){
+  if(!row||typeof row!=='object'){Toast.show('데이터를 불러올 수 없습니다.','err');return;}
+  window._auditRow=row;
+  const steps=['계획','실시중','보고','완료'];
+  const si=steps.indexOf(row.status||'계획');
+  const stBar=steps.map((s,i)=>
+    `<div class="pst"><div class="psd ${i===si?'ac':i<si?'dn':''}">${i+1}</div>
+     <div class="psl ${i===si?'ac':''}" style="font-size:11px">${s}</div></div>`
+  ).join('');
+  let checklist=[];
+  try{checklist=JSON.parse(row.checklist||'[]');}catch(e){checklist=[];}
+  const findings=checklist.filter(c=>c.result==='경미부적합'||c.result==='중대부적합');
+
+  /* 연계된 CAR 확인 (nc_no 형식으로 audit 번호 참조 가정 — CAR의 src='내부심사', nc_no에 audit.no 저장) */
+  const linkedCar=(DB.cars||[]).filter(c=>c.src==='내부심사'&&c.nc_no===row.no);
+
+  Modal.open({
+    title:`🔎 내부심사 상세 — ${H.e(row.no||'-')}`,size:'mxl',
+    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`
+        +`<button class="btn bout bsm" onclick="Pages._auditPrint(window._auditRow)">🖨️ 인쇄</button>`
+        +`<button class="btn bout" onclick="Modal.close();Pages._auditForm(window._auditRow)">✏️ 수정</button>`
+        +(findings.length?`<button class="btn bamb" onclick="Pages._auditToCar(window._auditRow)">🔧 CAR 발행</button>`:'')
+        +`<button class="btn bpri" onclick="Pages._auditNextStep(window._auditRow)">▶ 다음 단계</button>`,
+    body:`
+      <div class="psteps">${stBar}</div>
+      ${linkedCar.length?`<div style="background:#ede9fe;border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px">
+        🔧 연계 CAR: ${linkedCar.map(c=>`<span style="font-family:monospace;font-weight:700;color:#7c3aed;cursor:pointer" onclick="Modal.close();Nav.go('car')">${H.e(c.no)}</span> <span class="badge ${c.status==='완료'?'bgrn':'bamb'}" style="font-size:10px">${H.e(c.status)}</span>`).join(' / ')}
+      </div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+        <div>
+          <div class="ir"><div class="il">심사번호</div>
+            <div class="iv" style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">${H.e(row.no||'-')}</div></div>
+          <div class="ir"><div class="il">유형</div>
+            <div class="iv"><span class="badge bblu" style="font-size:11px">${H.e(row.audit_type||'-')}</span></div></div>
+          <div class="ir"><div class="il">심사 범위</div>
+            <div class="iv">${H.e(row.scope||'-')}</div></div>
+          <div class="ir"><div class="il">피심사부서</div>
+            <div class="iv">${H.e(row.auditee_dept||'-')}</div></div>
+        </div>
+        <div>
+          <div class="ir"><div class="il">심사원</div>
+            <div class="iv">${H.e(row.auditor||'-')}</div></div>
+          <div class="ir"><div class="il">계획일</div>
+            <div class="iv">${H.e(row.plan_date||'-')}</div></div>
+          <div class="ir"><div class="il">실시일</div>
+            <div class="iv">${H.e(row.actual_date||'-')}</div></div>
+          ${row.file_url?`<div class="ir"><div class="il">첨부파일</div>
+            <div class="iv"><a href="${H.e(row.file_url)}" target="_blank" class="btn bxs bblu bsm">📎 파일 보기</a></div></div>`:''}
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="il" style="margin-bottom:6px">심사 체크리스트</div>
+        <table class="ctbl" style="width:100%"><thead><tr><th style="width:60px">조항</th><th>점검 항목</th><th style="width:90px">판정</th><th>비고</th></tr></thead><tbody>
+        ${checklist.map(c=>`<tr>
+          <td>${H.e(c.clause)}</td><td>${H.e(c.item)}</td>
+          <td><span class="badge ${c.result==='적합'?'bgrn':c.result==='중대부적합'?'bred':c.result==='경미부적합'?'bamb':c.result==='관찰사항'?'bblu':'bgry'}" style="font-size:10px">${H.e(c.result||'-')}</span></td>
+          <td>${H.e(c.note||'-')}</td>
+        </tr>`).join('')}
+        </tbody></table>
+      </div>
+      ${row.conclusion?`<div class="ir" style="margin-top:10px"><div class="il">종합 결론</div><div class="iv">${H.e(row.conclusion)}</div></div>`:''}
+      <div id="auditCmt" style="margin-top:14px"></div>`
+  });
+  setTimeout(()=>{if(typeof Cmt!=='undefined')Cmt.render('#auditCmt',`audit-${row.id}`);},80);
+},
+
+/* ── 내부심사 발견사항 → CAR 발행 연계 ── */
+_auditToCar(row){
+  let checklist=[];
+  try{checklist=JSON.parse(row.checklist||'[]');}catch(e){checklist=[];}
+  const findings=checklist.filter(c=>c.result==='경미부적합'||c.result==='중대부적합');
+  const titleSummary=findings.map(f=>`[${f.clause}] ${f.item}: ${f.note||f.result}`).join(' / ');
+  Modal.close();
+  Pages._carForm(null,{
+    src:'내부심사', nc_no:row.no,
+    title:`내부심사 발견사항 — ${row.scope}`,
+    note:titleSummary,
+  });
+},
+
+/* ── 내부심사 다음 단계 ── */
+async _auditNextStep(row){
+  const steps=['계획','실시중','보고','완료'];
+  const cur=steps.indexOf(row.status||'계획');
+  if(cur>=steps.length-1){Toast.show('이미 완료 상태입니다.','info');return;}
+  const next=steps[cur+1];
+  Modal.confirm({title:'▶ 단계 진행',
+    msg:`<strong>${H.e(row.no)}</strong>의 상태를<br><b>${H.e(row.status)}</b> → <b style="color:var(--pri)">${next}</b>으로 진행하시겠습니까?`,
+    onOk:async()=>{
+      const res=await SB.updateAudit(row.id,{status:next});
+      if(!res?.ok){Toast.show('상태 변경 실패','err');return;}
+      const idx=(DB.audits||[]).findIndex(a=>a.id===row.id);
+      if(idx>=0) DB.audits[idx].status=next;
+      window._auditRow={...row,status:next};
+      Modal.close();
+      Toast.show(`"${next}"으로 진행되었습니다.`,'ok');
+      Pages._auditRender2();
+    }
+  });
+},
+
+/* ── 내부심사 인쇄 [v2.149] — 내부심사 보고서 ── */
+_auditPrint(row){
+  if(!row){Toast.show('인쇄할 심사 데이터가 없습니다.','warn');return;}
+  const w=window.open('','_blank','width=1000,height=780,scrollbars=yes');
+  if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
+  const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let checklist=[];
+  try{checklist=JSON.parse(row.checklist||'[]');}catch(err){checklist=[];}
+  const steps=['계획','실시중','보고','완료'];
+  const si=steps.indexOf(row.status||'계획');
+  const stepsHtml=steps.map((s,i)=>`<td style="text-align:center;background:${i===si?'#dce6f1':i<si?'#e8f5e9':'#fff'};font-weight:${i===si?'bold':'normal'}">${i+1}.${s}</td>`).join('');
+  const checklistHtml=checklist.map(c=>`<tr>
+    <td style="text-align:center">${e(c.clause)}</td><td>${e(c.item)}</td>
+    <td style="text-align:center">${e(c.result||'-')}</td><td>${e(c.note||'')}</td>
+  </tr>`).join('');
+  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>내부심사 보고서 — ${e(row.no)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}
+body{background:#fff;color:#000;font-size:9pt;padding:0}
+@page{size:A4 portrait;margin:10mm 12mm}
+@media print{.no-print{display:none!important}}
+.wrap{width:186mm;margin:0 auto}
+h1{font-size:14pt;font-weight:bold;text-align:center;padding:8px 0;letter-spacing:2px;border-bottom:2pt solid #000;margin-bottom:8px}
+table{border-collapse:collapse;width:100%;margin-bottom:6px}
+td,th{border:.7pt solid #444;padding:3px 6px;vertical-align:middle;font-size:8.5pt}
+.lb{background:#dce6f1;font-weight:bold;white-space:nowrap;width:80px;text-align:center}
+.area{vertical-align:top;padding:4px 6px;min-height:40px}
+.sign td{height:32px;text-align:center}
+.step td{padding:4px;font-size:8pt}
+.hdr{background:#dce6f1;font-weight:bold;text-align:center;font-size:8pt}
+.print-btn{position:fixed;bottom:20px;right:20px;padding:10px 20px;background:#1a5fa8;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer}
+</style></head><body>
+<div class="wrap">
+  <h1>내 부 심 사 보 고 서</h1>
+  <table class="sign" style="margin-bottom:8px">
+    <tr><td class="hdr" rowspan="2" style="width:60px">작성</td>
+        <td class="hdr" style="width:60px">검토</td>
+        <td class="hdr" style="width:60px">승인</td>
+        <td class="lb" style="width:70px">문서번호</td>
+        <td>IPD-IA-01</td>
+        <td class="lb" style="width:60px">계획일</td>
+        <td>${e(row.plan_date||'')}</td></tr>
+    <tr><td></td><td></td>
+        <td class="lb">심사번호</td>
+        <td style="font-family:monospace;font-weight:bold;color:#1a5fa8">${e(row.no)}</td>
+        <td class="lb">진행 상태</td>
+        <td>${e(row.status||'계획')}</td></tr>
+  </table>
+  <table class="step" style="margin-bottom:8px"><tr class="hdr"><td colspan="4" class="hdr">■ 진행 단계</td></tr><tr>${stepsHtml}</tr></table>
+  <table>
+    <tr><td class="lb">심사유형</td><td>${e(row.audit_type||'')}</td>
+        <td class="lb">피심사부서</td><td>${e(row.auditee_dept||'')}</td></tr>
+    <tr><td class="lb">심사원</td><td>${e(row.auditor||'')}</td>
+        <td class="lb">실시일</td><td>${e(row.actual_date||'-')}</td></tr>
+    <tr><td class="lb">심사범위</td><td colspan="3">${e(row.scope||'')}</td></tr>
+  </table>
+  <table style="margin-top:6px">
+    <tr><td class="hdr" colspan="4">■ 심사 체크리스트</td></tr>
+    <tr><td class="hdr" style="width:50px">조항</td><td class="hdr">점검 항목</td><td class="hdr" style="width:70px">판정</td><td class="hdr">비고</td></tr>
+    ${checklistHtml}
+  </table>
+  <table style="margin-top:6px">
+    <tr><td class="hdr" colspan="2">■ 종합 결론</td></tr>
+    <tr><td colspan="2" class="area" style="min-height:50px">${e(row.conclusion||'')}</td></tr>
+  </table>
+  <table style="margin-top:8px;font-size:7.5pt">
+    <tr><td style="background:#dce6f1;width:33%">㈜이노디스 — IPD-IA-01(Rev01)</td>
+        <td style="background:#dce6f1;text-align:center">내부심사보고서</td>
+        <td style="background:#dce6f1;text-align:right">A4(210×297mm)</td></tr>
+  </table>
+</div>
+<button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄</button>
+</body></html>`;
+  w.document.open();w.document.write(html);w.document.close();
+},
 
 /* ── 멘션함 ── */
 /* ── 멘션함 ──

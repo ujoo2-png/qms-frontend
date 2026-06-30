@@ -874,6 +874,41 @@ const SB={
     const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
   },
 
+  /* ════ 개선활동 — 내부심사(Internal Audit) [v2.149 신규] ════
+     ISO 9001 9.2 내부심사: 연간계획 → 심사실시(체크리스트) →
+     부적합 발견사항 → CAR 연계 → 후속조치 확인 */
+  async getAudits(){
+    if(!_sb) return DB.audits||[];
+    const data=await this._sbFetchAll('internal_audits','plan_date',false);
+    if(data===null){console.warn('[SB] internal_audits 조회 실패');return [];}
+    return data;
+  },
+  async addAudit(row){
+    if(!_sb){const id=Math.max(0,...(DB.audits||[]).map(a=>a.id))+1;if(!DB.audits)DB.audits=[];DB.audits.push({id,...row});return{ok:true,id};}
+    const allowed={
+      no:row.no||'', scope:row.scope||'',
+      audit_type:row.audit_type||'정기',
+      plan_date:row.plan_date||null, actual_date:row.actual_date||null,
+      auditor:row.auditor||'', auditee_dept:row.auditee_dept||'',
+      checklist:row.checklist||'[]',
+      findings_count:row.findings_count||0,
+      conclusion:row.conclusion||null,
+      status:row.status||'계획',
+      report_date:row.report_date||null,
+      file_url:row.file_url||null,
+      created_by:row.created_by||'',
+    };
+    const {error}=await _sb.from('internal_audits').insert(allowed);
+    if(error){Toast.show('내부심사 저장 실패: '+error.message,'err');return{ok:false};}
+    if(!DB.audits)DB.audits=[];DB.audits.push({id:Date.now(),...allowed});return{ok:true};
+  },
+  async updateAudit(id,patch){
+    if(!_sb){const a=(DB.audits||[]).find(a=>a.id===id);if(a)Object.assign(a,patch);return{ok:true};}
+    const {error}=await _sb.from('internal_audits').update(patch).eq('id',id);
+    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
+    const a=(DB.audits||[]).find(a=>a.id===id);if(a)Object.assign(a,patch);return{ok:true};
+  },
+
   /* [v2.65 fix D1] DMS 지원 함수 */
 
   /* ════ code_types — 문서유형/분류 코드 관리 [v2.78] ════ */
