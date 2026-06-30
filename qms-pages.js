@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.144</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.145</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -1366,6 +1366,21 @@ _uForm(row=null){
           <input class="fc" id="uf_pw2" type="password" placeholder="${e?'변경 시만 입력':''}">
         </div>
       </div>
+      <!-- 서명 이미지 [v2.145] — 향후 출력물 결재란에 사용 -->
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">서명 이미지 <span style="font-size:10px;color:var(--tm);font-weight:400">(결재란 출력용)</span></label>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${row?.signature_url
+            ?`<img src="${H.e(row.signature_url)}" alt="서명" style="height:44px;max-width:120px;object-fit:contain;border:1px solid var(--brd);border-radius:6px;background:#fff;padding:2px">
+               <button type="button" class="btn bxs bred bsm" onclick="window._sigDel=true;this.previousElementSibling.style.opacity='0.3';this.nextElementSibling.textContent='(삭제 예정)'">🗑️ 삭제</button>
+               <span style="font-size:11px;color:var(--err)"></span>`
+            :'<span style="font-size:12px;color:var(--tm)">등록된 서명 없음</span>'}
+          <label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px dashed var(--brd);border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted)">
+            🖊️ 이미지 선택<input type="file" id="uf_sig" accept="image/png,image/jpeg,image/jpg" style="display:none"
+              onchange="this.closest('div').nextElementSibling?.remove();var n=document.createElement('span');n.style.cssText='font-size:11px;color:var(--pri);margin-left:4px';n.textContent=this.files[0]?.name||'';this.closest('label').insertAdjacentElement('afterend',n)">
+          </label>
+        </div>
+      </div>
       <!-- 부서 / 연락처 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div>
@@ -1443,12 +1458,22 @@ async _uSave(id){
   // SHA-256 해시 처리
   const pwHash=pw?await H.sha256(pw):null;
   const roleVal = document.getElementById('uf_role')?.value || (id ? undefined : 'user');
+  /* [v2.145] 서명 이미지 업로드/삭제 처리 */
+  let signature_url=id?(DB.users.find(u=>u.id===id)?.signature_url||null):null;
+  if(window._sigDel){signature_url=null;window._sigDel=false;}
+  const sigEl=document.getElementById('uf_sig');
+  if(sigEl?.files?.length){
+    const up=await SB.uploadFile('signature',sigEl.files[0]);
+    if(up?.url) signature_url=up.url;
+    else Toast.show('서명 이미지 업로드 실패. 다른 정보는 저장됩니다.','warn');
+  }
   const row={
     username:uid, name,
     department:g('uf_dept'), tel:g('uf_tel'), email,
     /* [v2.65 fix S3] roleVal 우선 적용, 기존값 fallback */
     role: roleVal || (id ? (DB.users.find(u=>u.id===id)?.role||'user') : 'user'),
     active:Number(document.getElementById('uf_active')?.value||1),
+    signature_url,
   };
   // password 해시 포함 (신규 등록 시 필수, 수정 시 입력한 경우만)
   if(pwHash) row.password=pwHash;
@@ -4618,7 +4643,12 @@ async doc_approval(){
       return;
     }
 
-    var html='<div style="display:flex;flex-direction:column;gap:10px">';
+    var html='<div style="overflow-x:auto"><table class="dt" style="width:100%;font-size:13px;table-layout:fixed">'+
+      '<colgroup><col style="width:60px"><col><col style="width:90px"><col style="width:95px">'+
+      '<col style="width:260px"><col style="width:280px"></colgroup>'+
+      '<thead><tr>'+
+        '<th>구분</th><th>문서 제목</th><th>버전</th><th>유형</th><th>개정 사유</th><th>처리</th>'+
+      '</tr></thead><tbody>';
     list.forEach(function(a){
       var ver=a.doc_ver||{};
       var dm=ver.doc_master||{};
@@ -4626,27 +4656,23 @@ async doc_approval(){
       var verNo=ver.ver_no||'-';
       var summary=ver.change_summary||'(개정 사유 없음)';
       html+=
-        '<div style="background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:16px 18px">'+
-        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">'+
-          '<span style="font-size:18px">'+(a.step_type==='approver'?'🔏':'🔍')+'</span>'+
-          '<div style="flex:1">'+
-            '<div style="font-weight:700;font-size:14px;margin-bottom:3px">'+H.e(docTitle)+'</div>'+
-            '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
-              '<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+H.e(verNo)+'</span>'+
-              '<span class="badge bblu" style="font-size:10px">'+(a.step_type==='approver'?'🔏 최종 결재':'🔍 검토')+'</span>'+
+        '<tr>'+
+          '<td style="text-align:center;font-size:16px">'+(a.step_type==='approver'?'🔏':'🔍')+'</td>'+
+          '<td style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+H.e(docTitle)+'">'+H.e(docTitle)+'</td>'+
+          '<td style="text-align:center"><span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+H.e(verNo)+'</span></td>'+
+          '<td style="text-align:center"><span class="badge bblu" style="font-size:10px">'+(a.step_type==='approver'?'🔏 최종결재':'🔍 검토')+'</span></td>'+
+          '<td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="'+H.e(summary)+'">📝 '+H.e(summary)+'</td>'+
+          '<td>'+
+            '<div style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap">'+
+              '<input type="text" id="cmt_'+a.id+'" style="flex:1;min-width:70px;padding:5px 8px;border:1px solid var(--brd);border-radius:6px;font-size:12px;background:var(--bg)" placeholder="의견(반려 시 필수)">'+
+              '<button class="btn bgrn bsm" style="white-space:nowrap" onclick="Pages._doApprove('+a.id+','+(ver.doc_id||0)+','+(ver.id||0)+',\''+H.e(verNo).replace(/'/g,"\\'")+'\','+meId+')">✅ 승인</button>'+
+              '<button class="btn bred bsm" style="white-space:nowrap" onclick="Pages._doReject('+a.id+')">❌ 반려</button>'+
+              '<button class="btn bout bsm" style="white-space:nowrap" onclick="Pages.doc_history('+(ver.doc_id||0)+')">🕐</button>'+
             '</div>'+
-          '</div>'+
-        '</div>'+
-        '<div style="font-size:13px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:var(--bg2);border-radius:6px">📝 '+H.e(summary)+'</div>'+
-        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
-          '<input type="text" id="cmt_'+a.id+'" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--brd);border-radius:6px;font-size:13px;background:var(--bg)" placeholder="의견 입력 (반려 시 필수)">'+
-          '<button class="btn bgrn bsm" onclick="Pages._doApprove('+a.id+','+(ver.doc_id||0)+','+(ver.id||0)+',\''+H.e(verNo).replace(/'/g,"\\'")+'\','+meId+')">✅ 승인</button>'+
-          '<button class="btn bred bsm" onclick="Pages._doReject('+a.id+')">❌ 반려</button>'+
-          '<button class="btn bout bsm" onclick="Pages.doc_history('+(ver.doc_id||0)+')">🕐 이력</button>'+
-        '</div>'+
-        '</div>';
+          '</td>'+
+        '</tr>';
     });
-    el.innerHTML=html+'</div>';
+    el.innerHTML=html+'</tbody></table></div>';
   }catch(e){
     el.innerHTML='<div style="padding:40px;text-align:center;color:var(--err)">⚠️ 결재 목록 로드 실패: '+H.e(e.message)+'</div>';
   }
@@ -11412,23 +11438,19 @@ _codeAdd:function(kind){
          '<div class="fgroup"><label class="fl req"><b style="color:#e11d48">명칭 *</b></label>'+
          '<input class="fc" id="codeVal" placeholder="예) 매뉴얼"></div>',
     foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'+
-         '<button class="btn bpri" onclick="Pages._codeAddSave()">추가</button>',
+         '<button class="btn bpri" onclick="Pages._codeAddSave(\''+kind+'\')">추가</button>',
   });
 },
-_codeAddSave:function(){
+_codeAddSave:function(kind){
   var k=(document.getElementById('codeKey')?.value||'').trim().replace(/[^a-zA-Z0-9_]/g,'');
   var v=(document.getElementById('codeVal')?.value||'').trim();
-  if(!k){Toast.show('코드를 입력하세요.','warn');return;}
+  if(!k){Toast.show('코드는 영문/숫자/언더바만 입력 가능합니다.','warn');return;}
   if(!v){Toast.show('명칭을 입력하세요.','warn');return;}
-  /* [v2.65 D1-3] 종류에 따라 _DT 또는 _DC에 저장 */
-  var kind=document.querySelector('#codeTypeBody')?'doc_type':'doc_type'; /* 모달에 data-kind 없으므로 _codeAddSave 직접 판단 */
-  /* 유형 먼저 체크 */
+  /* [v2.145] 모달 title 텍스트로 추측하던 방식 제거 — _codeAdd 호출 시 전달받은
+     kind('doc_type' 또는 'doc_cat')를 직접 사용. 기존엔 .modal .mtit 셀렉터가
+     항상 null이라 분류를 추가해도 무조건 doc_type으로 저장되던 버그가 있었음 */
   if(Pages._DT[k]||Pages._DC[k]){Toast.show('이미 존재하는 코드입니다.','warn');return;}
-  var isForCat=document.querySelector('#codeCatBody')&&!document.getElementById('codeTypeBody')?.parentElement?.contains(document.querySelector('#codeCatBody'));
-  /* 실제로 모달 title로 판단 */
-  var title=document.querySelector('.modal .mtit')?.textContent||'';
-  /* [v2.78] DB 저장 */
-  var cat=title.includes('분류')?'doc_cat':'doc_type';
+  var cat=kind==='doc_cat'?'doc_cat':'doc_type';
   SB.addCodeType(cat,k,v).then(function(r){
     if(!r.ok) return;
     Toast.show((cat==='doc_cat'?'분류':'유형')+' 추가됨: '+v,'ok');

@@ -986,9 +986,12 @@ const FM={
 
     Modal.open({title:'📎 파일 관리',size:'mmd',
       body:`<div id="flist" style="margin-bottom:12px">${fileListHtml}</div>
-      <label style="display:flex;align-items:center;gap:10px;padding:11px;border:2px dashed var(--bd);border-radius:var(--r);cursor:pointer;transition:.15s"
+      <label id="fmDropZone" style="display:flex;align-items:center;gap:10px;padding:11px;border:2px dashed var(--bd);border-radius:var(--r);cursor:pointer;transition:.15s"
         onmouseenter="this.style.borderColor='var(--acc)';this.style.background='#f0f9ff'"
-        onmouseleave="this.style.borderColor='var(--bd)';this.style.background=''">
+        onmouseleave="if(!this.classList.contains('dragover')){this.style.borderColor='var(--bd)';this.style.background='';}"
+        ondragover="event.preventDefault();event.stopPropagation();this.classList.add('dragover');this.style.borderColor='var(--acc)';this.style.background='#f0f9ff'"
+        ondragleave="event.preventDefault();event.stopPropagation();this.classList.remove('dragover');this.style.borderColor='var(--bd)';this.style.background=''"
+        ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('dragover');this.style.borderColor='var(--bd)';this.style.background='';if(event.dataTransfer.files.length)FM.add('${k}',event.dataTransfer.files)">
         <span style="font-size:22px">📁</span>
         <div>
           <div style="font-size:13px;font-weight:600">파일 선택 또는 드래그</div>
@@ -1039,9 +1042,10 @@ const FM={
      2. sessionStorage 캐시 저장
      3. 테이블 버튼 즉시 갱신 (오렌지색)
      4. 모달 파일 목록 즉시 갱신 */
-  async add(k,inp){
+  async add(k,inpOrFiles){
     if(!App.files[k]) App.files[k]=[];
-    const rawFiles=Array.from(inp.files);
+    /* [v2.145] 드래그앤드롭 지원 — input 엘리먼트(.files)와 FileList를 모두 허용 */
+    const rawFiles=Array.from(inpOrFiles.files?inpOrFiles.files:inpOrFiles);
     if(!rawFiles.length) return;
 
     // 업로드 진행 표시
