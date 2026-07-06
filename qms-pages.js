@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.149</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.150</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -8129,11 +8129,13 @@ async _mentionBulkSave(){
 
 /* ── 멘션 상세 팝업 [v2.394] ── */
 async _mentionDetail(id){
-  /* [v2.394] 멘션 상세 — 파일 미리보기+다운로드, 문자열 방식으로 안전하게 처리 */
+  /* [v2.394] 멘션 상세 — 파일 미리보기+다운로드 */
+  /* [v2.150] 수정 버튼 복귀 + 답장 스레드 표시 추가 */
   const m=(DB.mentions||[]).find(m=>Number(m.id)===Number(id));
   if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
   const me=Auth._cur||'admin';
-  if(!m.read&&m.from!==me){
+  const isMine=m.from===me;
+  if(!m.read&&!isMine){
     await SB.updateMention(id,{read:true});
     m.read=true;
     Pages._updateMentionBadge&&Pages._updateMentionBadge();
@@ -8143,18 +8145,16 @@ async _mentionDetail(id){
   const mid=Number(m.id);
   const mfrom=H.e(m.from||'');
 
-  /* 파일 블록 — 순수 문자열 조합으로 백틱 충돌 방지 */
+  /* 파일 블록 */
   let fileHtml='';
   if(m.file_url){
     const fu=m.file_url;
     const fn=H.e(fu.split('/').pop()||'첨부파일');
     const fuE=H.e(fu);
-    fileHtml=''
-      +'<div style="margin-top:10px;padding:10px 12px;background:#eff6ff;'
+    fileHtml='<div style="margin-top:10px;padding:10px 12px;background:#eff6ff;'
       +'border:1px solid #bfdbfe;border-radius:6px;display:flex;align-items:center;gap:10px">'
       +'<span style="font-size:20px">📎</span>'
-      +'<span style="font-size:12px;color:#1d4ed8;flex:1;overflow:hidden;'
-      +'text-overflow:ellipsis;white-space:nowrap">'+fn+'</span>'
+      +'<span style="font-size:13px;color:#1d4ed8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+fn+'</span>'
       +'<button class="btn bxs bblu" style="font-size:11px;padding:3px 12px"'
       +' data-fu="'+fuE+'" onclick="Pages._mentionFilePreview(this.dataset.fu)">👁 미리보기</button>'
       +'<a href="'+fuE+'" download target="_blank"'
@@ -8164,32 +8164,88 @@ async _mentionDetail(id){
 
   const toLabel=m.to==='all'?'📢 전체공지':H.e(m.to||'-');
 
+  /* [v2.150] 답장 스레드: DB.mentions에서 thread_id 또는 reply_to가 이 멘션을 가리키는 항목 */
+  const replies=(DB.mentions||[]).filter(r=>
+    (r.thread_id===mid||r.reply_to===mid) && Number(r.id)!==mid
+  ).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
+
+  let replyHtml='';
+  if(replies.length){
+    replyHtml='<div style="margin-top:14px;border-top:1px solid var(--brd);padding-top:12px">'
+      +'<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">↩ 답장 '+replies.length+'건</div>'
+      +replies.map(r=>{
+        const rts=(r.created_at||'').slice(0,16).replace('T',' ');
+        return '<div style="background:var(--bg2);border-radius:8px;padding:10px 14px;margin-bottom:8px;border-left:3px solid #6366f1">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+          +'<span style="font-size:13px;font-weight:700;color:#6366f1">'+H.e(r.from||'-')+'</span>'
+          +'<span style="font-size:11px;color:var(--muted)">'+rts+'</span>'
+          +'</div>'
+          +'<div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text)">'+H.e(r.text||r.message||'')+'</div>'
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }
+
   Modal.open({
     title:'💬 멘션 상세',
     size:'mmd',
+    /* [v2.150] 수정 버튼 복귀 — isMine일 때만 표시 */
     foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'
+        +(isMine?'<button class="btn bgry bsm" onclick="Modal.close();Pages._mentionEdit('+mid+')">✏️ 수정</button>':'')
         +'<button class="btn bgry bsm" data-mid="'+mid+'" data-from="'+mfrom+'"'
         +' onclick="Modal.close();Pages._mentionReply(+this.dataset.mid,this.dataset.from)">↩ 답장</button>',
     body:'<div class="card" style="padding:14px 18px">'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0">'
         +'<div class="ir"><div class="il">발신자</div>'
-        +'<div class="iv" style="font-weight:700">'+H.e(m.from||'-')+'</div></div>'
+        +'<div class="iv" style="font-weight:700;font-size:13px">'+H.e(m.from||'-')+'</div></div>'
         +'<div class="ir"><div class="il">수신자</div>'
-        +'<div class="iv">'+toLabel+'</div></div>'
+        +'<div class="iv" style="font-size:13px">'+toLabel+'</div></div>'
         +'<div class="ir"><div class="il">부서</div>'
-        +'<div class="iv">'+H.e(m.dept||'-')+'</div></div>'
+        +'<div class="iv" style="font-size:13px">'+H.e(m.dept||'-')+'</div></div>'
         +'<div class="ir"><div class="il">시간</div>'
-        +'<div class="iv" style="color:var(--tm)">'+ts+'</div></div>'
+        +'<div class="iv" style="color:var(--tm);font-size:13px">'+ts+'</div></div>'
         +(m.ref?'<div class="ir" style="grid-column:1/-1"><div class="il">참조</div>'
                +'<div class="iv"><span class="badge bgry">'+H.e(m.ref)+'</span></div></div>':'')
         +'</div>'
         +'<div style="margin-top:10px;padding:12px;background:var(--bg2);'
-        +'border-radius:6px;font-size:14px;line-height:1.7;white-space:pre-wrap">'
+        +'border-radius:6px;font-size:13px;line-height:1.7;white-space:pre-wrap">'
         +H.e(m.text||m.message||'')+'</div>'
         +fileHtml
+        +replyHtml
         +'</div>',
   });
 },
+
+/* [v2.150] 멘션 수정 — 내가 보낸 멘션만 수정 가능 */
+async _mentionEdit(id){
+  const m=(DB.mentions||[]).find(m=>Number(m.id)===Number(id));
+  if(!m){Toast.show('멘션을 찾을 수 없습니다.','err');return;}
+  const me=Auth._cur||'admin';
+  if(m.from!==me){Toast.show('본인이 보낸 멘션만 수정할 수 있습니다.','warn');return;}
+  Modal.open({
+    title:'✏️ 멘션 수정',
+    size:'mmd',
+    foot:'<button class="btn bout" onclick="Modal.close()">취소</button>'
+        +'<button class="btn bpri" onclick="Pages._mentionEditSave('+Number(id)+')">💾 저장</button>',
+    body:'<div class="fgroup" style="padding:12px">'
+        +'<label class="fl" style="font-size:13px;font-weight:600;margin-bottom:6px">내용</label>'
+        +'<textarea class="fc" id="mentionEditText" rows="5" style="font-size:13px;line-height:1.6">'
+        +H.e(m.text||m.message||'')+'</textarea>'
+        +'</div>',
+  });
+},
+async _mentionEditSave(id){
+  const text=(document.getElementById('mentionEditText')?.value||'').trim();
+  if(!text){Toast.show('내용을 입력하세요.','warn');return;}
+  const res=await SB.updateMention(id,{text,message:text});
+  if(!res?.ok){Toast.show('수정 실패','err');return;}
+  const m=(DB.mentions||[]).find(m=>Number(m.id)===Number(id));
+  if(m){m.text=text;m.message=text;}
+  Toast.show('수정되었습니다.','ok');
+  Modal.close();
+  Pages._mentionRefresh&&Pages._mentionRefresh();
+},
+
 
 /* ── 새 멘션 작성 폼 [v2.394] ── */
 async _mentionForm(){
@@ -11885,18 +11941,27 @@ _renderCodeMgmt:async function(){
   var dbCodes=await SB.getCodeTypes();
   dbCodes.filter(function(c){return c.category==='doc_type';}).forEach(function(c){Pages._DT[c.code]=c.label;});
   dbCodes.filter(function(c){return c.category==='doc_cat';}).forEach(function(c){Pages._DC[c.code]=c.label;});
-  /* dbId 맵 (삭제 시 id 전달용) */
   var dtIds={}, dcIds={};
   dbCodes.forEach(function(c){if(c.category==='doc_type')dtIds[c.code]=c.id;else dcIds[c.code]=c.id;});
-  var rows=(window._docRows||[]).filter(function(r){return r.status!=='deleted';});
-  /* 유형 tbody */
+  /* [v2.150] 집계 버그 수정: window._docRows 없으면 SB에서 직접 로드
+     설정→코드관리 탭 직접 접근 시 _docRows가 비어있어 항상 0건이 나오던 문제 */
+  var rows=window._docRows||[];
+  if(!rows.length && typeof SB!=='undefined' && SB.getDocMaster){
+    try{
+      var fresh=await SB.getDocMaster();
+      if(Array.isArray(fresh)&&fresh.length){window._docRows=fresh;rows=fresh;}
+    }catch(e){console.warn('[코드관리] doc_master 로드 실패:',e);}
+  }
+  rows=rows.filter(function(r){return r.status!=='deleted';});
+  /* 유형 tbody — 글자크기 13px 통일(기존 11px→13px) */
   var tbody=document.getElementById('codeTypeBody');
   if(tbody) tbody.innerHTML=Object.entries(Pages._DT).map(function(e){
     var k=e[0],v=e[1],cnt=rows.filter(function(r){return r.doc_type===k;}).length;
     var id=dtIds[k]||null;
     return '<tr>'+
-      '<td style="font-family:monospace;font-size:11px;color:var(--pri)">'+H.e(k)+'</td>'+
-      '<td>'+H.e(v)+'</td><td>'+cnt+'건</td>'+
+      '<td style="font-family:monospace;font-size:13px;color:var(--pri)">'+H.e(k)+'</td>'+
+      '<td style="font-size:13px">'+H.e(v)+'</td>'+
+      '<td style="font-size:13px;text-align:center">'+(cnt?'<span class="badge bblu" style="font-size:11px">'+cnt+'건</span>':'<span style="color:var(--tl)">0건</span>')+'</td>'+
       '<td><button class="btn bxs berr bsm" data-k="'+H.e(k)+'" data-v="'+H.e(v)+'" data-c="'+cnt+'" data-kind="doc_type" data-id="'+(id||'')+'"'+
         ' onclick="var b=this;Pages._codeDelete(b.dataset.kind,b.dataset.k,b.dataset.v,+b.dataset.c,+b.dataset.id||null)">삭제</button></td>'+
     '</tr>';
@@ -11905,11 +11970,13 @@ _renderCodeMgmt:async function(){
   var catbody=document.getElementById('codeCatBody');
   if(catbody) catbody.innerHTML=Object.entries(Pages._DC).map(function(e){
     var k=e[0],v=e[1],cnt=rows.filter(function(r){return r.category===k;}).length;
+    var id=dcIds[k]||null;
     return '<tr>'+
-      '<td style="font-family:monospace;font-size:11px;color:var(--pri)">'+H.e(k)+'</td>'+
-      '<td>'+H.e(v)+'</td><td>'+cnt+'건</td>'+
-      '<td><button class="btn bxs berr bsm" data-k="'+H.e(k)+'" data-v="'+H.e(v)+'" data-c="'+cnt+'" data-kind="doc_cat"'+
-        ' onclick="var b=this;Pages._codeDelete(b.dataset.kind,b.dataset.k,b.dataset.v,+b.dataset.c)">삭제</button></td>'+
+      '<td style="font-family:monospace;font-size:13px;color:var(--pri)">'+H.e(k)+'</td>'+
+      '<td style="font-size:13px">'+H.e(v)+'</td>'+
+      '<td style="font-size:13px;text-align:center">'+(cnt?'<span class="badge bgrn" style="font-size:11px">'+cnt+'건</span>':'<span style="color:var(--tl)">0건</span>')+'</td>'+
+      '<td><button class="btn bxs berr bsm" data-k="'+H.e(k)+'" data-v="'+H.e(v)+'" data-c="'+cnt+'" data-kind="doc_cat" data-id="'+(id||'')+'"'+
+        ' onclick="var b=this;Pages._codeDelete(b.dataset.kind,b.dataset.k,b.dataset.v,+b.dataset.c,+b.dataset.id||null)">삭제</button></td>'+
     '</tr>';
   }).join('');
 },
