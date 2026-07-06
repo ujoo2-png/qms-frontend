@@ -42,7 +42,7 @@ async home(){
     {c:'mc-c4',icon:'⭐',name:'공급업체 품질',badge:0,
      subs:[{icon:'📅',label:'심사 계획 관리',page:'sqm_plan'},{icon:'🔎',label:'업체 심사',page:'sqm_audit'},{icon:'⭐',label:'업체 평가',page:'sqm_eval'},{icon:'🚚',label:'납품 이력',page:'sqm_delivery'},{icon:'📊',label:'SQM 대시보드',page:'sqm_dash'}]},
     {c:'mc-c5',icon:'📈',name:'SPC 통계관리',badge:0,
-     subs:[{icon:'📈',label:'관리도',page:'spc_chart'},{icon:'🎯',label:'Cp/Cpk',page:'spc_cpk'},{icon:'📊',label:'파레토 분석',page:'spc_pareto'}]},
+     subs:[{icon:'📋',label:'관리 항목',page:'spc_items'},{icon:'📈',label:'관리도',page:'spc_chart'},{icon:'🎯',label:'Cp/Cpk',page:'spc_cpk'},{icon:'📊',label:'파레토 분석',page:'spc_pareto'}]},
     {c:'mc-c6',icon:'🔬',name:'계측기관리',badge:eqE,
      subs:[{icon:'🔬',label:'계측기 등록',page:'equip'},{icon:'📐',label:'교정 관리',page:'cal'},{icon:'📈',label:'MSA 분석',page:'msa'}]},
     {c:'mc-c7',icon:'📄',name:'문서관리',badge:0,
@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.153</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.154</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -14801,141 +14801,673 @@ _delivRefresh(){
 
 /* ══ C: SPC ══ */
 Object.assign(Pages,{
-spc_chart(){
-  const w=document.getElementById('pw');const data=DB2.spc_data[0];
-  const means=data.subgroups.map(sg=>sg.vals.reduce((s,v)=>s+v,0)/sg.vals.length);
-  const ranges=data.subgroups.map(sg=>Math.max(...sg.vals)-Math.min(...sg.vals));
-  const Xbar=(means.reduce((s,v)=>s+v,0)/means.length).toFixed(4);
-  const Rbar=(ranges.reduce((s,v)=>s+v,0)/ranges.length).toFixed(4);
-  const A2=0.577,D3=0,D4=2.114;
-  const UCLx=(parseFloat(Xbar)+A2*parseFloat(Rbar)).toFixed(4);
-  const LCLx=(parseFloat(Xbar)-A2*parseFloat(Rbar)).toFixed(4);
-  const UCLr=(D4*parseFloat(Rbar)).toFixed(4);
-  const LCLr=(D3*parseFloat(Rbar)).toFixed(4);
-  const xPass=v=>v>=parseFloat(LCLx)&&v<=parseFloat(UCLx);
-  const rPass=v=>v>=parseFloat(LCLr)&&v<=parseFloat(UCLr);
-  const mn_x=Math.min(...means,parseFloat(LCLx))-0.02,mx_x=Math.max(...means,parseFloat(UCLx))+0.02;
-  const mn_r=-0.001,mx_r=Math.max(...ranges,parseFloat(UCLr))+0.005;
-  const n=means.length,cW=580,cH=155,pad=38;
-  const sy=(v,mn,mx)=>pad+(cH-2*pad)*(1-(v-mn)/(mx-mn||1));
-  const sx=i=>pad+(cW-2*pad)*i/(n-1);
-  const mkPath=(vals,mn,mx)=>vals.map((v,i)=>`${i===0?'M':'L'}${sx(i)},${sy(v,mn,mx)}`).join(' ');
-  const mkDots=(vals,mn,mx,pf)=>vals.map((v,i)=>{const col=pf(v)?'var(--ok)':'var(--err)';return`<circle cx="${sx(i)}" cy="${sy(v,mn,mx)}" r="4" fill="${col}"/>`}).join('');
-  w.innerHTML=`<div class="ph"><div><div class="ptit">📈 관리도 (X-bar R Chart)</div><div class="psub">공정 안정성 모니터링</div></div></div>
-  <div class="tbar"><select class="fsel" style="min-width:220px">${DB2.spc_data.map((d,i)=>`<option value="${i}" ${i===0?'selected':''}>${H.e(d.process)}</option>`).join('')}</select></div>
-  <div class="g2" style="margin-bottom:13px">
-    <div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📊 X-bar 관리도</div>
-      <svg width="100%" viewBox="0 0 ${cW} ${cH}" style="overflow:visible">
-        <line x1="${pad}" y1="${sy(parseFloat(UCLx),mn_x,mx_x)}" x2="${cW-pad}" y2="${sy(parseFloat(UCLx),mn_x,mx_x)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4"/>
-        <text x="${cW-pad+3}" y="${sy(parseFloat(UCLx),mn_x,mx_x)+4}" font-size="10" fill="#ef4444">UCL=${UCLx}</text>
-        <line x1="${pad}" y1="${sy(parseFloat(Xbar),mn_x,mx_x)}" x2="${cW-pad}" y2="${sy(parseFloat(Xbar),mn_x,mx_x)}" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="6,2"/>
-        <text x="${cW-pad+3}" y="${sy(parseFloat(Xbar),mn_x,mx_x)+4}" font-size="10" fill="#2563eb">X̄=${Xbar}</text>
-        <line x1="${pad}" y1="${sy(parseFloat(LCLx),mn_x,mx_x)}" x2="${cW-pad}" y2="${sy(parseFloat(LCLx),mn_x,mx_x)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4"/>
-        <text x="${cW-pad+3}" y="${sy(parseFloat(LCLx),mn_x,mx_x)+4}" font-size="10" fill="#ef4444">LCL=${LCLx}</text>
-        <path d="${mkPath(means,mn_x,mx_x)}" fill="none" stroke="#475569" stroke-width="1.5"/>
-        ${mkDots(means,mn_x,mx_x,xPass)}
-        ${means.map((v,i)=>`<text x="${sx(i)}" y="${cH-5}" font-size="9" text-anchor="middle" fill="#94a3b8">${data.subgroups[i].date.slice(5)}</text>`).join('')}
-      </svg>
-    </div>
-    <div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📊 R 관리도 (범위)</div>
-      <svg width="100%" viewBox="0 0 ${cW} ${cH}" style="overflow:visible">
-        <line x1="${pad}" y1="${sy(parseFloat(UCLr),mn_r,mx_r)}" x2="${cW-pad}" y2="${sy(parseFloat(UCLr),mn_r,mx_r)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4"/>
-        <text x="${cW-pad+3}" y="${sy(parseFloat(UCLr),mn_r,mx_r)+4}" font-size="10" fill="#ef4444">UCL=${UCLr}</text>
-        <line x1="${pad}" y1="${sy(parseFloat(Rbar),mn_r,mx_r)}" x2="${cW-pad}" y2="${sy(parseFloat(Rbar),mn_r,mx_r)}" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="6,2"/>
-        <text x="${cW-pad+3}" y="${sy(parseFloat(Rbar),mn_r,mx_r)+4}" font-size="10" fill="#2563eb">R̄=${Rbar}</text>
-        <path d="${mkPath(ranges,mn_r,mx_r)}" fill="none" stroke="#475569" stroke-width="1.5"/>
-        ${mkDots(ranges,mn_r,mx_r,rPass)}
-        ${ranges.map((v,i)=>`<text x="${sx(i)}" y="${cH-5}" font-size="9" text-anchor="middle" fill="#94a3b8">${data.subgroups[i].date.slice(5)}</text>`).join('')}
-      </svg>
+/* [v2.154] SPC 관리 항목 관리 페이지 */
+async spc_items(){
+  const w=document.getElementById('pw');
+  w.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+  const items=await SB.getSpcItems();
+  window._spcItems=items;
+
+  w.innerHTML=`
+  <div class="ph">
+    <div><div class="ptit">📋 SPC 관리 항목</div>
+         <div class="psub">X-bar R 관리도 / Cpk 분석 대상 품목·공정·규격 관리</div></div>
+    <div class="pac">
+      <button class="btn bpri btn-f2" onclick="Pages._spcItemForm()">+ 항목 등록 <span class="kbd">F2</span></button>
     </div>
   </div>
-  <div class="g2">
-    <div class="card"><div class="ct" style="margin-bottom:10px">📋 관리 한계선</div>
-      <table style="width:100%;font-size:13px;border-collapse:collapse"><thead><tr style="background:#f8fafc"><th style="padding:7px 10px;text-align:left;border-bottom:2px solid var(--bd)">항목</th><th style="padding:7px 10px;text-align:center;border-bottom:2px solid var(--bd)">UCL</th><th style="padding:7px 10px;text-align:center;border-bottom:2px solid var(--bd)">중심선</th><th style="padding:7px 10px;text-align:center;border-bottom:2px solid var(--bd)">LCL</th></tr></thead>
-      <tbody><tr style="border-bottom:1px solid var(--bd)"><td style="padding:7px 10px;font-weight:600">X-bar</td><td style="padding:7px 10px;text-align:center;color:var(--err)">${UCLx}</td><td style="padding:7px 10px;text-align:center;color:#2563eb;font-weight:700">${Xbar}</td><td style="padding:7px 10px;text-align:center;color:var(--acc)">${LCLx}</td></tr>
-      <tr><td style="padding:7px 10px;font-weight:600">R</td><td style="padding:7px 10px;text-align:center;color:var(--err)">${UCLr}</td><td style="padding:7px 10px;text-align:center;color:#2563eb;font-weight:700">${Rbar}</td><td style="padding:7px 10px;text-align:center;color:var(--acc)">${LCLr}</td></tr></tbody></table>
+  <div id="spcItemTbl"></div>`;
+
+  Tbl.render({
+    el:'#spcItemTbl',
+    cols:[
+      {key:'item_code', label:'품목코드', w:'90px', render:v=>v?H.e(v):'<span style="color:var(--tl)">-</span>'},
+      {key:'item_name', label:'품목명', w:'*', render:v=>`<span style="font-weight:600">${H.e(v)}</span>`},
+      {key:'process',   label:'공정',   w:'100px'},
+      {key:'char_name', label:'관리특성', w:'100px'},
+      {key:'spec_upper',label:'USL',    w:'72px', align:'right',
+        render:v=>`<span style="font-family:monospace;color:#dc2626">${v??'-'}</span>`},
+      {key:'spec_lower',label:'LSL',    w:'72px', align:'right',
+        render:v=>`<span style="font-family:monospace;color:#2563eb">${v??'-'}</span>`},
+      {key:'target',    label:'Target', w:'72px', align:'right',
+        render:v=>v!=null?`<span style="font-family:monospace">${v}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'subgroup_size',label:'n',   w:'40px', align:'center'},
+      {key:'unit',      label:'단위',   w:'48px', align:'center'},
+      {key:'id',        label:'관리도', w:'60px', align:'center',
+        render:v=>`<button class="btn bxs bblu bsm" onclick="event.stopPropagation();Nav.go('spc_chart');setTimeout(()=>document.getElementById('spcChartSel')&&(document.getElementById('spcChartSel').value=${v})&&Pages._spcChartRender(${v}),500)">📈</button>`},
+    ],
+    data:items,
+    onRow:row=>Pages._spcItemForm(row),
+    onDel:async(ids)=>{
+      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+      Modal.confirm({title:'🗑️ 항목 삭제',msg:`<b>${ids.length}건</b>의 관리 항목과 연결된 모든 측정 데이터가 삭제됩니다.`,danger:true,
+        onOk:async()=>{
+          for(const id of ids){await SB.deleteSpcItem(id);}
+          window._spcItems=(window._spcItems||[]).filter(it=>!ids.includes(it.id));
+          Toast.show('삭제되었습니다.','ok');Modal.close();Pages.spc_items();
+        }
+      });
+    }
+  });
+},
+
+/* ════ SPC 통계관리 [v2.154 전면 재작성] ════
+   기존: DB2 더미 데이터만 사용, 선택 변경 시 차트 미갱신, n=5 하드코딩
+   변경: Supabase spc_items + spc_subgroups 실데이터 연동
+         관리 항목 등록/수정/삭제 + 서브그룹 데이터 입력/삭제
+         X-bar R 계수 n=2~10 동적 적용
+         파레토: inspections 테이블 실데이터 연계 (더미 제거)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── X-bar R 차트 계수 (n=2~10) ──
+   ASTM/KS A 3001 기준 A2, D3, D4 계수 */
+_spcConst:{
+  2:{A2:1.880,D3:0,D4:3.267},
+  3:{A2:1.023,D3:0,D4:2.574},
+  4:{A2:0.729,D3:0,D4:2.282},
+  5:{A2:0.577,D3:0,D4:2.114},
+  6:{A2:0.483,D3:0,D4:2.004},
+  7:{A2:0.419,D3:0.076,D4:1.924},
+  8:{A2:0.373,D3:0.136,D4:1.864},
+  9:{A2:0.337,D3:0.184,D4:1.816},
+  10:{A2:0.308,D3:0.223,D4:1.777},
+},
+
+/* ── SPC 공통 — 항목 select 옵션 생성 ── */
+_spcItemOpts(items, selId){
+  if(!items||!items.length) return '<option value="">등록된 항목 없음</option>';
+  return items.map(it=>`<option value="${it.id}" ${it.id==selId?'selected':''}>${H.e(it.process)} — ${H.e(it.char_name||it.item_name)} (${H.e(it.unit||'')})</option>`).join('');
+},
+
+/* ══════════════════════════════════════════════════
+   1. 관리도 (X-bar R Chart)
+   ══════════════════════════════════════════════════ */
+async spc_chart(){
+  const w=document.getElementById('pw');
+  w.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+  const items=await SB.getSpcItems();
+  window._spcItems=items;
+
+  if(!items.length){
+    w.innerHTML=`<div class="ph"><div><div class="ptit">📈 X-bar R 관리도</div></div>
+      <div class="pac"><button class="btn bpri" onclick="Pages._spcItemForm()">+ 관리 항목 등록</button></div></div>
+      <div class="card"><div class="es"><div class="es-icon">📋</div>
+      <div>등록된 관리 항목이 없습니다.</div>
+      <button class="btn bpri" style="margin-top:12px" onclick="Pages._spcItemForm()">+ 첫 번째 항목 등록</button>
+      </div></div>`;
+    return;
+  }
+  const selId=items[0].id;
+  window._spcSelId=selId;
+
+  w.innerHTML=`
+  <div class="ph">
+    <div><div class="ptit">📈 X-bar R 관리도</div>
+         <div class="psub">공정 안정성 모니터링 — 관리 한계선 이탈 자동 감지</div></div>
+    <div class="pac">
+      <button class="btn bout bsm" onclick="Pages._spcItemForm()">+ 항목 등록</button>
+      <button class="btn bpri bsm" onclick="Pages._spcDataForm(window._spcSelId)">+ 데이터 입력</button>
     </div>
-    <div class="card"><div class="ct" style="margin-bottom:10px">✅ 이상점 판정</div>
-      ${means.some(v=>!xPass(v))||ranges.some(v=>!rPass(v))?`<div style="padding:11px;background:#fff1f2;border:1px solid #fca5a5;border-radius:var(--r);color:var(--err);font-size:13px;font-weight:600">⚠️ 관리 한계 이탈 점 발견</div>`:`<div style="padding:11px;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);color:var(--ok);font-size:13px;font-weight:600">✅ 공정 안정 — 이상점 없음</div>`}
-      <div style="margin-top:10px;font-size:12px;color:var(--tm)"><div>• X-bar 이탈: ${means.filter(v=>!xPass(v)).length}/${n}점</div><div>• R 이탈: ${ranges.filter(v=>!rPass(v)).length}/${n}점</div></div>
+  </div>
+  <div class="tbar">
+    <select class="fsel" id="spcChartSel" style="min-width:260px"
+      onchange="window._spcSelId=+this.value;Pages._spcChartRender(window._spcSelId)">
+      ${Pages._spcItemOpts(items,selId)}
+    </select>
+    <button class="btn bout bsm" onclick="Pages._spcItemEdit(window._spcSelId)">✏️ 항목 수정</button>
+    <button class="btn bout bsm" onclick="Pages._spcItemList()">📋 전체 항목 관리</button>
+  </div>
+  <div id="spcChartArea"></div>`;
+
+  await Pages._spcChartRender(selId);
+},
+
+async _spcChartRender(itemId){
+  const el=document.getElementById('spcChartArea');
+  if(!el) return;
+  el.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>데이터 조회 중...</div></div>';
+
+  const item=(window._spcItems||[]).find(it=>it.id===Number(itemId));
+  if(!item){el.innerHTML='<div class="es"><div class="es-icon">⚠️</div><div>항목을 찾을 수 없습니다.</div></div>';return;}
+
+  const subs=await SB.getSpcSubgroups(itemId);
+  if(!subs.length){
+    el.innerHTML=`<div class="card"><div class="es" style="padding:40px">
+      <div class="es-icon">📊</div>
+      <div>측정 데이터가 없습니다.</div>
+      <button class="btn bpri" style="margin-top:12px" onclick="Pages._spcDataForm(${itemId})">+ 데이터 입력</button>
+    </div></div>`;
+    return;
+  }
+
+  /* 측정값 파싱 */
+  const groups=subs.map(s=>{
+    let vals=[];
+    try{vals=typeof s.values==='string'?JSON.parse(s.values):s.values;}catch(e){}
+    return{date:s.measured_at,vals:vals.map(Number).filter(v=>!isNaN(v)),id:s.id,memo:s.memo||''};
+  }).filter(g=>g.vals.length>0);
+
+  if(!groups.length){el.innerHTML='<div class="card es" style="padding:40px">유효한 측정값 없음</div>';return;}
+
+  const n=item.subgroup_size||5;
+  const C=Pages._spcConst[n]||Pages._spcConst[5];
+  const means=groups.map(g=>g.vals.reduce((s,v)=>s+v,0)/g.vals.length);
+  const ranges=groups.map(g=>Math.max(...g.vals)-Math.min(...g.vals));
+  const Xbar=means.reduce((s,v)=>s+v,0)/means.length;
+  const Rbar=ranges.reduce((s,v)=>s+v,0)/ranges.length;
+  const UCLx=Xbar+C.A2*Rbar, LCLx=Xbar-C.A2*Rbar;
+  const UCLr=C.D4*Rbar, LCLr=C.D3*Rbar;
+  const fmt=v=>v.toFixed(4);
+
+  const xPass=v=>v>=LCLx&&v<=UCLx;
+  const rPass=v=>v>=LCLr&&v<=UCLr;
+  const xOOC=means.filter(v=>!xPass(v)).length;
+  const rOOC=ranges.filter(v=>!rPass(v)).length;
+
+  /* SVG 생성 헬퍼 */
+  const mkChart=(vals,ucl,cl,lcl,pf,label)=>{
+    const cW=600,cH=160,pad=40;
+    const mn=Math.min(...vals,lcl)-Math.abs(cl)*0.01;
+    const mx=Math.max(...vals,ucl)+Math.abs(cl)*0.01;
+    const sy=v=>pad+(cH-2*pad)*(1-(v-mn)/(mx-mn||1));
+    const sx=i=>pad+(cW-2*pad)*i/(Math.max(vals.length-1,1));
+    const path=vals.map((v,i)=>`${i===0?'M':'L'}${sx(i).toFixed(1)},${sy(v).toFixed(1)}`).join(' ');
+    const dots=vals.map((v,i)=>`<circle cx="${sx(i).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="4" fill="${pf(v)?'#22c55e':'#ef4444'}"/>`).join('');
+    const labels=groups.map((g,i)=>`<text x="${sx(i).toFixed(1)}" y="${cH-4}" font-size="9" text-anchor="middle" fill="#94a3b8">${g.date.slice(5)}</text>`).join('');
+    const hline=(y,col,dash,txt)=>{
+      const yy=sy(y).toFixed(1);
+      return `<line x1="${pad}" y1="${yy}" x2="${cW-pad}" y2="${yy}" stroke="${col}" stroke-width="1.5" ${dash?'stroke-dasharray="4"':''}/>`
+        +`<text x="${cW-pad+4}" y="${+yy+4}" font-size="9" fill="${col}">${txt}=${y.toFixed(4)}</text>`;
+    };
+    return `<div class="card" style="padding:14px 18px"><div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)">${label}</div>
+    <svg width="100%" viewBox="0 0 ${cW} ${cH}" style="overflow:visible">
+      ${hline(ucl,'#ef4444',true,'UCL')}
+      ${hline(cl,'#2563eb',false,'CL')}
+      ${lcl>0?hline(lcl,'#ef4444',true,'LCL'):''}
+      <path d="${path}" fill="none" stroke="#64748b" stroke-width="1.5"/>
+      ${dots}${labels}
+    </svg></div>`;
+  };
+
+  el.innerHTML=`
+  <div class="stat-dash" style="margin-bottom:14px">
+    <div class="sd-card"><div class="sd-icon" style="background:#dbeafe;color:#2563eb">n</div>
+      <div><div class="sd-val">${n}</div><div class="sd-lbl">서브그룹 크기</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">k</div>
+      <div><div class="sd-val">${groups.length}</div><div class="sd-lbl">서브그룹 수</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#dcfce7;color:#16a34a">X̄</div>
+      <div><div class="sd-val">${fmt(Xbar)}</div><div class="sd-lbl">총 평균</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef9c3;color:#ca8a04">R̄</div>
+      <div><div class="sd-val">${fmt(Rbar)}</div><div class="sd-lbl">평균 범위</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:${xOOC||rOOC?'#fee2e2':'#dcfce7'};color:${xOOC||rOOC?'#dc2626':'#16a34a'}">${xOOC||rOOC?'⚠️':'✅'}</div>
+      <div><div class="sd-val" style="color:${xOOC||rOOC?'#dc2626':'#16a34a'}">${xOOC+rOOC}</div><div class="sd-lbl">이상점 합계</div></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    ${mkChart(means,UCLx,Xbar,LCLx,xPass,'📊 X-bar 관리도 (평균)')}
+    ${mkChart(ranges,UCLr,Rbar,LCLr,rPass,'📊 R 관리도 (범위)')}
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--text)">📋 측정 데이터 목록</div>
+      <button class="btn bpri bsm" onclick="Pages._spcDataForm(${itemId})">+ 데이터 추가</button>
     </div>
+    <div style="overflow-x:auto"><table class="dt" style="width:100%;font-size:13px">
+      <thead><tr><th style="width:88px">측정일</th><th>측정값 (${item.unit||''})</th>
+        <th style="width:60px">평균</th><th style="width:60px">범위</th>
+        <th style="width:50px">X판정</th><th style="width:50px">R판정</th>
+        <th style="width:60px">메모</th><th style="width:48px">삭제</th></tr></thead>
+      <tbody>${groups.map((g,i)=>`<tr>
+        <td>${g.date}</td>
+        <td style="font-family:monospace;font-size:12px">${g.vals.join(' / ')}</td>
+        <td style="text-align:center;font-weight:700;color:${xPass(means[i])?'#16a34a':'#dc2626'}">${means[i].toFixed(4)}</td>
+        <td style="text-align:center">${ranges[i].toFixed(4)}</td>
+        <td style="text-align:center"><span class="badge ${xPass(means[i])?'bgrn':'bred'}" style="font-size:10px">${xPass(means[i])?'정상':'이탈'}</span></td>
+        <td style="text-align:center"><span class="badge ${rPass(ranges[i])?'bgrn':'bred'}" style="font-size:10px">${rPass(ranges[i])?'정상':'이탈'}</span></td>
+        <td style="color:var(--muted);font-size:12px">${H.e(g.memo)}</td>
+        <td style="text-align:center"><button class="btn bxs berr" style="font-size:11px"
+          onclick="Pages._spcSubgroupDel(${g.id},${itemId})">✕</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>
   </div>`;
 },
-spc_cpk(){
-  const w=document.getElementById('pw');const data=DB2.spc_data[0];
-  const allVals=data.subgroups.flatMap(sg=>sg.vals);
-  const n=allVals.length;
-  const mean=allVals.reduce((s,v)=>s+v,0)/n;
-  const std=Math.sqrt(allVals.reduce((s,v)=>s+(v-mean)**2,0)/(n-1));
-  const usl=data.usl,lsl=data.lsl,target=data.target;
-  const cp=((usl-lsl)/(6*std)).toFixed(3);
-  const cpu=((usl-mean)/(3*std)).toFixed(3);
-  const cpl=((mean-lsl)/(3*std)).toFixed(3);
-  const cpk=Math.min(parseFloat(cpu),parseFloat(cpl)).toFixed(3);
-  const cpkG=parseFloat(cpk)>=1.67?'A':parseFloat(cpk)>=1.33?'B':parseFloat(cpk)>=1.0?'C':'D';
-  const cpkL={A:'우수',B:'양호',C:'보통',D:'개선 필수'};
-  const cpkC={A:'var(--ok)',B:'#2563eb',C:'var(--warn)',D:'var(--err)'};
-  const hist=Array(10).fill(0);const step=(usl-lsl)/10;
-  allVals.forEach(v=>{const bin=Math.min(9,Math.max(0,Math.floor((v-lsl)/step)));hist[bin]++;});
-  const maxH=Math.max(...hist)||1;
-  w.innerHTML=`<div class="ph"><div><div class="ptit">🎯 공정능력 (Cp/Cpk)</div><div class="psub">공정이 규격을 얼마나 잘 만족하는지 수치화</div></div></div>
-  <div class="tbar"><select class="fsel" style="min-width:220px">${DB2.spc_data.map((d,i)=>`<option value="${i}" ${i===0?'selected':''}>${H.e(d.process)}</option>`).join('')}</select></div>
-  <div class="stat-dash" style="margin:14px 0">
-    <div class="sd-card"><div class="sd-icon" style="background:${cpkC[cpkG]}22;color:${cpkC[cpkG]};font-size:18px;font-weight:900">${cpkG}</div><div><div class="sd-val" style="color:${cpkC[cpkG]}">${cpk}</div><div class="sd-lbl">Cpk</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📏</div><div><div class="sd-val">${cp}</div><div class="sd-lbl">Cp</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">⬆️</div><div><div class="sd-val">${cpu}</div><div class="sd-lbl">Cpu</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⬇️</div><div><div class="sd-val">${cpl}</div><div class="sd-lbl">Cpl</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#f1f5f9;color:#475569">〜</div><div><div class="sd-val">${mean.toFixed(4)}</div><div class="sd-lbl">평균</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">σ</div><div><div class="sd-val">${std.toFixed(4)}</div><div class="sd-lbl">표준편차</div></div></div>
-  </div>
-  <div class="g2">
-    <div class="card"><div class="ct" style="margin-bottom:12px">📊 히스토그램</div>
-      <div style="display:flex;align-items:flex-end;gap:3px;height:110px;padding:0 8px">
-        ${hist.map((h,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--pri);opacity:0.8;height:${Math.round(h/maxH*90)}px;border-radius:3px 3px 0 0;min-height:2px"></div><div style="font-size:8px;color:var(--tm)">${(lsl+step*(i+0.5)).toFixed(2)}</div></div>`).join('')}
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tm);margin-top:6px;padding:0 8px"><span style="color:var(--acc)">LSL:${lsl}</span><span style="color:var(--pri);font-weight:700">T:${target}</span><span style="color:var(--err)">USL:${usl}</span></div>
+
+/* ══════════════════════════════════════════════════
+   2. 공정능력 (Cp / Cpk)
+   ══════════════════════════════════════════════════ */
+async spc_cpk(){
+  const w=document.getElementById('pw');
+  w.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
+  const items=await SB.getSpcItems();
+  window._spcItems=items;
+
+  if(!items.length){
+    w.innerHTML=`<div class="ph"><div><div class="ptit">🎯 공정능력 (Cp/Cpk)</div></div>
+      <div class="pac"><button class="btn bpri" onclick="Pages._spcItemForm()">+ 관리 항목 등록</button></div></div>
+      <div class="card"><div class="es"><div class="es-icon">📋</div><div>등록된 관리 항목이 없습니다.</div></div></div>`;
+    return;
+  }
+  const selId=items[0].id;
+  window._spcSelId=selId;
+
+  w.innerHTML=`
+  <div class="ph">
+    <div><div class="ptit">🎯 공정능력 (Cp/Cpk)</div>
+         <div class="psub">공정이 규격을 얼마나 잘 만족하는지 수치화</div></div>
+    <div class="pac">
+      <button class="btn bpri bsm" onclick="Pages._spcDataForm(window._spcSelId)">+ 데이터 입력</button>
     </div>
-    <div class="card"><div class="ct" style="margin-bottom:12px">📋 공정능력 판정</div>
-      <div style="padding:12px;background:${cpkC[cpkG]}15;border:2px solid ${cpkC[cpkG]};border-radius:var(--r);text-align:center;margin-bottom:12px"><div style="font-size:20px;font-weight:900;color:${cpkC[cpkG]}">${cpkL[cpkG]}</div></div>
+  </div>
+  <div class="tbar">
+    <select class="fsel" id="spcCpkSel" style="min-width:260px"
+      onchange="window._spcSelId=+this.value;Pages._spcCpkRender(window._spcSelId)">
+      ${Pages._spcItemOpts(items,selId)}
+    </select>
+  </div>
+  <div id="spcCpkArea"></div>`;
+
+  await Pages._spcCpkRender(selId);
+},
+
+async _spcCpkRender(itemId){
+  const el=document.getElementById('spcCpkArea');
+  if(!el) return;
+  el.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>계산 중...</div></div>';
+
+  const item=(window._spcItems||[]).find(it=>it.id===Number(itemId));
+  if(!item){el.innerHTML='<div class="es"><div class="es-icon">⚠️</div><div>항목 없음</div></div>';return;}
+
+  const subs=await SB.getSpcSubgroups(itemId);
+  const allVals=subs.flatMap(s=>{
+    try{return(typeof s.values==='string'?JSON.parse(s.values):s.values).map(Number).filter(v=>!isNaN(v));}catch(e){return[];}
+  });
+
+  if(allVals.length<4){
+    el.innerHTML=`<div class="card"><div class="es" style="padding:40px">
+      <div class="es-icon">📊</div><div>Cpk 계산에는 최소 4개 이상의 측정값이 필요합니다.</div>
+      <button class="btn bpri" style="margin-top:12px" onclick="Pages._spcDataForm(${itemId})">+ 데이터 입력</button>
+    </div></div>`;
+    return;
+  }
+
+  const n2=allVals.length;
+  const mean=allVals.reduce((s,v)=>s+v,0)/n2;
+  const std=Math.sqrt(allVals.reduce((s,v)=>s+(v-mean)**2,0)/(n2-1));
+  const usl=item.spec_upper, lsl=item.spec_lower, tgt=item.target;
+  if(usl==null||lsl==null){
+    el.innerHTML='<div class="card es" style="padding:32px">⚠️ 관리 항목에 USL/LSL(규격 상/하한)을 등록해야 합니다.</div>';
+    return;
+  }
+  const cp=((usl-lsl)/(6*std));
+  const cpu=((usl-mean)/(3*std));
+  const cpl=((mean-lsl)/(3*std));
+  const cpk=Math.min(cpu,cpl);
+  const grade=cpk>=1.67?'A':cpk>=1.33?'B':cpk>=1.0?'C':'D';
+  const gLbl={A:'우수',B:'양호',C:'보통',D:'개선 필수'};
+  const gCol={A:'#16a34a',B:'#2563eb',C:'#d97706',D:'#dc2626'};
+  const col=gCol[grade];
+
+  /* 히스토그램 */
+  const bins=12;
+  const step=(usl-lsl)/bins;
+  const hist=Array(bins).fill(0);
+  const outOfSpec=allVals.filter(v=>v<lsl||v>usl).length;
+  allVals.forEach(v=>{
+    const b=Math.min(bins-1,Math.max(0,Math.floor((v-lsl)/step)));
+    hist[b]++;
+  });
+  const maxH=Math.max(...hist)||1;
+
+  el.innerHTML=`
+  <div class="stat-dash" style="margin:14px 0">
+    <div class="sd-card" style="border:2px solid ${col}22">
+      <div class="sd-icon" style="background:${col}22;color:${col};font-size:20px;font-weight:900">${grade}</div>
+      <div><div class="sd-val" style="color:${col}">${cpk.toFixed(3)}</div><div class="sd-lbl">Cpk</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📏</div>
+      <div><div class="sd-val">${cp.toFixed(3)}</div><div class="sd-lbl">Cp</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#dcfce7;color:#16a34a">⬆️</div>
+      <div><div class="sd-val">${cpu.toFixed(3)}</div><div class="sd-lbl">Cpu</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef9c3;color:#ca8a04">⬇️</div>
+      <div><div class="sd-val">${cpl.toFixed(3)}</div><div class="sd-lbl">Cpl</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#f1f5f9;color:#475569">μ</div>
+      <div><div class="sd-val">${mean.toFixed(4)}</div><div class="sd-lbl">평균</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">σ</div>
+      <div><div class="sd-val">${std.toFixed(4)}</div><div class="sd-lbl">표준편차</div></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:var(--text)">📊 히스토그램</div>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:120px;padding:0 4px">
+        ${hist.map((h,i)=>{
+          const binVal=lsl+step*(i+0.5);
+          const inSpec=binVal>=lsl&&binVal<=usl;
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+            <div style="width:100%;background:${inSpec?'#3b82c6':'#f87171'};height:${Math.round(h/maxH*100)}px;border-radius:2px 2px 0 0;min-height:${h>0?2:0}px"></div>
+            <div style="font-size:7px;color:var(--muted);transform:rotate(-30deg);white-space:nowrap">${binVal.toFixed(2)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:8px;padding:6px 4px;background:var(--bg2);border-radius:6px">
+        <span style="color:#dc2626;font-weight:700">LSL: ${lsl}</span>
+        ${tgt!=null?`<span style="color:#2563eb;font-weight:700">T: ${tgt}</span>`:''}
+        <span style="color:#dc2626;font-weight:700">USL: ${usl}</span>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:${outOfSpec?'#dc2626':'#16a34a'}">
+        규격 이탈: ${outOfSpec}/${n2}개 (${(outOfSpec/n2*100).toFixed(1)}%)
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">📋 공정능력 판정 기준</div>
+      <div style="padding:14px;background:${col}15;border:2px solid ${col}44;border-radius:8px;text-align:center;margin-bottom:12px">
+        <div style="font-size:24px;font-weight:900;color:${col}">${gLbl[grade]}</div>
+        <div style="font-size:13px;color:${col};margin-top:4px">Cpk = ${cpk.toFixed(3)}</div>
+      </div>
       <table style="width:100%;font-size:12px;border-collapse:collapse">
-        ${[['1.67 이상','A','우수','#059669'],['1.33~1.67','B','양호','#2563eb'],['1.00~1.33','C','보통','#d97706'],['1.00 미만','D','개선필수','#dc2626']].map(([r,g,l,c])=>`<tr style="border-bottom:1px solid var(--bd);background:${g===cpkG?c+'15':''}"><td style="padding:6px 10px">${r}</td><td style="padding:6px 10px;text-align:center"><span class="badge" style="background:${c}22;color:${c};font-weight:800">${g}</span></td><td style="padding:6px 10px;color:${c};font-weight:${g===cpkG?700:400}">${l}</td></tr>`).join('')}
+        ${[['1.67 이상','A','우수','#16a34a'],['1.33 ~ 1.67','B','양호','#2563eb'],['1.00 ~ 1.33','C','보통','#d97706'],['1.00 미만','D','개선 필수','#dc2626']]
+          .map(([r,g,l,c])=>`<tr style="border-bottom:1px solid var(--brd);background:${g===grade?c+'15':''}">
+            <td style="padding:6px 10px">${r}</td>
+            <td style="padding:6px 10px;text-align:center"><span class="badge" style="background:${c}22;color:${c};font-weight:800">${g}</span></td>
+            <td style="padding:6px 10px;color:${c};font-weight:${g===grade?700:400}">${l}</td>
+          </tr>`).join('')}
       </table>
     </div>
   </div>`;
 },
-spc_pareto(){
+
+/* ══════════════════════════════════════════════════
+   3. 파레토 분석 — inspections 실데이터 연계
+   ══════════════════════════════════════════════════ */
+async spc_pareto(){
   const w=document.getElementById('pw');
-  const defects={'치수불량':5,'외관불량':3,'재료불량':2,'포장불량':1,'기타':1};
-  const sorted=Object.entries(defects).sort((a,b)=>b[1]-a[1]);
-  const total=sorted.reduce((s,[,n])=>s+n,0);
+  w.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>검사 데이터 로딩 중...</div></div>';
+
+  /* inspections 테이블에서 불합격 데이터 집계 */
+  let inspData=[];
+  try{inspData=await SB.getInspections();}catch(e){inspData=DB.inspections||[];}
+
+  /* 기간 필터용 — 최근 6개월 기본 */
+  const today=new Date();
+  const sixMoAgo=new Date(today);sixMoAgo.setMonth(sixMoAgo.getMonth()-6);
+  const fromDate=sixMoAgo.toISOString().slice(0,10);
+
+  window._spcInspData=inspData;
+  Pages._spcParetoRender(inspData,fromDate,'all');
+},
+
+_spcParetoRender(inspData,fromDate,inspType){
+  const w=document.getElementById('pw');
+
+  /* 필터 적용 */
+  let filtered=inspData.filter(r=>(r.insp_date||'')>=fromDate&&(r.fail_qty||0)>0);
+  if(inspType&&inspType!=='all') filtered=filtered.filter(r=>r.type===inspType);
+
+  /* 불량 유형 집계 — item_name + note 기반 */
+  const catMap={};
+  filtered.forEach(r=>{
+    /* note에서 불량유형 키워드 추출, 없으면 item_name으로 분류 */
+    const raw=(r.note||r.item_name||'기타').trim()||'기타';
+    const cat=raw.length>12?raw.slice(0,12)+'…':raw;
+    if(!catMap[cat])catMap[cat]=0;
+    catMap[cat]+=(r.fail_qty||0);
+  });
+
+  const sorted=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const total=sorted.reduce((s,[,n])=>s+n,0)||1;
   let cum=0;
-  const data=sorted.map(([cat,cnt])=>{cum+=cnt;return{cat,cnt,cum,pct:Math.round(cum/total*100)}});
-  const maxN=Math.max(...data.map(d=>d.cnt));
-  w.innerHTML=`<div class="ph"><div><div class="ptit">📊 파레토 분석</div><div class="psub">불량 유형별 빈도 분석 (80/20 법칙)</div></div></div>
+  const rows=sorted.map(([cat,cnt])=>{cum+=cnt;return{cat,cnt,cum,pct:Math.round(cum/total*100)};});
+  const maxN=sorted[0]?.[1]||1;
+
+  const typeOpts=['all','수입','공정','출하'].map(t=>`<option value="${t}" ${t===inspType?'selected':''}>${t==='all'?'전체 유형':t+'검사'}</option>`).join('');
+
+  w.innerHTML=`
+  <div class="ph">
+    <div><div class="ptit">📊 파레토 분석</div>
+         <div class="psub">불량 유형별 빈도 분석 — 80/20 법칙 (inspections 실데이터)</div></div>
+  </div>
+  <div class="tbar">
+    <input type="date" class="fsel" id="paretoFrom" value="${fromDate}"
+      onchange="Pages._spcParetoRender(window._spcInspData||[],this.value,document.getElementById('paretoType')?.value||'all')">
+    <select class="fsel" id="paretoType" onchange="Pages._spcParetoRender(window._spcInspData||[],document.getElementById('paretoFrom')?.value||'${fromDate}',this.value)">
+      ${typeOpts}
+    </select>
+    <span style="font-size:13px;color:var(--muted)">기준일 이후 데이터</span>
+  </div>
+  ${!sorted.length?`<div class="card"><div class="es" style="padding:40px">
+    <div class="es-icon">📊</div>
+    <div>해당 기간에 불합격 검사 데이터가 없습니다.</div>
+  </div></div>`:`
   <div class="stat-dash" style="margin-bottom:16px">
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">⚠️</div><div><div class="sd-val">${total}</div><div class="sd-lbl">총 불량</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🏆</div><div><div class="sd-val">${data[0].cat}</div><div class="sd-lbl">1위 불량유형</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📉</div><div><div class="sd-val">${Math.round(data[0].cnt/total*100)}%</div><div class="sd-lbl">1위 점유율</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">⚠️</div>
+      <div><div class="sd-val">${total}</div><div class="sd-lbl">총 불량수</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🏆</div>
+      <div><div class="sd-val" style="font-size:13px">${rows[0]?.cat||'-'}</div><div class="sd-lbl">1위 불량유형</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📉</div>
+      <div><div class="sd-val">${total?Math.round((rows[0]?.cnt||0)/total*100):0}%</div><div class="sd-lbl">1위 점유율</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#f0fdf4;color:#16a34a">📋</div>
+      <div><div class="sd-val">${filtered.length}</div><div class="sd-lbl">대상 검사건수</div></div></div>
   </div>
   <div class="card">
-    <div class="ct" style="margin-bottom:16px">📊 파레토 차트</div>
-    <div style="display:flex;align-items:flex-end;gap:0;height:155px;padding:0 10px">
-      ${data.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center"><div style="font-size:11px;font-weight:700;color:var(--pri);margin-bottom:3px">${d.cnt}</div><div style="width:80%;background:${d.pct<=80?'var(--pri)':'var(--tm)'};height:${Math.round(d.cnt/maxN*125)}px;border-radius:3px 3px 0 0"></div></div>`).join('')}
+    <div style="font-size:13px;font-weight:700;margin-bottom:16px;color:var(--text)">📊 파레토 차트</div>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:160px;padding:0 8px;margin-bottom:4px">
+      ${rows.map((d,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center">
+        <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:3px">${d.cnt}</div>
+        <div style="width:88%;background:${i<3?'#3b82c6':'#94a3b8'};height:${Math.round(d.cnt/maxN*130)}px;border-radius:3px 3px 0 0;min-height:2px"></div>
+        ${d.pct<=80?`<div style="width:88%;height:3px;background:#ef4444;margin-top:1px" title="누적 80% 이내"></div>`:''}
+      </div>`).join('')}
     </div>
-    <div style="display:flex;padding:0 10px">${data.map(d=>`<div style="flex:1;text-align:center;font-size:11px;color:var(--tm);padding-top:4px;border-top:1px solid var(--bd)">${H.e(d.cat)}</div>`).join('')}</div>
-    <div style="margin-top:14px">${data.map(d=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12px">
-      <div style="width:78px;font-weight:500">${H.e(d.cat)}</div>
-      <div style="flex:1;background:#e5e7eb;border-radius:999px;height:10px"><div style="background:${d.pct<=80?'var(--err)':'var(--tm)'};width:${Math.round(d.cnt/maxN*100)}%;height:100%;border-radius:999px"></div></div>
-      <div style="width:26px;text-align:right;font-weight:700">${d.cnt}</div>
-      <div style="width:40px;text-align:right;color:var(--tm)">${Math.round(d.cnt/total*100)}%</div>
-      <div style="width:50px;text-align:right;font-weight:700;color:${d.pct<=80?'var(--err)':'var(--tm)'}">누적${d.pct}%</div>
-    </div>`).join('')}</div>
-    <div style="margin-top:10px;padding:10px;background:#eff6ff;border-radius:var(--r);font-size:12px;color:#1d4ed8">
-      💡 상위 ${data.filter(d=>d.pct<=80).length}개 유형이 전체 불량의 ${data.filter(d=>d.pct<=80).slice(-1)[0]?.pct||100}%를 차지합니다.
+    <div style="display:flex;padding:0 8px;border-top:1px solid var(--brd)">
+      ${rows.map(d=>`<div style="flex:1;text-align:center;font-size:10px;color:var(--muted);padding-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${H.e(d.cat)}">${H.e(d.cat)}</div>`).join('')}
     </div>
-  </div>`;
+    <div style="margin-top:14px">
+      ${rows.map(d=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:13px">
+        <div style="width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="${H.e(d.cat)}">${H.e(d.cat)}</div>
+        <div style="flex:1;background:#e5e7eb;border-radius:999px;height:10px">
+          <div style="background:${d.pct<=80?'#ef4444':'#94a3b8'};width:${Math.round(d.cnt/maxN*100)}%;height:100%;border-radius:999px"></div>
+        </div>
+        <div style="width:30px;text-align:right;font-weight:700">${d.cnt}</div>
+        <div style="width:44px;text-align:right;color:var(--muted)">${Math.round(d.cnt/total*100)}%</div>
+        <div style="width:56px;text-align:right;font-weight:700;color:${d.pct<=80?'#ef4444':'#94a3b8'}">누적${d.pct}%</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:12px;padding:10px 14px;background:#eff6ff;border-radius:8px;font-size:12px;color:#1d4ed8">
+      💡 상위 ${rows.filter(d=>d.pct<=80).length}개 유형이 전체 불량의 ${rows.filter(d=>d.pct<=80).slice(-1)[0]?.pct||100}%를 차지합니다.
+    </div>
+  </div>`}`;
 },
-});
+
+/* ══════════════════════════════════════════════════
+   4. SPC 관리 항목 등록/수정 폼
+   ══════════════════════════════════════════════════ */
+_spcItemForm(row=null){
+  const isEdit=!!row;
+  const g=k=>H.e(row?.[k]??'');
+  Modal.open({
+    title:isEdit?'✏️ SPC 관리 항목 수정':'+ SPC 관리 항목 등록',
+    size:'mmd',
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+          <button class="btn bpri btn-f8" onclick="Pages._spcItemSave(${isEdit?row.id:'null'})">💾 저장 <span class="kbd">F8</span></button>`,
+    body:`<div class="fg2" style="padding:4px 0">
+      <div class="fgroup">
+        <label class="fl">품목코드</label>
+        <input class="fc" id="spiCode" value="${g('item_code')}" placeholder="예) ITEM-001">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">품목명 *</b></label>
+        <input class="fc" id="spiName" value="${g('item_name')}" placeholder="예) 브라켓 두께">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">공정 *</b></label>
+        <input class="fc" id="spiProcess" value="${g('process')}" placeholder="예) 가공공정">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">관리특성 *</b></label>
+        <input class="fc" id="spiChar" value="${g('char_name')}" placeholder="예) 두께, 직경, 경도">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">USL(규격상한) *</b></label>
+        <input class="fc" type="number" step="any" id="spiUsl" value="${g('spec_upper')}">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">LSL(규격하한) *</b></label>
+        <input class="fc" type="number" step="any" id="spiLsl" value="${g('spec_lower')}">
+      </div>
+      <div class="fgroup">
+        <label class="fl">Target(목표값)</label>
+        <input class="fc" type="number" step="any" id="spiTarget" value="${g('target')}">
+      </div>
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">서브그룹 크기 *</b></label>
+        <select class="fc" id="spiN">
+          ${[2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${(row?.subgroup_size||5)==n?'selected':''}>${n}개</option>`).join('')}
+        </select>
+      </div>
+      <div class="fgroup">
+        <label class="fl">단위</label>
+        <input class="fc" id="spiUnit" value="${g('unit')}" placeholder="예) mm, kg, °C">
+      </div>
+      <div class="fgroup ff">
+        <label class="fl">비고</label>
+        <input class="fc" id="spiNote" value="${g('note')}">
+      </div>
+    </div>`,
+  });
+},
+async _spcItemSave(editId){
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  const name=g('spiName'), process=g('spiProcess'), charN=g('spiChar');
+  const usl=g('spiUsl'), lsl=g('spiLsl');
+  if(!name){Toast.show('품목명을 입력하세요.','warn');return;}
+  if(!process){Toast.show('공정을 입력하세요.','warn');return;}
+  if(!charN){Toast.show('관리특성을 입력하세요.','warn');return;}
+  if(!usl||!lsl){Toast.show('USL과 LSL을 입력하세요.','warn');return;}
+  if(parseFloat(usl)<=parseFloat(lsl)){Toast.show('USL은 LSL보다 커야 합니다.','warn');return;}
+  const row={
+    item_code:g('spiCode')||null, item_name:name, process,
+    char_name:charN, spec_upper:parseFloat(usl), spec_lower:parseFloat(lsl),
+    target:g('spiTarget')?parseFloat(g('spiTarget')):null,
+    subgroup_size:parseInt(document.getElementById('spiN')?.value||5),
+    unit:g('spiUnit'), note:g('spiNote'),
+  };
+  let res;
+  if(editId&&editId!='null'){res=await SB.updateSpcItem(editId,row);}
+  else{res=await SB.addSpcItem(row);}
+  if(!res?.ok) return;
+  Toast.show(editId&&editId!='null'?'항목이 수정되었습니다.':'항목이 등록되었습니다.','ok');
+  Modal.close();
+  /* 현재 페이지 새로고침 */
+  const cur=sessionStorage.getItem('qms_page')||'spc_chart';
+  if(cur==='spc_cpk') Pages.spc_cpk(); else Pages.spc_chart();
+},
+_spcItemEdit(itemId){
+  const item=(window._spcItems||[]).find(it=>it.id===Number(itemId));
+  if(!item){Toast.show('항목 정보를 찾을 수 없습니다.','warn');return;}
+  Pages._spcItemForm(item);
+},
+
+/* ── SPC 관리 항목 전체 목록 관리 ── */
+async _spcItemList(){
+  const items=window._spcItems||await SB.getSpcItems();
+  Modal.open({
+    title:'📋 SPC 관리 항목 전체',
+    size:'mlg',
+    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'
+        +'<button class="btn bpri" onclick="Modal.close();Pages._spcItemForm()">+ 항목 등록</button>',
+    body:`<div style="overflow-x:auto"><table class="dt" style="width:100%;font-size:13px">
+      <thead><tr><th>품목명</th><th>공정</th><th>관리특성</th><th style="width:70px">USL</th><th style="width:70px">LSL</th>
+        <th style="width:50px">n</th><th style="width:40px">단위</th><th style="width:80px">관리</th></tr></thead>
+      <tbody>${items.map(it=>`<tr>
+        <td style="font-weight:600">${H.e(it.item_name)}</td>
+        <td>${H.e(it.process)}</td><td>${H.e(it.char_name||'')}</td>
+        <td style="text-align:right;font-family:monospace">${it.spec_upper??'-'}</td>
+        <td style="text-align:right;font-family:monospace">${it.spec_lower??'-'}</td>
+        <td style="text-align:center">${it.subgroup_size||5}</td>
+        <td style="text-align:center">${H.e(it.unit||'')}</td>
+        <td style="text-align:center">
+          <button class="btn bxs bout bsm" onclick="Modal.close();Pages._spcItemEdit(${it.id})">✏️</button>
+          <button class="btn bxs berr bsm" onclick="Pages._spcItemDel(${it.id})">🗑️</button>
+        </td>
+      </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">등록된 항목 없음</td></tr>'}
+      </tbody></table></div>`,
+  });
+},
+async _spcItemDel(id){
+  Modal.confirm({title:'🗑️ 항목 삭제',msg:'이 관리 항목과 연결된 모든 측정 데이터가 삭제됩니다.<br>계속하시겠습니까?',danger:true,
+    onOk:async()=>{
+      const res=await SB.deleteSpcItem(id);
+      if(!res?.ok) return;
+      window._spcItems=(window._spcItems||[]).filter(it=>it.id!==id);
+      Toast.show('삭제되었습니다.','ok');
+      Modal.close();
+      Pages.spc_chart();
+    }
+  });
+},
+
+/* ══════════════════════════════════════════════════
+   5. 측정 데이터 입력 폼
+   ══════════════════════════════════════════════════ */
+_spcDataForm(itemId){
+  const item=(window._spcItems||[]).find(it=>it.id===Number(itemId));
+  if(!item){Toast.show('관리 항목을 먼저 선택하세요.','warn');return;}
+  const n=item.subgroup_size||5;
+  const inputs=Array.from({length:n},(_,i)=>
+    `<div class="fgroup"><label class="fl req"><b style="color:#e11d48">측정${i+1} *</b></label>
+     <input class="fc" type="number" step="any" id="spcV${i}" placeholder="${item.target??''}"></div>`
+  ).join('');
+  Modal.open({
+    title:`+ 측정 데이터 입력 — ${H.e(item.process)} / ${H.e(item.char_name||item.item_name)}`,
+    size:'mmd',
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+          <button class="btn bpri btn-f8" onclick="Pages._spcDataSave(${itemId},${n})">💾 저장 <span class="kbd">F8</span></button>`,
+    body:`<div class="fg2" style="padding:4px 0">
+      <div class="fgroup ff">
+        <label class="fl req"><b style="color:#e11d48">측정일 *</b></label>
+        <input class="fc" type="date" id="spcDate" value="${H.today()}">
+      </div>
+      ${inputs}
+      <div class="fgroup ff">
+        <label class="fl">메모</label>
+        <input class="fc" id="spcMemo" placeholder="특이사항 등">
+      </div>
+      <div style="grid-column:1/-1;font-size:12px;color:var(--muted);padding:8px 10px;background:var(--bg2);border-radius:6px">
+        규격: LSL ${item.spec_lower} ~ USL ${item.spec_upper} ${item.unit||''} / 서브그룹 크기: n=${n}
+      </div>
+    </div>`,
+  });
+},
+async _spcDataSave(itemId,n){
+  const date=(document.getElementById('spcDate')?.value||'').trim();
+  if(!date){Toast.show('측정일을 입력하세요.','warn');return;}
+  const vals=[];
+  for(let i=0;i<n;i++){
+    const v=document.getElementById(`spcV${i}`)?.value?.trim();
+    if(v===''||v==null){Toast.show(`측정${i+1} 값을 입력하세요.`,'warn');return;}
+    const num=parseFloat(v);
+    if(isNaN(num)){Toast.show(`측정${i+1}에 숫자를 입력하세요.`,'warn');return;}
+    vals.push(num);
+  }
+  const res=await SB.addSpcSubgroup({
+    spc_item_id:itemId, measured_at:date,
+    values:JSON.stringify(vals),
+    memo:(document.getElementById('spcMemo')?.value||'').trim(),
+  });
+  if(!res?.ok) return;
+  Toast.show('측정 데이터가 저장되었습니다.','ok');
+  Modal.close();
+  await Pages._spcChartRender(itemId);
+},
+async _spcSubgroupDel(subId,itemId){
+  Modal.confirm({title:'🗑️ 데이터 삭제',msg:'이 측정 데이터를 삭제하시겠습니까?',danger:true,
+    onOk:async()=>{
+      const res=await SB.deleteSpcSubgroup(subId);
+      if(!res?.ok) return;
+      Toast.show('삭제되었습니다.','ok');
+      Modal.close();
+      await Pages._spcChartRender(itemId);
+    }
+  });
+},
+});;
 
 /* ══ D: 부적합 심화 ══ */
 Object.assign(Pages,{

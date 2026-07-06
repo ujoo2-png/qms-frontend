@@ -874,6 +874,66 @@ const SB={
     const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
   },
 
+  /* ════ SPC 통계관리 [v2.154 신규] ════
+     spc_items: 관리 항목 (품목/공정/규격 USL·LSL·Target)
+     spc_subgroups: 서브그룹 측정 데이터 (날짜별 측정값 JSON 배열) */
+  async getSpcItems(){
+    if(!_sb) return DB.spcItems||[];
+    const {data,error}=await _sb.from('spc_items').select('*').order('created_at',{ascending:false});
+    if(error){console.warn('[SB] spc_items 조회 실패:',error.message);return[];}
+    return data||[];
+  },
+  async addSpcItem(row){
+    if(!_sb){if(!DB.spcItems)DB.spcItems=[];const id=Date.now();DB.spcItems.push({id,...row});return{ok:true,id};}
+    const allowed={
+      item_code:row.item_code||null, item_name:row.item_name||'',
+      process:row.process||'', char_name:row.char_name||'',
+      spec_upper:row.spec_upper!=null?Number(row.spec_upper):null,
+      spec_lower:row.spec_lower!=null?Number(row.spec_lower):null,
+      target:row.target!=null?Number(row.target):null,
+      subgroup_size:row.subgroup_size||5, unit:row.unit||'', note:row.note||'',
+    };
+    const {data,error}=await _sb.from('spc_items').insert(allowed).select('id').single();
+    if(error){Toast.show('SPC 항목 저장 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true,id:data?.id};
+  },
+  async updateSpcItem(id,patch){
+    if(!_sb){const r=(DB.spcItems||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
+    const {error}=await _sb.from('spc_items').update(patch).eq('id',id);
+    if(error){Toast.show('SPC 항목 수정 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true};
+  },
+  async deleteSpcItem(id){
+    if(!_sb){DB.spcItems=(DB.spcItems||[]).filter(r=>r.id!==id);return{ok:true};}
+    const {error}=await _sb.from('spc_items').delete().eq('id',id);
+    if(error){Toast.show('SPC 항목 삭제 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true};
+  },
+  async getSpcSubgroups(itemId){
+    if(!_sb) return(DB.spcSubgroups||[]).filter(r=>r.spc_item_id===itemId);
+    const {data,error}=await _sb.from('spc_subgroups').select('*').eq('spc_item_id',itemId).order('measured_at',{ascending:true});
+    if(error){console.warn('[SB] spc_subgroups 조회 실패:',error.message);return[];}
+    return data||[];
+  },
+  async addSpcSubgroup(row){
+    if(!_sb){if(!DB.spcSubgroups)DB.spcSubgroups=[];const id=Date.now();DB.spcSubgroups.push({id,...row});return{ok:true,id};}
+    const allowed={
+      spc_item_id:Number(row.spc_item_id),
+      measured_at:row.measured_at||H.today(),
+      values:typeof row.values==='string'?row.values:JSON.stringify(row.values),
+      memo:row.memo||'',
+    };
+    const {data,error}=await _sb.from('spc_subgroups').insert(allowed).select('id').single();
+    if(error){Toast.show('측정 데이터 저장 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true,id:data?.id};
+  },
+  async deleteSpcSubgroup(id){
+    if(!_sb){DB.spcSubgroups=(DB.spcSubgroups||[]).filter(r=>r.id!==id);return{ok:true};}
+    const {error}=await _sb.from('spc_subgroups').delete().eq('id',id);
+    if(error){Toast.show('삭제 실패: '+error.message,'err');return{ok:false};}
+    return{ok:true};
+  },
+
   /* ════ 개선활동 — 내부심사(Internal Audit) [v2.149 신규] ════
      ISO 9001 9.2 내부심사: 연간계획 → 심사실시(체크리스트) →
      부적합 발견사항 → CAR 연계 → 후속조치 확인 */
