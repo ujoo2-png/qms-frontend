@@ -965,7 +965,9 @@ const SB={
     review_cycle:row.review_cycle||'annual',
     next_review_at:row.next_review_at||null,
     file_url:row.file_url||null,
-    file_name:row.file_name||null
+    file_name:row.file_name||null,
+    /* [v2.151] 작성자 저장 — 로그인 사용자명 */
+    created_by:row.created_by||null,
   };
   /* [v2.65 D1-2] select().single()으로 삽입된 id 반환 */
   var res=await _sb.from('doc_master').insert(allowed).select('id').single();

@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.150</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.151</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -4284,6 +4284,10 @@ _docRender:function(){
       {key:'next_review_at',label:'다음 검토일', w:'120px',
         render:function(v,row){return H.e(v||'-')+' '+Pages._dDay(v);}},
       {key:'dept',          label:'부서',       w:'68px', align:'center'},
+      {key:'created_by',    label:'작성자',     w:'70px', align:'center',
+        render:function(v){return v?'<span style="font-size:13px">'+H.e(v)+'</span>':'<span style="color:var(--tl)">-</span>';}},
+      {key:'created_at',    label:'작성일',     w:'88px', align:'center',
+        render:function(v){return v?'<span style="font-size:13px">'+(v||'').slice(0,10)+'</span>':'<span style="color:var(--tl)">-</span>';}},
       {key:'id',            label:'파일',       w:'58px', align:'center',
         render:function(v,row){
           /* [v2.143] doc_master.file_url(단일파일, v2.131 이전 등록분)도 인식 —
@@ -4463,6 +4467,8 @@ _docSave:async function(editId){
     return;
   }
   row.status='draft'; row.current_ver='v1.0';
+  /* [v2.151] 작성자 저장 */
+  row.created_by=Auth._u?.name||Auth._u?.username||Auth._cur||null;
   /* [v2.65 D1-2] r.id 직접 사용 — getDocMaster 타이밍 이슈 해소 */
   var r=await SB.addDocMaster(row); if(!r.ok)return;
   var newDoc=r.id ? {id:r.id,doc_no:docNo} : (await SB.getDocMaster()).find(function(d){return d.doc_no===docNo;});
@@ -4668,6 +4674,8 @@ async doc_approval(){
               '<button class="btn bgrn bsm" style="white-space:nowrap" onclick="Pages._doApprove('+a.id+','+(ver.doc_id||0)+','+(ver.id||0)+',\''+H.e(verNo).replace(/'/g,"\\'")+'\','+meId+')">✅ 승인</button>'+
               '<button class="btn bred bsm" style="white-space:nowrap" onclick="Pages._doReject('+a.id+')">❌ 반려</button>'+
               '<button class="btn bout bsm" style="white-space:nowrap" onclick="Pages.doc_history('+(ver.doc_id||0)+')">🕐</button>'+
+              /* [v2.151] 문서 열람 버튼 */
+              '<button class="btn bblu bsm" style="white-space:nowrap" onclick="FM.modal(\'doc-'+(ver.doc_id||0)+'\')">📄 열람</button>'+
             '</div>'+
           '</td>'+
         '</tr>';
@@ -5300,10 +5308,84 @@ _dhRender:function(){
           return '<span class="badge '+(m[v]||'bgry')+'">'+(lbl[v]||v||'-')+'</span>';
         }},
       {key:'dept',label:'담당부서',w:'80px'},
+      {key:'created_by', label:'작성자',  w:'70px', align:'center',
+        render:function(v){return v?H.e(v):'<span style="color:var(--tl)">-</span>';}},
+      {key:'created_at', label:'작성일',  w:'88px', align:'center',
+        render:function(v){return v?(v||'').slice(0,10):'<span style="color:var(--tl)">-</span>';}},
     ],
     data:rows,
   });
 },
+/* ── 문서 열람창 [v2.151 신규] ──────────────────────────────────────────
+   파일 타입에 따라 인라인 뷰어 제공:
+   - PDF: iframe 직접 임베드 (브라우저 네이티브 PDF 뷰어)
+   - 이미지(jpg/png/gif/webp/svg): img 태그로 표시
+   - Office(xlsx/docx/pptx): Google Docs Viewer 임베드
+   - 기타: 다운로드 안내
+   파일이 없는 경우 FM.modal(파일 관리)로 연결
+   ─────────────────────────────────────────────────────────────────── */
+_docViewer(docId, title, fileUrl, fileName){
+  /* [v2.151] 문서 열람창 — PDF/이미지/Office/기타 파일 타입별 뷰어
+     파일 없으면 FM.modal(파일 관리)로 연결 */
+  if(!fileUrl){
+    var noFileBody=''
+      +'<div style="text-align:center;padding:40px 20px">'
+      +'<div style="font-size:36px;margin-bottom:12px">📭</div>'
+      +'<div style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 파일이 없습니다</div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-bottom:20px">파일 관리에서 문서 파일을 먼저 첨부해 주세요.</div>'
+      +'</div>';
+    Modal.open({title:'📄 문서 열람',size:'mmd',
+      foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'
+          +'<button class="btn bpri" onclick="Modal.close();FM.modal(\"doc-'+docId+'\")">📎 파일 관리 열기</button>',
+      body:noFileBody});
+    return;
+  }
+  var ext=(fileName||fileUrl||'').split('.').pop().toLowerCase().split('?')[0];
+  var imgExts=['jpg','jpeg','png','gif','webp','svg','bmp'];
+  var officeExts=['xlsx','xls','docx','doc','pptx','ppt'];
+  var pdfExt=(ext==='pdf');
+  var isImg=imgExts.indexOf(ext)>=0;
+  var isOffice=officeExts.indexOf(ext)>=0;
+  var safeUrl=H.e(fileUrl);
+  var safeTitle=H.e(title||fileName||'문서');
+  var safeFile=H.e(fileName||'파일');
+
+  var viewerHtml='';
+  if(pdfExt){
+    /* PDF: iframe 직접 임베드 (브라우저 네이티브 PDF 뷰어) */
+    viewerHtml='<iframe src="'+safeUrl+'" style="width:100%;height:72vh;border:none;border-radius:8px" title="'+safeTitle+'"></iframe>';
+  } else if(isImg){
+    /* 이미지: img 태그 중앙 표시 */
+    viewerHtml='<div style="text-align:center;background:#f8fafc;border-radius:8px;padding:12px">'
+      +'<img src="'+safeUrl+'" alt="'+safeTitle+'" '
+      +'style="max-width:100%;max-height:72vh;object-fit:contain;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.12)">'
+      +'</div>';
+  } else if(isOffice){
+    /* Office 파일: Google Docs Viewer 임베드 */
+    var encoded=encodeURIComponent(fileUrl);
+    viewerHtml='<div style="font-size:12px;color:var(--muted);margin-bottom:8px;text-align:center;padding:6px 0">'
+      +'Google Docs Viewer를 통해 표시됩니다. 원본 다운로드를 권장합니다.</div>'
+      +'<iframe src="https://docs.google.com/viewer?url='+encoded+'&embedded=true" '
+      +'style="width:100%;height:70vh;border:none;border-radius:8px" title="'+safeTitle+'"></iframe>';
+  } else {
+    /* 기타: 다운로드 안내 */
+    viewerHtml='<div style="text-align:center;padding:40px 20px">'
+      +'<div style="font-size:36px;margin-bottom:12px">📄</div>'
+      +'<div style="font-size:14px;font-weight:700;margin-bottom:6px">'+safeFile+'</div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-bottom:20px">이 파일 형식('+H.e(ext||'알 수 없음')+')은 브라우저에서 직접 볼 수 없습니다.</div>'
+      +'<a href="'+safeUrl+'" download target="_blank" class="btn bpri">⬇ 파일 다운로드</a>'
+      +'</div>';
+  }
+  Modal.open({
+    title:'📄 '+safeTitle,
+    size:'mxl',
+    foot:'<button class="btn bout" onclick="Modal.close()">닫기</button>'
+        +'<a href="'+safeUrl+'" download target="_blank" class="btn bout bsm">⬇ 다운로드</a>',
+    body:'<div style="background:var(--bg);border-radius:8px">'+viewerHtml+'</div>',
+  });
+},
+
+
 async doc_history(docId){
   if(!docId){Nav.go('docs');return;}
   var w=document.getElementById('pw');
@@ -5322,9 +5404,12 @@ async doc_history(docId){
       return;
     }
     document.getElementById('vHistTitle').textContent='📋 '+doc.doc_no+' — '+doc.title;
+    /* [v2.151] window._docViewTarget으로 파일 정보를 전달 — 이스케이프 충돌 방지 */
+    window._docViewTarget={id:docId,title:doc.title||'',file_url:doc.file_url||null,file_name:doc.file_name||null};
     document.getElementById('vHistActions').innerHTML=
       '<button class="btn bout bsm" onclick="Pages._docRevForm('+docId+')">✏️ 개정 기안</button>'+
-      '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>';
+      '<button class="btn bout bsm" onclick="Pages._docHistExcel('+docId+')">📥 이력 출력</button>'+
+      '<button class="btn bpri bsm" onclick="Pages._docViewer(window._docViewTarget.id,window._docViewTarget.title,window._docViewTarget.file_url,window._docViewTarget.file_name)">📄 문서 열람</button>';
     /* [v2.65] 문서 정보 배너 — 깔끔한 카드 그리드 UI */
     /* [v2.143] doc_master.file_url(단일파일, 구버전 등록분)도 인식 */
     var fKey='doc-'+docId;
@@ -6628,6 +6713,10 @@ _recRender:function(rows){
       {key:'next_review_at',label:'다음 검토일', w:'110px',
         render:function(v){return H.e(v||'-')+' '+Pages._dDay(v);}},
       {key:'dept',          label:'부서',       w:'68px', align:'center'},
+      {key:'created_by',    label:'작성자',     w:'70px', align:'center',
+        render:function(v){return v?'<span style="font-size:13px">'+H.e(v)+'</span>':'<span style="color:var(--tl)">-</span>';}},
+      {key:'created_at',    label:'작성일',     w:'88px', align:'center',
+        render:function(v){return v?'<span style="font-size:13px">'+(v||'').slice(0,10)+'</span>':'<span style="color:var(--tl)">-</span>';}},
       {key:'id',            label:'파일',       w:'58px', align:'center',
         render:function(v,row){
           /* [v2.143] doc_master.file_url(단일파일, v2.131 이전 등록분)도 인식 —
