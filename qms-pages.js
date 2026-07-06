@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.152</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.153</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -5347,114 +5347,122 @@ _dhRender:function(){
    파일이 없는 경우 FM.modal(파일 관리)로 연결
    ─────────────────────────────────────────────────────────────────── */
 _docSplitView:async function(docId, title){
-  /* [v2.152] 문서 열람 — 화면 분할 방식
-     좌측: 기존 목록 유지(너비 축소)
-     우측: 파일 미리보기 패널
+  /* [v2.153] 문서 열람 — pw.innerHTML 전체를 분할 레이아웃으로 교체
+     좌측(45%): 목록 테이블 그대로 유지
+     우측(55%): 파일 미리보기
+     닫기: Nav.go(현재 페이지)로 재진입 → 완전 복원 보장
      파일 소스: doc_master.file_url(구버전) + doc_files 테이블(신버전) 모두 조회 */
+  var w=document.getElementById('pw');
+  if(!w) return;
 
-  /* ① 현재 활성 페이지 판별 → 해당 컨테이너 찾기 */
-  var page=sessionStorage.getItem('qms_page')||'docs';
-  var containerId = page==='rec'?'recTbl':page==='doc_history_home'?'dhTbl':'docListPane';
-  var container=document.getElementById(containerId);
-  if(!container) return;
+  /* ① 현재 페이지 저장 (닫기 시 복원용) */
+  var curPage=sessionStorage.getItem('qms_page')||'docs';
 
-  /* ② 이미 분할된 상태면 기존 패널 제거 후 재열기 */
-  var existPreview=document.getElementById('docPreviewPane');
-  if(existPreview) existPreview.remove();
-  var wrap=container.parentElement;
-
-  /* ③ 좌측 목록 축소 */
-  wrap.style.display='flex';
-  wrap.style.gap='12px';
-  wrap.style.alignItems='flex-start';
-  container.style.flex='0 0 52%';
-  container.style.minWidth='0';
-  container.style.overflowX='auto';
-
-  /* ④ 우측 미리보기 패널 생성 */
-  var panel=document.createElement('div');
-  panel.id='docPreviewPane';
-  panel.style.cssText='flex:1;min-width:0;background:var(--card);border:1px solid var(--brd);'
-    +'border-radius:12px;overflow:hidden;position:sticky;top:12px;max-height:88vh;display:flex;flex-direction:column';
-  panel.innerHTML='<div style="background:linear-gradient(135deg,#1a5fa8,#2563eb);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0">'
-    +'<span style="color:#fff;font-size:13px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 '+H.e(title||'문서 열람')+'</span>'
-    +'<button class="btn bxs" style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;font-size:12px" '
-    +'onclick="Pages._docSplitClose()">✕ 닫기</button>'
-    +'</div>'
-    +'<div id="docPreviewBody" style="flex:1;overflow:auto;padding:0">'
-    +'<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--muted)">⏳ 파일 조회 중...</div>'
-    +'</div>';
-  wrap.appendChild(panel);
-
-  /* ⑤ 파일 URL 조회 — doc_master.file_url + doc_files 테이블 둘 다 */
+  /* ② 파일 URL 조회 — doc_master.file_url + doc_files 둘 다 확인 */
   var fileUrl=null, fileName=null;
   try{
-    /* doc_master에서 먼저 확인 */
-    var docRow=(window._docRows||[]).find(function(r){return Number(r.id)===Number(docId);});
+    var docRow=(window._docRows||window._recRows||[]).find(function(r){
+      return Number(r.id)===Number(docId);
+    });
     if(docRow&&docRow.file_url){fileUrl=docRow.file_url;fileName=docRow.file_name||null;}
-    /* doc_files 테이블 조회 (더 최신 파일이 있으면 우선) */
     if(typeof SB!=='undefined'&&SB.getDocFiles){
       var docFiles=await SB.getDocFiles(Number(docId));
       if(docFiles&&docFiles.length>0){
         var latest=docFiles[docFiles.length-1];
-        fileUrl=latest.url||fileUrl;
-        fileName=latest.name||fileName;
+        if(latest.url){fileUrl=latest.url;fileName=latest.name||fileName;}
       }
     }
-  }catch(e){console.warn('[splitView] 파일 조회 실패:',e);}
+  }catch(e){console.warn('[docSplitView] 파일 조회 실패:',e);}
 
-  /* ⑥ 파일 타입별 미리보기 렌더 */
-  var body=document.getElementById('docPreviewBody');
-  if(!body) return;
-  if(!fileUrl){
-    body.innerHTML='<div style="text-align:center;padding:48px 20px">'
-      +'<div style="font-size:40px;margin-bottom:12px">📭</div>'
-      +'<div style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 파일이 없습니다</div>'
-      +'<div style="font-size:13px;color:var(--muted);margin-bottom:20px">파일 관리에서 문서 파일을 먼저 첨부해 주세요.</div>'
-      +'<button class="btn bpri" onclick="FM.modal(\'doc-'+docId+'\')">📎 파일 관리 열기</button>'
-      +'</div>';
-    return;
-  }
+  /* ③ 파일 타입별 미리보기 HTML 생성 */
   var ext=(fileName||fileUrl||'').split('.').pop().toLowerCase().split('?')[0];
   var imgExts=['jpg','jpeg','png','gif','webp','svg','bmp'];
   var officeExts=['xlsx','xls','docx','doc','pptx','ppt'];
-  var safeUrl=H.e(fileUrl);
+  var safeUrl=H.e(fileUrl||'');
   var safeTitle=H.e(title||fileName||'문서');
-  if(ext==='pdf'){
-    body.innerHTML='<iframe src="'+safeUrl+'" style="width:100%;height:100%;min-height:70vh;border:none" title="'+safeTitle+'"></iframe>';
+  var previewHtml='';
+  if(!fileUrl){
+    previewHtml='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:300px;gap:14px;padding:40px 20px;text-align:center">'
+      +'<div style="font-size:48px">📭</div>'
+      +'<div style="font-size:15px;font-weight:700;color:var(--text)">등록된 파일이 없습니다</div>'
+      +'<div style="font-size:13px;color:var(--muted)">파일 관리에서 문서 파일을 먼저 첨부해 주세요.</div>'
+      +'<button class="btn bpri" onclick="Modal.close&&Modal.close();FM.modal(\'doc-'+docId+'\')">📎 파일 관리 열기</button>'
+      +'</div>';
+  } else if(ext==='pdf'){
+    previewHtml='<iframe src="'+safeUrl+'" style="width:100%;height:100%;border:none;display:block" title="'+safeTitle+'"></iframe>';
   } else if(imgExts.indexOf(ext)>=0){
-    body.innerHTML='<div style="text-align:center;background:#f8fafc;height:100%;min-height:300px;display:flex;align-items:center;justify-content:center;padding:16px">'
-      +'<img src="'+safeUrl+'" alt="'+safeTitle+'" style="max-width:100%;max-height:75vh;object-fit:contain;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.1)">'
+    previewHtml='<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#f8fafc;padding:16px">'
+      +'<img src="'+safeUrl+'" alt="'+safeTitle+'" style="max-width:100%;max-height:85vh;object-fit:contain;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12)">'
       +'</div>';
   } else if(officeExts.indexOf(ext)>=0){
     var encoded=encodeURIComponent(fileUrl);
-    body.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px 0;flex-shrink:0">Google Docs Viewer</div>'
-      +'<iframe src="https://docs.google.com/viewer?url='+encoded+'&embedded=true" '
-      +'style="width:100%;height:75vh;border:none" title="'+safeTitle+'"></iframe>';
+    previewHtml='<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px;background:var(--bg2)">Google Docs Viewer를 통해 표시됩니다</div>'
+      +'<iframe src="https://docs.google.com/viewer?url='+encoded+'&embedded=true" style="width:100%;height:calc(100% - 28px);border:none;display:block" title="'+safeTitle+'"></iframe>';
   } else {
-    body.innerHTML='<div style="text-align:center;padding:40px 20px">'
-      +'<div style="font-size:40px;margin-bottom:12px">📄</div>'
-      +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+H.e(fileName||'파일')+'</div>'
-      +'<div style="font-size:12px;color:var(--muted);margin-bottom:20px">이 파일 형식('+H.e(ext||'알 수 없음')+')은 브라우저에서 직접 볼 수 없습니다.</div>'
+    previewHtml='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:40px 20px;text-align:center">'
+      +'<div style="font-size:48px">📄</div>'
+      +'<div style="font-size:14px;font-weight:700;color:var(--text)">'+H.e(fileName||'파일')+'</div>'
+      +'<div style="font-size:12px;color:var(--muted)">이 파일 형식('+H.e(ext)+')은 브라우저에서 직접 볼 수 없습니다.</div>'
       +'<a href="'+safeUrl+'" download target="_blank" class="btn bpri">⬇ 파일 다운로드</a>'
       +'</div>';
   }
+
+  /* ④ pw.innerHTML을 분할 레이아웃으로 완전 교체
+     - 좌측(45%): 목록 테이블(Tbl.render 결과를 그대로 복원)
+     - 우측(55%): 미리보기 패널(sticky, 전체 높이) */
+  w.innerHTML=
+    '<div style="display:flex;gap:14px;align-items:flex-start;min-height:0">'+
+      /* 좌측 목록 */
+      '<div id="splitListPane" style="flex:0 0 45%;min-width:0;overflow-x:auto">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--text)">📋 문서 목록</div>'+
+          '<button class="btn bout bsm" onclick="Pages._docSplitClose(\''+curPage+'\')">← 목록으로</button>'+
+        '</div>'+
+        '<div id="splitListTbl"></div>'+
+      '</div>'+
+      /* 우측 미리보기 */
+      '<div style="flex:1;min-width:0;position:sticky;top:12px">'+
+        '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:88vh">'+
+          /* 헤더 */
+          '<div style="background:linear-gradient(135deg,#1a5fa8 0%,#2563eb 100%);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">'+
+            '<span style="font-size:20px">📄</span>'+
+            '<div style="flex:1;min-width:0">'+
+              '<div style="color:#fff;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safeTitle+'</div>'+
+              (fileUrl?'<div style="color:rgba(255,255,255,.7);font-size:11px">'+H.e(fileName||ext.toUpperCase())+'</div>':'')+
+            '</div>'+
+            (fileUrl?'<a href="'+safeUrl+'" download target="_blank" class="btn bxs" style="background:rgba(255,255,255,.2);color:#fff;font-size:11px;padding:3px 10px;border:1px solid rgba(255,255,255,.3)">⬇ 다운로드</a>':'')+
+            '<button class="btn bxs" style="background:rgba(255,255,255,.15);color:#fff;padding:3px 10px;font-size:12px;border:1px solid rgba(255,255,255,.3)" '+
+              'onclick="Pages._docSplitClose(\''+curPage+'\')">✕ 닫기</button>'+
+          '</div>'+
+          /* 미리보기 본문 */
+          '<div id="docSplitPreview" style="flex:1;overflow:auto;min-height:0">'+
+            previewHtml+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+
+  /* ⑤ 좌측 목록 재렌더 — splitListTbl 안에 각 페이지용 div id를 미리 생성 후 렌더
+     _recRender/_dhRender/_docRender가 해당 id를 찾아 렌더하므로 id가 DOM에 있어야 함 */
+  var slot=document.getElementById('splitListTbl');
+  if(!slot) return;
+  if(curPage==='rec'){
+    slot.innerHTML='<div id="recTbl"></div>';
+    Pages._recRender(window._recRows||[]);
+  } else if(curPage==='doc_history_home'){
+    slot.innerHTML='<div id="dhTbl"></div>';
+    Pages._dhRender();
+  } else {
+    slot.innerHTML='<div id="docListPane"><div id="docTbl"></div></div>';
+    Pages._docRender(window._docRows||[]);
+  }
 },
 
-/* [v2.152] 열람 패널 닫기 */
-_docSplitClose(){
-  var panel=document.getElementById('docPreviewPane');
-  if(panel) panel.remove();
-  /* 좌측 목록 원복 */
-  ['docListPane','recTbl','dhTbl'].forEach(function(id){
-    var el=document.getElementById(id);
-    if(el){el.style.flex='';el.style.minWidth='';el.style.overflowX='';}
-  });
-  var wrap=document.querySelector('#docListPane')?.parentElement
-    ||document.querySelector('#recTbl')?.parentElement
-    ||document.querySelector('#dhTbl')?.parentElement;
-  if(wrap){wrap.style.display='';wrap.style.gap='';wrap.style.alignItems='';}
+/* [v2.153] 문서 열람 닫기 — Nav.go로 현재 페이지 재진입해 완전 복원 */
+_docSplitClose(page){
+  Nav.go(page||sessionStorage.getItem('qms_page')||'docs');
 },
+
 
 
 
