@@ -877,10 +877,17 @@ const SB={
   /* ════ SPC 통계관리 [v2.154 신규] ════
      spc_items: 관리 항목 (품목/공정/규격 USL·LSL·Target)
      spc_subgroups: 서브그룹 측정 데이터 (날짜별 측정값 JSON 배열) */
+  /* [v2.155] getSpcItems — 400 에러 시 RLS 원인 Toast 안내 추가 */
   async getSpcItems(){
     if(!_sb) return DB.spcItems||[];
     const {data,error}=await _sb.from('spc_items').select('*').order('created_at',{ascending:false});
-    if(error){console.warn('[SB] spc_items 조회 실패:',error.message);return[];}
+    if(error){
+      console.warn('[SB] spc_items 조회 실패:',error.message);
+      if(error.message&&(error.code==='42501'||error.status===400||error.message.includes('row-level security'))){
+        Toast.show('spc_items 테이블 RLS를 비활성화 해주세요. (SQL: ALTER TABLE spc_items DISABLE ROW LEVEL SECURITY)','warn',8000);
+      }
+      return[];
+    }
     return data||[];
   },
   async addSpcItem(row){

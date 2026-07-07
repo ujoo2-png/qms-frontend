@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.154</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.155</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -15281,19 +15281,34 @@ _spcParetoRender(inspData,fromDate,inspType){
 _spcItemForm(row=null){
   const isEdit=!!row;
   const g=k=>H.e(row?.[k]??'');
+  /* [v2.155] DB.items에서 datalist 옵션 생성 — 품목코드 자연어 검색용
+     최대 300개로 제한(성능). 품목코드 선택 시 품목명 자동 채움 */
+  const itemList=(DB.items||[]).slice(0,300).map(it=>
+    `<option value="${H.e(it.item_code||'')}" data-name="${H.e(it.item_name||'')}">`
+  ).join('');
   Modal.open({
     title:isEdit?'✏️ SPC 관리 항목 수정':'+ SPC 관리 항목 등록',
     size:'mmd',
     foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
           <button class="btn bpri btn-f8" onclick="Pages._spcItemSave(${isEdit?row.id:'null'})">💾 저장 <span class="kbd">F8</span></button>`,
     body:`<div class="fg2" style="padding:4px 0">
+      <datalist id="spiCodeList">${itemList}</datalist>
       <div class="fgroup">
-        <label class="fl">품목코드</label>
-        <input class="fc" id="spiCode" value="${g('item_code')}" placeholder="예) ITEM-001">
+        <label class="fl">품목코드 <span style="font-size:11px;color:var(--muted)">(없으면 품목명 직접 입력)</span></label>
+        <input class="fc" id="spiCode" value="${g('item_code')}" placeholder="코드 입력 또는 검색..."
+          list="spiCodeList"
+          oninput="(function(v){
+            var found=(DB.items||[]).find(function(it){return it.item_code===v;});
+            if(found){
+              var nameEl=document.getElementById('spiName');
+              if(nameEl&&!nameEl.value) nameEl.value=found.item_name||'';
+            }
+          })(this.value)">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">🔍 코드를 입력하면 품목명이 자동으로 불러와집니다.</div>
       </div>
       <div class="fgroup">
         <label class="fl req"><b style="color:#e11d48">품목명 *</b></label>
-        <input class="fc" id="spiName" value="${g('item_name')}" placeholder="예) 브라켓 두께">
+        <input class="fc" id="spiName" value="${g('item_name')}" placeholder="예) 브라켓 두께 (품목코드 선택 시 자동입력)">
       </div>
       <div class="fgroup">
         <label class="fl req"><b style="color:#e11d48">공정 *</b></label>
