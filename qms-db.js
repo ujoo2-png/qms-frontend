@@ -877,19 +877,18 @@ const SB={
   /* ════ SPC 통계관리 [v2.154 신규] ════
      spc_items: 관리 항목 (품목/공정/규격 USL·LSL·Target)
      spc_subgroups: 서브그룹 측정 데이터 (날짜별 측정값 JSON 배열) */
-  /* [v2.155] getSpcItems — 400 에러 시 RLS 원인 Toast 안내 추가 */
+    /* [v2.157] getSpcItems — 에러 감지 단순화 (status 체크 제거, code 기반만 유지) */
   async getSpcItems(){
     if(!_sb) return DB.spcItems||[];
     const {data,error}=await _sb.from('spc_items').select('*').order('created_at',{ascending:false});
     if(error){
-      console.warn('[SB] spc_items 조회 실패:',error.message);
-      if(error.message&&(error.code==='42501'||error.status===400||error.message.includes('row-level security'))){
-        Toast.show('spc_items 테이블 RLS를 비활성화 해주세요. (SQL: ALTER TABLE spc_items DISABLE ROW LEVEL SECURITY)','warn',8000);
-      }
+      console.warn('[SB] spc_items 조회 실패:',error.message,'code:',error.code);
+      Toast.show('spc_items 조회 실패: '+error.message,'err',5000);
       return[];
     }
     return data||[];
   },
+  /* [v2.157] addSpcItem — .select('id').single() 제거 (anon SELECT 차단 패턴, 다른 add* 함수들과 동일) */
   async addSpcItem(row){
     if(!_sb){if(!DB.spcItems)DB.spcItems=[];const id=Date.now();DB.spcItems.push({id,...row});return{ok:true,id};}
     const allowed={
@@ -900,9 +899,11 @@ const SB={
       target:row.target!=null?Number(row.target):null,
       subgroup_size:row.subgroup_size||5, unit:row.unit||'', note:row.note||'',
     };
-    const {data,error}=await _sb.from('spc_items').insert(allowed).select('id').single();
+    const {error}=await _sb.from('spc_items').insert(allowed);
     if(error){Toast.show('SPC 항목 저장 실패: '+error.message,'err');return{ok:false};}
-    return{ok:true,id:data?.id};
+    if(!DB.spcItems)DB.spcItems=[];
+    DB.spcItems.push({id:Date.now(),...allowed});
+    return{ok:true};
   },
   async updateSpcItem(id,patch){
     if(!_sb){const r=(DB.spcItems||[]).find(r=>r.id===id);if(r)Object.assign(r,patch);return{ok:true};}
@@ -922,6 +923,7 @@ const SB={
     if(error){console.warn('[SB] spc_subgroups 조회 실패:',error.message);return[];}
     return data||[];
   },
+  /* [v2.157] addSpcSubgroup — .select('id').single() 제거 (addSpcItem과 동일한 패턴 통일) */
   async addSpcSubgroup(row){
     if(!_sb){if(!DB.spcSubgroups)DB.spcSubgroups=[];const id=Date.now();DB.spcSubgroups.push({id,...row});return{ok:true,id};}
     const allowed={
@@ -930,9 +932,9 @@ const SB={
       values:typeof row.values==='string'?row.values:JSON.stringify(row.values),
       memo:row.memo||'',
     };
-    const {data,error}=await _sb.from('spc_subgroups').insert(allowed).select('id').single();
+    const {error}=await _sb.from('spc_subgroups').insert(allowed);
     if(error){Toast.show('측정 데이터 저장 실패: '+error.message,'err');return{ok:false};}
-    return{ok:true,id:data?.id};
+    return{ok:true};
   },
   async deleteSpcSubgroup(id){
     if(!_sb){DB.spcSubgroups=(DB.spcSubgroups||[]).filter(r=>r.id!==id);return{ok:true};}
