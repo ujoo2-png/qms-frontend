@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.158</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.159</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -14876,7 +14876,15 @@ _spcConst:{
 /* ── SPC 공통 — 항목 select 옵션 생성 ── */
 _spcItemOpts(items, selId){
   if(!items||!items.length) return '<option value="">등록된 항목 없음</option>';
-  return items.map(it=>`<option value="${it.id}" ${it.id==selId?'selected':''}>${H.e(it.process)} — ${H.e(it.char_name||it.item_name)} (${H.e(it.unit||'')})</option>`).join('');
+  return items.map(it=>{
+    /* [v2.159] 품목코드 · 품목명 — 관리특성 (단위) 포맷으로 표시 */
+    const code=it.item_code?it.item_code+' · ':'';
+    const name=it.item_name||'';
+    const char=it.char_name||'';
+    const unit=it.unit?` (${it.unit})`:'';
+    const label=`${code}${name}${name&&char?' — ':''}${char}${unit}`;
+    return `<option value="${it.id}" ${it.id==selId?'selected':''}>${H.e(label)}</option>`;
+  }).join('');
 },
 
 /* ══════════════════════════════════════════════════
@@ -15178,102 +15186,157 @@ async _spcCpkRender(itemId){
    3. 파레토 분석 — inspections 실데이터 연계
    ══════════════════════════════════════════════════ */
 async spc_pareto(){
+  /* [v2.159] 파레토 분석 — 검사 기간(시작~종료), 공급사, 불량유형 필터 추가 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>검사 데이터 로딩 중...</div></div>';
-
-  /* inspections 테이블에서 불합격 데이터 집계 */
   let inspData=[];
   try{inspData=await SB.getInspections();}catch(e){inspData=DB.inspections||[];}
+  window._spcInspData=inspData;
 
-  /* 기간 필터용 — 최근 6개월 기본 */
-  const today=new Date();
-  const sixMoAgo=new Date(today);sixMoAgo.setMonth(sixMoAgo.getMonth()-6);
+  const today=new Date().toISOString().slice(0,10);
+  const sixMoAgo=new Date(); sixMoAgo.setMonth(sixMoAgo.getMonth()-6);
   const fromDate=sixMoAgo.toISOString().slice(0,10);
 
-  window._spcInspData=inspData;
-  Pages._spcParetoRender(inspData,fromDate,'all');
+  Pages._spcParetoRender(inspData,{from:fromDate,to:today,type:'all',vendor:'',defect:''});
 },
 
-_spcParetoRender(inspData,fromDate,inspType){
+/* [v2.159] _spcParetoRender — 필터 객체 방식으로 전면 재작성
+   filters: {from, to, type, vendor, defect}
+   - from/to: 검사일 범위
+   - type: 검사유형 (수입/공정/출하/all)
+   - vendor: 공급사 키워드 (부분일치)
+   - defect: 불량유형 키워드 (note/item_name 부분일치) */
+_spcParetoRender(inspData, filters){
   const w=document.getElementById('pw');
+  const f=filters||{};
+  const from=f.from||''; const to=f.to||'';
+  const type=f.type||'all'; const vendor=(f.vendor||'').trim();
+  const defect=(f.defect||'').trim();
 
-  /* 필터 적용 */
-  let filtered=inspData.filter(r=>(r.insp_date||'')>=fromDate&&(r.fail_qty||0)>0);
-  if(inspType&&inspType!=='all') filtered=filtered.filter(r=>r.type===inspType);
+  /* ── 필터 적용 ── */
+  let filtered=inspData.filter(r=>{
+    if((r.fail_qty||0)<=0) return false;
+    if(from&&(r.insp_date||'')<from) return false;
+    if(to&&(r.insp_date||'')>to) return false;
+    if(type&&type!=='all'&&r.type!==type) return false;
+    if(vendor&&!(r.vendor||'').toLowerCase().includes(vendor.toLowerCase())) return false;
+    if(defect){
+      const haystack=((r.note||'')+(r.item_name||'')).toLowerCase();
+      if(!haystack.includes(defect.toLowerCase())) return false;
+    }
+    return true;
+  });
 
-  /* 불량 유형 집계 — item_name + note 기반 */
+  /* ── 불량 유형 집계 ── */
+  /* 우선순위: note(불량유형 직접입력) → item_name(품목) → '기타' */
   const catMap={};
   filtered.forEach(r=>{
-    /* note에서 불량유형 키워드 추출, 없으면 item_name으로 분류 */
     const raw=(r.note||r.item_name||'기타').trim()||'기타';
-    const cat=raw.length>12?raw.slice(0,12)+'…':raw;
+    const cat=raw.length>14?raw.slice(0,14)+'…':raw;
     if(!catMap[cat])catMap[cat]=0;
     catMap[cat]+=(r.fail_qty||0);
   });
-
   const sorted=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,15);
   const total=sorted.reduce((s,[,n])=>s+n,0)||1;
   let cum=0;
   const rows=sorted.map(([cat,cnt])=>{cum+=cnt;return{cat,cnt,cum,pct:Math.round(cum/total*100)};});
   const maxN=sorted[0]?.[1]||1;
 
-  const typeOpts=['all','수입','공정','출하'].map(t=>`<option value="${t}" ${t===inspType?'selected':''}>${t==='all'?'전체 유형':t+'검사'}</option>`).join('');
+  /* ── 공급사 목록 (드롭다운) ── */
+  const vendors=[...new Set(inspData.map(r=>r.vendor||'').filter(Boolean))].sort();
+  const typeOpts=['all','수입','공정','출하'].map(t=>
+    `<option value="${t}" ${t===type?'selected':''}>${t==='all'?'전체 유형':t+'검사'}</option>`
+  ).join('');
+  const vendorOpts=`<option value="">전체 공급사</option>`
+    +vendors.map(v=>`<option value="${H.e(v)}" ${v===vendor?'selected':''}>${H.e(v)}</option>`).join('');
+
+  const mkFilter=`Pages._spcParetoRender(window._spcInspData||[],{
+    from:document.getElementById('pFrom')?.value||'',
+    to:document.getElementById('pTo')?.value||'',
+    type:document.getElementById('pType')?.value||'all',
+    vendor:document.getElementById('pVendor')?.value||'',
+    defect:document.getElementById('pDefect')?.value||''
+  })`;
 
   w.innerHTML=`
   <div class="ph">
     <div><div class="ptit">📊 파레토 분석</div>
-         <div class="psub">불량 유형별 빈도 분석 — 80/20 법칙 (inspections 실데이터)</div></div>
+         <div class="psub">불량 유형별 빈도 분석 — 80/20 법칙 (검사 실데이터)</div></div>
   </div>
-  <div class="tbar">
-    <input type="date" class="fsel" id="paretoFrom" value="${fromDate}"
-      onchange="Pages._spcParetoRender(window._spcInspData||[],this.value,document.getElementById('paretoType')?.value||'all')">
-    <select class="fsel" id="paretoType" onchange="Pages._spcParetoRender(window._spcInspData||[],document.getElementById('paretoFrom')?.value||'${fromDate}',this.value)">
-      ${typeOpts}
-    </select>
-    <span style="font-size:13px;color:var(--muted)">기준일 이후 데이터</span>
+  <!-- [v2.159] 검색 조건: 시작일~종료일 + 검사유형 + 공급사 + 불량유형 -->
+  <div style="background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:14px 18px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">검사일(시작)</label>
+        <input type="date" class="fc" id="pFrom" value="${from}" onchange="${mkFilter}">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">검사일(종료)</label>
+        <input type="date" class="fc" id="pTo" value="${to}" onchange="${mkFilter}">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">검사 유형</label>
+        <select class="fc" id="pType" onchange="${mkFilter}">${typeOpts}</select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">공급사</label>
+        <select class="fc" id="pVendor" onchange="${mkFilter}">${vendorOpts}</select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">불량유형 키워드</label>
+        <input class="fc" id="pDefect" value="${H.e(defect)}" placeholder="예) 치수, 외관, 재료..."
+          oninput="${mkFilter}">
+      </div>
+      <div style="align-self:end">
+        <button class="btn bout bsm" onclick="Pages._spcParetoRender(window._spcInspData||[],{from:'',to:'',type:'all',vendor:'',defect:''})">🔄 초기화</button>
+      </div>
+    </div>
   </div>
-  ${!sorted.length?`<div class="card"><div class="es" style="padding:40px">
-    <div class="es-icon">📊</div>
-    <div>해당 기간에 불합격 검사 데이터가 없습니다.</div>
-  </div></div>`:`
-  <div class="stat-dash" style="margin-bottom:16px">
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">⚠️</div>
-      <div><div class="sd-val">${total}</div><div class="sd-lbl">총 불량수</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🏆</div>
-      <div><div class="sd-val" style="font-size:13px">${rows[0]?.cat||'-'}</div><div class="sd-lbl">1위 불량유형</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📉</div>
-      <div><div class="sd-val">${total?Math.round((rows[0]?.cnt||0)/total*100):0}%</div><div class="sd-lbl">1위 점유율</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#f0fdf4;color:#16a34a">📋</div>
-      <div><div class="sd-val">${filtered.length}</div><div class="sd-lbl">대상 검사건수</div></div></div>
-  </div>
-  <div class="card">
-    <div style="font-size:13px;font-weight:700;margin-bottom:16px;color:var(--text)">📊 파레토 차트</div>
-    <div style="display:flex;align-items:flex-end;gap:2px;height:160px;padding:0 8px;margin-bottom:4px">
-      ${rows.map((d,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center">
-        <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:3px">${d.cnt}</div>
-        <div style="width:88%;background:${i<3?'#3b82c6':'#94a3b8'};height:${Math.round(d.cnt/maxN*130)}px;border-radius:3px 3px 0 0;min-height:2px"></div>
-        ${d.pct<=80?`<div style="width:88%;height:3px;background:#ef4444;margin-top:1px" title="누적 80% 이내"></div>`:''}
-      </div>`).join('')}
+  ${!sorted.length
+    ?`<div class="card"><div class="es" style="padding:40px">
+        <div class="es-icon">📊</div>
+        <div>해당 조건에 불합격 검사 데이터가 없습니다.</div>
+      </div></div>`
+    :`<div class="stat-dash" style="margin-bottom:14px">
+      <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">⚠️</div>
+        <div><div class="sd-val">${total}</div><div class="sd-lbl">총 불량수</div></div></div>
+      <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🏆</div>
+        <div><div class="sd-val" style="font-size:13px;font-weight:700">${rows[0]?.cat||'-'}</div><div class="sd-lbl">1위 불량유형</div></div></div>
+      <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📉</div>
+        <div><div class="sd-val">${total?Math.round((rows[0]?.cnt||0)/total*100):0}%</div><div class="sd-lbl">1위 점유율</div></div></div>
+      <div class="sd-card"><div class="sd-icon" style="background:#f0fdf4;color:#16a34a">📋</div>
+        <div><div class="sd-val">${filtered.length}</div><div class="sd-lbl">대상 검사건수</div></div></div>
     </div>
-    <div style="display:flex;padding:0 8px;border-top:1px solid var(--brd)">
-      ${rows.map(d=>`<div style="flex:1;text-align:center;font-size:10px;color:var(--muted);padding-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${H.e(d.cat)}">${H.e(d.cat)}</div>`).join('')}
-    </div>
-    <div style="margin-top:14px">
-      ${rows.map(d=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:13px">
-        <div style="width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="${H.e(d.cat)}">${H.e(d.cat)}</div>
-        <div style="flex:1;background:#e5e7eb;border-radius:999px;height:10px">
-          <div style="background:${d.pct<=80?'#ef4444':'#94a3b8'};width:${Math.round(d.cnt/maxN*100)}%;height:100%;border-radius:999px"></div>
-        </div>
-        <div style="width:30px;text-align:right;font-weight:700">${d.cnt}</div>
-        <div style="width:44px;text-align:right;color:var(--muted)">${Math.round(d.cnt/total*100)}%</div>
-        <div style="width:56px;text-align:right;font-weight:700;color:${d.pct<=80?'#ef4444':'#94a3b8'}">누적${d.pct}%</div>
-      </div>`).join('')}
-    </div>
-    <div style="margin-top:12px;padding:10px 14px;background:#eff6ff;border-radius:8px;font-size:12px;color:#1d4ed8">
-      💡 상위 ${rows.filter(d=>d.pct<=80).length}개 유형이 전체 불량의 ${rows.filter(d=>d.pct<=80).slice(-1)[0]?.pct||100}%를 차지합니다.
-    </div>
-  </div>`}`;
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:16px;color:var(--text)">📊 파레토 차트</div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:160px;padding:0 8px;margin-bottom:4px">
+        ${rows.map((d,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center">
+          <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:3px">${d.cnt}</div>
+          <div style="width:88%;background:${i<3?'#3b82c6':'#94a3b8'};height:${Math.round(d.cnt/maxN*130)}px;border-radius:3px 3px 0 0;min-height:2px"></div>
+          ${d.pct<=80?`<div style="width:88%;height:3px;background:#ef4444;margin-top:1px" title="누적 80% 이내"></div>`:''}
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;padding:0 8px;border-top:1px solid var(--brd)">
+        ${rows.map(d=>`<div style="flex:1;text-align:center;font-size:10px;color:var(--muted);padding-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${H.e(d.cat)}">${H.e(d.cat)}</div>`).join('')}
+      </div>
+      <div style="margin-top:14px">
+        ${rows.map(d=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:13px">
+          <div style="width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="${H.e(d.cat)}">${H.e(d.cat)}</div>
+          <div style="flex:1;background:#e5e7eb;border-radius:999px;height:10px">
+            <div style="background:${d.pct<=80?'#ef4444':'#94a3b8'};width:${Math.round(d.cnt/maxN*100)}%;height:100%;border-radius:999px"></div>
+          </div>
+          <div style="width:36px;text-align:right;font-weight:700">${d.cnt}</div>
+          <div style="width:44px;text-align:right;color:var(--muted)">${Math.round(d.cnt/total*100)}%</div>
+          <div style="width:56px;text-align:right;font-weight:700;color:${d.pct<=80?'#ef4444':'#94a3b8'}">누적${d.pct}%</div>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:12px;padding:10px 14px;background:#eff6ff;border-radius:8px;font-size:12px;color:#1d4ed8">
+        💡 상위 ${rows.filter(d=>d.pct<=80).length}개 유형이 전체 불량의 ${rows.filter(d=>d.pct<=80).slice(-1)[0]?.pct||100}%를 차지합니다.
+        <span style="margin-left:12px;color:#64748b">(불량유형은 검사 비고란 기준으로 집계됩니다)</span>
+      </div>
+    </div>`}`;
 },
+
 
 /* ══════════════════════════════════════════════════
    4. SPC 관리 항목 등록/수정 폼
