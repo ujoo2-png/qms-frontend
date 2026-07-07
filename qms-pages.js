@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.155</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.156</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -15281,34 +15281,29 @@ _spcParetoRender(inspData,fromDate,inspType){
 _spcItemForm(row=null){
   const isEdit=!!row;
   const g=k=>H.e(row?.[k]??'');
-  /* [v2.155] DB.items에서 datalist 옵션 생성 — 품목코드 자연어 검색용
-     최대 300개로 제한(성능). 품목코드 선택 시 품목명 자동 채움 */
-  const itemList=(DB.items||[]).slice(0,300).map(it=>
-    `<option value="${H.e(it.item_code||'')}" data-name="${H.e(it.item_name||'')}">`
-  ).join('');
   Modal.open({
     title:isEdit?'✏️ SPC 관리 항목 수정':'+ SPC 관리 항목 등록',
     size:'mmd',
     foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
           <button class="btn bpri btn-f8" onclick="Pages._spcItemSave(${isEdit?row.id:'null'})">💾 저장 <span class="kbd">F8</span></button>`,
     body:`<div class="fg2" style="padding:4px 0">
-      <datalist id="spiCodeList">${itemList}</datalist>
+      <!-- [v2.156] 품목코드: 실시간 필터링 datalist(30개) + SearchPop 버튼 -->
+      <datalist id="spiCodeList"></datalist>
       <div class="fgroup">
         <label class="fl">품목코드 <span style="font-size:11px;color:var(--muted)">(없으면 품목명 직접 입력)</span></label>
-        <input class="fc" id="spiCode" value="${g('item_code')}" placeholder="코드 입력 또는 검색..."
-          list="spiCodeList"
-          oninput="(function(v){
-            var found=(DB.items||[]).find(function(it){return it.item_code===v;});
-            if(found){
-              var nameEl=document.getElementById('spiName');
-              if(nameEl&&!nameEl.value) nameEl.value=found.item_name||'';
-            }
-          })(this.value)">
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">🔍 코드를 입력하면 품목명이 자동으로 불러와집니다.</div>
+        <div style="display:flex;gap:6px">
+          <input class="fc" id="spiCode" value="${g('item_code')}" placeholder="코드 입력 또는 검색..."
+            list="spiCodeList" autocomplete="off"
+            oninput="Pages._spcCodeFilter(this.value)">
+          <button type="button" class="btn bout bsm" style="white-space:nowrap"
+            title="전체 품목에서 검색"
+            onclick="Pages._spcSearchItem()">🔍 검색</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">🔍 코드 입력 시 자동완성 · 검색 버튼으로 전체 품목 조회 가능</div>
       </div>
       <div class="fgroup">
-        <label class="fl req"><b style="color:#e11d48">품목명 *</b></label>
-        <input class="fc" id="spiName" value="${g('item_name')}" placeholder="예) 브라켓 두께 (품목코드 선택 시 자동입력)">
+        <label class="fl">품목명 <span style="font-size:11px;color:var(--muted)">(코드 선택 시 자동입력)</span></label>
+        <input class="fc" id="spiName" value="${g('item_name')}" placeholder="코드 선택 시 자동입력 또는 직접 입력">
       </div>
       <div class="fgroup">
         <label class="fl req"><b style="color:#e11d48">공정 *</b></label>
@@ -15347,17 +15342,51 @@ _spcItemForm(row=null){
     </div>`,
   });
 },
+
+/* [v2.156] 품목 검색 팝업 열기 — SearchPop.items.onRow를 spc 전용으로 임시 설정 */
+_spcSearchItem(){
+  if(!SearchPop._cfg||!SearchPop._cfg.items){Toast.show('품목 검색 설정이 없습니다.','warn');return;}
+  SearchPop._cfg.items.onRow=function(r){
+    var codeEl=document.getElementById('spiCode');
+    var nameEl=document.getElementById('spiName');
+    if(codeEl) codeEl.value=r.item_code||'';
+    if(nameEl) nameEl.value=r.item_name||'';
+    SearchPop.close();
+  };
+  SearchPop.open('items');
+},
+/* [v2.156] 품목코드 실시간 필터링 — 입력값으로 DB.items 전체(37,366건) 검색
+   상위 30개만 datalist에 교체, 완전 일치 시 품목명 자동채움 */
+_spcCodeFilter(val){
+  const dl=document.getElementById('spiCodeList');
+  if(!dl) return;
+  if(!val||val.length<1){dl.innerHTML='';return;}
+  const lower=val.toLowerCase();
+  const matched=(DB.items||[]).filter(it=>
+    (it.item_code||'').toLowerCase().includes(lower)||
+    (it.item_name||'').toLowerCase().includes(lower)
+  ).slice(0,30);
+  dl.innerHTML=matched.map(it=>
+    `<option value="${H.e(it.item_code||'')}">${H.e(it.item_code||'')} — ${H.e(it.item_name||'')}</option>`
+  ).join('');
+  /* 완전 일치 시 품목명 자동채움 (덮어쓰기 허용) */
+  const exact=(DB.items||[]).find(it=>it.item_code===val);
+  if(exact){
+    const nameEl=document.getElementById('spiName');
+    if(nameEl) nameEl.value=exact.item_name||'';
+  }
+},
 async _spcItemSave(editId){
   const g=id=>(document.getElementById(id)?.value||'').trim();
   const name=g('spiName'), process=g('spiProcess'), charN=g('spiChar');
   const usl=g('spiUsl'), lsl=g('spiLsl');
-  if(!name){Toast.show('품목명을 입력하세요.','warn');return;}
+  /* [v2.156] 품목명 필수 → 선택(코드 없어도 직접 입력 허용, 코드만 있어도 가능) */
   if(!process){Toast.show('공정을 입력하세요.','warn');return;}
   if(!charN){Toast.show('관리특성을 입력하세요.','warn');return;}
   if(!usl||!lsl){Toast.show('USL과 LSL을 입력하세요.','warn');return;}
   if(parseFloat(usl)<=parseFloat(lsl)){Toast.show('USL은 LSL보다 커야 합니다.','warn');return;}
   const row={
-    item_code:g('spiCode')||null, item_name:name, process,
+    item_code:g('spiCode')||null, item_name:name||g('spiCode')||'', process,
     char_name:charN, spec_upper:parseFloat(usl), spec_lower:parseFloat(lsl),
     target:g('spiTarget')?parseFloat(g('spiTarget')):null,
     subgroup_size:parseInt(document.getElementById('spiN')?.value||5),
@@ -15369,9 +15398,12 @@ async _spcItemSave(editId){
   if(!res?.ok) return;
   Toast.show(editId&&editId!='null'?'항목이 수정되었습니다.':'항목이 등록되었습니다.','ok');
   Modal.close();
-  /* 현재 페이지 새로고침 */
-  const cur=sessionStorage.getItem('qms_page')||'spc_chart';
-  if(cur==='spc_cpk') Pages.spc_cpk(); else Pages.spc_chart();
+  /* [v2.156] 복귀 버그 수정: spc_items 페이지에서 등록 시 spc_chart로 튕기던 문제 수정
+     spc_items/spc_chart/spc_cpk 세 케이스 모두 처리 */
+  const cur=sessionStorage.getItem('qms_page')||'spc_items';
+  if(cur==='spc_cpk') Pages.spc_cpk();
+  else if(cur==='spc_items') Pages.spc_items();
+  else Pages.spc_chart();
 },
 _spcItemEdit(itemId){
   const item=(window._spcItems||[]).find(it=>it.id===Number(itemId));
