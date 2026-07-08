@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.160</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.162</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -14803,53 +14803,170 @@ _delivRefresh(){
 Object.assign(Pages,{
 /* [v2.154] SPC 관리 항목 관리 페이지 */
 async spc_items(){
+  /* [v2.161] SPC 관리 항목 — 등록일/작성자 컬럼 추가, 접이식 인라인 검색 패널(F3)
+     검색 조건: 등록일(시작~종료), 작성자, 품목코드, 품목명, 공정, 관리특성 */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="es"><div class="es-icon">⏳</div><div>로딩 중...</div></div>';
   const items=await SB.getSpcItems();
   window._spcItems=items;
+  window._spcItemSearchOpen=false; /* 검색 패널 열림 상태 */
+
+  const render=(list)=>{
+    Tbl.render({
+      el:'#spcItemTbl',
+      cols:[
+        {key:'item_code', label:'품목코드', w:'90px',
+          render:v=>v?`<span style="font-family:monospace;font-size:12px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+        {key:'item_name', label:'품목명', w:'*',
+          render:v=>`<span style="font-weight:600">${H.e(v)}</span>`},
+        {key:'process',   label:'공정',   w:'90px'},
+        {key:'char_name', label:'관리특성', w:'90px'},
+        {key:'spec_upper',label:'USL', w:'66px', align:'right',
+          render:v=>`<span style="font-family:monospace;color:#dc2626;font-size:12px">${v??'-'}</span>`},
+        {key:'spec_lower',label:'LSL', w:'66px', align:'right',
+          render:v=>`<span style="font-family:monospace;color:#2563eb;font-size:12px">${v??'-'}</span>`},
+        {key:'target',    label:'Target', w:'60px', align:'right',
+          render:v=>v!=null?`<span style="font-family:monospace;font-size:12px">${v}</span>`:'<span style="color:var(--tl)">-</span>'},
+        {key:'subgroup_size',label:'n', w:'36px', align:'center'},
+        {key:'unit',      label:'단위', w:'44px', align:'center'},
+        /* [v2.161] 등록일 컬럼 추가 */
+        {key:'created_at',label:'등록일', w:'88px', align:'center',
+          render:v=>v?`<span style="font-size:12px;color:var(--muted)">${(v||'').slice(0,10)}</span>`:'<span style="color:var(--tl)">-</span>'},
+        /* [v2.161] 작성자 컬럼 추가 */
+        {key:'created_by',label:'작성자', w:'72px', align:'center',
+          render:v=>v?`<span style="font-size:12px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+        {key:'id', label:'관리도', w:'56px', align:'center',
+          render:v=>`<button class="btn bxs bblu bsm" title="관리도로 이동"
+            onclick="event.stopPropagation();Nav.go('spc_chart');
+              setTimeout(()=>{const s=document.getElementById('spcChartSel');
+              if(s){s.value=${v};Pages._spcChartRender(${v});}},500)">📈</button>`},
+      ],
+      data:list,
+      onRow:row=>Pages._spcItemForm(row),
+      onDel:async(ids)=>{
+        if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
+        Modal.confirm({title:'🗑️ 항목 삭제',
+          msg:`<b>${ids.length}건</b>의 관리 항목과 연결된 모든 측정 데이터가 삭제됩니다.`,
+          danger:true,
+          onOk:async()=>{
+            for(const id of ids){await SB.deleteSpcItem(id);}
+            window._spcItems=(window._spcItems||[]).filter(it=>!ids.includes(it.id));
+            Toast.show('삭제되었습니다.','ok');Modal.close();Pages.spc_items();
+          }
+        });
+      }
+    });
+  };
+
+  /* 검색 필터 적용 함수 */
+  const applyFilter=()=>{
+    const sv=id=>(document.getElementById(id)?.value||'').trim().toLowerCase();
+    const dateFrom=document.getElementById('spiFrom')?.value||'';
+    const dateTo  =document.getElementById('spiTo')?.value||'';
+    const author  =sv('spiAuthor');
+    const code    =sv('spiSCode');
+    const name    =sv('spiSName');
+    const process =sv('spiSProc');
+    const char    =sv('spiSChar');
+    const filtered=(window._spcItems||[]).filter(it=>{
+      const d=(it.created_at||'').slice(0,10);
+      if(dateFrom&&d&&d<dateFrom) return false;
+      if(dateTo&&d&&d>dateTo)   return false;
+      if(author&&!(it.created_by||'').toLowerCase().includes(author)) return false;
+      if(code&&!(it.item_code||'').toLowerCase().includes(code))      return false;
+      if(name&&!(it.item_name||'').toLowerCase().includes(name))      return false;
+      if(process&&!(it.process||'').toLowerCase().includes(process))  return false;
+      if(char&&!(it.char_name||'').toLowerCase().includes(char))      return false;
+      return true;
+    });
+    /* 건수 배지 갱신 */
+    const badge=document.getElementById('spiFilterBadge');
+    const isFiltered=dateFrom||dateTo||author||code||name||process||char;
+    if(badge) badge.textContent=isFiltered?`${filtered.length}건`:'';
+    render(filtered);
+  };
+
+  /* 검색 패널 토글 */
+  window._spcItemToggleSearch=()=>{
+    window._spcItemSearchOpen=!window._spcItemSearchOpen;
+    const panel=document.getElementById('spiSearchPanel');
+    const btn=document.getElementById('spiSearchBtn');
+    if(!panel||!btn) return;
+    panel.style.display=window._spcItemSearchOpen?'block':'none';
+    btn.classList.toggle('bpri', window._spcItemSearchOpen);
+    btn.classList.toggle('bout', !window._spcItemSearchOpen);
+    if(window._spcItemSearchOpen){
+      setTimeout(()=>document.getElementById('spiSCode')?.focus(),50);
+    }
+  };
+  /* 검색 초기화 */
+  window._spcItemResetSearch=()=>{
+    ['spiFrom','spiTo','spiAuthor','spiSCode','spiSName','spiSProc','spiSChar']
+      .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    render(window._spcItems||[]);
+    const badge=document.getElementById('spiFilterBadge');
+    if(badge) badge.textContent='';
+  };
 
   w.innerHTML=`
   <div class="ph">
     <div><div class="ptit">📋 SPC 관리 항목</div>
          <div class="psub">X-bar R 관리도 / Cpk 분석 대상 품목·공정·규격 관리</div></div>
     <div class="pac">
-      <button class="btn bpri btn-f2" onclick="Pages._spcItemForm()">+ 항목 등록 <span class="kbd">F2</span></button>
+      <button id="spiSearchBtn" class="btn bout bsm" onclick="_spcItemToggleSearch()">
+        🔍 검색 <span id="spiFilterBadge" style="margin-left:4px;color:#ef4444;font-weight:700"></span>
+        <span class="kbd">F3</span>
+      </button>
+      <button class="btn bout bsm" onclick="ExcelMgr.download('spc_items')" title="작성 양식 다운로드">📄 양식 다운로드</button>
+      <button class="btn bout bsm" onclick="ExcelMgr.open('spc_items')" title="엑셀 일괄 등록">📥 엑셀 업로드</button>
+      <button class="btn bpri bsm btn-f2" onclick="Pages._spcItemForm()">+ 항목 등록 <span class="kbd">F2</span></button>
     </div>
   </div>
+
+  <!-- [v2.161] 접이식 인라인 검색 패널 — 기본 숨김, F3/버튼으로 토글 -->
+  <div id="spiSearchPanel" style="display:none;background:var(--card);border:1px solid var(--brd);
+    border-radius:10px;padding:16px 20px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">등록일(시작)</label>
+        <input type="date" class="fc" id="spiFrom" oninput="applyFilter()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">등록일(종료)</label>
+        <input type="date" class="fc" id="spiTo" oninput="applyFilter()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">작성자</label>
+        <input class="fc" id="spiAuthor" placeholder="이름 검색" oninput="applyFilter()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">품목코드</label>
+        <input class="fc" id="spiSCode" placeholder="코드 검색" oninput="applyFilter()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">품목명</label>
+        <input class="fc" id="spiSName" placeholder="품목명 검색" oninput="applyFilter()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">공정</label>
+        <input class="fc" id="spiSProc" placeholder="공정 검색" oninput="applyFilter()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">관리특성</label>
+        <input class="fc" id="spiSChar" placeholder="특성 검색" oninput="applyFilter()">
+      </div>
+      <div style="align-self:end;display:flex;gap:6px">
+        <button class="btn bpri bsm" onclick="applyFilter()">🔍 적용</button>
+        <button class="btn bout bsm" onclick="_spcItemResetSearch()">🔄 초기화</button>
+      </div>
+    </div>
+  </div>
+
   <div id="spcItemTbl"></div>`;
 
-  Tbl.render({
-    el:'#spcItemTbl',
-    cols:[
-      {key:'item_code', label:'품목코드', w:'90px', render:v=>v?H.e(v):'<span style="color:var(--tl)">-</span>'},
-      {key:'item_name', label:'품목명', w:'*', render:v=>`<span style="font-weight:600">${H.e(v)}</span>`},
-      {key:'process',   label:'공정',   w:'100px'},
-      {key:'char_name', label:'관리특성', w:'100px'},
-      {key:'spec_upper',label:'USL',    w:'72px', align:'right',
-        render:v=>`<span style="font-family:monospace;color:#dc2626">${v??'-'}</span>`},
-      {key:'spec_lower',label:'LSL',    w:'72px', align:'right',
-        render:v=>`<span style="font-family:monospace;color:#2563eb">${v??'-'}</span>`},
-      {key:'target',    label:'Target', w:'72px', align:'right',
-        render:v=>v!=null?`<span style="font-family:monospace">${v}</span>`:'<span style="color:var(--tl)">-</span>'},
-      {key:'subgroup_size',label:'n',   w:'40px', align:'center'},
-      {key:'unit',      label:'단위',   w:'48px', align:'center'},
-      {key:'id',        label:'관리도', w:'60px', align:'center',
-        render:v=>`<button class="btn bxs bblu bsm" onclick="event.stopPropagation();Nav.go('spc_chart');setTimeout(()=>document.getElementById('spcChartSel')&&(document.getElementById('spcChartSel').value=${v})&&Pages._spcChartRender(${v}),500)">📈</button>`},
-    ],
-    data:items,
-    onRow:row=>Pages._spcItemForm(row),
-    onDel:async(ids)=>{
-      if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
-      Modal.confirm({title:'🗑️ 항목 삭제',msg:`<b>${ids.length}건</b>의 관리 항목과 연결된 모든 측정 데이터가 삭제됩니다.`,danger:true,
-        onOk:async()=>{
-          for(const id of ids){await SB.deleteSpcItem(id);}
-          window._spcItems=(window._spcItems||[]).filter(it=>!ids.includes(it.id));
-          Toast.show('삭제되었습니다.','ok');Modal.close();Pages.spc_items();
-        }
-      });
-    }
-  });
+  render(items);
 },
+
 
 /* ════ SPC 통계관리 [v2.154 전면 재작성] ════
    기존: DB2 더미 데이터만 사용, 선택 변경 시 차트 미갱신, n=5 하드코딩
@@ -15497,6 +15614,8 @@ async _spcItemSave(editId){
     target:g('spiTarget')?parseFloat(g('spiTarget')):null,
     subgroup_size:parseInt(document.getElementById('spiN')?.value||5),
     unit:g('spiUnit'), note:g('spiNote'),
+    /* [v2.161] 신규 등록 시 현재 로그인 사용자 자동 세팅 */
+    created_by:editId&&editId!='null'?undefined:(Auth._u?.name||Auth._u?.username||null),
   };
   let res;
   if(editId&&editId!='null'){res=await SB.updateSpcItem(editId,row);}

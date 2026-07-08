@@ -29,6 +29,11 @@ function setupHotkeys(){
          SearchPop 팝업 방식 사용. (v2.116에서 단순 focus 방식으로 바꿨던 것을 되돌림 —
          F3 버튼 클릭은 SearchPop.open()을 호출하는데 키보드 F3은 focus()만 하여
          동작이 불일치하던 문제 해결) */
+      /* [v2.161] spc_items: 인라인 검색 패널 토글(F3 정책 준수 — SearchPop 미사용) */
+      if(page==='spc_items'){
+        if(typeof _spcItemToggleSearch==='function') _spcItemToggleSearch();
+        return;
+      }
       const spPage = EMS_PAGES.includes(page) ? 'ems_eq' : page;
       if(spPage && window.SearchPop && window.SearchPop._cfg[spPage]){
         window.SearchPop.open(spPage);

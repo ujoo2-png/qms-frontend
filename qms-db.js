@@ -888,7 +888,7 @@ const SB={
     }
     return data||[];
   },
-  /* [v2.157] addSpcItem — .select('id').single() 제거 (anon SELECT 차단 패턴, 다른 add* 함수들과 동일) */
+  /* [v2.161] addSpcItem — created_by 컬럼 추가 */
   async addSpcItem(row){
     if(!_sb){if(!DB.spcItems)DB.spcItems=[];const id=Date.now();DB.spcItems.push({id,...row});return{ok:true,id};}
     const allowed={
@@ -898,6 +898,7 @@ const SB={
       spec_lower:row.spec_lower!=null?Number(row.spec_lower):null,
       target:row.target!=null?Number(row.target):null,
       subgroup_size:row.subgroup_size||5, unit:row.unit||'', note:row.note||'',
+      created_by:row.created_by||null,
     };
     const {error}=await _sb.from('spc_items').insert(allowed);
     if(error){Toast.show('SPC 항목 저장 실패: '+error.message,'err');return{ok:false};}

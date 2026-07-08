@@ -1059,6 +1059,33 @@ var ExcelMgr=window.ExcelMgr={
     },
   },
 
+  /* [v2.162] SPC 관리항목 엑셀 업로드 스키마
+     컬럼 정의, 중복 키(item_code+process+char_name), 저장 함수 */
+  spc_items:{
+    title:'SPC 관리항목',
+    cols:[
+      {key:'item_code',     label:'품목코드',       req:false, sample:'ITEM-001'},
+      {key:'item_name',     label:'품목명',          req:true,  sample:'브라켓'},
+      {key:'process',       label:'공정',            req:true,  sample:'가공공정'},
+      {key:'char_name',     label:'관리특성',        req:true,  sample:'두께'},
+      {key:'spec_upper',    label:'USL(규격상한)',   req:true,  sample:'2.1'},
+      {key:'spec_lower',    label:'LSL(규격하한)',   req:true,  sample:'1.9'},
+      {key:'target',        label:'Target(목표값)',  req:false, sample:'2.0'},
+      {key:'subgroup_size', label:'서브그룹크기(n)', req:false, sample:'5'},
+      {key:'unit',          label:'단위',            req:false, sample:'mm'},
+      {key:'note',          label:'비고',            req:false, sample:''},
+    ],
+    dupKey:'item_code',
+    dupLabel:'품목코드',
+    dupOnly:false,
+    getData:()=>window._spcItems||DB.spcItems||[],
+    afterSave:async()=>{
+      /* 저장 후 관리항목 목록 새로고침 */
+      const fresh=await SB.getSpcItems();
+      if(fresh){window._spcItems=fresh;}
+    },
+  },
+
   /* ── 양식 내려받기 ── */
   /* [v2.394] 파일명 생성 공통 함수 — 중복 로직 제거 */
   _fileName(title,suffix=''){
@@ -2049,6 +2076,32 @@ var ExcelMgr=window.ExcelMgr={
         ['qty','pass_qty','fail_qty','defect_rate'].forEach(k=>{if(row[k]!==undefined)row[k]=Number(row[k])||0;});
         row.created_at=today;row.updated_at=today;return row;
       });
+      /* [v2.162] SPC 관리항목: SB.addSpcItem 직접 호출 */
+      if(pKey==='spc_items'&&_sb){
+        let cnt=0;
+        for(const r of rows){
+          const row={
+            item_code: r.item_code||null,
+            item_name: r.item_name||'',
+            process:   r.process||'',
+            char_name: r.char_name||'',
+            spec_upper: r.spec_upper!=null&&r.spec_upper!==''?Number(r.spec_upper):null,
+            spec_lower: r.spec_lower!=null&&r.spec_lower!==''?Number(r.spec_lower):null,
+            target:     r.target!=null&&r.target!==''?Number(r.target):null,
+            subgroup_size: r.subgroup_size?Number(r.subgroup_size):5,
+            unit: r.unit||'',
+            note: r.note||'',
+            created_by: (typeof Auth!=='undefined'&&Auth._u?.name)||null,
+          };
+          const res=await SB.addSpcItem(row);
+          if(res.ok){totalSuccess++;cnt++;}
+          else{totalFail++;failMsgs.push('[spc_items] '+H.e(r.item_name||r.item_code||''));}
+          await sleep(30);
+        }
+        /* afterSave 훅 실행 */
+        if(ExcelMgr._schemas.spc_items.afterSave) await ExcelMgr._schemas.spc_items.afterSave();
+        continue;
+      }
       /* vendors: SB.addVendor 직접 호출 (컬럼 오류 자동 처리 내장) */
       if(pKey==='vendors'&&_sb){
         let cnt=0;
