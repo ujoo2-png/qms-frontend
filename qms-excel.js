@@ -1176,8 +1176,9 @@ var ExcelMgr=window.ExcelMgr={
         <div style="margin-bottom:14px;padding:12px 14px;background:#eff6ff;border-radius:var(--r);border:1px solid #bfdbfe;font-size:12px;line-height:1.8">
           <strong>📋 일괄등록 안내</strong><br>
           ① <strong>양식 내려받기</strong>로 엑셀 양식을 다운로드하세요.<br>
+          /* [v2.164] dupLabel null 처리 — spc_subgroups 등 중복 체크 없는 스키마 대응 */
           ② 2행(샘플)을 삭제하고 데이터를 입력하세요. 빨간색(*) 항목은 필수입니다.<br>
-          ③ 완성된 파일을 아래에 업로드하세요. <strong>${sc.dupLabel}</strong>이(가) 중복된 행은 등록되지 않습니다.
+          ③ 완성된 파일을 아래에 업로드하세요. ${sc.dupLabel?`<strong>${sc.dupLabel}</strong>이(가) 중복된 행은 등록되지 않습니다.`:'중복 행은 자동으로 처리됩니다.'}
         </div>
         <div class="xl-drop" id="xlDrop" onclick="document.getElementById('xlFileInp').click()"
           ondragover="event.preventDefault();this.classList.add('over')"
