@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.162</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.163</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -15031,6 +15031,8 @@ async spc_chart(){
          <div class="psub">공정 안정성 모니터링 — 관리 한계선 이탈 자동 감지</div></div>
     <div class="pac">
       <button class="btn bout bsm" onclick="Pages._spcItemForm()">+ 항목 등록</button>
+      <button class="btn bout bsm" onclick="ExcelMgr.download('spc_subgroups')" title="측정데이터 양식 다운로드">📄 양식</button>
+      <button class="btn bout bsm" onclick="ExcelMgr.open('spc_subgroups')" title="측정데이터 엑셀 일괄 업로드">📥 일괄 업로드</button>
       <button class="btn bpri bsm" onclick="Pages._spcDataForm(window._spcSelId)">+ 데이터 입력</button>
     </div>
   </div>
@@ -15180,6 +15182,8 @@ async spc_cpk(){
     <div><div class="ptit">🎯 공정능력 (Cp/Cpk)</div>
          <div class="psub">공정이 규격을 얼마나 잘 만족하는지 수치화</div></div>
     <div class="pac">
+      <button class="btn bout bsm" onclick="ExcelMgr.download('spc_subgroups')" title="측정데이터 양식 다운로드">📄 양식</button>
+      <button class="btn bout bsm" onclick="ExcelMgr.open('spc_subgroups')" title="측정데이터 엑셀 일괄 업로드">📥 일괄 업로드</button>
       <button class="btn bpri bsm" onclick="Pages._spcDataForm(window._spcSelId)">+ 데이터 입력</button>
     </div>
   </div>

@@ -1057,33 +1057,47 @@ var ExcelMgr=window.ExcelMgr={
         const fresh=await SB.getVendorAudits();if(fresh)DB.vendor_audits=fresh;
       }
     },
-  },
-
-  /* [v2.162] SPC 관리항목 엑셀 업로드 스키마
-     컬럼 정의, 중복 키(item_code+process+char_name), 저장 함수 */
+  /* [v2.163] SPC 관리항목 스키마 */
   spc_items:{
     title:'SPC 관리항목',
     cols:[
-      {key:'item_code',     label:'품목코드',       req:false, sample:'ITEM-001'},
-      {key:'item_name',     label:'품목명',          req:true,  sample:'브라켓'},
-      {key:'process',       label:'공정',            req:true,  sample:'가공공정'},
-      {key:'char_name',     label:'관리특성',        req:true,  sample:'두께'},
-      {key:'spec_upper',    label:'USL(규격상한)',   req:true,  sample:'2.1'},
-      {key:'spec_lower',    label:'LSL(규격하한)',   req:true,  sample:'1.9'},
-      {key:'target',        label:'Target(목표값)',  req:false, sample:'2.0'},
-      {key:'subgroup_size', label:'서브그룹크기(n)', req:false, sample:'5'},
-      {key:'unit',          label:'단위',            req:false, sample:'mm'},
-      {key:'note',          label:'비고',            req:false, sample:''},
+      {key:'item_code',     label:'품목코드',        req:false, sample:'ITEM-001'},
+      {key:'item_name',     label:'품목명',           req:true,  sample:'브라켓'},
+      {key:'process',       label:'공정',             req:true,  sample:'가공공정'},
+      {key:'char_name',     label:'관리특성',         req:true,  sample:'두께'},
+      {key:'spec_upper',    label:'USL(규격상한)',    req:true,  sample:'2.1'},
+      {key:'spec_lower',    label:'LSL(규격하한)',    req:true,  sample:'1.9'},
+      {key:'target',        label:'Target(목표값)',   req:false, sample:'2.0'},
+      {key:'subgroup_size', label:'서브그룹크기(n)',  req:false, sample:'5'},
+      {key:'unit',          label:'단위',             req:false, sample:'mm'},
+      {key:'note',          label:'비고',             req:false, sample:''},
     ],
-    dupKey:'item_code',
-    dupLabel:'품목코드',
-    dupOnly:false,
+    dupKey:'item_code',dupLabel:'품목코드',dupOnly:false,
     getData:()=>window._spcItems||DB.spcItems||[],
+    afterSave:async()=>{const fresh=await SB.getSpcItems();if(fresh)window._spcItems=fresh;},
+  },
+  /* [v2.163] SPC 측정데이터 스키마 */
+  spc_subgroups:{
+    title:'SPC 측정데이터',
+    cols:[
+      {key:'item_name', label:'품목명',    req:true,  sample:'브라켓'},
+      {key:'process',   label:'공정',      req:true,  sample:'가공공정'},
+      {key:'char_name', label:'관리특성',  req:true,  sample:'두께'},
+      {key:'measured_at',label:'측정일',   req:true,  sample:'2026-07-01'},
+      {key:'v1', label:'측정1',req:true, sample:'2.01'},{key:'v2', label:'측정2',req:false,sample:'1.99'},
+      {key:'v3', label:'측정3',req:false,sample:'2.00'},{key:'v4', label:'측정4',req:false,sample:'2.02'},
+      {key:'v5', label:'측정5',req:false,sample:'2.01'},{key:'v6', label:'측정6',req:false,sample:''},
+      {key:'v7', label:'측정7',req:false,sample:''},{key:'v8', label:'측정8',req:false,sample:''},
+      {key:'v9', label:'측정9',req:false,sample:''},{key:'v10',label:'측정10',req:false,sample:''},
+      {key:'memo',label:'메모',req:false,sample:''},
+    ],
+    dupKey:null,getData:()=>[],
     afterSave:async()=>{
-      /* 저장 후 관리항목 목록 새로고침 */
-      const fresh=await SB.getSpcItems();
-      if(fresh){window._spcItems=fresh;}
+      const cur=sessionStorage.getItem('qms_page');
+      if(cur==='spc_chart'&&window._spcSelId) await Pages._spcChartRender(window._spcSelId);
+      else if(cur==='spc_cpk'&&window._spcSelId) await Pages._spcCpkRender(window._spcSelId);
     },
+  },
   },
 
   /* ── 양식 내려받기 ── */
@@ -2076,6 +2090,39 @@ var ExcelMgr=window.ExcelMgr={
         ['qty','pass_qty','fail_qty','defect_rate'].forEach(k=>{if(row[k]!==undefined)row[k]=Number(row[k])||0;});
         row.created_at=today;row.updated_at=today;return row;
       });
+      /* [v2.163] SPC 측정데이터: 품목명+공정+관리특성으로 spc_item_id 매핑 후 저장 */
+      if(pKey==='spc_subgroups'&&_sb){
+        const spcItems=window._spcItems||await SB.getSpcItems()||[];
+        for(const r of rows){
+          const matched=spcItems.find(it=>
+            (it.item_name||'').trim()===(r.item_name||'').trim()&&
+            (it.process||'').trim()===(r.process||'').trim()&&
+            (it.char_name||'').trim()===(r.char_name||'').trim()
+          );
+          if(!matched){
+            totalFail++;
+            failMsgs.push(`[측정데이터] 관리항목 없음: ${r.item_name||''} / ${r.process||''} / ${r.char_name||''}`);
+            continue;
+          }
+          const vals=[];
+          for(let vi=1;vi<=10;vi++){
+            const v=r[`v${vi}`];
+            if(v!=null&&v!==''){const n=Number(v);if(!isNaN(n))vals.push(n);}
+          }
+          if(!vals.length){totalFail++;failMsgs.push(`[측정데이터] 측정값 없음: ${r.measured_at||''}`);continue;}
+          const res=await SB.addSpcSubgroup({
+            spc_item_id:matched.id,
+            measured_at:r.measured_at||H.today(),
+            values:JSON.stringify(vals),
+            memo:r.memo||'',
+          });
+          if(res.ok)totalSuccess++;
+          else{totalFail++;failMsgs.push(`[측정데이터] 저장 실패: ${r.measured_at||''} ${r.item_name||''}`);}
+          await sleep(30);
+        }
+        if(ExcelMgr._schemas.spc_subgroups?.afterSave) await ExcelMgr._schemas.spc_subgroups.afterSave();
+        continue;
+      }
       /* [v2.162] SPC 관리항목: SB.addSpcItem 직접 호출 */
       if(pKey==='spc_items'&&_sb){
         let cnt=0;
