@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.164</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.165</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -15328,24 +15328,22 @@ async spc_pareto(){
    type = 'all'|'수입검사'|'공정검사'|'구매검사'|'외주검사'|'최종검사'|'부적합관리'
    부적합관리 선택 시 → DB.nc(nonconformances)에서 desc(불량내용) 기반 집계 */
 _spcParetoRender(inspData, filters){
+  /* [v2.165] mkFilter 줄바꿈 버그 수정 — 별도 _spcParetoFilter() 함수로 분리
+     기존: oninput="${mkFilter}" → 줄바꿈 포함 문자열이 HTML 속성으로 들어가 이벤트 동작 안 함
+     변경: oninput="Pages._spcParetoFilter()" 호출 방식으로 교체 */
   const w=document.getElementById('pw');
   const f=filters||{};
   const from=f.from||''; const to=f.to||'';
   const type=f.type||'all'; const vendor=(f.vendor||'').trim();
   const defect=(f.defect||'').trim();
 
-  /* ── 검사유형 매핑 (품질관리 메뉴와 일치) ── */
-  /* inspections.type 실제값 */
-  const typeMap={
-    '수입검사':'수입', '공정검사':'공정', '구매검사':'구매',
-    '외주검사':'외주', '최종검사':'최종',
-  };
+  /* ── 검사유형 매핑 ── */
+  const typeMap={'수입검사':'수입','공정검사':'공정','구매검사':'구매','외주검사':'외주','최종검사':'최종'};
   const isNc=(type==='부적합관리');
 
   /* ── 데이터 집계 ── */
   let catMap={};
   if(isNc){
-    /* 부적합관리: NC 테이블에서 desc(불량내용) 기반 집계 */
     const ncData=window._spcNcData||DB.nc||[];
     let filtered=ncData.filter(r=>{
       if(from&&(r.date||'')<from) return false;
@@ -15356,18 +15354,15 @@ _spcParetoRender(inspData, filters){
     filtered.forEach(r=>{
       const raw=(r.desc||r.item||'기타').trim()||'기타';
       const cat=raw.length>14?raw.slice(0,14)+'…':raw;
-      if(!catMap[cat])catMap[cat]=0;
-      catMap[cat]++;
+      catMap[cat]=(catMap[cat]||0)+1;
     });
   } else {
-    /* 검사 데이터: inspections 테이블 */
     const inspType=typeMap[type]||null;
     let filtered=inspData.filter(r=>{
       if((r.fail_qty||0)<=0) return false;
       if(from&&(r.insp_date||'')<from) return false;
       if(to&&(r.insp_date||'')>to) return false;
       if(inspType&&r.type!==inspType) return false;
-      if(type==='all'&&r.type==='nc') return false; /* NC는 부적합관리 선택 시만 */
       if(vendor&&!(r.vendor||'').toLowerCase().includes(vendor.toLowerCase())) return false;
       if(defect){
         const hay=((r.note||'')+(r.item_name||'')).toLowerCase();
@@ -15378,8 +15373,7 @@ _spcParetoRender(inspData, filters){
     filtered.forEach(r=>{
       const raw=(r.note||r.item_name||'기타').trim()||'기타';
       const cat=raw.length>14?raw.slice(0,14)+'…':raw;
-      if(!catMap[cat])catMap[cat]=0;
-      catMap[cat]+=(r.fail_qty||0);
+      catMap[cat]=(catMap[cat]||0)+(r.fail_qty||0);
     });
   }
 
@@ -15389,36 +15383,24 @@ _spcParetoRender(inspData, filters){
   const rows=sorted.map(([cat,cnt])=>{cum+=cnt;return{cat,cnt,cum,pct:Math.round(cum/total*100)};});
   const maxN=sorted[0]?.[1]||1;
 
-  /* ── 공급사 목록(검사유형이 부적합관리가 아닐 때만 표시) ── */
+  /* ── 공급사 드롭다운 ── */
   const vendors=[...new Set(inspData.map(r=>r.vendor||'').filter(Boolean))].sort();
   const typeOpts=[
     {val:'all',label:'전체'},
-    {val:'수입검사',label:'수입검사'},
-    {val:'공정검사',label:'공정검사'},
-    {val:'구매검사',label:'구매검사'},
-    {val:'외주검사',label:'외주검사'},
-    {val:'최종검사',label:'최종검사'},
-    {val:'부적합관리',label:'⚠️ 부적합관리'},
+    {val:'수입검사',label:'수입검사'},{val:'공정검사',label:'공정검사'},
+    {val:'구매검사',label:'구매검사'},{val:'외주검사',label:'외주검사'},
+    {val:'최종검사',label:'최종검사'},{val:'부적합관리',label:'⚠️ 부적합관리'},
   ].map(t=>`<option value="${t.val}" ${t.val===type?'selected':''}>${t.label}</option>`).join('');
-
   const vendorOpts=`<option value="">전체 공급사</option>`
     +vendors.map(v=>`<option value="${H.e(v)}" ${v===vendor?'selected':''}>${H.e(v)}</option>`).join('');
 
-  const mkFilter=`Pages._spcParetoRender(window._spcInspData||[],{
-    from:document.getElementById('pFrom')?.value||'',
-    to:document.getElementById('pTo')?.value||'',
-    type:document.getElementById('pType')?.value||'all',
-    vendor:document.getElementById('pVendor')?.value||'',
-    defect:document.getElementById('pDefect')?.value||''
-  })`;
-
-  const ncNotice=isNc?`<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 14px;font-size:12px;color:#856404;margin-bottom:8px">
-    ⚠️ 부적합관리 모드: <b>품질관리 → 부적합관리</b>의 발생 내용(desc) 기준으로 집계됩니다.
-    불량건수는 부적합 발생 건수로 집계됩니다.
-  </div>`:
-  `<div style="background:#e8f4fd;border:1px solid #b3d9f7;border-radius:6px;padding:8px 14px;font-size:12px;color:#1565c0;margin-bottom:8px">
-    💡 불량유형은 <b>검사 비고란(note)</b> 기준으로 집계됩니다. 비고가 없으면 품목명으로 분류됩니다.
-  </div>`;
+  const ncNotice=isNc
+    ?`<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 14px;font-size:12px;color:#856404;margin-bottom:8px">
+        ⚠️ 부적합관리 모드: <b>품질관리 → 부적합관리</b>의 발생 내용(desc) 기준으로 집계됩니다.
+      </div>`
+    :`<div style="background:#e8f4fd;border:1px solid #b3d9f7;border-radius:6px;padding:8px 14px;font-size:12px;color:#1565c0;margin-bottom:8px">
+        💡 불량유형은 <b>검사 비고란(note)</b> 기준으로 집계됩니다. 비고가 없으면 품목명으로 분류됩니다.
+      </div>`;
 
   w.innerHTML=`
   <div class="ph">
@@ -15429,28 +15411,36 @@ _spcParetoRender(inspData, filters){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end">
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">검사일(시작)</label>
-        <input type="date" class="fc" id="pFrom" value="${from}" onchange="${mkFilter}">
+        <input type="date" class="fc" id="pFrom" value="${from}"
+          onchange="Pages._spcParetoFilter()">
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">검사일(종료)</label>
-        <input type="date" class="fc" id="pTo" value="${to}" onchange="${mkFilter}">
+        <input type="date" class="fc" id="pTo" value="${to}"
+          onchange="Pages._spcParetoFilter()">
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">검사 유형</label>
-        <select class="fc" id="pType" onchange="${mkFilter}">${typeOpts}</select>
+        <select class="fc" id="pType" onchange="Pages._spcParetoFilter()">${typeOpts}</select>
       </div>
-      ${!isNc?`<div>
-        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">공급사</label>
-        <select class="fc" id="pVendor" onchange="${mkFilter}">${vendorOpts}</select>
-      </div>`:`<div><label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">공급사</label>
-        <select class="fc" id="pVendor" disabled style="opacity:0.4"><option>부적합관리 모드</option></select></div>`}
+      ${!isNc
+        ?`<div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">공급사</label>
+            <select class="fc" id="pVendor" onchange="Pages._spcParetoFilter()">${vendorOpts}</select>
+          </div>`
+        :`<div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">공급사</label>
+            <select class="fc" id="pVendor" disabled style="opacity:0.4"><option>부적합관리 모드</option></select>
+          </div>`}
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">${isNc?'불량내용 키워드':'불량유형 키워드'}</label>
-        <input class="fc" id="pDefect" value="${H.e(defect)}" placeholder="${isNc?'예) 치수, 외관...':'예) 치수, 외관...'}"
-          oninput="${mkFilter}">
+        <input class="fc" id="pDefect" value="${H.e(defect)}"
+          placeholder="예) 치수, 외관..."
+          oninput="Pages._spcParetoFilter()">
       </div>
       <div style="align-self:end">
-        <button class="btn bout bsm" onclick="Pages._spcParetoRender(window._spcInspData||[],{from:'',to:'',type:'all',vendor:'',defect:''})">🔄 초기화</button>
+        <button class="btn bout bsm"
+          onclick="Pages._spcParetoRender(window._spcInspData||[],{from:'',to:'',type:'all',vendor:'',defect:''})">🔄 초기화</button>
       </div>
     </div>
   </div>
@@ -15476,7 +15466,7 @@ _spcParetoRender(inspData, filters){
         ${rows.map((d,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center">
           <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:3px">${d.cnt}</div>
           <div style="width:88%;background:${i<3?'#3b82c6':'#94a3b8'};height:${Math.round(d.cnt/maxN*130)}px;border-radius:3px 3px 0 0;min-height:2px"></div>
-          ${d.pct<=80?`<div style="width:88%;height:3px;background:#ef4444;margin-top:1px"></div>`:''}
+          ${d.pct<=80?'<div style="width:88%;height:3px;background:#ef4444;margin-top:1px"></div>':''}
         </div>`).join('')}
       </div>
       <div style="display:flex;padding:0 8px;border-top:1px solid var(--brd)">
@@ -15495,9 +15485,21 @@ _spcParetoRender(inspData, filters){
       </div>
       <div style="margin-top:12px;padding:10px 14px;background:#eff6ff;border-radius:8px;font-size:12px;color:#1d4ed8">
         💡 상위 ${rows.filter(d=>d.pct<=80).length}개 유형이 전체의 ${rows.filter(d=>d.pct<=80).slice(-1)[0]?.pct||100}%를 차지합니다.
-        ${isNc?`&nbsp; <a style="color:#7c3aed;cursor:pointer;text-decoration:underline" onclick="Nav.go('nc')">→ 부적합관리 바로가기</a>`:''}
+        ${isNc?'&nbsp; <a style="color:#7c3aed;cursor:pointer;text-decoration:underline" onclick="Nav.go(\'nc\')">→ 부적합관리 바로가기</a>':''}
       </div>
     </div>`}`;
+},
+
+/* [v2.165] _spcParetoFilter — 필터 입력값 수집 후 _spcParetoRender 재호출
+   mkFilter 인라인 문자열 방식(줄바꿈 버그)을 함수 분리 방식으로 교체 */
+_spcParetoFilter(){
+  Pages._spcParetoRender(window._spcInspData||[],{
+    from: document.getElementById('pFrom')?.value||'',
+    to:   document.getElementById('pTo')?.value||'',
+    type: document.getElementById('pType')?.value||'all',
+    vendor: document.getElementById('pVendor')?.value||'',
+    defect: document.getElementById('pDefect')?.value||'',
+  });
 },
 
 
