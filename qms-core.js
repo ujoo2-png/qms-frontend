@@ -2550,7 +2550,7 @@ const GeminiAI={
    - 빠른 질문 버튼, 타이핑 인디케이터, 마크다운 렌더
    - 대화 초기화, ESC 닫기 지원
    ════════════════════════════════════════════════════════════ */
-const QmsChat = {
+window.QmsChat = {
   _history: [],      /* {role:'user'|'assistant', content:''} */
   _loading: false,
 
