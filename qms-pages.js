@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.169</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.170</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -610,7 +610,10 @@ _homeCard(subs){/* 레거시 */},
 /* ── 대시보드 ── */
 dash(){
   const w=document.getElementById('pw');
-  w.innerHTML=`<div class="ph"><div><div class="ptit">📊 대시보드</div><div class="psub">품질경영시스템 종합 현황</div></div></div>
+  w.innerHTML=`<div class="ph"><div><div class="ptit">📊 대시보드</div><div class="psub">품질경영시스템 종합 현황</div></div>
+    <div class="pac">
+      <button class="btn bout bsm ai-loading-btn" style="background:linear-gradient(135deg,#7c3aed22,#4f46e522);border:1px solid #7c3aed66;color:#7c3aed" onclick="Pages._aiHomeInsight()" title="AI로 품질 현황 종합 인사이트">🤖 AI 인사이트</button>
+    </div></div>
   <div class="sg">
     <div class="sc"><div class="si sbl">📦</div><div><div class="sv">${DB.items.length}</div><div class="sl">등록 품목</div></div></div>
     <div class="sc"><div class="si spl">🏢</div><div><div class="sv">${DB.vendors.length}</div><div class="sl">등록 거래처</div></div></div>
@@ -753,8 +756,6 @@ async items(){
         <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('items')" title="엑셀 일괄등록">📤 자료 일괄등록</button>
         <button class="btn btn-xl-up bsm" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none"
           onclick="ExcelMgr.openUploadAll()" title="멀티시트 통합 일괄등록 (A+C안)">🗂️ 통합 일괄등록</button>
-        <button class="btn bout bsm ai-loading-btn" style="background:linear-gradient(135deg,#7c3aed22,#4f46e522);border:1px solid #7c3aed66;color:#7c3aed"
-          onclick="Pages._aiHomeInsight()" title="AI로 품질 현황 종합 인사이트">🤖 AI 인사이트</button>
       </div>
     </div>
     <div class="tbar">
