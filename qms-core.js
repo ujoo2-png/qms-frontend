@@ -2645,55 +2645,70 @@ window.QmsChat = {
     overlay.style.display = 'none';
     if(floatBtn) floatBtn.style.display = 'none';
 
-    /* 아래에서 위로 팝업 애니메이션 */
-    panel.style.opacity = '0';
-    panel.style.transform = 'translateY(16px) scale(0.97)';
-    panel.style.transition = 'opacity .2s ease, transform .2s ease';
+    /* [v2.181] 초기 위치: 우하단 고정 (left/top 기준) */
+    const PW = 380, PH = 580;
+    const initLeft = Math.max(16, window.innerWidth  - PW - 24);
+    const initTop  = Math.max(16, window.innerHeight - PH - 88);
+    panel.style.left   = initLeft + 'px';
+    panel.style.top    = initTop  + 'px';
+    panel.style.right  = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.width  = PW + 'px';
+    panel.style.height = PH + 'px';
+
+    /* 팝업 애니메이션 */
+    panel.style.opacity    = '0';
+    panel.style.transform  = 'translateY(12px) scale(0.97)';
+    panel.style.transition = 'opacity .18s ease, transform .18s ease';
     requestAnimationFrame(()=>{
-      panel.style.opacity = '1';
+      panel.style.opacity   = '1';
       panel.style.transform = 'translateY(0) scale(1)';
     });
 
-    /* [v2.180] 드래그 이동 — 헤더를 잡고 자유롭게 이동 */
+    /* [v2.181] 드래그 이동 — left/top 기준, 화면 경계 보호 */
     const hdr = panel.querySelector('#aiChatHeader');
     if(hdr && !hdr._dragBound){
       hdr._dragBound = true;
-      let startX, startY, startRight, startBottom;
+      let startMouseX, startMouseY, startLeft, startTop;
+
       const onDown = e => {
-        /* 버튼 클릭은 드래그 무시 */
         if(e.target.tagName === 'BUTTON') return;
+        e.preventDefault();
         const rect = panel.getBoundingClientRect();
-        startX = e.clientX; startY = e.clientY;
-        /* right/bottom 기준으로 계산 */
-        startRight  = window.innerWidth  - rect.right;
-        startBottom = window.innerHeight - rect.bottom;
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        startMouseX = cx; startMouseY = cy;
+        startLeft   = rect.left; startTop = rect.top;
         panel.style.transition = 'none';
-        panel.style.cursor = 'grabbing';
+        hdr.style.cursor = 'grabbing';
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup',   onUp);
-        /* 터치 지원 */
         document.addEventListener('touchmove', onTouchMove, {passive:false});
         document.addEventListener('touchend',  onUp);
       };
-      const move = (cx, cy) => {
-        const dx = startX - cx; const dy = startY - cy;
-        const newRight  = Math.max(0, Math.min(window.innerWidth  - 200, startRight  + dx));
-        const newBottom = Math.max(0, Math.min(window.innerHeight - 100, startBottom + dy));
-        panel.style.right  = newRight  + 'px';
-        panel.style.bottom = newBottom + 'px';
+
+      const doMove = (cx, cy) => {
+        const dx = cx - startMouseX;
+        const dy = cy - startMouseY;
+        const newLeft = Math.max(0, Math.min(window.innerWidth  - PW, startLeft + dx));
+        const newTop  = Math.max(0, Math.min(window.innerHeight - 60, startTop  + dy));
+        panel.style.left = newLeft + 'px';
+        panel.style.top  = newTop  + 'px';
       };
-      const onMove      = e => move(e.clientX, e.clientY);
-      const onTouchMove = e => { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); };
+
+      const onMove      = e => doMove(e.clientX, e.clientY);
+      const onTouchMove = e => { e.preventDefault(); doMove(e.touches[0].clientX, e.touches[0].clientY); };
       const onUp = () => {
-        panel.style.cursor = '';
+        hdr.style.cursor = 'grab';
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup',   onUp);
         document.removeEventListener('touchmove', onTouchMove);
         document.removeEventListener('touchend',  onUp);
       };
+
       hdr.style.cursor = 'grab';
-      hdr.addEventListener('mousedown', onDown);
-      hdr.addEventListener('touchstart', onDown, {passive:true});
+      hdr.addEventListener('mousedown',  onDown);
+      hdr.addEventListener('touchstart', onDown, {passive:false});
     }
 
     this._updateCtxBar();
