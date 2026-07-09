@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.172</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.174</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -612,7 +612,7 @@ dash(){
   const w=document.getElementById('pw');
   w.innerHTML=`<div class="ph"><div><div class="ptit">📊 대시보드</div><div class="psub">품질경영시스템 종합 현황</div></div>
     <div class="pac">
-      <button class="btn bout bsm ai-loading-btn" style="background:linear-gradient(135deg,#7c3aed22,#4f46e522);border:1px solid #7c3aed66;color:#7c3aed" onclick="Pages._aiHomeInsight()" title="AI로 품질 현황 종합 인사이트">🤖 AI 인사이트</button>
+      <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiHomeInsight()" title="AI로 품질 현황 종합 인사이트">🤖 AI 인사이트</button>
     </div></div>
   <div class="sg">
     <div class="sc"><div class="si sbl">📦</div><div><div class="sv">${DB.items.length}</div><div class="sl">등록 품목</div></div></div>
@@ -2210,6 +2210,7 @@ async quality_dash(){
       <div><div class="ptit">📊 품질현황 대시보드</div>
         <div class="psub">검사 5종 통합현황 · ${state.from} ~ ${state.to}</div></div>
       <div class="pac">
+        <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiQualityDash()" title="AI로 품질 현황 종합 분석">🤖 AI 분석</button>
         <button class="btn bout bsm" onclick="Pages._qdashExcel()">📥 엑셀 내보내기</button>
       </div>
     </div>
@@ -2480,7 +2481,7 @@ _ncRender(){
       <div class="pac">
         <button class="btn btn-xl-down bsm" onclick="Pages._ncExcelDown()" title="엑셀 양식 내려받기">📥 양식</button>
         <button class="btn btn-xl-up bsm" onclick="Pages._ncExcelUp()" title="엑셀 일괄등록">📤 일괄등록</button>
-        <button class="btn bout bsm ai-loading-btn" onclick="Pages._aiNcAnalyze()" title="AI로 부적합 패턴 분석">🤖 AI 분석</button>
+        <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiNcAnalyze()" title="AI로 부적합 패턴 분석">🤖 AI 분석</button>
         <button class="btn bpri btn-f2" onclick="Pages._ncForm()">+ 부적합 등록 <span class="kbd">F2</span></button>
       </div>
     </div>
@@ -3151,6 +3152,7 @@ async equip(){
     </div>
     <div class="ph" style="margin-top:14px"><div><div class="ptit">🔬 계측기 등록</div></div>
     <div class="pac">
+      <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiEquipAnalyze()" title="AI로 계측기 교정 현황 분석">🤖 AI 분석</button>
       <button class="btn bpri btn-f2" onclick="Pages._equipCalForm()">+ 계측기 등록 <span class="kbd">F2</span></button>
       <button class="btn btn-xl-up bpri" onclick="Pages._equipUploadOpen()" title="계측기 엑셀 일괄등록">📤 엑셀 일괄등록</button>
       <button class="btn bsm" style="background:#475569;color:#fff" onclick="Pages._eqPrint()" title="계측기 관리대장 인쇄">🖨️ 관리대장 인쇄</button>
@@ -4181,7 +4183,7 @@ async docs(){
     '<div class="ph" style="margin-top:14px"><div><div class="ptit">📄 문서 목록</div></div>'+
       '<div class="pac">'+
         '<button class="btn berr bsm" onclick="Pages._docBulkDelete()" title="체크된 문서 삭제">🗑️ 선택삭제</button>'+
-      '<button class="btn bout bsm ai-loading-btn" onclick="Pages._aiDocAnalyze()" title="AI로 문서 현황 분석">🤖 AI 분석</button>'+
+      '<button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiDocAnalyze()" title="AI로 문서 현황 분석">🤖 AI 분석</button>'+
       '<button class="btn bpri btn-f2" onclick="Pages._docForm()">+ 문서 등록 <span class="kbd">F2</span></button>'+
       '</div>'+
     '</div>'+
@@ -4778,6 +4780,7 @@ async cal(){
         <div class="pac">
           <button class="btn btn-xl-down bsm" onclick="Pages._calExcelDown()" title="엑셀 양식 내려받기">📥 양식</button>
           <button class="btn btn-xl-up bsm" onclick="Pages._calExcelUp()" title="엑셀 일괄등록">📤 일괄등록</button>
+          <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiCalAnalyze()" title="AI로 교정 이력 분석">🤖 AI 분석</button>
           <button class="btn bpri btn-f2" onclick="Pages._calForm()">+ 교정 등록 <span class="kbd">F2</span></button>
         </div>
       </div>
@@ -5063,6 +5066,7 @@ async msa(){
     <div class="ph" style="margin-top:14px">
       <div><div class="ptit">📈 MSA 게이지 R&R 분석</div></div>
       <div class="pac">
+        <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiMsaAnalyze()" title="AI로 MSA 측정 시스템 분석">🤖 AI 분석</button>
         <button class="btn bpri btn-f2" onclick="Pages._msaForm()">+ 신규 연구 <span class="kbd">F2</span></button>
       </div>
     </div>
@@ -5856,7 +5860,7 @@ async doc_review_cycle(){
     '</div><div class="pac">'+
       '<button class="btn bred bsm" onclick="Pages._rcSendAlert(7)">🚨 D-7 긴급알림</button>'+
       '<button class="btn bamb bsm" onclick="Pages._rcSendAlert(30)">🔔 D-30 알림발송</button>'+
-      '<button class="btn bout bsm ai-loading-btn" onclick="Pages._aiDocReviewPlan()" title="AI로 검토 우선순위 추천">🤖 AI 검토 계획</button>'+
+      '<button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiDocReviewPlan()" title="AI로 검토 우선순위 추천">🤖 AI 검토 계획</button>'+
     '</div></div>'+
     '<div class="tbar">'+
       '<div class="sw2"><input type="text" id="rcKw" placeholder="문서번호, 제목, 부서..." oninput="Pages._rcKwFilter(this.value)"></div>'+
@@ -6201,7 +6205,7 @@ async doc_dashboard(){
       '<div style="font-size:13px;color:var(--muted);margin-top:2px">ISO 9001 문서화된 정보 관리 현황</div>'+
     '</div><div class="pac">'+
       '<button class="btn bout bsm" onclick="Pages._dashRefresh()">🔄 새로고침</button>'+
-      '<button class="btn bout bsm ai-loading-btn" onclick="Pages._aiDocDashAnalyze()" title="AI로 문서 현황 종합 분석">🤖 AI 현황 분석</button>'+
+      '<button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiDocDashAnalyze()" title="AI로 문서 현황 종합 분석">🤖 AI 현황 분석</button>'+
     '</div></div>'+
 
     /* ① KPI 카드 */
@@ -6917,6 +6921,7 @@ async car(){
     <div class="pac">
       <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('car')" title="엑셀 양식">📥 양식</button>
       <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('car')" title="엑셀 일괄등록">📤 일괄등록</button>
+      <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiCarAnalyze()" title="AI로 시정조치 현황 분석">🤖 AI 분석</button>
       <button class="btn bpri btn-f2" onclick="Pages._carForm()">+ CAR 등록 <span class="kbd">F2</span></button>
     </div>
   </div>
@@ -9535,8 +9540,8 @@ async _renderAiDash(){
   logs.forEach(l=>{modeMap[l.mode]=(modeMap[l.mode]||0)+1;});
   const modeLabels={'nc':'부적합 분석','sqm':'SQM 계획','spc':'SPC 분석','home':'종합 인사이트','general':'기타'};
 
-  /* 무료 한도: 일 1,500회, 분당 15회 */
-  const dailyLimit=1500;
+  /* 무료 한도: Groq 일 1,000회, 분 30회 */
+  const dailyLimit=1000;
   const pct=Math.min(100,Math.round(todayCalls/dailyLimit*100));
 
   el.innerHTML=`
@@ -9565,9 +9570,9 @@ async _renderAiDash(){
         ${pct>=90?'⚠️ 한도 초과 임박':'✅ 여유 있음'} (${pct}% 사용)
       </div>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);padding:8px;background:var(--bg2);border-radius:6px">
-        💡 gemini-2.0-flash 무료 티어<br>
-        · 일 1,500회 / 분당 15회<br>
-        · 입력 1M 토큰 + 출력 1M 토큰/분<br>
+        💡 Groq 무료 티어 (llama-3.3-70b)<br>
+        · 일 1,000회 / 분당 30회<br>
+        · 신용카드 불필요<br>
         · 추가 비용 없음
       </div>
     </div>
@@ -9896,6 +9901,146 @@ async _aiDocDashAnalyze(){
   const res=await GeminiAI.analyze(prompt, data, 'doc');
   if(res.ok) GeminiAI.showResult('문서 현황 AI 종합 분석', res.result, res.usage);
 },
+/* ════ 추가 AI 분석 함수 [v2.174] ════
+   _aiCarAnalyze: 개선활동(CAR) 분석
+   _aiQualityDash: 품질현황 대시보드 분석
+   _aiEquipAnalyze: 계측기 교정 현황 분석
+   _aiCalAnalyze: 교정 이력 분석
+   _aiMsaAnalyze: MSA 측정 시스템 분석
+   ════════════════════════════════════ */
+
+async _aiCarAnalyze(){
+  const cars=await SB.getCars?.() || DB.car || DB.cars || [];
+  if(!cars.length){Toast.show('CAR 데이터가 없습니다.','warn');return;}
+  const today=new Date().toISOString().slice(0,10);
+  const open=cars.filter(r=>r.status!=='완료'&&r.status!=='closed');
+  const overdue=open.filter(r=>r.due_date&&r.due_date<today);
+  const prompt=`당신은 ISO 9001 시정조치 전문가입니다. 아래는 CAR(시정조치요구서) 현황입니다.
+다음을 한국어로 분석해 주세요:
+1. **전체 CAR 현황 요약** (완료율, 지연율, 주요 발생 원인)
+2. **즉시 조치 필요 건** (기한 초과 CAR 우선순위)
+3. **반복 발생 패턴** (동일 원인 2회 이상 반복)
+4. **근본 원인 분석** (8D/5Why 관점)
+5. **이번 달 완료 목표** (실행 가능한 계획)`;
+  const data={
+    total:cars.length,
+    byStatus:{},
+    openCount:open.length,
+    overdueCount:overdue.length,
+    recentCars:cars.slice(0,20).map(r=>({
+      no:r.no, title:r.title||r.item, src:r.src,
+      status:r.status, dueDate:r.due_date||r.dueDate,
+      assignee:r.assignee||r.responsible
+    }))
+  };
+  cars.forEach(r=>{data.byStatus[r.status||'미정']=(data.byStatus[r.status||'미정']||0)+1;});
+  const res=await GeminiAI.analyze(prompt, data, 'car');
+  if(res.ok) GeminiAI.showResult(`CAR 개선활동 AI 분석 (총 ${cars.length}건)`, res.result, res.usage);
+},
+
+async _aiQualityDash(){
+  const insps=DB.inspections||[];
+  const nc=DB.nc||[];
+  const cars=DB.car||DB.cars||[];
+  const today=new Date();
+  const thisMonth=today.toISOString().slice(0,7);
+  const failInsps=insps.filter(r=>r.result==='불합격');
+  const failRate=insps.length>0?Math.round(failInsps.length/insps.length*100):0;
+  const prompt=`당신은 제조업 품질 컨설턴트입니다. 아래는 품질현황 대시보드 데이터입니다.
+경영진에게 보고할 수 있는 품질 현황 보고서를 작성해 주세요:
+1. **이번 달 품질 KPI 요약** (불합격률, 부적합 건수, CAR 완료율)
+2. **품질 트렌드 분석** (개선/악화 여부)
+3. **핵심 위험 요소** TOP 3
+4. **즉시 대응 필요 사항**
+5. **다음 달 품질 목표** (수치 포함)`;
+  const data={
+    thisMonth,
+    inspection:{
+      total:insps.length,
+      fail:failInsps.length,
+      failRate:failRate+'%',
+      thisMonth:insps.filter(r=>(r.insp_date||'').startsWith(thisMonth)).length
+    },
+    nc:{total:nc.length, open:nc.filter(r=>r.status!=='완료').length,
+        thisMonth:nc.filter(r=>(r.date||'').startsWith(thisMonth)).length},
+    car:{total:cars.length, open:cars.filter(r=>r.status!=='완료'&&r.status!=='closed').length}
+  };
+  const res=await GeminiAI.analyze(prompt, data, 'quality');
+  if(res.ok) GeminiAI.showResult('품질현황 AI 종합 분석', res.result, res.usage);
+},
+
+async _aiEquipAnalyze(){
+  const equip=DB.equip||[];
+  if(!equip.length){Toast.show('계측기 데이터가 없습니다.','warn');return;}
+  const today=new Date().toISOString().slice(0,10);
+  const expired=equip.filter(r=>r.status==='교정만료'||(r.next_cal&&r.next_cal<today));
+  const soon=equip.filter(r=>r.next_cal&&r.next_cal>=today&&Math.ceil((new Date(r.next_cal)-new Date())/86400000)<=30);
+  const prompt=`당신은 계측기 관리 전문가입니다. 아래는 계측기 교정 현황 데이터입니다.
+다음을 한국어로 분석해 주세요:
+1. **교정 현황 요약** (만료/정상/임박 비율)
+2. **즉시 교정 필요 계측기** (만료된 계측기 목록 및 위험도)
+3. **30일 이내 교정 예정** (일정 계획 수립)
+4. **교정 주기 최적화 제안** (사용 빈도 및 중요도 기준)
+5. **ISO 9001 MSA 관점 위험 요소**`;
+  const data={
+    total:equip.length,
+    expired:expired.length,
+    expiredList:expired.slice(0,10).map(r=>({name:r.name||r.equip_name,code:r.equip_code||r.code,lastCal:r.last_cal,nextCal:r.next_cal})),
+    soon:soon.length,
+    soonList:soon.slice(0,10).map(r=>({name:r.name||r.equip_name,code:r.equip_code||r.code,nextCal:r.next_cal,daysLeft:Math.ceil((new Date(r.next_cal)-new Date())/86400000)}))
+  };
+  const res=await GeminiAI.analyze(prompt, data, 'equip');
+  if(res.ok) GeminiAI.showResult(`계측기 교정 AI 분석 (총 ${equip.length}개)`, res.result, res.usage);
+},
+
+async _aiCalAnalyze(){
+  const cals=DB.calibrations||DB.cal||[];
+  if(!cals.length){Toast.show('교정 데이터가 없습니다.','warn');return;}
+  const today=new Date().toISOString().slice(0,10);
+  const thisYear=today.slice(0,4);
+  const prompt=`당신은 계측기 교정 관리 전문가입니다. 아래는 교정 이력 데이터입니다.
+다음을 한국어로 분석해 주세요:
+1. **교정 이력 현황 요약** (연간 교정 건수, 합격/불합격률)
+2. **불합격 계측기 패턴** (반복 불합격 계측기 식별)
+3. **교정 비용 최적화** (외부교정 vs 자체교정 권고)
+4. **교정 주기 준수율** (예정일 대비 실제 교정일 분석)
+5. **내년도 교정 계획** (우선순위 기반)`;
+  const data={
+    total:cals.length,
+    thisYear:cals.filter(r=>(r.cal_date||r.date||'').startsWith(thisYear)).length,
+    byResult:{},
+    recentCals:cals.slice(0,20).map(r=>({
+      name:r.name||r.equip_name, code:r.equip_code||r.code,
+      date:r.cal_date||r.date, result:r.result, type:r.cal_type||r.type
+    }))
+  };
+  cals.forEach(r=>{const rs=r.result||'미정';data.byResult[rs]=(data.byResult[rs]||0)+1;});
+  const res=await GeminiAI.analyze(prompt, data, 'cal');
+  if(res.ok) GeminiAI.showResult(`교정 이력 AI 분석 (총 ${cals.length}건)`, res.result, res.usage);
+},
+
+async _aiMsaAnalyze(){
+  const msa=DB.msa||[];
+  if(!msa.length){Toast.show('MSA 연구 데이터가 없습니다.','warn');return;}
+  const prompt=`당신은 MSA(측정 시스템 분석) 전문가입니다. 아래는 R&R 연구 데이터입니다.
+다음을 한국어로 분석해 주세요:
+1. **측정 시스템 전반 평가** (%GR&R 기준: <10% 우수, 10-30% 수용, >30% 불량)
+2. **개선 필요 측정 시스템** (%GR&R 30% 초과 계측기)
+3. **측정 변동 원인 분석** (계측기 변동 vs 측정자 변동)
+4. **측정 능력 개선 방안** (재교육, 계측기 교체, 측정 방법 개선)
+5. **AIAG MSA 4th Edition 기준 적합성 평가**`;
+  const data={
+    total:msa.length,
+    studies:msa.slice(0,10).map(r=>({
+      name:r.name, equip:r.equip_code||r.equip_name,
+      parts:r.parts, appraisers:r.appraisers, trials:r.trials,
+      grr:r.grr_pct||r.grr, ev:r.ev, av:r.av, tolerance:r.tolerance
+    }))
+  };
+  const res=await GeminiAI.analyze(prompt, data, 'msa');
+  if(res.ok) GeminiAI.showResult(`MSA 측정 시스템 AI 분석 (총 ${msa.length}건)`, res.result, res.usage);
+},
+
 
 
 async _renderSbDash(){
@@ -9959,22 +10104,39 @@ async _renderSbDash(){
 
   /* ── KPI 값 정의 (SB 무료플랜 기준) ── */
   /* [v2.82] C안: 행수 기반 추정값 */
-  const dbEstMB = Math.round(totalRows * 0.7 / 1024 * 10) / 10;  /* 행당 ~0.7KB */
-  const egEstMB = Math.round(dbEstMB * 37);                        /* DB × 37배 경험치 */
+  /* [v2.174] DB크기/Egress — localStorage 저장값 사용 (Supabase 대시보드 실제값 입력)
+     초기값: Supabase 대시보드 Usage 화면의 실제 값 사용
+     사용자가 설정에서 직접 입력하거나 자동 갱신 버튼으로 업데이트 */
+  const sbUsage=JSON.parse(localStorage.getItem('qms_sb_usage')||'{}');
+  const dbSizeMB  = sbUsage.dbSizeMB   || Math.round(totalRows * 0.7 / 1024 * 10)/10;
+  const egressMB  = sbUsage.egressMB   || 0;
+  /* storageMB는 실제 조회값 우선, 없으면 저장값 사용 */
+  if(!storageMB && sbUsage.storageMB) storageMB = sbUsage.storageMB;
   const kpiList=[
-    {label:'Database',   icon:'🗄️', used:totalRows, max:50000, unit:'행',
-     color:totalRows>50000?'#ef4444':'#3b82f6',
-     bg:totalRows>50000?'#fef2f2':'#eff6ff',
-     desc:totalRows>50000?'⚠️ 무료플랜 50K행 초과!':'DB 전체 행 수 / 무료 50K행'},
-    {label:'Storage',    icon:'💾', used:storageMB||dbEstMB, max:1024, unit:'MB',
-     color:'#10b981', bg:'#f0fdf4',
-     desc:'파일:'+(storageMB||0)+'MB / DB추정:'+dbEstMB+'MB'},
-    {label:'Egress',     icon:'📡', used:egEstMB, max:5120, unit:'MB',
-     color:egEstMB>4000?'#ef4444':'#f59e0b', bg:'#fef3c7',
-     desc:'추정값 (행수×0.7KB×37배) ※실제: SB대시보드 확인',
-     link:'https://supabase.com/dashboard/project/_/reports'},
-    {label:'전체행',     icon:'📋', used:totalRows, max:50000, unit:'행',
-     color:'#8b5cf6', bg:'#f5f3ff', desc:'전체 데이터 행 수'},
+    {/* [v2.174] KPI — Supabase 실제값 기반으로 재설계
+       Database: 실제 DB 크기(MB), 한도 500MB (Free Plan)
+       Storage: 실제 파일 스토리지(MB), 한도 1,024MB
+       Egress: 실제 아웃바운드(MB), 한도 5,120MB/월
+       ※ 실제 DB 크기는 Supabase REST API로 조회 불가 → 직접 입력 방식 안내
+       사진 기준: DB=0.044GB=44MB, Storage=0.102GB=104MB, Egress=0.603GB=617MB */
+    label:'Database',   icon:'🗄️',
+     used:dbSizeMB, max:500, unit:'MB',
+     color:dbSizeMB>400?'#ef4444':dbSizeMB>300?'#f59e0b':'#3b82f6',
+     bg:dbSizeMB>400?'#fef2f2':'#eff6ff',
+     desc:'DB 크기 '+dbSizeMB+'MB / 무료 500MB'},
+    {label:'Storage',    icon:'💾',
+     used:storageMB, max:1024, unit:'MB',
+     color:storageMB>900?'#ef4444':storageMB>700?'#f59e0b':'#10b981', bg:'#f0fdf4',
+     desc:'파일 스토리지 '+storageMB+'MB / 무료 1,024MB'},
+    {label:'Egress',     icon:'📡',
+     used:egressMB, max:5120, unit:'MB',
+     color:egressMB>4500?'#ef4444':egressMB>3000?'#f59e0b':'#f59e0b', bg:'#fef3c7',
+     desc:'월 아웃바운드 '+egressMB+'MB / 무료 5,120MB',
+     link:'https://supabase.com/dashboard/project/phxlsnghgvowrxdlcsph/reports'},
+    {label:'DB 행 수',   icon:'📋',
+     used:totalRows, max:50000, unit:'행',
+     color:totalRows>45000?'#ef4444':totalRows>30000?'#f59e0b':'#8b5cf6', bg:'#f5f3ff',
+     desc:'전체 '+totalRows.toLocaleString()+'행 / 참고용'},
     {label:'비활성방지', icon:'🛡️', used:1, max:1, unit:'',
      color:'#ef4444', bg:'#fff5f5', desc:'keepalive 상태'},
   ];
@@ -9987,6 +10149,34 @@ async _renderSbDash(){
   h+='<div class="card" style="margin-bottom:14px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between">';
   h+='<div style="font-size:13px;font-weight:600">🔌 Supabase 연결 상태</div>';
   h+='<span style="font-size:12px;font-weight:700;color:'+(connected?'#22c55e':'#ef4444')+'">● '+(connected?'연결됨':'연결 안됨')+'</span>';
+  h+='</div>';
+
+  /* [v2.174] 실제값 직접 입력 패널 — Supabase 대시보드 Usage 화면 값 입력 */
+  const _su=JSON.parse(localStorage.getItem('qms_sb_usage')||'{}');
+  h+='<div class="card" style="margin-bottom:14px;padding:14px 16px">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+  h+='<div style="font-size:13px;font-weight:700;color:var(--text)">📊 실제 사용량 입력</div>';
+  h+='<a href="https://supabase.com/dashboard/project/phxlsnghgvowrxdlcsph/settings/billing" target="_blank" style="font-size:11px;color:#3b82f6">Supabase 대시보드 →</a>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Supabase → Settings → Usage 화면의 실제 값을 MB 단위로 입력하세요. (예: 0.044 GB = 44 MB)</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
+  h+='<div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px">🗄️ Database (MB)</label>';
+  h+='<input id="sbInputDb" type="number" step="0.1" class="fc" style="font-size:12px" placeholder="예) 44" value="'+(_su.dbSizeMB||'')+'"></div>';
+  h+='<div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px">💾 Storage (MB)</label>';
+  h+='<input id="sbInputSt" type="number" step="0.1" class="fc" style="font-size:12px" placeholder="예) 104" value="'+(_su.storageMB||'')+'"></div>';
+  h+='<div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px">📡 Egress (MB)</label>';
+  h+='<input id="sbInputEg" type="number" step="0.1" class="fc" style="font-size:12px" placeholder="예) 617" value="'+(_su.egressMB||'')+'"></div>';
+  h+='</div>';
+  h+='<div style="margin-top:8px;display:flex;gap:6px">';
+  h+='<button class="btn bpri bsm" onclick="(function(){';
+  h+='const d=parseFloat(document.getElementById(\'sbInputDb\')?.value)||0;';
+  h+='const s=parseFloat(document.getElementById(\'sbInputSt\')?.value)||0;';
+  h+='const e=parseFloat(document.getElementById(\'sbInputEg\')?.value)||0;';
+  h+='localStorage.setItem(\'qms_sb_usage\',JSON.stringify({dbSizeMB:d,storageMB:s,egressMB:e}));';
+  h+='Toast.show(\'사용량이 저장됐습니다. 새로고침합니다.\',\'ok\');';
+  h+='setTimeout(()=>Pages._renderSbDash(),500);})()">💾 저장 및 갱신</button>';
+  h+='<button class="btn bout bsm" onclick="localStorage.removeItem(\'qms_sb_usage\');Pages._renderSbDash()">🔄 초기화</button>';
+  h+='</div>';
   h+='</div>';
 
   /* 5개 KPI 도넛 카드 */
@@ -14368,7 +14558,7 @@ async sqm_audit(){
       <div><div class="ptit">🔎 공급업체 심사</div>
         <div class="psub">정기/수시/특별 심사 계획 · 진도 · 결과 관리</div></div>
       <div class="pac">
-        <button class="btn bout bsm ai-loading-btn" onclick="Pages._aiSqmPlan()" title="AI로 분기 공급사 관리 계획 생성">🤖 AI 분기 계획</button>
+        <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiSqmPlan()" title="AI로 분기 공급사 관리 계획 생성">🤖 AI 분기 계획</button>
         <button class="btn bpri btn-f2" onclick="Pages._sqmAuditForm()">+ 심사 등록 <span class="kbd">F2</span></button>
       </div>
     </div>
@@ -15440,7 +15630,7 @@ async spc_chart(){
       <button class="btn bout bsm" onclick="Pages._spcItemForm()">+ 항목 등록</button>
       <button class="btn bout bsm" onclick="ExcelMgr.download('spc_subgroups')" title="측정데이터 양식 다운로드">📄 양식</button>
       <button class="btn bout bsm" onclick="ExcelMgr.openUpload('spc_subgroups')" title="측정데이터 엑셀 일괄 업로드">📥 일괄 업로드</button>
-      <button class="btn bout bsm ai-loading-btn" onclick="Pages._aiSpcAnalyze(window._spcSelId)" title="AI로 이상 원인 분석">🤖 AI 분석</button>
+      <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiSpcAnalyze(window._spcSelId)" title="AI로 이상 원인 분석">🤖 AI 분석</button>
       <button class="btn bpri bsm" onclick="Pages._spcDataForm(window._spcSelId)">+ 데이터 입력</button>
     </div>
   </div>
