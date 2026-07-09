@@ -2541,3 +2541,260 @@ const GeminiAI={
     });
   },
 };
+
+/* ════════════════════════════════════════════════════════════
+   QmsChat — QMS AI 어시스턴트 채팅 모듈 [v2.176]
+   - 전체화면 슬라이드 패널 (position:fixed, 우측에서 등장)
+   - 다중턴 대화 (messages 배열, 최대 20턴 유지)
+   - 현재 페이지 컨텍스트 자동 인식 + 데이터 참조
+   - 빠른 질문 버튼, 타이핑 인디케이터, 마크다운 렌더
+   - 대화 초기화, ESC 닫기 지원
+   ════════════════════════════════════════════════════════════ */
+const QmsChat = {
+  _history: [],      /* {role:'user'|'assistant', content:''} */
+  _loading: false,
+
+  /* [v2.177] _getContext — 전체 DB 데이터 종합 요약
+     현재 페이지와 무관하게 모든 모듈 데이터를 컨텍스트에 포함
+     → AI가 어느 질문이든 전체 QMS 데이터를 참조해서 답변 가능 */
+  _getContext(){
+    const page = sessionStorage.getItem('qms_page') || 'home';
+    const pageLabels = {
+      home:'홈 대시보드', nc:'부적합관리', nc_8d:'8D Report',
+      car:'개선활동(CAR)', inspections:'검사관리', insp_in:'수입검사',
+      insp_pr:'공정검사', sqm_dash:'공급업체 품질', vendor_eval:'공급사 평가',
+      spc_chart:'SPC 관리도', spc_cpk:'공정능력(Cpk)', spc_pareto:'파레토 분석',
+      docs:'문서관리', doc_dashboard:'문서 대시보드', equip:'계측기 관리',
+      cal:'교정관리', msa:'MSA 분석', quality_dash:'품질현황 대시보드',
+      nc_8d:'8D Report', car:'개선활동',
+    };
+    const label = pageLabels[page] || page;
+
+    /* 전체 DB 종합 요약 */
+    let dataCtx = '';
+    let fullSummary = '';
+    try {
+      const DB = window.DB || {};
+      const today = new Date().toISOString().slice(0,10);
+      const thisMonth = today.slice(0,7);
+
+      /* ① 부적합관리 */
+      const nc = DB.nc||[];
+      const ncOpen = nc.filter(r=>r.status!=='완료');
+
+      /* ② 검사 */
+      const insps = DB.inspections||[];
+      const inspFail = insps.filter(r=>r.result==='불합격');
+
+      /* ③ CAR 개선활동 */
+      const cars = DB.car||DB.cars||[];
+      const carOpen = cars.filter(r=>r.status!=='완료'&&r.status!=='closed');
+
+      /* ④ 8D Report */
+      const r8d = DB.reports||[];
+      const r8dOpen = r8d.filter(r=>r.status!=='완료'&&r.status!=='종결');
+
+      /* ⑤ 공급사 */
+      const vendors = DB.vendors||[];
+      const evals = DB.vendor_evals||[];
+      const lowScore = evals.filter(r=>(r.total||0)<80);
+
+      /* ⑥ 계측기/교정 */
+      const equip = DB.equip||[];
+      const calExpired = equip.filter(r=>r.status==='교정만료');
+      const calSoon = equip.filter(r=>{
+        if(!r.next_cal||r.status==='교정만료') return false;
+        return Math.ceil((new Date(r.next_cal)-new Date())/86400000)<=30;
+      });
+
+      /* ⑦ 문서 */
+      const docs = DB.docs||[];
+      const docsActive = docs.filter(r=>r.status==='active');
+
+      /* ⑧ SPC */
+      const spcItems = window._spcItems||[];
+
+      /* 현재 페이지 컨텍스트 (간단) */
+      dataCtx = `현재: ${label}`;
+
+      /* 전체 데이터 요약 — AI 시스템 컨텍스트에 삽입 */
+      fullSummary = [
+        `[QMS 전체 현황 — ${today}]`,
+        `부적합: 총 ${nc.length}건, 미결 ${ncOpen.length}건, 이번달 ${nc.filter(r=>(r.date||'').startsWith(thisMonth)).length}건`,
+        `검사: 총 ${insps.length}건, 불합격 ${inspFail.length}건 (불합격률 ${insps.length?Math.round(inspFail.length/insps.length*100):0}%)`,
+        `CAR: 총 ${cars.length}건, 미완료 ${carOpen.length}건`,
+        `8D: 총 ${r8d.length}건, 진행 ${r8dOpen.length}건`,
+        `공급사: ${vendors.length}개, 최근평가 ${evals.length}건, 저점수(80점미만) ${lowScore.length}개`,
+        `계측기: ${equip.length}개, 교정만료 ${calExpired.length}개, D-30이내 ${calSoon.length}개`,
+        `문서: 총 ${docs.length}건, 유효 ${docsActive.length}건`,
+        `SPC 관리항목: ${spcItems.length}개`,
+        `현재 페이지: ${label}`,
+      ].join('\n');
+    } catch(e) { dataCtx = label; fullSummary = ''; }
+
+    return { page, label, dataCtx, fullSummary };
+  },
+
+  /* ── 열기 ── */
+  open(){
+    const panel   = document.getElementById('aiChatPanel');
+    const overlay = document.getElementById('aiChatOverlay');
+    const floatBtn= document.getElementById('aiChatFloatBtn');
+    if(!panel) return;
+    panel.style.display = 'flex';
+    overlay.style.display = 'block';
+    if(floatBtn) floatBtn.style.display = 'none';
+
+    /* 슬라이드 인 애니메이션 */
+    panel.style.transform = 'translateX(100%)';
+    panel.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
+    requestAnimationFrame(()=>{ panel.style.transform = 'translateX(0)'; });
+
+    this._updateCtxBar();
+    setTimeout(()=>document.getElementById('aiChatInput')?.focus(), 300);
+  },
+
+  /* ── 닫기 ── */
+  close(){
+    const panel   = document.getElementById('aiChatPanel');
+    const overlay = document.getElementById('aiChatOverlay');
+    const floatBtn= document.getElementById('aiChatFloatBtn');
+    if(!panel) return;
+    panel.style.transform = 'translateX(100%)';
+    setTimeout(()=>{
+      panel.style.display = 'none';
+      overlay.style.display = 'none';
+      if(floatBtn) floatBtn.style.display = 'flex';
+    }, 250);
+  },
+
+  /* ── 컨텍스트 바 갱신 ── */
+  _updateCtxBar(){
+    const ctx = this._getContext();
+    const label  = document.getElementById('aiChatCtxLabel');
+    const ctxBar = document.getElementById('aiChatCtxBar');
+    if(label)  label.textContent = ctx.label;
+    if(ctxBar) ctxBar.textContent = `📍 전체 QMS 데이터 참조 중 · 현재: ${ctx.label}`;
+  },
+
+  /* ── 메시지 추가 ── */
+  _addMsg(role, content){
+    const wrap = document.getElementById('aiChatMessages');
+    if(!wrap) return;
+    const div = document.createElement('div');
+    div.className = `ai-chat-msg ${role==='user'?'ai-msg-user':'ai-msg-ai'}`;
+    /* 간단 마크다운 렌더 */
+    div.innerHTML = content
+      .replace(/^### (.+)$/gm,'<b style="font-size:12px;color:var(--muted)">$1</b>')
+      .replace(/^## (.+)$/gm,'<b style="font-size:13px">$1</b>')
+      .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+      .replace(/\n/g,'<br>');
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  },
+
+  /* ── 타이핑 인디케이터 ── */
+  _showLoading(){
+    const wrap = document.getElementById('aiChatMessages');
+    if(!wrap) return;
+    const div = document.createElement('div');
+    div.id = 'aiTypingIndicator';
+    div.className = 'ai-msg-loading';
+    div.innerHTML = '<span class="ai-typing-dot"></span><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span>&nbsp;AI가 분석 중...';
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  },
+  _hideLoading(){
+    document.getElementById('aiTypingIndicator')?.remove();
+  },
+
+  /* ── 대화 초기화 ── */
+  clear(){
+    this._history = [];
+    const wrap = document.getElementById('aiChatMessages');
+    if(wrap) wrap.innerHTML = `<div class="ai-chat-msg ai-msg-ai">
+      대화가 초기화됐습니다. 새로운 질문을 입력해 주세요! 😊
+    </div>`;
+  },
+
+  /* ── 빠른 질문 ── */
+  quick(text){
+    const input = document.getElementById('aiChatInput');
+    if(input){ input.value = text; }
+    this.send();
+  },
+
+  /* ── 메시지 전송 ── */
+  async send(){
+    if(this._loading) return;
+    const input = document.getElementById('aiChatInput');
+    const sendBtn = document.getElementById('aiChatSendBtn');
+    if(!input) return;
+    const text = input.value.trim();
+    if(!text) return;
+
+    input.value = '';
+    input.style.height = '44px';
+    this._loading = true;
+    if(sendBtn){ sendBtn.disabled=true; sendBtn.style.opacity='0.5'; }
+
+    /* 컨텍스트 갱신 */
+    this._updateCtxBar();
+    const ctx = this._getContext();
+
+    /* 첫 메시지면 전체 DB 요약을 컨텍스트에 삽입 */
+    let userContent = text;
+    if(this._history.length === 0 && ctx.fullSummary){
+      userContent = `${ctx.fullSummary}\n\n질문: ${text}`;
+    }
+
+    /* 히스토리 추가 */
+    this._history.push({ role:'user', content: userContent });
+    this._addMsg('user', text);  /* 표시는 원본 텍스트 */
+    this._showLoading();
+
+    /* 히스토리 최대 20턴(40개 메시지) 유지 */
+    if(this._history.length > 40) this._history = this._history.slice(-40);
+
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: this._history, mode: 'chat' }),
+      });
+      const json = await res.json();
+      this._hideLoading();
+
+      if(json.error){
+        this._addMsg('assistant', `⚠️ 오류: ${json.error}`);
+        this._history.pop(); /* 실패한 user 메시지 제거 */
+      } else {
+        const reply = json.result || '응답을 가져올 수 없습니다.';
+        this._history.push({ role:'assistant', content: reply });
+        this._addMsg('assistant', reply);
+        /* 사용량 기록 */
+        if(json.usage && typeof GeminiAI !== 'undefined') GeminiAI._saveUsage(json.usage, 'chat', text.length);
+      }
+    } catch(e) {
+      this._hideLoading();
+      this._addMsg('assistant', `⚠️ 연결 오류: ${e.message}`);
+      this._history.pop();
+    } finally {
+      this._loading = false;
+      if(sendBtn){ sendBtn.disabled=false; sendBtn.style.opacity='1'; }
+      document.getElementById('aiChatInput')?.focus();
+    }
+  },
+};
+
+/* ESC 키로 채팅 패널 닫기 */
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    const panel = document.getElementById('aiChatPanel');
+    if(panel && panel.style.display !== 'none') QmsChat.close();
+  }
+});
+/* 오버레이 클릭으로 닫기 */
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('aiChatOverlay')?.addEventListener('click', ()=>QmsChat.close());
+});

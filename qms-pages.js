@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.174</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.177</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -9909,6 +9909,82 @@ async _aiDocDashAnalyze(){
    _aiMsaAnalyze: MSA 측정 시스템 분석
    ════════════════════════════════════ */
 
+async _ai8dAnalyze(){
+  /* [v2.175] 8D Report AI 분석
+     - 전체 8D 현황 요약 (완료율, 진행 단계 분포)
+     - 미완성 8D의 막힌 단계 분석
+     - D4(근본원인)/D5(영구대책) 품질 평가
+     - 반복 발생 불량 패턴 식별
+     - 완료 촉진 액션 플랜 */
+  const data8d = DB.reports || DB.nc_8d || [];
+  if(!data8d.length){Toast.show('8D Report 데이터가 없습니다.','warn');return;}
+
+  const today = new Date().toISOString().slice(0,10);
+  const open  = data8d.filter(r=>r.status!=='완료'&&r.status!=='종결'&&r.status!=='D8-팀인정');
+  const closed= data8d.filter(r=>r.status==='완료'||r.status==='종결'||r.status==='D8-팀인정');
+
+  /* D 단계별 진행 현황 집계 */
+  const byStage={};
+  data8d.forEach(r=>{ byStage[r.status||'미정']=(byStage[r.status||'미정']||0)+1; });
+
+  /* 미완성 8D에서 막힌 단계 분석 */
+  const stuckAt={};
+  open.forEach(r=>{
+    /* D1~D8 중 마지막으로 내용 있는 단계 찾기 */
+    let lastFilled='D1';
+    for(let n=1;n<=8;n++){
+      if(r[`d${n}`]&&r[`d${n}`].trim()) lastFilled=`D${n}`;
+    }
+    stuckAt[lastFilled]=(stuckAt[lastFilled]||0)+1;
+  });
+
+  const prompt=`당신은 8D 문제 해결 방법론 전문가입니다. 아래는 8D Report 현황 데이터입니다.
+다음을 한국어로 분석해 주세요:
+1. **8D 현황 요약** (완료율, 평균 소요 기간 추정, 단계별 분포)
+2. **정체 단계 분석** (가장 많이 막히는 D 단계와 원인)
+3. **D4/D5 품질 평가** (근본원인 및 영구대책의 충실도 평가)
+4. **반복 발생 패턴** (유사 제목/원인의 반복 여부)
+5. **완료 촉진 액션 플랜** (단계별 구체적 지원 방안)
+6. **이번 달 완료 목표** (실행 가능한 3건 선정 근거)
+8D 방법론(AIAG/Ford 기준) 관점에서 실무적으로 분석해 주세요.`;
+
+  const payload={
+    total: data8d.length,
+    completionRate: Math.round(closed.length/data8d.length*100)+'%',
+    byStage,
+    stuckAt,
+    openCount: open.length,
+    closedCount: closed.length,
+    /* 진행 중 8D 상세 (최근 15건) */
+    openDetails: open.slice(0,15).map(r=>({
+      no:    r.no,
+      title: r.title,
+      ncRef: r.nc_ref,
+      owner: r.owner,
+      stage: r.status,
+      d1:    (r.d1||'').slice(0,50)||'미입력',
+      d2:    (r.d2||'').slice(0,50)||'미입력',
+      d3:    (r.d3||'').slice(0,50)||'미입력',
+      d4:    (r.d4||'').slice(0,80)||'미입력',  /* 근본원인 — 중요 */
+      d5:    (r.d5||'').slice(0,80)||'미입력',  /* 영구대책 — 중요 */
+      d6:    (r.d6||'').slice(0,50)||'미입력',
+      d7:    (r.d7||'').slice(0,50)||'미입력',
+      d8:    (r.d8||'').slice(0,50)||'미입력',
+      startDate: r.d1_date,
+    })),
+    /* 완료 8D 요약 (최근 5건) */
+    recentClosed: closed.slice(0,5).map(r=>({
+      no:r.no, title:r.title, d4:(r.d4||'').slice(0,60), d5:(r.d5||'').slice(0,60)
+    })),
+  };
+
+  const res=await GeminiAI.analyze(prompt, payload, '8d');
+  if(res.ok) GeminiAI.showResult(
+    `8D Report AI 분석 (총 ${data8d.length}건 · 진행 ${open.length}건 · 완료 ${closed.length}건)`,
+    res.result, res.usage
+  );
+},
+
 async _aiCarAnalyze(){
   const cars=await SB.getCars?.() || DB.car || DB.cars || [];
   if(!cars.length){Toast.show('CAR 데이터가 없습니다.','warn');return;}
@@ -16413,6 +16489,7 @@ nc_8d(){
       <div><div class="ptit">📋 8D Report</div>
         <div class="psub">품질 문제 8단계 해결 방법론 보고서</div></div>
       <div class="pac">
+        <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._ai8dAnalyze()" title="AI로 8D Report 현황 분석 및 개선 방향 제시">🤖 AI 분석</button>
         <button class="btn bpri btn-f2" onclick="Pages._8dForm()">+ 8D 등록 <span class="kbd">F2</span></button>
         <button class="btn bout bsm btn-f3" onclick="SearchPop.open('nc_8d')">🔍 검색 <span class="kbd">F3</span></button>
       </div>
