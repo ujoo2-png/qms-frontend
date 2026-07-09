@@ -27,6 +27,7 @@
     }
   ],
   "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/qms-db.js",    "dest": "/qms-db.js" },
     { "src": "/qms-core.js",  "dest": "/qms-core.js" },
     { "src": "/qms-pages.js", "dest": "/qms-pages.js" },
