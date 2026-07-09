@@ -2432,3 +2432,112 @@ _deactivateUser(id){
     ov.style.alignItems=''; ov.style.justifyContent='';
   }
 }
+
+/* ════════════════════════════════════════════════════════════
+   GeminiAI — Gemini 2.0 Flash AI 분석 모듈 [v2.168]
+   - /api/gemini (Vercel Edge Function) 통해 안전하게 호출
+   - 사용량(횟수/토큰) localStorage에 누적 기록
+   - GeminiAI.analyze(prompt, data, mode) → {result, usage}
+   - GeminiAI.getUsage() → 누적 사용량
+   - GeminiAI.clearUsage() → 사용량 초기화
+   ════════════════════════════════════════════════════════════ */
+const GeminiAI={
+  _ENDPOINT:'/api/gemini',
+  _STORE_KEY:'qms_gemini_usage',
+
+  /* 누적 사용량 불러오기 */
+  getUsage(){
+    try{
+      const raw=localStorage.getItem(this._STORE_KEY);
+      if(!raw) return {totalCalls:0,totalPromptTokens:0,totalOutputTokens:0,totalTokens:0,logs:[]};
+      return JSON.parse(raw);
+    }catch(e){return {totalCalls:0,totalPromptTokens:0,totalOutputTokens:0,totalTokens:0,logs:[]};}
+  },
+
+  /* 사용량 저장 */
+  _saveUsage(usage, mode, promptLen){
+    const cur=this.getUsage();
+    cur.totalCalls=(cur.totalCalls||0)+1;
+    cur.totalPromptTokens=(cur.totalPromptTokens||0)+(usage.promptTokens||0);
+    cur.totalOutputTokens=(cur.totalOutputTokens||0)+(usage.outputTokens||0);
+    cur.totalTokens=(cur.totalTokens||0)+(usage.totalTokens||0);
+    if(!cur.logs) cur.logs=[];
+    cur.logs.unshift({
+      time: usage.requestTime||new Date().toISOString(),
+      mode: mode||'general',
+      promptTokens: usage.promptTokens||0,
+      outputTokens: usage.outputTokens||0,
+      totalTokens:  usage.totalTokens||0,
+    });
+    if(cur.logs.length>100) cur.logs=cur.logs.slice(0,100);
+    try{localStorage.setItem(this._STORE_KEY, JSON.stringify(cur));}catch(e){}
+    return cur;
+  },
+
+  /* 사용량 초기화 */
+  clearUsage(){
+    localStorage.removeItem(this._STORE_KEY);
+  },
+
+  /* 핵심: AI 분석 실행
+     @param prompt  - 분석 지시문 (한국어)
+     @param data    - 분석 대상 데이터 (객체 또는 배열)
+     @param mode    - 분류 태그 ('nc'|'sqm'|'spc'|'home'|...)
+     @returns       - {ok, result, usage} */
+  async analyze(prompt, data=null, mode='general'){
+    const btn=document.querySelector('.ai-loading-btn');
+    if(btn){btn.disabled=true;btn.textContent='⏳ AI 분석 중...';}
+    try{
+      const res=await fetch(this._ENDPOINT,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({prompt, data, mode}),
+      });
+      const json=await res.json();
+      if(!res.ok||json.error){
+        Toast.show('AI 분석 실패: '+(json.error||'알 수 없는 오류'),'err');
+        return {ok:false, error:json.error};
+      }
+      this._saveUsage(json.usage||{}, mode, prompt.length);
+      return {ok:true, result:json.result, usage:json.usage};
+    }catch(e){
+      Toast.show('AI 서버 연결 실패: '+e.message,'err');
+      return {ok:false, error:e.message};
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent='🤖 AI 분석';}
+    }
+  },
+
+  /* AI 결과를 모달로 표시 */
+  showResult(title, result, usage=null){
+    const usageTxt=usage
+      ?`<div style="margin-top:12px;padding:8px 12px;background:var(--bg2);border-radius:6px;font-size:11px;color:var(--muted);display:flex;gap:16px">
+          <span>📊 입력 ${usage.promptTokens||0} 토큰</span>
+          <span>📝 출력 ${usage.outputTokens||0} 토큰</span>
+          <span>⏱ ${(usage.requestTime||'').slice(11,19)}</span>
+        </div>`:'';
+    /* 마크다운 → HTML 간단 변환 */
+    const html=result
+      .replace(/^### (.+)$/gm,'<h4 style="margin:14px 0 6px;color:var(--text)">$1</h4>')
+      .replace(/^## (.+)$/gm,'<h3 style="margin:16px 0 8px;color:var(--text)">$1</h3>')
+      .replace(/^# (.+)$/gm,'<h2 style="margin:18px 0 10px;color:var(--text)">$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/^- (.+)$/gm,'<li style="margin:3px 0">$1</li>')
+      .replace(/^(\d+)\. (.+)$/gm,'<li style="margin:3px 0"><b>$1.</b> $2</li>')
+      .replace(/\n{2,}/g,'</p><p style="margin:8px 0">')
+      .replace(/\n/g,'<br>');
+    Modal.open({
+      title:`🤖 ${title}`,
+      size:'mlg',
+      foot:`<div style="display:flex;gap:8px;align-items:center">
+        <button class="btn bout bsm" onclick="navigator.clipboard.writeText(${JSON.stringify(result)}).then(()=>Toast.show('복사됨','ok'))">📋 복사</button>
+        <button class="btn bpri" onclick="Modal.close()">닫기</button>
+      </div>`,
+      body:`<div style="line-height:1.8;font-size:13px;color:var(--text)">
+        <div style="padding:14px 0"><p style="margin:0">${html}</p></div>
+        ${usageTxt}
+      </div>`,
+    });
+  },
+};

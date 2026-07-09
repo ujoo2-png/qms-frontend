@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.166</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.169</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -753,6 +753,8 @@ async items(){
         <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('items')" title="엑셀 일괄등록">📤 자료 일괄등록</button>
         <button class="btn btn-xl-up bsm" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none"
           onclick="ExcelMgr.openUploadAll()" title="멀티시트 통합 일괄등록 (A+C안)">🗂️ 통합 일괄등록</button>
+        <button class="btn bout bsm ai-loading-btn" style="background:linear-gradient(135deg,#7c3aed22,#4f46e522);border:1px solid #7c3aed66;color:#7c3aed"
+          onclick="Pages._aiHomeInsight()" title="AI로 품질 현황 종합 인사이트">🤖 AI 인사이트</button>
       </div>
     </div>
     <div class="tbar">
@@ -2477,6 +2479,7 @@ _ncRender(){
       <div class="pac">
         <button class="btn btn-xl-down bsm" onclick="Pages._ncExcelDown()" title="엑셀 양식 내려받기">📥 양식</button>
         <button class="btn btn-xl-up bsm" onclick="Pages._ncExcelUp()" title="엑셀 일괄등록">📤 일괄등록</button>
+        <button class="btn bout bsm ai-loading-btn" onclick="Pages._aiNcAnalyze()" title="AI로 부적합 패턴 분석">🤖 AI 분석</button>
         <button class="btn bpri btn-f2" onclick="Pages._ncForm()">+ 부적합 등록 <span class="kbd">F2</span></button>
       </div>
     </div>
@@ -4177,6 +4180,7 @@ async docs(){
     '<div class="ph" style="margin-top:14px"><div><div class="ptit">📄 문서 목록</div></div>'+
       '<div class="pac">'+
         '<button class="btn berr bsm" onclick="Pages._docBulkDelete()" title="체크된 문서 삭제">🗑️ 선택삭제</button>'+
+      '<button class="btn bout bsm ai-loading-btn" onclick="Pages._aiDocAnalyze()" title="AI로 문서 현황 분석">🤖 AI 분석</button>'+
       '<button class="btn bpri btn-f2" onclick="Pages._docForm()">+ 문서 등록 <span class="kbd">F2</span></button>'+
       '</div>'+
     '</div>'+
@@ -5851,6 +5855,7 @@ async doc_review_cycle(){
     '</div><div class="pac">'+
       '<button class="btn bred bsm" onclick="Pages._rcSendAlert(7)">🚨 D-7 긴급알림</button>'+
       '<button class="btn bamb bsm" onclick="Pages._rcSendAlert(30)">🔔 D-30 알림발송</button>'+
+      '<button class="btn bout bsm ai-loading-btn" onclick="Pages._aiDocReviewPlan()" title="AI로 검토 우선순위 추천">🤖 AI 검토 계획</button>'+
     '</div></div>'+
     '<div class="tbar">'+
       '<div class="sw2"><input type="text" id="rcKw" placeholder="문서번호, 제목, 부서..." oninput="Pages._rcKwFilter(this.value)"></div>'+
@@ -6195,6 +6200,7 @@ async doc_dashboard(){
       '<div style="font-size:13px;color:var(--muted);margin-top:2px">ISO 9001 문서화된 정보 관리 현황</div>'+
     '</div><div class="pac">'+
       '<button class="btn bout bsm" onclick="Pages._dashRefresh()">🔄 새로고침</button>'+
+      '<button class="btn bout bsm ai-loading-btn" onclick="Pages._aiDocDashAnalyze()" title="AI로 문서 현황 종합 분석">🤖 AI 현황 분석</button>'+
     '</div></div>'+
 
     /* ① KPI 카드 */
@@ -9136,6 +9142,7 @@ async settings(){
     document.querySelectorAll('.stab-btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
     document.querySelectorAll('.stab-pane').forEach(p=>p.style.display=p.dataset.tab===tab?'block':'none');
     if(tab==='sbdash') setTimeout(()=>Pages._renderSbDash(),0);
+    if(tab==='aidash') setTimeout(()=>Pages._renderAiDash(),0);
     if(tab==='codemgmt') Pages._renderCodeMgmt();
   };
 
@@ -9342,6 +9349,9 @@ async settings(){
     <button class="btn stab-btn bout" data-tab="sbdash"
       onclick="renderTab('sbdash')"
       style="border-radius:8px">🔌 SB 대시보드</button>
+    <button class="btn stab-btn bout" data-tab="aidash"
+      onclick="renderTab('aidash')"
+      style="border-radius:8px">🤖 AI 대시보드</button>
     <button class="btn stab-btn ${isAdmin?'':'bout'}" data-tab="codemgmt" onclick="${isAdmin?`renderTab('codemgmt')`:`Toast.show('관리자만 접근 가능합니다.','warn')`}" style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}">&#128203; 코드 관리${isAdmin?'':' 🔒'}</button>
   </div>
 
@@ -9444,6 +9454,10 @@ async settings(){
   </div>
 
   <!-- SB 대시보드 탭 -->
+  <div class="stab-pane" data-tab="aidash" style="display:none">
+    <div id="aiDashContainer"><div class="es"><div class="es-icon">🤖</div><div>AI 대시보드 탭을 클릭하세요</div></div></div>
+  </div>
+
   <div class="stab-pane" data-tab="sbdash" style="display:none">
     <div id="sbDashContainer">
       <div style="text-align:center;padding:40px;color:var(--tm);font-size:13px">
@@ -9492,6 +9506,397 @@ async sysusers(){
 },
 
 /* SB 대시보드 [v2.394] */
+
+/* ════════════════════════════════════════════════════════════
+   AI 분석 함수 모음 [v2.168]
+   - _renderAiDash(): 설정 > AI 대시보드 렌더
+   - _aiNcAnalyze(): 부적합 AI 분석
+   - _aiSqmPlan(): SQM 분기 계획 AI 생성
+   - _aiSpcAnalyze(): SPC 이상 원인 분석
+   - _aiHomeInsight(): 홈 종합 인사이트
+   ════════════════════════════════════════════════════════════ */
+
+/* ── AI 대시보드 (설정 탭) ── */
+async _renderAiDash(){
+  const el=document.getElementById('aiDashContainer');
+  if(!el) return;
+  const u=GeminiAI.getUsage();
+  const logs=u.logs||[];
+
+  /* 오늘 날짜 사용량 집계 */
+  const today=new Date().toISOString().slice(0,10);
+  const todayLogs=logs.filter(l=>l.time.startsWith(today));
+  const todayCalls=todayLogs.length;
+  const todayTokens=todayLogs.reduce((s,l)=>s+(l.totalTokens||0),0);
+
+  /* 모드별 집계 */
+  const modeMap={};
+  logs.forEach(l=>{modeMap[l.mode]=(modeMap[l.mode]||0)+1;});
+  const modeLabels={'nc':'부적합 분석','sqm':'SQM 계획','spc':'SPC 분석','home':'종합 인사이트','general':'기타'};
+
+  /* 무료 한도: 일 1,500회, 분당 15회 */
+  const dailyLimit=1500;
+  const pct=Math.min(100,Math.round(todayCalls/dailyLimit*100));
+
+  el.innerHTML=`
+  <div class="stat-dash" style="margin-bottom:16px">
+    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">🤖</div>
+      <div><div class="sd-val">${u.totalCalls||0}</div><div class="sd-lbl">총 AI 호출 횟수</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#dbeafe;color:#2563eb">📊</div>
+      <div><div class="sd-val">${(u.totalTokens||0).toLocaleString()}</div><div class="sd-lbl">총 사용 토큰</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#dcfce7;color:#16a34a">📅</div>
+      <div><div class="sd-val">${todayCalls}</div><div class="sd-lbl">오늘 호출 횟수</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef9c3;color:#ca8a04">⚡</div>
+      <div><div class="sd-val">${todayTokens.toLocaleString()}</div><div class="sd-lbl">오늘 토큰 사용량</div></div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">📈 일일 무료 한도 사용률</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+        <span>오늘 ${todayCalls}회 사용</span>
+        <span>한도 ${dailyLimit.toLocaleString()}회/일</span>
+      </div>
+      <div style="background:#e5e7eb;border-radius:999px;height:12px;margin-bottom:8px">
+        <div style="background:${pct>=90?'#ef4444':pct>=70?'#f59e0b':'#22c55e'};width:${pct}%;height:100%;border-radius:999px;transition:width .3s"></div>
+      </div>
+      <div style="font-size:12px;color:${pct>=90?'#ef4444':'var(--muted)'}">
+        ${pct>=90?'⚠️ 한도 초과 임박':'✅ 여유 있음'} (${pct}% 사용)
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);padding:8px;background:var(--bg2);border-radius:6px">
+        💡 gemini-2.0-flash 무료 티어<br>
+        · 일 1,500회 / 분당 15회<br>
+        · 입력 1M 토큰 + 출력 1M 토큰/분<br>
+        · 추가 비용 없음
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">🏷️ 기능별 사용 현황</div>
+      ${Object.keys(modeMap).length===0
+        ?'<div class="es" style="padding:20px"><div style="color:var(--muted)">아직 AI를 사용하지 않았습니다.</div></div>'
+        :Object.entries(modeMap).sort((a,b)=>b[1]-a[1]).map(([m,cnt])=>`
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px">
+            <div style="width:90px;color:var(--text)">${modeLabels[m]||m}</div>
+            <div style="flex:1;background:#e5e7eb;border-radius:999px;height:8px">
+              <div style="background:#7c3aed;width:${Math.round(cnt/(u.totalCalls||1)*100)}%;height:100%;border-radius:999px"></div>
+            </div>
+            <div style="width:36px;text-align:right;font-weight:700;color:var(--text)">${cnt}회</div>
+          </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--text)">📋 최근 AI 호출 이력 (최대 100건)</div>
+      <button class="btn berr bsm" onclick="if(confirm('사용량 기록을 초기화하시겠습니까?')){GeminiAI.clearUsage();Pages._renderAiDash();}">🗑️ 초기화</button>
+    </div>
+    ${logs.length===0
+      ?'<div class="es" style="padding:24px"><div style="color:var(--muted)">이력 없음</div></div>'
+      :`<div style="overflow-x:auto"><table class="dt" style="width:100%;font-size:12px">
+        <thead><tr>
+          <th style="width:140px">시간</th>
+          <th style="width:90px">기능</th>
+          <th style="width:70px;text-align:right">입력</th>
+          <th style="width:70px;text-align:right">출력</th>
+          <th style="width:70px;text-align:right">합계</th>
+        </tr></thead>
+        <tbody>${logs.slice(0,50).map(l=>`<tr>
+          <td style="color:var(--muted)">${l.time.replace('T',' ').slice(0,19)}</td>
+          <td><span class="badge" style="background:#ede9fe;color:#7c3aed">${modeLabels[l.mode]||l.mode}</span></td>
+          <td style="text-align:right">${(l.promptTokens||0).toLocaleString()}</td>
+          <td style="text-align:right">${(l.outputTokens||0).toLocaleString()}</td>
+          <td style="text-align:right;font-weight:700">${(l.totalTokens||0).toLocaleString()}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`}
+  </div>`;
+},
+
+/* ── 1. 부적합 AI 분석 (NC) ── */
+async _aiNcAnalyze(){
+  const ncData=await SB.getNc?.() || DB.nc || [];
+  if(!ncData.length){Toast.show('부적합 데이터가 없습니다.','warn');return;}
+  const prompt=`당신은 QMS(품질경영시스템) 전문가입니다. 아래는 제조업체의 부적합(불량) 발생 데이터입니다.
+다음 항목을 한국어로 분석해 주세요:
+1. **주요 불량 패턴 요약** (발생 빈도, 유형별 분류)
+2. **반복 발생 품목/공정 식별** (동일 항목 2회 이상)
+3. **처리 현황** (완료/처리중/접수 비율 및 위험 평가)
+4. **이번 달 개선 액션 3가지** (구체적이고 실행 가능한 것)
+5. **향후 예방 조치 제안**
+분석은 간결하고 실무 중심으로 작성해 주세요.`;
+  const summary=ncData.map(r=>({
+    no:r.no, type:r.type, item:r.item, date:r.date,
+    status:r.status, desc:r.desc, assignee:r.assignee
+  }));
+  const res=await GeminiAI.analyze(prompt, summary, 'nc');
+  if(res.ok) GeminiAI.showResult(`부적합 AI 분석 (${ncData.length}건)`, res.result, res.usage);
+},
+
+/* ── 2. SQM 분기 계획 AI 생성 ── */
+async _aiSqmPlan(){
+  const evals=await SB.getVendorEvals?.() || DB.vendor_evals || [];
+  const audits=await SB.getVendorAudits?.() || DB.vendor_audits || [];
+  const vendors=await SB.getVendors?.() || DB.vendors || [];
+  if(!vendors.length){Toast.show('공급사 데이터가 없습니다.','warn');return;}
+  const today=new Date();
+  const quarter=Math.floor(today.getMonth()/3)+1;
+  const year=today.getFullYear();
+  const prompt=`당신은 공급사 품질 관리(SQM) 전문가입니다. 아래는 공급사 평가 및 심사 이력 데이터입니다.
+현재 날짜: ${year}년 ${quarter}분기
+다음을 한국어로 작성해 주세요:
+1. **이번 분기(${quarter}Q) 우선 조치 사항** (평가 점수 낮은 공급사 집중 관리)
+2. **다음 분기 심사 계획** (점수 기반 우선순위 결정)
+3. **위험 공급사 목록** (점수 80점 미만 또는 하락 추세)
+4. **개선 권고 사항** (공급사별 구체적 액션)
+5. **이번 분기 달성 목표** (측정 가능한 KPI 3가지)`;
+  const data={
+    vendors: vendors.slice(0,30).map(v=>({name:v.name||v.vendor_name,code:v.code})),
+    recentEvals: evals.slice(0,20).map(e=>({
+      vendor:e.vendor_name, period:e.period,
+      quality:e.quality, delivery:e.delivery,
+      price:e.price, service:e.service,
+      total:e.total
+    })),
+    recentAudits: audits.slice(0,10).map(a=>({
+      vendor:a.vendor_name, date:a.audit_date||a.plan_date, result:a.result||a.status
+    })),
+    quarter:`${year}Q${quarter}`
+  };
+  const res=await GeminiAI.analyze(prompt, data, 'sqm');
+  if(res.ok) GeminiAI.showResult(`SQM ${year}Q${quarter} AI 분기 계획`, res.result, res.usage);
+},
+
+/* ── 3. SPC 이상 원인 분석 ── */
+async _aiSpcAnalyze(itemId){
+  const items=window._spcItems||await SB.getSpcItems();
+  const item=items.find(it=>it.id===Number(itemId));
+  if(!item){Toast.show('관리 항목을 선택하세요.','warn');return;}
+  const subs=await SB.getSpcSubgroups(itemId);
+  if(subs.length<3){Toast.show('데이터가 부족합니다. (최소 3개 서브그룹 필요)','warn');return;}
+  const n=item.subgroup_size||5;
+  const C=Pages._spcConst[n]||Pages._spcConst[5];
+  const groups=subs.map(s=>{
+    let vals=[];
+    try{vals=typeof s.values==='string'?JSON.parse(s.values):s.values;}catch(e){}
+    return{date:s.measured_at,vals:vals.map(Number).filter(v=>!isNaN(v))};
+  }).filter(g=>g.vals.length>0);
+  const means=groups.map(g=>g.vals.reduce((s,v)=>s+v,0)/g.vals.length);
+  const ranges=groups.map(g=>Math.max(...g.vals)-Math.min(...g.vals));
+  const Xbar=means.reduce((s,v)=>s+v,0)/means.length;
+  const Rbar=ranges.reduce((s,v)=>s+v,0)/ranges.length;
+  const UCLx=Xbar+C.A2*Rbar, LCLx=Xbar-C.A2*Rbar;
+  const outOfCtrl=groups.filter((g,i)=>means[i]>UCLx||means[i]<LCLx);
+  const prompt=`당신은 SPC(통계적 공정관리) 전문가입니다. 아래 X-bar R 관리도 데이터를 분석해 주세요.
+다음을 한국어로 작성해 주세요:
+1. **공정 안정성 평가** (관리 한계선 이탈 패턴 분석)
+2. **이탈 원인 가설** (연속 이탈/주기적/돌발 패턴 구분)
+3. **즉시 조치 사항** (공정 복구를 위한 구체적 액션)
+4. **장기 개선 방향** (근본 원인 제거를 위한 계획)`;
+  const data={
+    item:{name:item.item_name, process:item.process, char:item.char_name, unit:item.unit},
+    spec:{usl:item.spec_upper, lsl:item.spec_lower, target:item.target},
+    control:{Xbar:+Xbar.toFixed(4), Rbar:+Rbar.toFixed(4), UCLx:+UCLx.toFixed(4), LCLx:+LCLx.toFixed(4)},
+    subgroupSize:n, totalGroups:groups.length,
+    outOfControlCount:outOfCtrl.length,
+    recentData:groups.slice(-10).map((g,i)=>({
+      date:g.date, mean:+means[groups.length-10+i]?.toFixed(4),
+      range:+ranges[groups.length-10+i]?.toFixed(4)
+    }))
+  };
+  const res=await GeminiAI.analyze(prompt, data, 'spc');
+  if(res.ok) GeminiAI.showResult(`SPC AI 분석 — ${item.process} / ${item.char_name}`, res.result, res.usage);
+},
+
+/* ── 4. 홈 종합 인사이트 ── */
+async _aiHomeInsight(){
+  const nc=DB.nc||[];
+  const insps=DB.inspections||[];
+  const cars=DB.car||[];
+  const evals=DB.vendor_evals||[];
+  const today=new Date().toISOString().slice(0,10);
+  const thisMonth=today.slice(0,7);
+  const prompt=`당신은 제조업 QMS 컨설턴트입니다. 아래는 품질경영시스템의 이번 달 현황 데이터입니다.
+다음을 한국어로 간결하게 작성해 주세요:
+1. **이번 달 품질 현황 요약** (3줄 이내)
+2. **즉시 조치 필요 사항** (위험 신호 TOP 3)
+3. **이번 주 집중 업무 추천** (실행 가능한 3가지)
+4. **다음 달 준비 사항** (사전 예방적 조치)
+실무자가 아침에 읽고 바로 행동할 수 있도록 간결하게 작성해 주세요.`;
+  const data={
+    thisMonth,
+    nc:{total:nc.length, open:nc.filter(r=>r.status!=='완료').length,
+        thisMonth:nc.filter(r=>(r.date||'').startsWith(thisMonth)).length},
+    inspection:{total:insps.length, fail:insps.filter(r=>r.result==='불합격').length,
+        thisMonth:insps.filter(r=>(r.insp_date||'').startsWith(thisMonth)).length},
+    car:{total:cars.length, open:cars.filter(r=>r.status!=='완료'&&r.status!=='closed').length},
+    vendorEval:{total:evals.length, lowScore:evals.filter(r=>r.total<80).length},
+  };
+  const res=await GeminiAI.analyze(prompt, data, 'home');
+  if(res.ok) GeminiAI.showResult('품질 현황 AI 종합 인사이트', res.result, res.usage);
+},
+/* ════ 문서관리 AI 분석 함수 [v2.169] ════
+   _aiDocAnalyze(): 문서 목록 AI 현황 분석
+   _aiDocReviewPlan(): 정기검토 주기 AI 우선순위 계획
+   _aiDocDashAnalyze(): 대시보드 통합 AI 분석
+   ════════════════════════════════════════ */
+
+/* ── 문서 목록 AI 현황 분석 ── */
+async _aiDocAnalyze(){
+  let docs=[];
+  try{docs=await SB.getDocMaster();}catch(e){docs=DB.docs||[];}
+  if(!docs.length){Toast.show('문서 데이터가 없습니다.','warn');return;}
+
+  const today=new Date().toISOString().slice(0,10);
+  /* 상태별 집계 */
+  const byStatus={draft:0,in_review:0,active:0,obsolete:0};
+  docs.forEach(r=>{if(byStatus[r.status]!==undefined)byStatus[r.status]++;});
+  /* 유형별 집계 */
+  const byType={};
+  docs.forEach(r=>{const t=Pages._DT?.[r.doc_type]||r.doc_type||'기타';byType[t]=(byType[t]||0)+1;});
+  /* 검토 임박(30일 이내) */
+  const expiring=docs.filter(r=>{
+    if(!r.next_review_at||r.status!=='active') return false;
+    const d=Math.ceil((new Date(r.next_review_at)-new Date())/86400000);
+    return d>=0&&d<=30;
+  });
+  /* 미완료(초안/검토중) */
+  const pending=docs.filter(r=>r.status==='draft'||r.status==='in_review');
+
+  const prompt=`당신은 ISO 9001 문서관리 전문가입니다. 아래는 회사의 QMS 문서 현황입니다.
+다음을 한국어로 분석해 주세요:
+1. **문서 관리 현황 요약** (3줄 이내, 전체적인 건강도 평가)
+2. **즉시 조치 필요 문서** (초안/검토중 장기 미완료, 검토 임박 문서)
+3. **문서 유형별 불균형 분석** (누락 또는 과잉 문서 유형)
+4. **ISO 9001 준수 관점 위험 요소** (심사 시 지적될 수 있는 사항)
+5. **이번 달 문서 관리 액션 3가지** (구체적이고 실행 가능한 것)`;
+
+  const data={
+    totalDocs:docs.length,
+    byStatus,
+    byType,
+    expiringCount:expiring.length,
+    expiringSoon:expiring.slice(0,10).map(r=>({
+      no:r.doc_no, title:r.title, type:r.doc_type,
+      nextReview:r.next_review_at
+    })),
+    pendingCount:pending.length,
+    pendingDocs:pending.slice(0,10).map(r=>({
+      no:r.doc_no, title:r.title, status:r.status,
+      createdAt:(r.created_at||'').slice(0,10)
+    })),
+    analysisDate:today
+  };
+
+  const res=await GeminiAI.analyze(prompt, data, 'doc');
+  if(res.ok) GeminiAI.showResult(`문서 AI 현황 분석 (총 ${docs.length}건)`, res.result, res.usage);
+},
+
+/* ── 정기검토 주기 AI 계획 수립 ── */
+async _aiDocReviewPlan(){
+  let docs=[];
+  try{docs=await SB.getDocMaster();}catch(e){docs=DB.docs||[];}
+  const today=new Date();
+
+  /* 검토 필요 문서 분류 */
+  const overdue=docs.filter(r=>{
+    if(!r.next_review_at||r.status!=='active') return false;
+    return new Date(r.next_review_at)<today;
+  });
+  const within30=docs.filter(r=>{
+    if(!r.next_review_at||r.status!=='active') return false;
+    const d=Math.ceil((new Date(r.next_review_at)-today)/86400000);
+    return d>=0&&d<=30;
+  });
+  const within90=docs.filter(r=>{
+    if(!r.next_review_at||r.status!=='active') return false;
+    const d=Math.ceil((new Date(r.next_review_at)-today)/86400000);
+    return d>30&&d<=90;
+  });
+
+  if(!overdue.length&&!within30.length&&!within90.length){
+    Toast.show('검토 예정 문서가 없습니다. 모든 문서가 최신 상태입니다.','ok');
+    return;
+  }
+
+  const prompt=`당신은 ISO 9001 문서 검토 관리 전문가입니다. 아래는 문서 정기 검토 현황입니다.
+다음을 한국어로 작성해 주세요:
+1. **지금 당장 검토해야 할 문서** (기한 초과 문서 우선순위 결정)
+2. **이번 달 검토 일정** (D-30 이내 문서 주별 검토 계획)
+3. **다음 분기 검토 일정** (D-90 이내 문서 월별 계획)
+4. **검토 효율화 방안** (유사 문서 묶음 검토, 담당자 배분 등)
+5. **미검토 시 리스크** (ISO 심사, 현장 적용 오류 등)
+간결하고 실행 가능한 계획으로 작성해 주세요.`;
+
+  const data={
+    today:today.toISOString().slice(0,10),
+    overdue:overdue.slice(0,15).map(r=>({
+      no:r.doc_no, title:r.title, type:r.doc_type,
+      nextReview:r.next_review_at,
+      daysOverdue:Math.ceil((today-new Date(r.next_review_at))/86400000)
+    })),
+    within30Days:within30.slice(0,15).map(r=>({
+      no:r.doc_no, title:r.title, type:r.doc_type,
+      nextReview:r.next_review_at,
+      daysLeft:Math.ceil((new Date(r.next_review_at)-today)/86400000)
+    })),
+    within90Days:within90.slice(0,15).map(r=>({
+      no:r.doc_no, title:r.title, type:r.doc_type,
+      nextReview:r.next_review_at,
+      daysLeft:Math.ceil((new Date(r.next_review_at)-today)/86400000)
+    })),
+    summary:{overdueCount:overdue.length, within30Count:within30.length, within90Count:within90.length}
+  };
+
+  const res=await GeminiAI.analyze(prompt, data, 'doc');
+  if(res.ok) GeminiAI.showResult(
+    `문서 검토 AI 계획 (초과 ${overdue.length}건 · D-30 ${within30.length}건)`,
+    res.result, res.usage
+  );
+},
+
+/* ── 문서 대시보드 AI 통합 분석 ── */
+async _aiDocDashAnalyze(){
+  let docs=[];
+  try{docs=await SB.getDocMaster();}catch(e){docs=DB.docs||[];}
+  if(!docs.length){Toast.show('문서 데이터가 없습니다.','warn');return;}
+
+  const today=new Date();
+  const thisMonth=today.toISOString().slice(0,7);
+  const byStatus={draft:0,in_review:0,active:0,obsolete:0};
+  docs.forEach(r=>{if(byStatus[r.status]!==undefined)byStatus[r.status]++;});
+  const byType={};
+  docs.forEach(r=>{const t=Pages._DT?.[r.doc_type]||r.doc_type||'기타';byType[t]=(byType[t]||0)+1;});
+  const overdueCount=docs.filter(r=>{
+    if(!r.next_review_at||r.status!=='active') return false;
+    return new Date(r.next_review_at)<today;
+  }).length;
+  const newThisMonth=docs.filter(r=>(r.created_at||'').startsWith(thisMonth)).length;
+
+  const prompt=`당신은 ISO 9001 품질 컨설턴트입니다. 아래 QMS 문서 대시보드 데이터를 분석하고
+경영자/품질팀장에게 보고할 수 있는 종합 인사이트를 작성해 주세요.
+다음 항목을 한국어로 작성해 주세요:
+1. **문서 관리 종합 평가** (A/B/C/D 등급 및 근거)
+2. **핵심 성과 지표(KPI) 분석** (목표 대비 현황)
+3. **리스크 TOP 3** (즉시 조치 필요 사항)
+4. **개선 기회** (효율화, 디지털화, 통합 등)
+5. **다음 달 목표** (측정 가능한 3가지 목표)
+경영자가 읽기 쉽고 행동 가능한 인사이트로 작성해 주세요.`;
+
+  const data={
+    analysisDate:today.toISOString().slice(0,10),
+    totalDocs:docs.length,
+    byStatus, byType,
+    overdueReviewCount:overdueCount,
+    newThisMonth,
+    activeRate:docs.length>0?Math.round(byStatus.active/docs.length*100):0,
+    reviewReadyRate:((byStatus.active+byStatus.in_review)>0
+      ?Math.round(byStatus.active/(byStatus.active+byStatus.in_review)*100):0)
+  };
+
+  const res=await GeminiAI.analyze(prompt, data, 'doc');
+  if(res.ok) GeminiAI.showResult('문서 현황 AI 종합 분석', res.result, res.usage);
+},
+
+
 async _renderSbDash(){
   /* [v2.394] SB 대시보드 — 5개 KPI 도넛차트 복구
      Database / Storage / Egress / 전체행 / 비활성방지 */
@@ -13962,6 +14367,7 @@ async sqm_audit(){
       <div><div class="ptit">🔎 공급업체 심사</div>
         <div class="psub">정기/수시/특별 심사 계획 · 진도 · 결과 관리</div></div>
       <div class="pac">
+        <button class="btn bout bsm ai-loading-btn" onclick="Pages._aiSqmPlan()" title="AI로 분기 공급사 관리 계획 생성">🤖 AI 분기 계획</button>
         <button class="btn bpri btn-f2" onclick="Pages._sqmAuditForm()">+ 심사 등록 <span class="kbd">F2</span></button>
       </div>
     </div>
@@ -15033,6 +15439,7 @@ async spc_chart(){
       <button class="btn bout bsm" onclick="Pages._spcItemForm()">+ 항목 등록</button>
       <button class="btn bout bsm" onclick="ExcelMgr.download('spc_subgroups')" title="측정데이터 양식 다운로드">📄 양식</button>
       <button class="btn bout bsm" onclick="ExcelMgr.openUpload('spc_subgroups')" title="측정데이터 엑셀 일괄 업로드">📥 일괄 업로드</button>
+      <button class="btn bout bsm ai-loading-btn" onclick="Pages._aiSpcAnalyze(window._spcSelId)" title="AI로 이상 원인 분석">🤖 AI 분석</button>
       <button class="btn bpri bsm" onclick="Pages._spcDataForm(window._spcSelId)">+ 데이터 입력</button>
     </div>
   </div>
