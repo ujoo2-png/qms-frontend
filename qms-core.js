@@ -2642,13 +2642,59 @@ window.QmsChat = {
     const floatBtn= document.getElementById('aiChatFloatBtn');
     if(!panel) return;
     panel.style.display = 'flex';
-    overlay.style.display = 'block';
+    overlay.style.display = 'none';
     if(floatBtn) floatBtn.style.display = 'none';
 
-    /* 슬라이드 인 애니메이션 */
-    panel.style.transform = 'translateX(100%)';
-    panel.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
-    requestAnimationFrame(()=>{ panel.style.transform = 'translateX(0)'; });
+    /* 아래에서 위로 팝업 애니메이션 */
+    panel.style.opacity = '0';
+    panel.style.transform = 'translateY(16px) scale(0.97)';
+    panel.style.transition = 'opacity .2s ease, transform .2s ease';
+    requestAnimationFrame(()=>{
+      panel.style.opacity = '1';
+      panel.style.transform = 'translateY(0) scale(1)';
+    });
+
+    /* [v2.180] 드래그 이동 — 헤더를 잡고 자유롭게 이동 */
+    const hdr = panel.querySelector('#aiChatHeader');
+    if(hdr && !hdr._dragBound){
+      hdr._dragBound = true;
+      let startX, startY, startRight, startBottom;
+      const onDown = e => {
+        /* 버튼 클릭은 드래그 무시 */
+        if(e.target.tagName === 'BUTTON') return;
+        const rect = panel.getBoundingClientRect();
+        startX = e.clientX; startY = e.clientY;
+        /* right/bottom 기준으로 계산 */
+        startRight  = window.innerWidth  - rect.right;
+        startBottom = window.innerHeight - rect.bottom;
+        panel.style.transition = 'none';
+        panel.style.cursor = 'grabbing';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup',   onUp);
+        /* 터치 지원 */
+        document.addEventListener('touchmove', onTouchMove, {passive:false});
+        document.addEventListener('touchend',  onUp);
+      };
+      const move = (cx, cy) => {
+        const dx = startX - cx; const dy = startY - cy;
+        const newRight  = Math.max(0, Math.min(window.innerWidth  - 200, startRight  + dx));
+        const newBottom = Math.max(0, Math.min(window.innerHeight - 100, startBottom + dy));
+        panel.style.right  = newRight  + 'px';
+        panel.style.bottom = newBottom + 'px';
+      };
+      const onMove      = e => move(e.clientX, e.clientY);
+      const onTouchMove = e => { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); };
+      const onUp = () => {
+        panel.style.cursor = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend',  onUp);
+      };
+      hdr.style.cursor = 'grab';
+      hdr.addEventListener('mousedown', onDown);
+      hdr.addEventListener('touchstart', onDown, {passive:true});
+    }
 
     this._updateCtxBar();
     setTimeout(()=>document.getElementById('aiChatInput')?.focus(), 300);
@@ -2660,12 +2706,13 @@ window.QmsChat = {
     const overlay = document.getElementById('aiChatOverlay');
     const floatBtn= document.getElementById('aiChatFloatBtn');
     if(!panel) return;
-    panel.style.transform = 'translateX(100%)';
+    panel.style.opacity = '0';
+    panel.style.transform = 'translateY(16px) scale(0.97)';
     setTimeout(()=>{
       panel.style.display = 'none';
       overlay.style.display = 'none';
       if(floatBtn) floatBtn.style.display = 'flex';
-    }, 250);
+    }, 200);
   },
 
   /* ── 컨텍스트 바 갱신 ── */

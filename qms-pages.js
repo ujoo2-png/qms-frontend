@@ -86,7 +86,7 @@ async home(){
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
           <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.178</div>
+          <div class="hw-hdr-sub">Quality Management System · v2.180</div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
