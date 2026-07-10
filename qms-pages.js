@@ -7015,83 +7015,89 @@ _recForm:function(editRec){
    NC 연계: NC 상세에서 "CAR 발행" 버튼 → nc_id/nc_no 자동 채움
    ═══════════════════════════════════════════════════════ */
 async car(){
+  /* [v2.192] 시정조치 조회 — 목록형+칸반형, 검색조건, 결정(반려/승인/종료) */
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
   const fresh=await SB.getCars();
   if(fresh&&fresh.length>=0) DB.cars=fresh;
   const data=DB.cars||[];
-  const total=data.length;
-  const byStatus={접수:0,대책접수:0,대책실시:0,유효성평가:0,완료:0};
+  const open=data.filter(c=>c.status!=='완료'&&c.status!=='종결').length;
+  const byStatus={접수:0,대책접수:0,대책실시:0,유효성평가:0,완료:0,반려:0,종결:0};
   data.forEach(c=>{if(byStatus[c.status]!==undefined)byStatus[c.status]++;});
-  const open=data.filter(c=>c.status!=='완료').length;
-
-  /* EQS 동적 너비 */
-  const noMaxLen=Math.max(8,...data.map(r=>(r.no||'').length));
-  const noW=Math.min(160,Math.max(120,noMaxLen*9+24))+'px';
-  const titMaxLen=Math.max(10,...data.map(r=>(r.title||'').length));
-  const titW='*';
 
   w.innerHTML=`
-  <div class="stat-dash">
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🔧</div>
-      <div><div class="sd-val">${total}</div><div class="sd-lbl">전체 CAR</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">🔴</div>
-      <div><div class="sd-val">${open}</div><div class="sd-lbl">미결</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#e0f2fe;color:#0891b2">📋</div>
-      <div><div class="sd-val">${byStatus['대책접수']||0}</div><div class="sd-lbl">대책접수</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">⚙️</div>
-      <div><div class="sd-val">${byStatus['대책실시']||0}</div><div class="sd-lbl">대책실시</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#d1fae5;color:#059669">✅</div>
-      <div><div class="sd-val">${byStatus['완료']||0}</div><div class="sd-lbl">완료</div></div></div>
-  </div>
-  <div class="ph" style="margin-top:14px">
-    <div><div class="ptit">🔧 시정조치 (CAR)</div>
-      <div style="font-size:13px;color:var(--muted)">부적합 → 대책접수 → 대책실시 → 유효성 평가</div></div>
+  <div class="ph">
+    <div><div class="ptit">🔍 시정조치 조회</div>
+         <div class="psub">접수된 시정조치 검토 · 반려 · 승인 · 종료 결정</div></div>
     <div class="pac">
-      <button class="btn btn-xl-down bsm" onclick="ExcelMgr.download('car')" title="엑셀 양식">📥 양식</button>
-      <button class="btn btn-xl-up bsm" onclick="ExcelMgr.openUpload('car')" title="엑셀 일괄등록">📤 일괄등록</button>
-      <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiCarAnalyze()" title="AI로 시정조치 현황 분석">🤖 AI 분석</button>
-      <button class="btn bpri btn-f2" onclick="Pages._carForm()">+ CAR 등록 <span class="kbd">F2</span></button>
+      <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiCarAnalyze()">🤖 AI 분석</button>
+      <button class="btn bout bsm" onclick="Nav.go('car_input')">✍️ 시정조치 입력</button>
     </div>
   </div>
-  <div class="tbar">
-    <div class="sw2">
-      <input type="text" id="carSearch" placeholder="CAR번호, 제목, 품목, 담당자 검색..."
-        oninput="Pages._carRender()" value="">
-    </div>
+  <div class="stat-dash" style="margin-bottom:12px">
+    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🔧</div>
+      <div><div class="sd-val">${data.length}</div><div class="sd-lbl">전체</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">📋</div>
+      <div><div class="sd-val">${byStatus['접수']||0}</div><div class="sd-lbl">접수</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fce7f3;color:#ec4899">⚙️</div>
+      <div><div class="sd-val">${(byStatus['대책접수']||0)+(byStatus['대책실시']||0)}</div><div class="sd-lbl">진행</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#dcfce7;color:#16a34a">✅</div>
+      <div><div class="sd-val">${byStatus['완료']||0}</div><div class="sd-lbl">완료</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚫</div>
+      <div><div class="sd-val">${byStatus['반려']||0}</div><div class="sd-lbl">반려</div></div></div>
+  </div>
+
+  <!-- 검색 필터 -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+    <input class="fc" id="carSearch" style="width:220px;font-size:13px"
+      placeholder="🔍 CAR번호·제목·품목·담당자"
+      oninput="Pages._carRender()">
     <select class="fsel" id="carSrcF" onchange="Pages._carRender()">
       <option value="">전체 발생원</option>
-      ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option>${s}</option>`).join('')}
+      ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option value="${s}">${s}</option>`).join('')}
     </select>
     <select class="fsel" id="carStatusF" onchange="Pages._carRender()">
       <option value="">전체 상태</option>
-      ${['접수','대책접수','대책실시','유효성평가','완료'].map(s=>`<option>${s}</option>`).join('')}
+      ${['접수','대책접수','대책실시','유효성평가','완료','반려','종결'].map(s=>`<option value="${s}">${s}</option>`).join('')}
     </select>
-    <button class="btn bout bsm" onclick="SearchPop.open('car')" title="통합검색 (F3)">🔎 <span class="kbd">F3</span></button>
+    <select class="fsel" id="carAssigneeF" onchange="Pages._carRender()">
+      <option value="">전체 담당자</option>
+      ${[...new Set(data.map(c=>c.assignee||'').filter(Boolean))].sort().map(a=>`<option value="${a}">${H.e(a)}</option>`).join('')}
+    </select>
+    <button class="btn bout bsm" onclick="document.getElementById('carSearch').value='';document.getElementById('carSrcF').value='';document.getElementById('carStatusF').value='';document.getElementById('carAssigneeF').value='';Pages._carRender()">🔄 초기화</button>
   </div>
-  <div id="carTbl"></div>`;
+
+  <!-- 탭: 목록/칸반 -->
+  <div class="stabs" style="margin-bottom:10px">
+    <button class="stab-btn on" data-tab="list" onclick="Pages._carTab('list',this)">📋 목록</button>
+    <button class="stab-btn" data-tab="kanban" onclick="Pages._carTab('kanban',this)">📌 칸반</button>
+  </div>
+  <div id="carListPane"><div id="carTbl"></div></div>
+  <div id="carKanbanPane" style="display:none"></div>`;
 
   Pages._carRender();
 },
 
 /* ── CAR 목록 렌더 ── */
+/* [v2.192] 시정조치 조회 — 목록 렌더 + 결정 버튼 */
 _carRender(){
   const data=DB.cars||[];
   const q=(document.getElementById('carSearch')?.value||'').toLowerCase();
   const src=document.getElementById('carSrcF')?.value||'';
   const st=document.getElementById('carStatusF')?.value||'';
+  const as=document.getElementById('carAssigneeF')?.value||'';
   const filtered=data.filter(c=>{
     if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
     if(src&&c.src!==src)return false;
     if(st&&c.status!==st)return false;
+    if(as&&c.assignee!==as)return false;
     return true;
   });
-  const noMaxLen=Math.max(8,...filtered.map(r=>(r.no||'').length));
-  const noW=Math.min(160,Math.max(120,noMaxLen*9+24))+'px';
   Tbl.render({
     el:'#carTbl',
     rowStyle:(row)=>{
-      if(row.status==='완료') return '';
+      if(row.status==='완료'||row.status==='종결') return '';
+      if(row.status==='반려') return 'background:rgba(254,226,226,0.4);';
       if(row.due){
         const d=Math.ceil((new Date(row.due)-new Date())/86400000);
         if(d<0) return 'background:rgba(254,226,226,0.5);';
@@ -7100,18 +7106,16 @@ _carRender(){
       return '';
     },
     cols:[
-      {key:'status',   label:'상태',    w:'76px', align:'center',
-        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='유효성평가'?'bblu':v==='대책실시'?'bamb':v==='대책접수'?'bpur':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
-      {key:'no',       label:'CAR번호', w:noW, req:true,
+      {key:'status',   label:'상태',    w:'80px', align:'center',
+        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='유효성평가'?'bblu':v==='대책실시'?'bamb':v==='대책접수'?'bpur':v==='반려'?'bred':v==='종결'?'bgry':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'no',       label:'CAR번호', w:'150px', req:true,
         render:v=>`<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
       {key:'src',      label:'발생원',  w:'72px',
         render:v=>`<span class="badge bpur" style="font-size:10px">${H.e(v||'-')}</span>`},
-      {key:'nc_no',    label:'NC참조',  w:'120px',
-        render:v=>v?`<span style="font-family:monospace;font-size:12px;color:#7c3aed;cursor:pointer" onclick="Nav.go('nc')">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'nc_no',    label:'NC참조',  w:'130px',
+        render:v=>v?`<span style="font-family:monospace;font-size:12px;color:#7c3aed">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
       {key:'title',    label:'제목',    w:'*'},
-      {key:'item_code',label:'품목코드',w:'90px',
-        render:v=>v?`<span style="font-family:monospace;font-size:13px;color:#64748b">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
-      {key:'item',     label:'품목명',  w:'100px'},
+      {key:'assignee', label:'담당자',  w:'72px'},
       {key:'open',     label:'개시일',  w:'88px'},
       {key:'due',      label:'완료기한',w:'88px',
         render:v=>{
@@ -7120,32 +7124,840 @@ _carRender(){
           const cls=d<0?'bred':d<=3?'bamb':'bgrn';
           return`<span class="badge ${cls}" style="font-size:10px">${v}</span>`;
         }},
-      {key:'assignee', label:'담당자',  w:'70px'},
-      {key:'file_url', label:'파일',    w:'46px', align:'center',
-        render:v=>v?`<a href="${H.e(v)}" target="_blank" onclick="event.stopPropagation()" style="font-size:14px">📎</a>`:'<span style="color:var(--tl)">-</span>'},
+      /* [v2.192] 결정 버튼 컬럼 */
+      {key:'id', label:'결정', w:'140px', align:'center',
+        render:(v,row)=>{
+          const done=row.status==='완료'||row.status==='종결'||row.status==='반려';
+          if(done) return `<span style="font-size:11px;color:var(--muted)">${H.e(row.status)}</span>`;
+          return `<div style="display:flex;gap:3px;justify-content:center">
+            <button class="btn bxs bgrn" style="font-size:10px;padding:2px 6px"
+              onclick="event.stopPropagation();Pages._carDecide(${Number(v)},'승인')">✅승인</button>
+            <button class="btn bxs bred" style="font-size:10px;padding:2px 6px"
+              onclick="event.stopPropagation();Pages._carDecide(${Number(v)},'반려')">🚫반려</button>
+            <button class="btn bxs bgry" style="font-size:10px;padding:2px 6px"
+              onclick="event.stopPropagation();Pages._carDecide(${Number(v)},'종결')">⛔종료</button>
+          </div>`;
+        }},
     ],
     data:filtered,
-    onRow:row=>Pages._carDetail(row),
+    onRow:row=>Nav.go('car_input',{carId:row.id}),
     onDel:async(ids)=>{
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       Modal.confirm({title:'🗑️ CAR 삭제 확인',
-        msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 CAR를 삭제합니다.<br><small style="color:#64748b">삭제된 데이터는 복구가 어렵습니다.</small>`,
+        msg:`선택한 <b style="color:#dc2626">${ids.length}건</b>의 시정조치를 삭제합니다.`,
         danger:true,
         onOk:async()=>{
           const numIds=ids.map(Number);
-          if(_sb){
-            for(const id of numIds){const {error}=await _sb.from('corrective_actions').delete().eq('id',id);if(error){Toast.show('삭제 실패: '+error.message,'err');return;}}
-          }
+          if(_sb) for(const id of numIds){await _sb.from('corrective_actions').delete().eq('id',id);}
           DB.cars=(DB.cars||[]).filter(c=>!numIds.includes(Number(c.id)));
-          Toast.show(`${numIds.length}건 삭제되었습니다.`,'ok');
+          Toast.show(`${numIds.length}건 삭제됐습니다.`,'ok');
           Pages._carRender();
         }
       });
     }
   });
+  /* 칸반도 같이 갱신 */
+  const kb=document.getElementById('carKanbanPane');
+  if(kb&&kb.style.display!=='none') Pages._carKanbanRender(filtered);
 },
 
-/* ── CAR 등록/수정 폼 [v2.139] ── */
+/* [v2.192] 탭 전환 */
+_carTab(tab, btn){
+  document.querySelectorAll('.stab-btn').forEach(b=>b.classList.toggle('on',b===btn));
+  document.getElementById('carListPane').style.display=tab==='list'?'':'none';
+  const kb=document.getElementById('carKanbanPane');
+  kb.style.display=tab==='kanban'?'':'none';
+  if(tab==='kanban'){
+    const data=DB.cars||[];
+    const q=(document.getElementById('carSearch')?.value||'').toLowerCase();
+    const src=document.getElementById('carSrcF')?.value||'';
+    const st=document.getElementById('carStatusF')?.value||'';
+    const as=document.getElementById('carAssigneeF')?.value||'';
+    const filtered=data.filter(c=>{
+      if(q&&![(c.no||''),(c.title||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
+      if(src&&c.src!==src)return false;
+      if(st&&c.status!==st)return false;
+      if(as&&c.assignee!==as)return false;
+      return true;
+    });
+    Pages._carKanbanRender(filtered);
+  }
+},
+
+/* [v2.192] 칸반 렌더 */
+_carKanbanRender(data){
+  const el=document.getElementById('carKanbanPane');
+  if(!el) return;
+  const steps=['접수','대책접수','대책실시','유효성평가','완료'];
+  const colors={접수:'#6366f1',대책접수:'#a855f7',대책실시:'#f59e0b',유효성평가:'#3b82f6',완료:'#22c55e'};
+  const byStep={};
+  steps.forEach(s=>{byStep[s]=data.filter(c=>c.status===s);});
+  el.innerHTML=`<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">
+  ${steps.map(s=>`
+    <div style="flex:0 0 220px;background:var(--bg2);border-radius:10px;padding:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:${colors[s]}">${s}</div>
+        <span style="background:${colors[s]};color:#fff;border-radius:99px;padding:1px 8px;font-size:11px">${byStep[s].length}</span>
+      </div>
+      ${byStep[s].length===0?`<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">없음</div>`
+        :byStep[s].map(c=>{
+          const d=c.due?Math.ceil((new Date(c.due)-new Date())/86400000):null;
+          const dday=d!==null?`<span style="font-size:10px;color:${d<0?'#dc2626':d<=3?'#d97706':'#16a34a'}">${d<0?'D+'+Math.abs(d):'D-'+d}</span>`:'';
+          return`<div style="background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer"
+            onclick="Nav.go('car_input',{carId:${Number(c.id)}})">
+            <div style="font-size:11px;font-family:monospace;color:#1a5fa8;margin-bottom:4px">${H.e(c.no||'-')}</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${H.e(c.title||'')}">${H.e(c.title||'-')}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;color:var(--muted)">${H.e(c.assignee||'-')}</span>
+              ${dday}
+            </div>
+          </div>`;
+        }).join('')}
+    </div>`).join('')}
+  </div>`;
+},
+
+/* [v2.192] 결정 처리 — 반려/승인/종결 + 사유 입력 */
+async _carDecide(carId, action){
+  const car=(DB.cars||[]).find(c=>Number(c.id)===carId);
+  if(!car){Toast.show('데이터를 찾을 수 없습니다.','err');return;}
+  const actionColors={승인:'#16a34a',반려:'#dc2626',종결:'#6b7280'};
+  const actionBadge={승인:'bgrn',반려:'bred',종결:'bgry'};
+  Modal.open({
+    title:`📋 ${action} 처리 — ${H.e(car.no||'')}`,
+    size:'mmd',
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+          <button class="btn bpri" style="background:${actionColors[action]}" onclick="Pages._carDecideExec(${carId},'${action}')">✅ ${action} 확정</button>`,
+    body:`<div style="padding:8px 0">
+      <div style="background:var(--bg2);border-radius:8px;padding:12px;margin-bottom:14px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">CAR번호</div>
+        <div style="font-weight:700;color:#1a5fa8;font-family:monospace">${H.e(car.no||'')}</div>
+        <div style="font-size:12px;margin-top:6px">${H.e(car.title||'')}</div>
+      </div>
+      <div style="margin-bottom:6px">
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">
+          <b style="color:#e11d48">${action} 사유 *</b>
+        </label>
+        <textarea id="carDecideReason" class="fc" rows="4"
+          placeholder="${action==='승인'?'승인 의견을 입력하세요...':action==='반려'?'반려 사유를 상세히 입력하세요...':'종결 사유를 입력하세요...'}"
+          style="resize:vertical"></textarea>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">
+        • 결정자: ${H.e(Auth._u?.name||Auth._u?.username||'현재 사용자')}<br>
+        • 결정일시: ${new Date().toLocaleString('ko-KR')}
+      </div>
+    </div>`,
+  });
+},
+
+async _carDecideExec(carId, action){
+  const reason=(document.getElementById('carDecideReason')?.value||'').trim();
+  if(!reason){Toast.show('사유를 입력하세요.','warn');return;}
+  const statusMap={승인:'유효성평가',반려:'반려',종결:'종결'};
+  const newStatus=statusMap[action];
+  const res=await SB.updateCar(carId,{status:newStatus});
+  if(!res?.ok){Toast.show('처리 실패','err');return;}
+  /* 이력 저장 */
+  await SB.addCarHistory({
+    car_id:carId, action, reason,
+    changed_by:Auth._u?.name||Auth._u?.username||'',
+    changed_at:new Date().toISOString(),
+  });
+  /* 멘션 알림 */
+  const car=(DB.cars||[]).find(c=>Number(c.id)===carId);
+  if(car?.assignee){
+    await SB.addMention({
+      from:Auth._u?.name||'시스템',
+      to:car.assignee,
+      to_list:[car.assignee],
+      text:`[시정조치 ${action}] ${car.no} — ${reason.slice(0,50)}`,
+      message:`시정조치 ${car.no}이(가) ${action} 처리됐습니다. 사유: ${reason}`,
+      ref:`car:${carId}`,
+    });
+  }
+  const idx=(DB.cars||[]).findIndex(c=>Number(c.id)===carId);
+  if(idx>=0) DB.cars[idx]={...DB.cars[idx],status:newStatus};
+  Modal.close();
+  Toast.show(`${action} 처리됐습니다.`,'ok');
+  Pages._carRender();
+},
+
+
+
+/* ════════════════════════════════════════════════════════════
+   [v2.192] car_input — 시정조치 입력 (전체화면 폼)
+   기본정보 헤더 + 대책내용 BODY + 버튼 하단
+   파일첨부, 멘션 연동, 엑셀 다운/업로드, 버전 이력 관리
+   ════════════════════════════════════════════════════════════ */
+async car_input(params={}){
+  const w=document.getElementById('pw');
+  w.innerHTML='<div class="spin"></div>';
+
+  /* 데이터 로딩 */
+  const fresh=await SB.getCars();
+  if(fresh) DB.cars=fresh;
+  const carId=params?.carId||window._carInputId||null;
+  let row=carId?(DB.cars||[]).find(c=>Number(c.id)===Number(carId)):null;
+  window._carInputId=carId;
+  window._carInputRow=row||null;
+
+  /* 버전 이력 로딩 */
+  let versions=[];
+  if(carId&&SB.getCarHistory) {
+    const hist=await SB.getCarHistory(carId);
+    versions=hist||[];
+  }
+
+  const isEdit=!!row;
+  const today=H.today();
+  const nextNo=(()=>{
+    const d=today.replace(/-/g,'');
+    const todayCars=(DB.cars||[]).filter(c=>(c.no||'').startsWith('CAR-'+d));
+    return`CAR-${d}-${String(todayCars.length+1).padStart(3,'0')}`;
+  })();
+  const v=(key,fb='')=>isEdit?(row[key]!=null?row[key]:fb):fb;
+
+  const userOpts=(DB.users||[]).filter(u=>u.active!==false).map(u=>{
+    const nm=H.e(u.name||u.username);
+    const sel=isEdit&&row.assignee===nm?'selected':(!isEdit&&(Auth._u?.name||Auth._u?.username)===nm?'selected':'');
+    return`<option value="${nm}" ${sel}>${nm}${u.dept?' ('+H.e(u.dept)+')':''}</option>`;
+  }).join('');
+
+  const userMentionOpts=(DB.users||[]).filter(u=>u.active!==false)
+    .map(u=>`<option value="${H.e(u.name||u.username)}">`).join('');
+
+  const steps=['접수','대책접수','대책실시','유효성평가','완료','반려','종결'];
+  const curStep=isEdit?(steps.indexOf(row.status||'접수')):-1;
+  const stepColors={접수:'#6366f1',대책접수:'#a855f7',대책실시:'#f59e0b',유효성평가:'#3b82f6',완료:'#22c55e',반려:'#ef4444',종결:'#6b7280'};
+
+  /* 단계 스텝바 */
+  const mainSteps=['접수','대책접수','대책실시','유효성평가','완료'];
+  const si=mainSteps.indexOf(row?.status||'접수');
+  const stepBar=mainSteps.map((s,i)=>{
+    const done=i<si; const active=i===si;
+    return`<div style="display:flex;flex-direction:column;align-items:center;flex:1">
+      <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+        background:${done?'#22c55e':active?stepColors[s]:'#e5e7eb'};color:${done||active?'#fff':'#9ca3af'};
+        font-size:12px;font-weight:700;margin-bottom:4px">${done?'✓':i+1}</div>
+      <div style="font-size:10px;font-weight:${active?700:400};color:${active?stepColors[s]:'var(--muted)'}">${s}</div>
+    </div>
+    ${i<mainSteps.length-1?`<div style="flex:1;height:2px;background:${i<si?'#22c55e':'#e5e7eb'};margin-top:14px;max-width:60px"></div>`:''}`;
+  }).join('');
+
+  /* 버전 탭 */
+  const versionTabs=versions.length>0
+    ?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="stab-btn on" onclick="Pages._carInputVersion('current',this)">현재</button>
+        ${versions.slice(0,5).map((v,i)=>`<button class="stab-btn" onclick="Pages._carInputVersion(${i},this)">${v.version||('v'+(versions.length-i))}</button>`).join('')}
+      </div>`
+    :'';
+
+  w.innerHTML=`
+  <!-- 진행 스텝바 -->
+  ${isEdit?`<div class="card" style="padding:14px 20px;margin-bottom:12px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">진행 단계</div>
+    <div style="display:flex;align-items:center">${stepBar}</div>
+  </div>`:''}
+
+  <!-- 상단 액션 버튼 -->
+  <div class="ph" style="margin-bottom:12px">
+    <div>
+      <div class="ptit">${isEdit?`✏️ 시정조치 수정 — ${H.e(row.no||'')}` : '✍️ 시정조치 입력'}</div>
+      <div class="psub">${isEdit?H.e(row.title||''):'새 시정조치 등록'}</div>
+    </div>
+    <div class="pac" style="gap:6px">
+      <button class="btn bout bsm" onclick="Nav.go('car')">← 목록</button>
+      ${isEdit?`<button class="btn bsm" style="background:#f97316;color:#fff;border:none" onclick="Pages._carInputMail()">📧 메일</button>`:''}
+      ${isEdit?`<button class="btn bout bsm" onclick="Pages._carInputPrint()">🖨️ 인쇄</button>`:''}
+      ${isEdit?`<button class="btn bout bsm" onclick="Pages._carInputPreview()">👁 미리보기</button>`:''}
+      <button class="btn bout bsm" onclick="ExcelMgr.download('car')" title="엑셀 양식 내려받기">📥 양식</button>
+      <button class="btn bout bsm" onclick="ExcelMgr.openUpload('car')" title="엑셀 일괄 업로드">📤 업로드</button>
+      <button class="btn bamb bsm" onclick="Pages._carInputSave('temp')">⏳ 임시저장</button>
+      ${isEdit?`<button class="btn berr bsm" onclick="Pages._carInputDelete(${Number(carId)})">🗑️ 삭제</button>`:''}
+      <button class="btn bpri" onclick="Pages._carInputSave('${isEdit?row.id:'new'}')">💾 저장</button>
+    </div>
+  </div>
+
+  <div id="carInputVersionTabs">${versionTabs}</div>
+
+  <!-- ① 기본정보 헤더 -->
+  <div class="card" style="margin-bottom:12px;padding:18px 20px">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      📋 기본정보
+      ${isEdit?`<span class="badge ${row.status==='완료'?'bgrn':row.status==='반려'?'bred':'bblu'}">${H.e(row.status||'접수')}</span>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <input type="hidden" id="carInputId" value="${isEdit?row.id:''}">
+      <input type="hidden" id="carInputNcId" value="${H.e(v('nc_id'))}">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">CAR 번호</label>
+        <input class="fc" id="carInputNo" value="${H.e(v('no',nextNo))}" ${isEdit?'readonly':''}
+          style="font-family:monospace;font-weight:700;color:#1a5fa8">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">발생원 *</b></label>
+        <select class="fc" id="carInputSrc">
+          ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option value="${s}" ${v('src','부적합')===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">NC 참조번호</label>
+        <input class="fc" id="carInputNcNo" value="${H.e(v('nc_no'))}"
+          placeholder="NC-20260601-001" style="font-family:monospace;color:#7c3aed">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">개시일 *</b></label>
+        <input class="fc" type="date" id="carInputOpen" value="${H.e(v('open',today))}">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">완료 기한 *</b></label>
+        <input class="fc" type="date" id="carInputDue" value="${H.e(v('due',H.addDays(today,14)))}">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">담당자 *</b></label>
+        <select class="fc" id="carInputAssignee"><option value="">선택</option>${userOpts}</select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">제목 *</b></label>
+        <input class="fc" id="carInputTitle" value="${H.e(v('title'))}" placeholder="시정조치 제목">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">품목코드</label>
+        <input class="fc" id="carInputItemCode" value="${H.e(v('item_code'))}"
+          list="carInputItemList" placeholder="코드 검색..."
+          oninput="(function(){var v=document.getElementById('carInputItemCode').value.split(' — ')[0].trim();var it=(DB.items||[]).find(function(x){return(x.item_code||x.code||'')===v;});if(it)document.getElementById('carInputItem').value=it.name||it.item_name||'';})()">
+        <datalist id="carInputItemList">
+          ${(DB.items||[]).map(it=>`<option value="${H.e(it.item_code||it.code||'')}">${H.e((it.item_code||it.code||'')+' — '+(it.name||it.item_name||''))}</option>`).join('')}
+        </datalist>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">품목명</label>
+        <input class="fc" id="carInputItem" value="${H.e(v('item'))}" placeholder="품목코드 입력 시 자동완성" style="background:var(--bg2)">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">상태</label>
+        <select class="fc" id="carInputStatus">
+          ${steps.map(s=>`<option value="${s}" ${v('status','접수')===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 대책 내용 BODY -->
+  <div class="card" style="margin-bottom:12px;padding:18px 20px">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">📝 대책 내용 (단계별 입력)</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px">
+          ① 팀 구성 (D1) <span style="font-size:11px;color:var(--muted)">담당팀 및 구성원</span>
+        </label>
+        <textarea class="fc" id="carInputD1" rows="2" maxlength="500"
+          placeholder="대책팀 구성 및 역할 기재..."
+          oninput="document.getElementById('carInputD1cnt').textContent=this.value.length"
+          style="resize:vertical">${H.e(v('d1_team'))}</textarea>
+        <div style="text-align:right;font-size:11px;color:var(--muted)"><span id="carInputD1cnt">${(v('d1_team')||'').length}</span>/500</div>
+      </div>
+
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px">
+          ② 문제 기술 (D2) <span style="font-size:11px;color:var(--muted)">부적합 현상 및 문제 내용</span>
+        </label>
+        <textarea class="fc" id="carInputD2" rows="4" maxlength="500"
+          placeholder="부적합 현상 및 문제 내용 상세 기술..."
+          oninput="document.getElementById('carInputD2cnt').textContent=this.value.length"
+          style="resize:vertical">${H.e(v('d2_desc'))}</textarea>
+        <div style="text-align:right;font-size:11px;color:var(--muted)"><span id="carInputD2cnt">${(v('d2_desc')||'').length}</span>/500</div>
+      </div>
+
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px">
+          ③ 임시 대책 (D3) <span style="font-size:11px;color:var(--muted)">즉각적 임시 조치</span>
+        </label>
+        <textarea class="fc" id="carInputD3" rows="3" maxlength="500"
+          placeholder="즉각적 임시 조치 내용..."
+          oninput="document.getElementById('carInputD3cnt').textContent=this.value.length"
+          style="resize:vertical">${H.e(v('d3_action'))}</textarea>
+        <div style="text-align:right;font-size:11px;color:var(--muted)"><span id="carInputD3cnt">${(v('d3_action')||'').length}</span>/500</div>
+      </div>
+
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px">
+          ④ 근본 원인 분석 (D4 — 5-Why)
+        </label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${[1,2,3,4,5].map(n=>`
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <span style="background:#fef3c7;color:#d97706;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;margin-top:8px">Why ${n}</span>
+            <textarea class="fc" id="carInputWhy${n}" rows="2" maxlength="500"
+              placeholder="Why ${n}: ${n===1?'왜 발생했는가?':n===2?'왜 그 원인이 발생했는가?':n===3?'왜 막지 못했는가?':n===4?'왜 관리 기준이 없었는가?':'근본 원인은 무엇인가?'}"
+              style="flex:1;resize:vertical">${H.e(v('d4_why'+n))}</textarea>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px">
+          ⑤ 대책 실시 (D5) <span style="font-size:11px;color:var(--muted)">실시한 시정조치</span>
+        </label>
+        <textarea class="fc" id="carInputD5" rows="3" maxlength="500"
+          placeholder="실시한 시정조치 내용..."
+          oninput="document.getElementById('carInputD5cnt').textContent=this.value.length"
+          style="resize:vertical">${H.e(v('d5_action'))}</textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <label style="font-size:12px;color:var(--muted)">대책 실시일:
+            <input class="fc" type="date" id="carInputD5Date" value="${H.e(v('d5_date'))}"
+              style="width:140px;display:inline-block;margin-left:6px">
+          </label>
+          <span style="font-size:11px;color:var(--muted)"><span id="carInputD5cnt">${(v('d5_action')||'').length}</span>/500</span>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px">
+          ⑥ 유효성 평가 (D6) <span style="font-size:11px;color:var(--muted)">시정조치 효과 확인</span>
+        </label>
+        <textarea class="fc" id="carInputD6" rows="3" maxlength="500"
+          placeholder="시정조치 효과 확인 결과..."
+          oninput="document.getElementById('carInputD6cnt').textContent=this.value.length"
+          style="resize:vertical">${H.e(v('d6_verify'))}</textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;gap:10px;align-items:center">
+            <label style="font-size:12px;color:var(--muted)">평가 결과:
+              <select class="fc" id="carInputD6Result" style="width:120px;display:inline-block;margin-left:6px">
+                ${['','유효','일부유효','무효'].map(r=>`<option value="${r}" ${v('d6_result')===r?'selected':''}>${r||'선택'}</option>`).join('')}
+              </select>
+            </label>
+            <label style="font-size:12px;color:var(--muted)">평가일:
+              <input class="fc" type="date" id="carInputD6Date" value="${H.e(v('d6_date'))}"
+                style="width:140px;display:inline-block;margin-left:6px">
+            </label>
+          </div>
+          <span style="font-size:11px;color:var(--muted)"><span id="carInputD6cnt">${(v('d6_verify')||'').length}</span>/500</span>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px">
+          ⑦ 재발 방지 (D7) <span style="font-size:11px;color:var(--muted)">수평전개 및 재발 방지</span>
+        </label>
+        <textarea class="fc" id="carInputD7" rows="3" maxlength="500"
+          placeholder="수평전개 및 재발 방지 대책..."
+          oninput="document.getElementById('carInputD7cnt').textContent=this.value.length"
+          style="resize:vertical">${H.e(v('d7_prevent'))}</textarea>
+        <div style="text-align:right;font-size:11px;color:var(--muted)"><span id="carInputD7cnt">${(v('d7_prevent')||'').length}</span>/500</div>
+      </div>
+
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">비고</label>
+        <input class="fc" id="carInputNote" value="${H.e(v('note'))}" placeholder="비고">
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ③ 파일 첨부 -->
+  <div class="card" style="margin-bottom:12px;padding:18px 20px">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">📎 파일 첨부</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      ${isEdit&&row.file_url
+        ?`<a href="${H.e(row.file_url)}" target="_blank" class="btn bxs bblu bsm">📎 현재 파일</a>
+           <button type="button" class="btn bxs bred bsm"
+             onclick="window._carInputFileDel=true;this.textContent='🗑️ 삭제 예정'">🗑️ 파일 삭제</button>`:''}
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;
+        border:1.5px dashed var(--brd);border-radius:8px;cursor:pointer;font-size:13px;color:var(--muted);
+        background:var(--bg2)">
+        📁 파일 선택
+        <input type="file" id="carInputFile"
+          accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.jpeg,.png,.zip"
+          style="display:none"
+          onchange="document.getElementById('carInputFileName').textContent=this.files[0]?.name||''">
+      </label>
+      <span id="carInputFileName" style="font-size:12px;color:var(--pri)"></span>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--muted)">지원 형식: PDF, Excel, Word, 이미지(JPG/PNG), ZIP · 최대 10MB</div>
+  </div>
+
+  <!-- ④ 멘션 연동 -->
+  <div class="card" style="margin-bottom:12px;padding:18px 20px">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">📣 담당자 알림 (멘션)</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">수신자</label>
+        <input class="fc" id="carInputMentionTo" list="carMentionUserList" placeholder="담당자 선택">
+        <datalist id="carMentionUserList">${userMentionOpts}</datalist>
+      </div>
+      <div style="flex:2;min-width:300px">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">알림 메시지</label>
+        <input class="fc" id="carInputMentionMsg"
+          placeholder="예) 시정조치 검토 요청드립니다. 기한 내 검토 부탁드립니다.">
+      </div>
+      <button class="btn bpri bsm" onclick="Pages._carInputSendMention()" style="white-space:nowrap">📣 알림 발송</button>
+    </div>
+    ${isEdit?`<div style="margin-top:10px;font-size:11px;color:var(--muted)">저장 시 담당자(${H.e(row.assignee||'')})에게 자동 알림이 발송됩니다.</div>`:''}
+  </div>
+
+  <!-- ⑤ 변경 이력 -->
+  ${isEdit&&versions.length>0?`
+  <div class="card" style="margin-bottom:12px;padding:18px 20px">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">🕐 변경 이력</div>
+    <div style="overflow-x:auto">
+      <table class="dt" style="width:100%;font-size:12px">
+        <thead><tr>
+          <th style="width:140px">일시</th>
+          <th style="width:70px">액션</th>
+          <th style="width:80px">처리자</th>
+          <th>사유/내용</th>
+        </tr></thead>
+        <tbody>
+          ${versions.map(h=>`<tr>
+            <td style="color:var(--muted)">${(h.changed_at||h.created_at||'').replace('T',' ').slice(0,16)}</td>
+            <td><span class="badge ${h.action==='승인'?'bgrn':h.action==='반려'?'bred':h.action==='수정'?'bblu':'bgry'}"
+              style="font-size:10px">${H.e(h.action||'-')}</span></td>
+            <td>${H.e(h.changed_by||'-')}</td>
+            <td>${H.e(h.reason||'-')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`:''}
+
+  <!-- ⑥ 하단 버튼 바 -->
+  <div style="position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--brd);
+    padding:12px 20px;display:flex;justify-content:space-between;align-items:center;
+    border-radius:0 0 12px 12px;z-index:10">
+    <div style="display:flex;gap:6px">
+      <button class="btn bout bsm" onclick="Nav.go('car')">← 목록</button>
+      ${isEdit?`<button class="btn bsm" style="background:#f97316;color:#fff;border:none" onclick="Pages._carInputMail()">📧 메일 발송</button>`:''}
+      ${isEdit?`<button class="btn bout bsm" onclick="Pages._carInputPrint()">🖨️ 인쇄</button>`:''}
+      ${isEdit?`<button class="btn bout bsm" onclick="Pages._carInputPreview()">👁 미리보기</button>`:''}
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn bamb bsm" onclick="Pages._carInputSave('temp')">⏳ 임시저장</button>
+      ${isEdit?`<button class="btn berr bsm" onclick="Pages._carInputDelete(${Number(carId)})">🗑️ 삭제</button>`:''}
+      <button class="btn bpri" onclick="Pages._carInputSave('${isEdit?row.id:'new'}')">💾 저장</button>
+    </div>
+  </div>`;
+},
+
+/* ── 시정조치 입력 — 저장 ── */
+async _carInputSave(editId){
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const title=g('carInputTitle');
+  const open=g('carInputOpen');
+  const assignee=g('carInputAssignee');
+  if(!title){Toast.show('제목을 입력하세요.','warn');return;}
+  if(!open){Toast.show('개시일을 입력하세요.','warn');return;}
+  if(!assignee){Toast.show('담당자를 선택하세요.','warn');return;}
+
+  const isTemp=editId==='temp';
+  const isNew=editId==='new';
+  const realId=(!isTemp&&!isNew)?Number(editId):null;
+
+  /* 파일 업로드 */
+  let file_url=realId?(DB.cars||[]).find(c=>c.id===realId)?.file_url||null:null;
+  if(window._carInputFileDel){file_url=null;window._carInputFileDel=false;}
+  const fileEl=document.getElementById('carInputFile');
+  if(fileEl?.files?.length){
+    const up=await SB.uploadFile('car',fileEl.files[0]);
+    if(up?.url) file_url=up.url;
+    else Toast.show('파일 업로드 실패. 저장은 계속됩니다.','warn');
+  }
+
+  const itemCode=g('carInputItemCode').split(' — ')[0].trim();
+  const row={
+    no:g('carInputNo'), src:g('carInputSrc'),
+    title, nc_id:document.getElementById('carInputNcId')?.value||null,
+    nc_no:g('carInputNcNo')||null,
+    item_code:itemCode||null, item:g('carInputItem')||null,
+    open, due:g('carInputDue')||null,
+    assignee, status:isTemp?'접수':g('carInputStatus')||'접수',
+    d1_team:g('carInputD1')||null,
+    d2_desc:g('carInputD2')||null,
+    d3_action:g('carInputD3')||null,
+    d4_why1:g('carInputWhy1')||null, d4_why2:g('carInputWhy2')||null,
+    d4_why3:g('carInputWhy3')||null, d4_why4:g('carInputWhy4')||null,
+    d4_why5:g('carInputWhy5')||null,
+    d5_action:g('carInputD5')||null, d5_date:g('carInputD5Date')||null,
+    d6_verify:g('carInputD6')||null, d6_result:g('carInputD6Result')||null,
+    d6_date:g('carInputD6Date')||null,
+    d7_prevent:g('carInputD7')||null,
+    note:g('carInputNote')||null, file_url,
+    created_by:Auth._u?.name||Auth._u?.username||'',
+  };
+
+  let savedId=realId;
+  if(realId){
+    const res=await SB.updateCar(realId,row);
+    if(!res?.ok) return;
+    const idx=(DB.cars||[]).findIndex(c=>c.id===realId);
+    if(idx>=0) DB.cars[idx]={...DB.cars[idx],...row};
+    /* 수정 이력 저장 */
+    await SB.addCarHistory({
+      car_id:realId, action:'수정',
+      reason:`${isTemp?'임시저장':'수정'} — ${title}`,
+      changed_by:Auth._u?.name||Auth._u?.username||'',
+      changed_at:new Date().toISOString(),
+    });
+    Toast.show(isTemp?'임시저장됐습니다.':'시정조치가 수정됐습니다.','ok');
+  } else {
+    const res=await SB.addCar(row);
+    if(!res?.ok) return;
+    savedId=res.id;
+    /* 등록 이력 저장 */
+    if(savedId) await SB.addCarHistory({
+      car_id:savedId, action:'등록',
+      reason:`신규 등록 — ${title}`,
+      changed_by:Auth._u?.name||Auth._u?.username||'',
+      changed_at:new Date().toISOString(),
+    });
+    Toast.show('시정조치가 등록됐습니다.','ok');
+  }
+
+  /* 담당자 멘션 알림 */
+  if(assignee&&!isTemp){
+    await SB.addMention({
+      from:Auth._u?.name||'시스템',
+      to:assignee, to_list:[assignee],
+      text:`[시정조치 ${realId?'수정':'등록'}] ${row.no} — ${title}`,
+      message:`시정조치 ${row.no}이(가) ${realId?'수정':'등록'}됐습니다. 검토 부탁드립니다.`,
+      ref:`car:${savedId||realId}`,
+    });
+  }
+
+  /* 저장 후 현재 페이지 새로고침 */
+  window._carInputId=savedId||realId;
+  await Pages.car_input({carId:window._carInputId});
+},
+
+/* ── 시정조치 입력 — 삭제 ── */
+async _carInputDelete(carId){
+  Modal.confirm({title:'🗑️ 삭제 확인',
+    msg:'이 시정조치를 삭제합니다. 복구가 어렵습니다.',
+    danger:true,
+    onOk:async()=>{
+      if(_sb) await _sb.from('corrective_actions').delete().eq('id',carId);
+      DB.cars=(DB.cars||[]).filter(c=>Number(c.id)!==carId);
+      Toast.show('삭제됐습니다.','ok');
+      Nav.go('car');
+    }
+  });
+},
+
+/* ── 시정조치 입력 — 멘션 발송 ── */
+async _carInputSendMention(){
+  const to=(document.getElementById('carInputMentionTo')?.value||'').trim();
+  const msg=(document.getElementById('carInputMentionMsg')?.value||'').trim();
+  const no=(document.getElementById('carInputNo')?.value||'');
+  if(!to){Toast.show('수신자를 선택하세요.','warn');return;}
+  if(!msg){Toast.show('메시지를 입력하세요.','warn');return;}
+  await SB.addMention({
+    from:Auth._u?.name||'시스템',
+    to, to_list:[to],
+    text:`[CAR 알림] ${no} — ${msg}`,
+    message:msg,
+    ref:`car:${window._carInputId||''}`,
+  });
+  Toast.show(`${to}님께 알림을 발송했습니다.`,'ok');
+  document.getElementById('carInputMentionMsg').value='';
+},
+
+/* ── 시정조치 입력 — 메일 발송 ── */
+async _carInputMail(){
+  const row=window._carInputRow;
+  if(!row){Toast.show('저장 후 메일을 발송할 수 있습니다.','warn');return;}
+  const assignee=row.assignee||'';
+  const user=(DB.users||[]).find(u=>(u.name||u.username)===assignee);
+  const email=user?.email||'';
+  const subject=encodeURIComponent(`[시정조치] ${row.no} — ${row.title}`);
+  const body=encodeURIComponent(
+    `시정조치 번호: ${row.no}\n제목: ${row.title}\n개시일: ${row.open}\n완료기한: ${row.due||'-'}\n담당자: ${row.assignee}\n\n` +
+    `문제기술: ${row.d2_desc||'-'}\n임시대책: ${row.d3_action||'-'}\n\n` +
+    `QMS 시스템에서 확인: https://innodis-qms.vercel.app`
+  );
+  window.open(`mailto:${email}?subject=${subject}&body=${body}`,'_blank');
+},
+
+/* ── 시정조치 입력 — 인쇄 ── */
+_carInputPrint(){
+  const row=window._carInputRow;
+  if(!row){Toast.show('저장 후 인쇄할 수 있습니다.','warn');return;}
+  window.print();
+},
+
+/* ── 시정조치 입력 — 미리보기 ── */
+_carInputPreview(){
+  const row=window._carInputRow;
+  if(!row){Toast.show('저장 후 미리보기를 볼 수 있습니다.','warn');return;}
+  const g=id=>document.getElementById(id)?.value||'';
+  const html=`<html><head><title>CAR 미리보기 — ${H.e(g('carInputNo'))}</title>
+  <style>body{font-family:sans-serif;padding:30px;max-width:800px;margin:0 auto}
+  h1{font-size:18px;color:#1a5fa8;border-bottom:2px solid #1a5fa8;padding-bottom:8px}
+  h2{font-size:14px;color:#374151;margin-top:20px;background:#f3f4f6;padding:6px 12px;border-radius:4px}
+  .row{display:grid;grid-template-columns:120px 1fr;gap:4px;margin:6px 0;font-size:13px}
+  .label{color:#6b7280;font-weight:600} .val{color:#111827}
+  </style></head><body>
+  <h1>시정조치 보고서 (CAR)</h1>
+  <div class="row"><div class="label">CAR 번호</div><div class="val">${H.e(g('carInputNo'))}</div></div>
+  <div class="row"><div class="label">발생원</div><div class="val">${H.e(g('carInputSrc'))}</div></div>
+  <div class="row"><div class="label">제목</div><div class="val">${H.e(g('carInputTitle'))}</div></div>
+  <div class="row"><div class="label">담당자</div><div class="val">${H.e(g('carInputAssignee'))}</div></div>
+  <div class="row"><div class="label">개시일</div><div class="val">${H.e(g('carInputOpen'))}</div></div>
+  <div class="row"><div class="label">완료기한</div><div class="val">${H.e(g('carInputDue'))}</div></div>
+  <h2>② 문제 기술 (D2)</h2><p style="font-size:13px">${H.e(g('carInputD2')).replace(/\n/g,'<br>')||'-'}</p>
+  <h2>③ 임시 대책 (D3)</h2><p style="font-size:13px">${H.e(g('carInputD3')).replace(/\n/g,'<br>')||'-'}</p>
+  <h2>④ 근본 원인 (D4 — 5-Why)</h2>
+  ${[1,2,3,4,5].map(n=>`<div class="row"><div class="label">Why ${n}</div><div class="val">${H.e(g('carInputWhy'+n))||'-'}</div></div>`).join('')}
+  <h2>⑤ 대책 실시 (D5)</h2><p style="font-size:13px">${H.e(g('carInputD5')).replace(/\n/g,'<br>')||'-'}</p>
+  <h2>⑥ 유효성 평가 (D6)</h2><p style="font-size:13px">${H.e(g('carInputD6')).replace(/\n/g,'<br>')||'-'}</p>
+  <h2>⑦ 재발 방지 (D7)</h2><p style="font-size:13px">${H.e(g('carInputD7')).replace(/\n/g,'<br>')||'-'}</p>
+  </body></html>`;
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+},
+
+/* ── 버전 탭 선택 ── */
+_carInputVersion(idx, btn){
+  document.querySelectorAll('#carInputVersionTabs .stab-btn').forEach(b=>b.classList.toggle('on',b===btn));
+  if(idx==='current'){
+    /* 현재 버전 — 이미 렌더된 폼 유지 */
+    Toast.show('현재 버전입니다.','info');
+  } else {
+    /* 이전 버전 — 읽기 전용 표시 */
+    Toast.show('이전 버전은 조회만 가능합니다.','info');
+  }
+},
+
+/* ════════════════════════════════════════
+   [v2.192] car_status — 시정조치 현황
+   승인(유효성평가/완료) 문서 + 상태 이력
+   ════════════════════════════════════════ */
+async car_status(){
+  const w=document.getElementById('pw');
+  w.innerHTML='<div class="spin"></div>';
+  const fresh=await SB.getCars();
+  if(fresh) DB.cars=fresh;
+  const allData=DB.cars||[];
+  /* 승인 = 유효성평가 이상 상태 */
+  const approvedData=allData.filter(c=>['유효성평가','완료'].includes(c.status));
+  const byStatus={유효성평가:0,완료:0};
+  approvedData.forEach(c=>{if(byStatus[c.status]!==undefined)byStatus[c.status]++;});
+
+  w.innerHTML=`
+  <div class="ph">
+    <div><div class="ptit">📊 시정조치 현황</div>
+         <div class="psub">승인된 시정조치 현황 · 상태 변경 이력 조회</div></div>
+    <div class="pac">
+      <button class="btn bout bsm" onclick="Nav.go('car_input')">✍️ 신규 입력</button>
+    </div>
+  </div>
+  <div class="stat-dash" style="margin-bottom:12px">
+    <div class="sd-card"><div class="sd-icon" style="background:#eff6ff;color:#2563eb">📋</div>
+      <div><div class="sd-val">${approvedData.length}</div><div class="sd-lbl">승인 건수</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#f0fdf4;color:#16a34a">✅</div>
+      <div><div class="sd-val">${byStatus['완료']||0}</div><div class="sd-lbl">완료</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⚙️</div>
+      <div><div class="sd-val">${byStatus['유효성평가']||0}</div><div class="sd-lbl">유효성평가</div></div></div>
+    <div class="sd-card"><div class="sd-icon" style="background:#f5f3ff;color:#7c3aed">📈</div>
+      <div><div class="sd-val">${allData.length>0?Math.round(byStatus['완료']/allData.length*100):0}%</div><div class="sd-lbl">완료율</div></div></div>
+  </div>
+
+  <!-- 검색 -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <input class="fc" id="carStatusSearch" style="width:200px;font-size:13px"
+      placeholder="🔍 CAR번호·제목·담당자"
+      oninput="Pages._carStatusRender()">
+    <select class="fsel" id="carStatusFilter" onchange="Pages._carStatusRender()">
+      <option value="">승인 전체</option>
+      <option value="유효성평가">유효성평가</option>
+      <option value="완료">완료</option>
+    </select>
+    <button class="btn bout bsm" onclick="document.getElementById('carStatusSearch').value='';document.getElementById('carStatusFilter').value='';Pages._carStatusRender()">🔄 초기화</button>
+  </div>
+
+  <!-- 탭 -->
+  <div class="stabs" style="margin-bottom:10px">
+    <button class="stab-btn on" data-tab="list" onclick="Pages._carStatusTab('list',this)">📋 목록</button>
+    <button class="stab-btn" data-tab="kanban" onclick="Pages._carStatusTab('kanban',this)">📌 칸반</button>
+  </div>
+  <div id="carStatusListPane"><div id="carStatusTbl"></div></div>
+  <div id="carStatusKanbanPane" style="display:none"></div>`;
+
+  window._carStatusData=approvedData;
+  Pages._carStatusRender();
+},
+
+_carStatusRender(){
+  const data=window._carStatusData||[];
+  const q=(document.getElementById('carStatusSearch')?.value||'').toLowerCase();
+  const st=document.getElementById('carStatusFilter')?.value||'';
+  const filtered=data.filter(c=>{
+    if(q&&![(c.no||''),(c.title||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
+    if(st&&c.status!==st)return false;
+    return true;
+  });
+  Tbl.render({
+    el:'#carStatusTbl',
+    cols:[
+      {key:'status',   label:'상태',    w:'80px', align:'center',
+        render:v=>`<span class="badge ${v==='완료'?'bgrn':'bblu'}" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'no',       label:'CAR번호', w:'150px', req:true,
+        render:v=>`<span style="font-family:monospace;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
+      {key:'src',      label:'발생원',  w:'72px',
+        render:v=>`<span class="badge bpur" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'title',    label:'제목',    w:'*'},
+      {key:'assignee', label:'담당자',  w:'72px'},
+      {key:'open',     label:'개시일',  w:'88px'},
+      {key:'due',      label:'완료기한',w:'88px'},
+      {key:'d6_result',label:'평가결과',w:'80px', align:'center',
+        render:v=>v?`<span class="badge ${v==='유효'?'bgrn':v==='무효'?'bred':'bamb'}" style="font-size:10px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+    ],
+    data:filtered,
+    onRow:row=>Nav.go('car_input',{carId:row.id}),
+  });
+  const kb=document.getElementById('carStatusKanbanPane');
+  if(kb&&kb.style.display!=='none') Pages._carStatusKanbanRender(filtered);
+},
+
+_carStatusTab(tab, btn){
+  document.querySelectorAll('.stab-btn').forEach(b=>b.classList.toggle('on',b===btn));
+  document.getElementById('carStatusListPane').style.display=tab==='list'?'':'none';
+  const kb=document.getElementById('carStatusKanbanPane');
+  kb.style.display=tab==='kanban'?'':'none';
+  if(tab==='kanban') Pages._carStatusKanbanRender(window._carStatusData||[]);
+},
+
+_carStatusKanbanRender(data){
+  const el=document.getElementById('carStatusKanbanPane');
+  if(!el) return;
+  const steps=['유효성평가','완료'];
+  const colors={유효성평가:'#3b82f6',완료:'#22c55e'};
+  const byStep={};
+  steps.forEach(s=>{byStep[s]=data.filter(c=>c.status===s);});
+  el.innerHTML=`<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">
+  ${steps.map(s=>`
+    <div style="flex:0 0 280px;background:var(--bg2);border-radius:10px;padding:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:${colors[s]}">${s}</div>
+        <span style="background:${colors[s]};color:#fff;border-radius:99px;padding:1px 8px;font-size:11px">${byStep[s].length}</span>
+      </div>
+      ${byStep[s].map(c=>`
+        <div style="background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer"
+          onclick="Nav.go('car_input',{carId:${Number(c.id)}})">
+          <div style="font-size:11px;font-family:monospace;color:#1a5fa8;margin-bottom:4px">${H.e(c.no||'-')}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${H.e(c.title||'-')}</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+            <span>${H.e(c.assignee||'-')}</span>
+            ${c.d6_result?`<span class="badge ${c.d6_result==='유효'?'bgrn':c.d6_result==='무효'?'bred':'bamb'}" style="font-size:10px">${H.e(c.d6_result)}</span>`:''}
+          </div>
+        </div>`).join('')}
+      ${byStep[s].length===0?`<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">없음</div>`:''}
+    </div>`).join('')}
+  </div>`;
+},
+
+
 _carForm(row=null, prefillNc=null){
   const isEdit=!!row;
   const today=H.today();

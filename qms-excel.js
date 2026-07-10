@@ -814,6 +814,38 @@ var ExcelMgr=window.ExcelMgr={
         return null;
       },
     },
+    /* [v2.192] CAR 시정조치 엑셀 스키마 */
+    car:{
+      title:'시정조치(CAR)',
+      cols:[
+        {key:'no',          label:'CAR번호',   req:true,  sample:'CAR-20260710-001'},
+        {key:'src',         label:'발생원',    req:true,  sample:'부적합'},
+        {key:'title',       label:'제목',      req:true,  sample:'치수 불량 시정조치'},
+        {key:'nc_no',       label:'NC참조번호', sample:'NC-20260710-001'},
+        {key:'item_code',   label:'품목코드',   sample:'ITEM-001'},
+        {key:'item',        label:'품목명',    sample:'알루미늄 바'},
+        {key:'open',        label:'개시일',    req:true,  sample:'2026-07-10'},
+        {key:'due',         label:'완료기한',   sample:'2026-07-24'},
+        {key:'assignee',    label:'담당자',    req:true,  sample:'홍길동'},
+        {key:'status',      label:'상태',      sample:'접수'},
+        {key:'d1_team',     label:'D1 팀구성', sample:'품질팀'},
+        {key:'d2_desc',     label:'D2 문제기술', sample:'치수 불량 발생'},
+        {key:'d3_action',   label:'D3 임시대책', sample:'불량품 격리 조치'},
+        {key:'d4_why1',     label:'D4 Why1',   sample:'측정 오류'},
+        {key:'d4_why2',     label:'D4 Why2',   sample:'계측기 미교정'},
+        {key:'d4_why3',     label:'D4 Why3',   sample:'교정 주기 미준수'},
+        {key:'d5_action',   label:'D5 대책실시', sample:'계측기 교정 실시'},
+        {key:'d5_date',     label:'D5 실시일',   sample:'2026-07-15'},
+        {key:'d6_verify',   label:'D6 유효성평가', sample:'재발 없음 확인'},
+        {key:'d6_result',   label:'D6 평가결과',  sample:'유효'},
+        {key:'d7_prevent',  label:'D7 재발방지',  sample:'교정 주기 관리 강화'},
+        {key:'note',        label:'비고',         sample:''},
+      ],
+      addFn: async (row)=>{
+        const res=await SB.addCar(row);
+        return res?.ok?null:`CAR 저장 실패`;
+      },
+    },
     nc:{
       title:'부적합관리',
       /* [v2.394] 엑셀 업로드 컬럼 — 사내외/품목코드/고객 유형 추가 */

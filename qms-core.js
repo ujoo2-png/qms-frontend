@@ -1333,7 +1333,8 @@ const TopNav={
    ══════════════════════════════════════════════════════ */
 /* ══ 내비 ══ */
 const Nav={
-  go(page){
+  go(page, params={}){
+    /* [v2.192] params 지원 추가 — Nav.go('car_input',{carId:123}) */
     /* C안: 현재 페이지를 sessionStorage에 저장 → F5 후 복원 */
     if(Auth._u) sessionStorage.setItem('qms_page', page);
     /* [v2.65] npOverlay(공지/알림 팝업) 열려있으면 닫기 */
@@ -1382,7 +1383,7 @@ const Nav={
     const w=document.getElementById('pw');
     if(page!=='home') w.classList.remove('home-mode');
     w.innerHTML='<div class="spin"></div>';
-    try{Pages[page]?Pages[page]():w.innerHTML=`<div class="card"><div class="es"><div class="es-icon">🚧</div><div>준비 중입니다.</div></div></div>`}
+    try{Pages[page]?Pages[page](params):w.innerHTML=`<div class="card"><div class="es"><div class="es-icon">🚧</div><div>준비 중입니다.</div></div></div>`}
     catch(e){w.innerHTML=`<div class="card"><p style="color:var(--err)">오류: ${e.message}</p></div>`}
   }
 };

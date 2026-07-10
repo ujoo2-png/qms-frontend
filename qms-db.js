@@ -874,6 +874,34 @@ const SB={
     const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
   },
 
+  /* [v2.192] CAR 이력 저장 */
+  async addCarHistory(row){
+    if(!_sb){return{ok:true};}
+    try{
+      const allowed={
+        car_id:row.car_id||null,
+        action:row.action||'수정',
+        reason:row.reason||'',
+        changed_by:row.changed_by||'',
+        changed_at:row.changed_at||new Date().toISOString(),
+      };
+      const {error}=await _sb.from('car_history').insert(allowed);
+      if(error){console.warn('[SB] addCarHistory 오류:',error.message);return{ok:false};}
+      return{ok:true};
+    }catch(e){console.warn('[SB] addCarHistory 예외:',e.message);return{ok:false};}
+  },
+
+  /* [v2.192] CAR 이력 조회 */
+  async getCarHistory(carId){
+    if(!_sb) return [];
+    try{
+      const {data,error}=await _sb.from('car_history')
+        .select('*').eq('car_id',carId).order('changed_at',{ascending:false}).limit(20);
+      if(error){console.warn('[SB] getCarHistory 오류:',error.message);return[];}
+      return data||[];
+    }catch(e){return[];}
+  },
+
   /* ════ SPC 통계관리 [v2.154 신규] ════
      spc_items: 관리 항목 (품목/공정/규격 USL·LSL·Target)
      spc_subgroups: 서브그룹 측정 데이터 (날짜별 측정값 JSON 배열) */
@@ -898,7 +926,7 @@ const SB={
       spec_lower:row.spec_lower!=null?Number(row.spec_lower):null,
       target:row.target!=null?Number(row.target):null,
       subgroup_size:row.subgroup_size||5, unit:row.unit||'', note:row.note||'',
-      created_by:row.created_by||null,
+      /* [v2.193] created_by 컬럼 제거 — spc_items 테이블에 없는 컬럼 */
     };
     const {error}=await _sb.from('spc_items').insert(allowed);
     if(error){Toast.show('SPC 항목 저장 실패: '+error.message,'err');return{ok:false};}
