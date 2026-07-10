@@ -1,14 +1,13 @@
-/* [v2.182] Vercel Edge Function — Groq AI + 다중턴 대화 지원
-   단일 분석: POST { prompt, data, mode }
-   다중턴 채팅: POST { messages: [{role, content}], mode }
-   모델 폴백: llama-3.3-70b → gemma2-9b-it → llama3-70b-8192
-   llama-3.1-70b / mixtral-8x7b 서비스 종료로 제거 */
+/* [v2.183] Vercel Edge Function — Groq AI + 다중턴 대화 지원
+   2026년 7월 기준 Groq 권장 모델로 업데이트
+   공식 권장: openai/gpt-oss-120b, qwen/qwen3.6-27b
+   종료된 모델: llama-3.3-70b, llama-3.1-70b, gemma2-9b, llama3-70b, mixtral */
 export const config = { runtime: 'edge' };
 
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile',
-  'gemma2-9b-it',
-  'llama3-70b-8192',
+  'openai/gpt-oss-120b',      /* Groq 공식 권장 — 최고 품질, 무료 */
+  'qwen/qwen3.6-27b',         /* 폴백 1 — Groq 공식 권장, 한국어 우수 */
+  'llama-3.1-8b-instant',     /* 폴백 2 — 경량, 빠름, 안정적 */
 ];
 
 const QMS_SYSTEM = `당신은 INNODIS 품질경영시스템(QMS)의 AI 어시스턴트입니다.
@@ -85,13 +84,21 @@ export default async function handler(req) {
           }
         }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
       }
-      if (status === 429 || status === 503) { lastError = json.error?.message || `${model} limit`; continue; }
+      if (status === 429 || status === 503) {
+        lastError = json.error?.message || `${model} limit`;
+        continue;
+      }
+      /* 모델 종료(decommissioned) 오류도 다음 모델로 폴백 */
+      if (status === 400 && json.error?.message?.includes('decommissioned')) {
+        lastError = `${model} 종료됨`;
+        continue;
+      }
       return new Response(JSON.stringify({ error: json.error?.message || 'Groq API 오류' }), {
         status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    return new Response(JSON.stringify({ error: `잠시 후 재시도하세요. (${lastError || 'rate limit'})` }), {
+    return new Response(JSON.stringify({ error: `잠시 후 재시도하세요. (${lastError || ''})` }), {
       status: 429, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
 
