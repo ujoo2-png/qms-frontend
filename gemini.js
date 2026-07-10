@@ -1,16 +1,17 @@
-/* [v2.183] Vercel Edge Function — Groq AI + 다중턴 대화 지원
-   2026년 7월 기준 Groq 권장 모델로 업데이트
-   공식 권장: openai/gpt-oss-120b, qwen/qwen3.6-27b
-   종료된 모델: llama-3.3-70b, llama-3.1-70b, gemma2-9b, llama3-70b, mixtral */
+/* [v2.187] Vercel Edge Function — Groq AI + QMS 데이터 system 메시지 지원
+   챗봇: POST { messages, systemOverride, mode }
+     → systemOverride에 전체 QMS DB 데이터 포함 → 매 턴 실제 데이터 참조
+   단일 분석: POST { prompt, data, mode }
+   모델 폴백: openai/gpt-oss-120b → qwen/qwen3.6-27b → llama-3.1-8b-instant */
 export const config = { runtime: 'edge' };
 
 const GROQ_MODELS = [
-  'openai/gpt-oss-120b',      /* Groq 공식 권장 — 최고 품질, 무료 */
-  'qwen/qwen3.6-27b',         /* 폴백 1 — Groq 공식 권장, 한국어 우수 */
-  'llama-3.1-8b-instant',     /* 폴백 2 — 경량, 빠름, 안정적 */
+  'openai/gpt-oss-120b',
+  'qwen/qwen3.6-27b',
+  'llama-3.1-8b-instant',
 ];
 
-const QMS_SYSTEM = `당신은 INNODIS 품질경영시스템(QMS)의 AI 어시스턴트입니다.
+const QMS_SYSTEM_DEFAULT = `당신은 INNODIS 품질경영시스템(QMS)의 AI 어시스턴트입니다.
 제조업 품질관리 전문가로서 ISO 9001, SPC, MSA, 8D, FMEA 등에 정통합니다.
 사용자가 제공하는 실제 QMS 데이터를 바탕으로 구체적이고 실행 가능한 인사이트를 제공합니다.
 답변은 한국어로, 간결하고 실무 중심으로 작성합니다.`;
@@ -40,20 +41,29 @@ export default async function handler(req) {
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'GROQ_API_KEY 미설정. Vercel 환경변수를 확인하세요.' }), {
+    return new Response(JSON.stringify({ error: 'GROQ_API_KEY 미설정.' }), {
       status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   }
 
   try {
     const body = await req.json();
-    const { prompt, data, mode, messages: chatMessages } = body;
+    const { prompt, data, mode, messages: chatMessages, systemOverride } = body;
     const requestTime = new Date().toISOString();
 
     let messages;
+
     if (chatMessages && Array.isArray(chatMessages)) {
-      messages = [{ role: 'system', content: QMS_SYSTEM }, ...chatMessages];
+      /* [v2.187] 챗봇 모드 — systemOverride에 실제 QMS DB 데이터 포함
+         매 요청마다 최신 데이터를 system 메시지로 전달
+         → AI가 모든 턴에서 실제 데이터를 참조하여 구체적 답변 */
+      const systemContent = systemOverride || QMS_SYSTEM_DEFAULT;
+      messages = [
+        { role: 'system', content: systemContent },
+        ...chatMessages,
+      ];
     } else {
+      /* 단일 분석 모드 (AI 분석 버튼) */
       if (!prompt) {
         return new Response(JSON.stringify({ error: 'prompt가 필요합니다.' }), {
           status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -63,7 +73,7 @@ export default async function handler(req) {
         ? `${prompt}\n\n[데이터]\n${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}`
         : prompt;
       messages = [
-        { role: 'system', content: QMS_SYSTEM },
+        { role: 'system', content: QMS_SYSTEM_DEFAULT },
         { role: 'user', content: fullPrompt },
       ];
     }
@@ -88,7 +98,6 @@ export default async function handler(req) {
         lastError = json.error?.message || `${model} limit`;
         continue;
       }
-      /* 모델 종료(decommissioned) 오류도 다음 모델로 폴백 */
       if (status === 400 && json.error?.message?.includes('decommissioned')) {
         lastError = `${model} 종료됨`;
         continue;
