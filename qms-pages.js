@@ -4930,10 +4930,33 @@ _calRender:function(){
       {key:'cost', label:'비용',w:'88px',
         render:v=>v?Number(v).toLocaleString()+'원':'-'},
       {key:'note', label:'비고',w:'*'},
-      {key:'file_url', label:'파일', w:'56px',
-        render:function(v){return v?'<button class="btn bxs bblu" style="font-size:10px;padding:2px 6px" onclick="event.stopPropagation();window.open(\''+H.e(v)+'\',\'_blank\')">\ud83d\udcce</button>':'<span style="color:var(--tl);font-size:11px">-</span>';}},
+      /* [v2.191] 파일 컬럼 — 파일 있으면 수량+오렌지 배경 표시 */
+      {key:'file_url', label:'파일', w:'56px', align:'center',
+        render:function(v,row){
+          if(!v) return '<span style="color:var(--tl);font-size:11px">-</span>';
+          return '<span style="background:#f97316;color:#fff;font-size:10px;font-weight:700;' +
+            'padding:2px 7px;border-radius:12px;white-space:nowrap">📎 1</span>';
+        }},
+      /* [v2.191] 열람 컬럼 — 클릭 시 화면 분할 미리보기 */
+      {key:'id', label:'열람', w:'56px', align:'center',
+        render:function(v,row){
+          const safeId=Number(v);
+          if(!row.file_url) return '<span style="color:var(--tl);font-size:11px">-</span>';
+          return '<button class="btn bxs bblu" style="font-size:10px;padding:2px 6px" ' +
+            'title="성적서 열람(화면 분할)" ' +
+            'onclick="event.stopPropagation();' +
+            'window._calViewTarget={' +
+              'id:'+safeId+',' +
+              'fileUrl:\''+H.e(row.file_url||'')+'\',' +
+              'certNo:\''+H.e(row.cert_no||row.cert||'')+'\',' +
+              'name:\''+H.e(row.name||'')+'\',' +
+              'calDate:\''+H.e(row.cal_date||row.date||'')+'\',' +
+              'equipCode:\''+H.e(row.equip_code||row.code||'')+'\'};' +
+            'Pages._calSplitView(window._calViewTarget)">👁 열람</button>';
+        }},
     ],
     data:rows,
+    onRow:function(){ window._calRows = rows; },  /* [v2.191] 분할뷰용 */
     onDel:async function(ids){
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
       Modal.confirm({title:'교정 이력 삭제',
@@ -5564,32 +5587,13 @@ async _calSplitView(target){
       '</div>' +
     '</div>';
 
-  /* 좌측 교정이력 목록 재렌더 */
+  /* [v2.191] 좌측 교정이력 목록 재렌더 — _calRender() 직접 호출 */
   const slot = document.getElementById('calSplitTbl');
   if(!slot) return;
-  slot.innerHTML = '<div id="calTbl"></div>';
+  slot.innerHTML = '<div id="calTbl"></div>'
+    + '<div id="calCostChart"></div>';  /* _calRender가 참조하는 id 포함 */
   window._calRows = window._calRows || DB.cals || [];
-  /* 현재 선택된 행 하이라이트를 위해 onRow 콜백 포함 재렌더 */
-  Tbl.render({el:'#calTbl', cols:[
-    {key:'code',  label:'계측기코드', w:'90px'},
-    {key:'name',  label:'계측기명',   w:'110px'},
-    {key:'cal_date', label:'교정일',  w:'82px', render:(v,row)=>v||row.date||'-'},
-    {key:'agency',label:'교정기관',   w:'100px'},
-    {key:'result',label:'결과',       w:'66px', align:'center',
-      render:v=>`<span class="badge ${v==='합격'?'bgrn':v==='조건부합격'?'bamb':'bred'}">${H.e(v||'-')}</span>`},
-    {key:'id',    label:'열람',       w:'54px', align:'center',
-      render:(v,row)=>{
-        const safeId=Number(v); const hasFile=!!(row.file_url);
-        if(!hasFile) return '<span style="color:var(--tl);font-size:11px">-</span>';
-        const isSelected = target && Number(target.id)===safeId;
-        return `<button class="btn bxs ${isSelected?'bpri':'bblu'}" style="font-size:10px;padding:1px 7px"
-          onclick="event.stopPropagation();
-            window._calViewTarget={id:${safeId},fileUrl:'${H.e(row.file_url||'')}',
-              certNo:'${H.e(row.cert_no||row.cert||'')}',name:'${H.e(row.name||'')}',
-              calDate:'${H.e(row.cal_date||row.date||'')}'};
-            Pages._calSplitView(window._calViewTarget)">👁 열람</button>`;
-      }},
-  ], data: window._calRows, ps:15});
+  Pages._calRender();
 },
 
 /* [v2.190] 교정관리 분할 닫기 */
