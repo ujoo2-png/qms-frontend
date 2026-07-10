@@ -1,13 +1,13 @@
-/* [v2.176] Vercel Edge Function — Groq AI + 다중턴 대화 지원
-   단일 분석: POST { prompt, data, mode }
-   다중턴 채팅: POST { messages: [{role, content}], mode }
-   모델: llama-3.3-70b-versatile → llama-3.1-70b → mixtral-8x7b */
+/* [v2.183] Vercel Edge Function — Groq AI + 다중턴 대화 지원
+   2026년 7월 기준 Groq 권장 모델로 업데이트
+   공식 권장: openai/gpt-oss-120b, qwen/qwen3.6-27b
+   종료된 모델: llama-3.3-70b, llama-3.1-70b, gemma2-9b, llama3-70b, mixtral */
 export const config = { runtime: 'edge' };
 
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-70b-versatile',
-  'mixtral-8x7b-32768',
+  'openai/gpt-oss-120b',      /* Groq 공식 권장 — 최고 품질, 무료 */
+  'qwen/qwen3.6-27b',         /* 폴백 1 — Groq 공식 권장, 한국어 우수 */
+  'llama-3.1-8b-instant',     /* 폴백 2 — 경량, 빠름, 안정적 */
 ];
 
 const QMS_SYSTEM = `당신은 INNODIS 품질경영시스템(QMS)의 AI 어시스턴트입니다.
@@ -22,12 +22,7 @@ async function callGroq(apiKey, messages, model) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 1500,
-    }),
+    body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 1500 }),
   });
   const json = await res.json();
   return { status: res.status, ok: res.ok, json };
@@ -35,14 +30,11 @@ async function callGroq(apiKey, messages, model) {
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      }
-    });
+    return new Response(null, { status: 204, headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }});
   }
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
 
@@ -58,15 +50,10 @@ export default async function handler(req) {
     const { prompt, data, mode, messages: chatMessages } = body;
     const requestTime = new Date().toISOString();
 
-    /* ── 다중턴 채팅 모드 (messages 배열 전달 시) ── */
     let messages;
     if (chatMessages && Array.isArray(chatMessages)) {
-      messages = [
-        { role: 'system', content: QMS_SYSTEM },
-        ...chatMessages,
-      ];
+      messages = [{ role: 'system', content: QMS_SYSTEM }, ...chatMessages];
     } else {
-      /* ── 단일 분석 모드 (기존 호환) ── */
       if (!prompt) {
         return new Response(JSON.stringify({ error: 'prompt가 필요합니다.' }), {
           status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -81,7 +68,6 @@ export default async function handler(req) {
       ];
     }
 
-    /* ── 모델 폴백 ── */
     let lastError = null;
     for (const model of GROQ_MODELS) {
       const { status, ok, json } = await callGroq(apiKey, messages, model);
@@ -89,27 +75,30 @@ export default async function handler(req) {
         const text = json.choices?.[0]?.message?.content || '결과를 가져올 수 없습니다.';
         const usage = json.usage || {};
         return new Response(JSON.stringify({
-          result: text,
-          model,
+          result: text, model,
           usage: {
             promptTokens:  usage.prompt_tokens     || 0,
             outputTokens:  usage.completion_tokens || 0,
             totalTokens:   usage.total_tokens      || 0,
-            requestTime,
-            mode: mode || 'chat',
+            requestTime, mode: mode || 'chat',
           }
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
+        }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
       }
-      if (status === 429 || status === 503) { lastError = json.error?.message || `${model} limit`; continue; }
+      if (status === 429 || status === 503) {
+        lastError = json.error?.message || `${model} limit`;
+        continue;
+      }
+      /* 모델 종료(decommissioned) 오류도 다음 모델로 폴백 */
+      if (status === 400 && json.error?.message?.includes('decommissioned')) {
+        lastError = `${model} 종료됨`;
+        continue;
+      }
       return new Response(JSON.stringify({ error: json.error?.message || 'Groq API 오류' }), {
         status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    return new Response(JSON.stringify({ error: `잠시 후 재시도하세요. (${lastError || 'rate limit'})` }), {
+    return new Response(JSON.stringify({ error: `잠시 후 재시도하세요. (${lastError || ''})` }), {
       status: 429, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
 
