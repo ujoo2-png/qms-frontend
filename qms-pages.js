@@ -9634,7 +9634,7 @@ async _aiNcAnalyze(){
     total:ncData.length,
     byStatus:{},byType:{},
     thisMonth:ncData.filter(r=>(r.date||'').startsWith(new Date().toISOString().slice(0,7))).length,
-    records:ncData.slice(0,60).map(r=>({
+    records:ncData.slice(0,15).map(r=>({
       no:r.no, type:r.type, item:r.item, date:r.date,
       status:r.status, desc:r.desc, assignee:r.assignee,
       cause:r.cause||'', action:r.action||'', result:r.result||''
@@ -9732,7 +9732,7 @@ async _aiSpcAnalyze(itemId){
     outOfControlCount:outOfCtrl.length,
     outOfControlDates:outOfCtrl.map(g=>g.date),
     /* 전체 측정 데이터 */
-    allGroups:groups.map((g,i)=>({
+    allGroups:groups.slice(0,30).map((g,i)=>({
       date:g.date,
       mean:+means[i].toFixed(4),
       range:+ranges[i].toFixed(4),
@@ -9772,7 +9772,7 @@ async _aiHomeInsight(){
       open:nc.filter(r=>r.status!=='완료').length,
       thisMonth:nc.filter(r=>(r.date||'').startsWith(thisMonth)).length,
       byType:{},byStatus:{},
-      recent:nc.slice(0,20).map(r=>({no:r.no,type:r.type,item:r.item,date:r.date,status:r.status,desc:(r.desc||'').slice(0,50)})),
+      recent:nc.slice(0,10).map(r=>({no:r.no,type:r.type,item:r.item,date:r.date,status:r.status,desc:(r.desc||'').slice(0,50)})),
     },
     /* 검사 */
     inspection:{
@@ -9789,7 +9789,7 @@ async _aiHomeInsight(){
       total:cars.length,
       open:cars.filter(r=>r.status!=='완료'&&r.status!=='closed').length,
       overdue:cars.filter(r=>r.due_date&&r.due_date<today&&r.status!=='완료').length,
-      recent:cars.slice(0,15).map(r=>({no:r.no,title:r.title,status:r.status,dueDate:r.due_date})),
+      recent:cars.slice(0,10).map(r=>({no:r.no,title:r.title,status:r.status,dueDate:r.due_date})),
     },
     /* 8D */
     r8d:{total:r8d.length, open:r8d.filter(r=>r.status!=='완료').length},
@@ -9974,7 +9974,7 @@ async _aiDocDashAnalyze(){
     overdueReviewCount:overdueCount, newThisMonth,
     activeRate:docs.length>0?Math.round(byStatus.active/docs.length*100):0,
     /* 전체 문서 목록 */
-    allDocs:docs.slice(0,60).map(r=>({
+    allDocs:docs.slice(0,15).map(r=>({
       no:r.doc_no||'', title:r.title||'', type:r.doc_type||'',
       status:r.status||'', version:r.version||'',
       owner:r.owner||r.author||'', dept:r.dept||'',
@@ -10095,7 +10095,7 @@ async _aiCarAnalyze(){
     openCount:open.length, overdueCount:overdue.length,
     byStatus:{},
     /* 전체 CAR 목록 */
-    allCars:cars.map(r=>({
+    allCars:cars.slice(0,15).map(r=>({
       no:r.no, title:r.title||r.item||'', src:r.src||'',
       status:r.status||'', dueDate:r.due_date||r.dueDate||'',
       assignee:r.assignee||r.responsible||'',
@@ -10138,7 +10138,7 @@ async _aiQualityDash(){
       total:insps.length, fail:failInsps.length, failRate:failRate+'%',
       thisMonth:insps.filter(r=>(r.insp_date||'').startsWith(thisMonth)).length,
       byType:{}, byResult:{},
-      recentFails:failInsps.slice(0,20).map(r=>({
+      recentFails:failInsps.slice(0,10).map(r=>({
         no:r.insp_no||'', type:r.type||'', vendor:r.vendor||'',
         item:r.item_name||'', date:r.insp_date||'',
         failQty:r.fail_qty||0, note:r.note||''
@@ -10149,13 +10149,13 @@ async _aiQualityDash(){
       total:nc.length, open:nc.filter(r=>r.status!=='완료').length,
       thisMonth:nc.filter(r=>(r.date||'').startsWith(thisMonth)).length,
       byType:{},
-      recent:nc.slice(0,20).map(r=>({no:r.no,type:r.type,item:r.item,date:r.date,status:r.status,desc:(r.desc||'').slice(0,50)})),
+      recent:nc.slice(0,10).map(r=>({no:r.no,type:r.type,item:r.item,date:r.date,status:r.status,desc:(r.desc||'').slice(0,50)})),
     },
     /* CAR 전체 */
     car:{
       total:cars.length, open:cars.filter(r=>r.status!=='완료'&&r.status!=='closed').length,
       overdue:cars.filter(r=>r.due_date&&r.due_date<today.toISOString().slice(0,10)&&r.status!=='완료').length,
-      recent:cars.slice(0,15).map(r=>({no:r.no,title:r.title||r.item,status:r.status,dueDate:r.due_date})),
+      recent:cars.slice(0,10).map(r=>({no:r.no,title:r.title||r.item,status:r.status,dueDate:r.due_date})),
     },
   };
   insps.forEach(r=>{data.inspection.byType[r.type||'기타']=(data.inspection.byType[r.type||'기타']||0)+1;});
@@ -10185,7 +10185,7 @@ async _aiEquipAnalyze(){
     expiredCount:expired.length,
     soonCount:soon.length,
     /* 전체 계측기 목록 (최대 50건) */
-    allEquip:equip.slice(0,50).map(r=>({
+    allEquip:equip.slice(0,15).map(r=>({
       no:r.no, name:r.name||r.equip_name||'', code:r.equip_code||r.code||'',
       type:r.equip_type||r.type||'', maker:r.maker||'', range:r.range||'',
       lastCal:r.last_cal||'', nextCal:r.next_cal||'',
@@ -10225,7 +10225,7 @@ async _aiCalAnalyze(){
     total:cals.length,
     thisYear:cals.filter(r=>(r.cal_date||r.date||'').startsWith(thisYear)).length,
     byResult:{},
-    allCals:cals.slice(0,60).map(r=>({
+    allCals:cals.slice(0,15).map(r=>({
       no:r.no||'', name:r.name||r.equip_name||'', code:r.equip_code||r.code||'',
       calDate:r.cal_date||r.date||'', nextCal:r.next_cal||'',
       result:r.result||'', calType:r.cal_type||r.type||'',
@@ -10252,7 +10252,7 @@ async _aiMsaAnalyze(){
   const data={
     total:msa.length,
     /* 전체 MSA 연구 목록 */
-    allStudies:msa.map(r=>({
+    allStudies:msa.slice(0,10).map(r=>({
       name:r.name||'', equipCode:r.equip_code||'', equipName:r.equip_name||'',
       studyDate:r.study_date||r.date||'', studyType:r.study_type||r.type||'',
       parts:r.parts||0, appraisers:r.appraisers||0, trials:r.trials||0,
