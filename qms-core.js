@@ -2509,9 +2509,9 @@ const GeminiAI={
   },
 
   showResult(title, result, usage=null){
-    /* [v2.184] 마크다운 → HTML 완전 재작성
-       기존: 줄별 replace만 → 테이블/구분선/li블록 깨짐
-       변경: 줄 단위 파싱 → 블록별 처리 */
+    /* [v2.189] 마크다운 렌더 + 깔끔한 모달 레이아웃
+       - body: 순수 콘텐츠만 (max-height/overflow 중복 제거 — .mbd가 이미 처리)
+       - foot: 토큰 정보 + 복사/닫기 버튼 */
     const lines = result.split('\n');
     let html = '';
     let inList = false;
@@ -2530,13 +2530,7 @@ const GeminiAI={
       html+=`<table style="border-collapse:collapse;width:100%;margin:8px 0">${th}${trs}</table>`;
       tableRows=[];
     };
-
-    const flushList = () => {
-      if(!inList) return;
-      html+='</ul>';
-      inList=false;
-    };
-
+    const flushList = () => { if(!inList) return; html+='</ul>'; inList=false; };
     const renderInline = t => t
       .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
       .replace(/\*(.+?)\*/g,'<em>$1</em>')
@@ -2544,46 +2538,25 @@ const GeminiAI={
 
     for(let raw of lines){
       const line = raw.trimEnd();
-
-      /* 테이블 행 */
       if(line.startsWith('|')){
-        if(!inTable){inTable=true; flushList();}
-        tableRows.push(line);
-        continue;
-      } else if(inTable){
-        flushTable();
-        inTable=false;
-      }
-
-      /* 제목 */
+        if(!inTable){inTable=true; flushList();} tableRows.push(line); continue;
+      } else if(inTable){ flushTable(); inTable=false; }
       if(line.startsWith('### ')){flushList();html+=`<h4 style="margin:14px 0 5px;font-size:13px;color:var(--text)">${renderInline(line.slice(4))}</h4>`;continue;}
-      if(line.startsWith('## ')) {flushList();html+=`<h3 style="margin:16px 0 6px;font-size:14px;color:var(--text)">${renderInline(line.slice(3))}</h3>`;continue;}
-      if(line.startsWith('# '))  {flushList();html+=`<h2 style="margin:18px 0 8px;font-size:15px;color:var(--text)">${renderInline(line.slice(2))}</h2>`;continue;}
-
-      /* 구분선 */
+      if(line.startsWith('## ')){flushList();html+=`<h3 style="margin:16px 0 6px;font-size:14px;color:var(--text)">${renderInline(line.slice(3))}</h3>`;continue;}
+      if(line.startsWith('# ')){flushList();html+=`<h2 style="margin:18px 0 8px;font-size:15px;color:var(--text)">${renderInline(line.slice(2))}</h2>`;continue;}
       if(line.match(/^[-*_]{3,}$/)){flushList();html+='<hr style="border:none;border-top:1px solid var(--brd);margin:10px 0">';continue;}
-
-      /* 리스트 */
       const liMatch = line.match(/^(\s*)[*\-+] (.+)/);
       if(liMatch){
         if(!inList){html+='<ul style="margin:6px 0;padding-left:18px">'; inList=true;}
-        html+=`<li style="margin:3px 0;font-size:13px">${renderInline(liMatch[2])}</li>`;
-        continue;
+        html+=`<li style="margin:3px 0;font-size:13px">${renderInline(liMatch[2])}</li>`; continue;
       }
       const olMatch = line.match(/^\d+\.\s(.+)/);
       if(olMatch){
         if(!inList){html+='<ul style="margin:6px 0;padding-left:18px;list-style:decimal">'; inList=true;}
-        html+=`<li style="margin:3px 0;font-size:13px">${renderInline(olMatch[1])}</li>`;
-        continue;
+        html+=`<li style="margin:3px 0;font-size:13px">${renderInline(olMatch[1])}</li>`; continue;
       }
-
-      /* 빈 줄 */
       if(!line.trim()){flushList();html+='<div style="height:6px"></div>';continue;}
-
-      /* 인용 */
       if(line.startsWith('> ')){flushList();html+=`<div style="border-left:3px solid #fbbf24;padding:4px 10px;margin:4px 0;color:var(--muted);font-size:12px">${renderInline(line.slice(2))}</div>`;continue;}
-
-      /* 일반 텍스트 */
       flushList();
       html+=`<div style="font-size:13px;line-height:1.8;margin:2px 0">${renderInline(line)}</div>`;
     }
@@ -2591,23 +2564,23 @@ const GeminiAI={
     if(inTable) flushTable();
 
     const usageTxt = usage
-      ?`<div style="margin-top:12px;padding:8px 12px;background:var(--bg2);border-radius:6px;font-size:11px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap">
+      ?`<span style="font-size:11px;color:var(--muted);display:flex;gap:12px;align-items:center">
           <span>🤖 ${usage.model||'Groq'}</span>
-          <span>📊 입력 ${(usage.promptTokens||0).toLocaleString()} 토큰</span>
-          <span>📝 출력 ${(usage.outputTokens||0).toLocaleString()} 토큰</span>
-          <span>⏱ ${(usage.requestTime||'').slice(11,19)}</span>
-        </div>`:'';
+          <span>📊 ${(usage.promptTokens||0).toLocaleString()} → ${(usage.outputTokens||0).toLocaleString()} 토큰</span>
+        </span>`
+      :'';
+
     Modal.open({
       title:`🤖 ${title}`,
       size:'mlg',
-      foot:`<div style="display:flex;gap:8px;align-items:center">
-        <button class="btn bout bsm" onclick="navigator.clipboard.writeText(${JSON.stringify(result)}).then(()=>Toast.show('복사됨','ok'))">📋 복사</button>
-        <button class="btn bpri" onclick="Modal.close()">닫기</button>
-      </div>`,
-      body:`<div style="line-height:1.7;color:var(--text);overflow-y:auto;max-height:60vh;padding:4px 2px">
-        ${html}
+      foot:`<div style="display:flex;justify-content:space-between;align-items:center;width:100%">
         ${usageTxt}
+        <div style="display:flex;gap:8px">
+          <button class="btn bout bsm" onclick="navigator.clipboard.writeText(${JSON.stringify(result)}).then(()=>Toast.show('복사됨','ok'))">📋 복사</button>
+          <button class="btn bpri" onclick="Modal.close()">닫기</button>
+        </div>
       </div>`,
+      body:`<div style="line-height:1.75;color:var(--text)">${html}</div>`,
     });
   },
 };
