@@ -2508,25 +2508,95 @@ const GeminiAI={
     }
   },
 
-  /* AI 결과를 모달로 표시 */
   showResult(title, result, usage=null){
-    const usageTxt=usage
-      ?`<div style="margin-top:12px;padding:8px 12px;background:var(--bg2);border-radius:6px;font-size:11px;color:var(--muted);display:flex;gap:16px">
-          <span>📊 입력 ${usage.promptTokens||0} 토큰</span>
-          <span>📝 출력 ${usage.outputTokens||0} 토큰</span>
-          <span>⏱ ${(usage.requestTime||'').slice(11,19)}</span>
-        </div>`:'';
-    /* 마크다운 → HTML 간단 변환 */
-    const html=result
-      .replace(/^### (.+)$/gm,'<h4 style="margin:14px 0 6px;color:var(--text)">$1</h4>')
-      .replace(/^## (.+)$/gm,'<h3 style="margin:16px 0 8px;color:var(--text)">$1</h3>')
-      .replace(/^# (.+)$/gm,'<h2 style="margin:18px 0 10px;color:var(--text)">$1</h2>')
+    /* [v2.184] 마크다운 → HTML 완전 재작성
+       기존: 줄별 replace만 → 테이블/구분선/li블록 깨짐
+       변경: 줄 단위 파싱 → 블록별 처리 */
+    const lines = result.split('\n');
+    let html = '';
+    let inList = false;
+    let inTable = false;
+    let tableRows = [];
+
+    const flushTable = () => {
+      if(!tableRows.length) return;
+      let th='', trs='';
+      tableRows.forEach((row,i)=>{
+        const cells = row.split('|').map(c=>c.trim()).filter(c=>c && !c.match(/^[-:]+$/));
+        if(!cells.length) return;
+        if(i===0) th=`<tr>${cells.map(c=>`<th style="padding:5px 10px;background:var(--bg2);border:1px solid var(--brd);font-size:12px">${c}</th>`).join('')}</tr>`;
+        else if(!row.match(/^\|[\s\-:|]+\|/)) trs+=`<tr>${cells.map(c=>`<td style="padding:5px 10px;border:1px solid var(--brd);font-size:12px">${renderInline(c)}</td>`).join('')}</tr>`;
+      });
+      html+=`<table style="border-collapse:collapse;width:100%;margin:8px 0">${th}${trs}</table>`;
+      tableRows=[];
+    };
+
+    const flushList = () => {
+      if(!inList) return;
+      html+='</ul>';
+      inList=false;
+    };
+
+    const renderInline = t => t
       .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
       .replace(/\*(.+?)\*/g,'<em>$1</em>')
-      .replace(/^- (.+)$/gm,'<li style="margin:3px 0">$1</li>')
-      .replace(/^(\d+)\. (.+)$/gm,'<li style="margin:3px 0"><b>$1.</b> $2</li>')
-      .replace(/\n{2,}/g,'</p><p style="margin:8px 0">')
-      .replace(/\n/g,'<br>');
+      .replace(/`(.+?)`/g,'<code style="background:var(--bg2);padding:1px 4px;border-radius:3px;font-size:11px">$1</code>');
+
+    for(let raw of lines){
+      const line = raw.trimEnd();
+
+      /* 테이블 행 */
+      if(line.startsWith('|')){
+        if(!inTable){inTable=true; flushList();}
+        tableRows.push(line);
+        continue;
+      } else if(inTable){
+        flushTable();
+        inTable=false;
+      }
+
+      /* 제목 */
+      if(line.startsWith('### ')){flushList();html+=`<h4 style="margin:14px 0 5px;font-size:13px;color:var(--text)">${renderInline(line.slice(4))}</h4>`;continue;}
+      if(line.startsWith('## ')) {flushList();html+=`<h3 style="margin:16px 0 6px;font-size:14px;color:var(--text)">${renderInline(line.slice(3))}</h3>`;continue;}
+      if(line.startsWith('# '))  {flushList();html+=`<h2 style="margin:18px 0 8px;font-size:15px;color:var(--text)">${renderInline(line.slice(2))}</h2>`;continue;}
+
+      /* 구분선 */
+      if(line.match(/^[-*_]{3,}$/)){flushList();html+='<hr style="border:none;border-top:1px solid var(--brd);margin:10px 0">';continue;}
+
+      /* 리스트 */
+      const liMatch = line.match(/^(\s*)[*\-+] (.+)/);
+      if(liMatch){
+        if(!inList){html+='<ul style="margin:6px 0;padding-left:18px">'; inList=true;}
+        html+=`<li style="margin:3px 0;font-size:13px">${renderInline(liMatch[2])}</li>`;
+        continue;
+      }
+      const olMatch = line.match(/^\d+\.\s(.+)/);
+      if(olMatch){
+        if(!inList){html+='<ul style="margin:6px 0;padding-left:18px;list-style:decimal">'; inList=true;}
+        html+=`<li style="margin:3px 0;font-size:13px">${renderInline(olMatch[1])}</li>`;
+        continue;
+      }
+
+      /* 빈 줄 */
+      if(!line.trim()){flushList();html+='<div style="height:6px"></div>';continue;}
+
+      /* 인용 */
+      if(line.startsWith('> ')){flushList();html+=`<div style="border-left:3px solid #fbbf24;padding:4px 10px;margin:4px 0;color:var(--muted);font-size:12px">${renderInline(line.slice(2))}</div>`;continue;}
+
+      /* 일반 텍스트 */
+      flushList();
+      html+=`<div style="font-size:13px;line-height:1.8;margin:2px 0">${renderInline(line)}</div>`;
+    }
+    flushList();
+    if(inTable) flushTable();
+
+    const usageTxt = usage
+      ?`<div style="margin-top:12px;padding:8px 12px;background:var(--bg2);border-radius:6px;font-size:11px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap">
+          <span>🤖 ${usage.model||'Groq'}</span>
+          <span>📊 입력 ${(usage.promptTokens||0).toLocaleString()} 토큰</span>
+          <span>📝 출력 ${(usage.outputTokens||0).toLocaleString()} 토큰</span>
+          <span>⏱ ${(usage.requestTime||'').slice(11,19)}</span>
+        </div>`:'';
     Modal.open({
       title:`🤖 ${title}`,
       size:'mlg',
@@ -2534,8 +2604,8 @@ const GeminiAI={
         <button class="btn bout bsm" onclick="navigator.clipboard.writeText(${JSON.stringify(result)}).then(()=>Toast.show('복사됨','ok'))">📋 복사</button>
         <button class="btn bpri" onclick="Modal.close()">닫기</button>
       </div>`,
-      body:`<div style="line-height:1.8;font-size:13px;color:var(--text)">
-        <div style="padding:14px 0"><p style="margin:0">${html}</p></div>
+      body:`<div style="line-height:1.7;color:var(--text);overflow-y:auto;max-height:60vh;padding:4px 2px">
+        ${html}
         ${usageTxt}
       </div>`,
     });
@@ -2558,6 +2628,8 @@ window.QmsChat = {
      현재 페이지와 무관하게 모든 모듈 데이터를 컨텍스트에 포함
      → AI가 어느 질문이든 전체 QMS 데이터를 참조해서 답변 가능 */
   _getContext(){
+    /* [v2.186] 전체 메뉴 raw data 종합 수집
+       AI 어시스턴트가 어떤 질문이든 실제 데이터를 참조해서 심도 있는 답변 제공 */
     const page = sessionStorage.getItem('qms_page') || 'home';
     const pageLabels = {
       home:'홈 대시보드', nc:'부적합관리', nc_8d:'8D Report',
@@ -2566,71 +2638,82 @@ window.QmsChat = {
       spc_chart:'SPC 관리도', spc_cpk:'공정능력(Cpk)', spc_pareto:'파레토 분석',
       docs:'문서관리', doc_dashboard:'문서 대시보드', equip:'계측기 관리',
       cal:'교정관리', msa:'MSA 분석', quality_dash:'품질현황 대시보드',
-      nc_8d:'8D Report', car:'개선활동',
     };
     const label = pageLabels[page] || page;
-
-    /* 전체 DB 종합 요약 */
-    let dataCtx = '';
+    let dataCtx = `현재 페이지: ${label}`;
     let fullSummary = '';
+
     try {
       const DB = window.DB || {};
       const today = new Date().toISOString().slice(0,10);
       const thisMonth = today.slice(0,7);
 
-      /* ① 부적합관리 */
-      const nc = DB.nc||[];
-      const ncOpen = nc.filter(r=>r.status!=='완료');
-
-      /* ② 검사 */
-      const insps = DB.inspections||[];
-      const inspFail = insps.filter(r=>r.result==='불합격');
-
-      /* ③ CAR 개선활동 */
-      const cars = DB.car||DB.cars||[];
-      const carOpen = cars.filter(r=>r.status!=='완료'&&r.status!=='closed');
-
-      /* ④ 8D Report */
-      const r8d = DB.reports||[];
-      const r8dOpen = r8d.filter(r=>r.status!=='완료'&&r.status!=='종결');
-
-      /* ⑤ 공급사 */
+      const nc      = DB.nc||[];
+      const insps   = DB.inspections||[];
+      const cars    = DB.car||DB.cars||[];
+      const r8d     = DB.reports||[];
       const vendors = DB.vendors||[];
-      const evals = DB.vendor_evals||[];
-      const lowScore = evals.filter(r=>(r.total||0)<80);
+      const evals   = DB.vendor_evals||[];
+      const audits  = DB.vendor_audits||[];
+      const equip   = DB.equip||[];
+      const cals    = DB.calibrations||DB.cal||[];
+      const docs    = DB.docs||[];
+      const msa     = DB.msa||[];
+      const spcItems= window._spcItems||[];
 
-      /* ⑥ 계측기/교정 */
-      const equip = DB.equip||[];
-      const calExpired = equip.filter(r=>r.status==='교정만료');
-      const calSoon = equip.filter(r=>{
-        if(!r.next_cal||r.status==='교정만료') return false;
+      const ncOpen     = nc.filter(r=>r.status!=='완료');
+      const inspFail   = insps.filter(r=>r.result==='불합격');
+      const carOpen    = cars.filter(r=>r.status!=='완료'&&r.status!=='closed');
+      const carOverdue = carOpen.filter(r=>r.due_date&&r.due_date<today);
+      const r8dOpen    = r8d.filter(r=>r.status!=='완료'&&r.status!=='종결');
+      const lowScore   = evals.filter(r=>(r.total||0)<80);
+      const calExpired = equip.filter(r=>r.status==='교정만료'||(r.next_cal&&r.next_cal<today));
+      const calSoon    = equip.filter(r=>{
+        if(!r.next_cal||calExpired.find(e=>e===r)) return false;
         return Math.ceil((new Date(r.next_cal)-new Date())/86400000)<=30;
       });
+      const docsOverdue = docs.filter(r=>r.next_review_at&&new Date(r.next_review_at)<new Date()&&r.status==='active');
 
-      /* ⑦ 문서 */
-      const docs = DB.docs||[];
-      const docsActive = docs.filter(r=>r.status==='active');
+      const ncByType={};
+      nc.forEach(r=>{ncByType[r.type||'기타']=(ncByType[r.type||'기타']||0)+1;});
 
-      /* ⑧ SPC */
-      const spcItems = window._spcItems||[];
+      dataCtx = `${label} | NC미결 ${ncOpen.length}건, CAR미완료 ${carOpen.length}건, 교정만료 ${calExpired.length}개`;
 
-      /* 현재 페이지 컨텍스트 (간단) */
-      dataCtx = `현재: ${label}`;
-
-      /* 전체 데이터 요약 — AI 시스템 컨텍스트에 삽입 */
       fullSummary = [
-        `[QMS 전체 현황 — ${today}]`,
-        `부적합: 총 ${nc.length}건, 미결 ${ncOpen.length}건, 이번달 ${nc.filter(r=>(r.date||'').startsWith(thisMonth)).length}건`,
-        `검사: 총 ${insps.length}건, 불합격 ${inspFail.length}건 (불합격률 ${insps.length?Math.round(inspFail.length/insps.length*100):0}%)`,
-        `CAR: 총 ${cars.length}건, 미완료 ${carOpen.length}건`,
-        `8D: 총 ${r8d.length}건, 진행 ${r8dOpen.length}건`,
-        `공급사: ${vendors.length}개, 최근평가 ${evals.length}건, 저점수(80점미만) ${lowScore.length}개`,
-        `계측기: ${equip.length}개, 교정만료 ${calExpired.length}개, D-30이내 ${calSoon.length}개`,
-        `문서: 총 ${docs.length}건, 유효 ${docsActive.length}건`,
-        `SPC 관리항목: ${spcItems.length}개`,
-        `현재 페이지: ${label}`,
-      ].join('\n');
-    } catch(e) { dataCtx = label; fullSummary = ''; }
+        `[INNODIS QMS 전체 현황 — ${today} | 현재화면: ${label}]`,
+        '',
+        `■ 부적합관리(NC): 총 ${nc.length}건, 미결 ${ncOpen.length}건, 이번달 ${nc.filter(r=>(r.date||'').startsWith(thisMonth)).length}건`,
+        `  유형별: ${Object.entries(ncByType).map(([k,v])=>`${k} ${v}건`).join(', ')||'없음'}`,
+        ncOpen.length ? `  미결 상세: ${ncOpen.slice(0,5).map(r=>`[${r.no||''}] ${r.item||''} - ${(r.desc||'').slice(0,30)}`).join(' / ')}` : '  미결 없음',
+        '',
+        `■ 검사: 총 ${insps.length}건, 불합격 ${inspFail.length}건 (불합격률 ${insps.length?Math.round(inspFail.length/insps.length*100):0}%)`,
+        inspFail.length ? `  최근 불합격: ${inspFail.slice(0,5).map(r=>`${r.vendor||''} ${r.item_name||''} (${r.insp_date||''})`).join(' / ')}` : '  불합격 없음',
+        '',
+        `■ CAR 개선활동: 총 ${cars.length}건, 미완료 ${carOpen.length}건, 기한초과 ${carOverdue.length}건`,
+        carOpen.length ? `  미완료 목록: ${carOpen.slice(0,5).map(r=>`[${r.no||''}] ${r.title||r.item||''} (D:${r.due_date||'미정'})`).join(' / ')}` : '  미완료 없음',
+        '',
+        `■ 8D Report: 총 ${r8d.length}건, 진행 ${r8dOpen.length}건`,
+        r8dOpen.length ? `  진행중: ${r8dOpen.slice(0,5).map(r=>`[${r.no||''}] ${r.title||''} (${r.status||''})`).join(' / ')}` : '  진행중 없음',
+        '',
+        `■ 공급사(SQM): ${vendors.length}개 등록, 평가이력 ${evals.length}건, 심사이력 ${audits.length}건, 저점수 ${lowScore.length}개`,
+        lowScore.length ? `  저점수 공급사: ${lowScore.slice(0,5).map(e=>`${e.vendor_name||''} ${e.total||0}점`).join(', ')}` : '  저점수 공급사 없음',
+        '',
+        `■ 계측기: 총 ${equip.length}개, 교정만료 ${calExpired.length}개, D-30이내 ${calSoon.length}개`,
+        calExpired.length ? `  만료 계측기: ${calExpired.slice(0,5).map(r=>`${r.name||r.equip_name||''}`).join(', ')}` : '  만료 없음',
+        `  교정이력: 총 ${cals.length}건`,
+        '',
+        `■ 문서관리: 총 ${docs.length}건, 유효 ${docs.filter(r=>r.status==='active').length}건, 검토초과 ${docsOverdue.length}건`,
+        docsOverdue.length ? `  검토초과: ${docsOverdue.slice(0,5).map(r=>`${r.title||''} (${r.next_review_at||''})`).join(' / ')}` : '  검토초과 없음',
+        '',
+        `■ SPC: 관리항목 ${spcItems.length}개`,
+        spcItems.length ? `  항목: ${spcItems.slice(0,5).map(r=>`${r.item_name||''}-${r.char_name||''}`).join(', ')}` : '',
+        '',
+        `■ MSA: 연구 ${msa.length}건`,
+        msa.filter(r=>(r.grr_pct||r.grr||0)>30).length ?
+          `  불량시스템: ${msa.filter(r=>(r.grr_pct||r.grr||0)>30).map(r=>r.name||'').join(', ')}` : '',
+      ].filter(Boolean).join('\n');
+
+    } catch(e) { dataCtx = label; fullSummary = `[현재 페이지: ${label}]`; }
 
     return { page, label, dataCtx, fullSummary };
   },
@@ -2786,10 +2869,9 @@ window.QmsChat = {
     this.send();
   },
 
-  /* ── 메시지 전송 ── */
   async send(){
     if(this._loading) return;
-    const input = document.getElementById('aiChatInput');
+    const input   = document.getElementById('aiChatInput');
     const sendBtn = document.getElementById('aiChatSendBtn');
     if(!input) return;
     const text = input.value.trim();
@@ -2800,41 +2882,54 @@ window.QmsChat = {
     this._loading = true;
     if(sendBtn){ sendBtn.disabled=true; sendBtn.style.opacity='0.5'; }
 
-    /* 컨텍스트 갱신 */
     this._updateCtxBar();
     const ctx = this._getContext();
 
-    /* 첫 메시지면 전체 DB 요약을 컨텍스트에 삽입 */
-    let userContent = text;
-    if(this._history.length === 0 && ctx.fullSummary){
-      userContent = `${ctx.fullSummary}\n\n질문: ${text}`;
-    }
+    /* [v2.187] 핵심 수정: 데이터를 system 메시지에 항상 포함
+       - 기존: 첫 메시지 user 내용에 데이터 삽입 → AI 혼란, 이후 턴 데이터 없음
+       - 변경: 매 요청마다 system 메시지에 최신 DB 데이터 자동 포함
+               → AI가 모든 턴에서 실제 데이터 참조하여 구체적 답변 가능 */
+    const systemContent = ctx.fullSummary
+      ? `당신은 INNODIS 품질경영시스템(QMS) AI 어시스턴트입니다.
+ISO 9001, SPC, MSA, 8D, FMEA 등 제조업 품질관리 전문가입니다.
+아래는 현재 QMS 시스템의 실제 데이터입니다. 이 데이터를 기반으로 구체적이고 실행 가능한 답변을 해주세요.
+추측이나 일반론이 아닌, 실제 등록된 데이터를 인용하여 답변하세요.
+답변은 항상 한국어로, 간결하고 실무 중심으로 작성하세요.
 
-    /* 히스토리 추가 */
-    this._history.push({ role:'user', content: userContent });
-    this._addMsg('user', text);  /* 표시는 원본 텍스트 */
+${ctx.fullSummary}`
+      : `당신은 INNODIS 품질경영시스템(QMS) AI 어시스턴트입니다.
+ISO 9001, SPC, MSA, 8D, FMEA 등 제조업 품질관리 전문가입니다.
+답변은 한국어로, 간결하고 실무 중심으로 작성하세요.`;
+
+    /* 히스토리에 user 메시지 추가 (원본 텍스트만) */
+    this._history.push({ role:'user', content: text });
+    this._addMsg('user', text);
     this._showLoading();
 
-    /* 히스토리 최대 20턴(40개 메시지) 유지 */
+    /* 히스토리 최대 20턴 유지 */
     if(this._history.length > 40) this._history = this._history.slice(-40);
 
     try {
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: this._history, mode: 'chat' }),
+        /* system 메시지를 별도로 전달 — api/gemini.js에서 최우선 삽입 */
+        body: JSON.stringify({
+          messages: this._history,
+          systemOverride: systemContent,
+          mode: 'chat',
+        }),
       });
       const json = await res.json();
       this._hideLoading();
 
       if(json.error){
         this._addMsg('assistant', `⚠️ 오류: ${json.error}`);
-        this._history.pop(); /* 실패한 user 메시지 제거 */
+        this._history.pop();
       } else {
         const reply = json.result || '응답을 가져올 수 없습니다.';
         this._history.push({ role:'assistant', content: reply });
         this._addMsg('assistant', reply);
-        /* 사용량 기록 */
         if(json.usage && typeof GeminiAI !== 'undefined') GeminiAI._saveUsage(json.usage, 'chat', text.length);
       }
     } catch(e) {

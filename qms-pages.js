@@ -9629,10 +9629,21 @@ async _aiNcAnalyze(){
 4. **이번 달 개선 액션 3가지** (구체적이고 실행 가능한 것)
 5. **향후 예방 조치 제안**
 분석은 간결하고 실무 중심으로 작성해 주세요.`;
-  const summary=ncData.map(r=>({
-    no:r.no, type:r.type, item:r.item, date:r.date,
-    status:r.status, desc:r.desc, assignee:r.assignee
-  }));
+  /* [v2.184] NC 전체 raw data 전달 */
+  const summary={
+    total:ncData.length,
+    byStatus:{},byType:{},
+    thisMonth:ncData.filter(r=>(r.date||'').startsWith(new Date().toISOString().slice(0,7))).length,
+    records:ncData.slice(0,60).map(r=>({
+      no:r.no, type:r.type, item:r.item, date:r.date,
+      status:r.status, desc:r.desc, assignee:r.assignee,
+      cause:r.cause||'', action:r.action||'', result:r.result||''
+    })),
+  };
+  ncData.forEach(r=>{
+    summary.byStatus[r.status||'미정']=(summary.byStatus[r.status||'미정']||0)+1;
+    summary.byType[r.type||'기타']=(summary.byType[r.type||'기타']||0)+1;
+  });
   const res=await GeminiAI.analyze(prompt, summary, 'nc');
   if(res.ok) GeminiAI.showResult(`부적합 AI 분석 (${ncData.length}건)`, res.result, res.usage);
 },
@@ -9654,18 +9665,31 @@ async _aiSqmPlan(){
 3. **위험 공급사 목록** (점수 80점 미만 또는 하락 추세)
 4. **개선 권고 사항** (공급사별 구체적 액션)
 5. **이번 분기 달성 목표** (측정 가능한 KPI 3가지)`;
+  /* [v2.185] 공급사 전체 raw data 전달 */
   const data={
-    vendors: vendors.slice(0,30).map(v=>({name:v.name||v.vendor_name,code:v.code})),
-    recentEvals: evals.slice(0,20).map(e=>({
-      vendor:e.vendor_name, period:e.period,
-      quality:e.quality, delivery:e.delivery,
-      price:e.price, service:e.service,
-      total:e.total
+    quarter:`${year}Q${quarter}`, today:today.toISOString().slice(0,10),
+    /* 전체 공급사 목록 */
+    vendors: vendors.map(v=>({
+      name:v.name||v.vendor_name, code:v.code||'',
+      type:v.type||'', items:v.items||'', contact:v.contact||'',
+      grade:v.grade||'', status:v.status||''
     })),
-    recentAudits: audits.slice(0,10).map(a=>({
-      vendor:a.vendor_name, date:a.audit_date||a.plan_date, result:a.result||a.status
+    /* 전체 평가 이력 */
+    allEvals: evals.map(e=>({
+      vendor:e.vendor_name, period:e.period, evalDate:e.eval_date||'',
+      quality:e.quality, delivery:e.delivery, price:e.price, service:e.service,
+      total:e.total, grade:e.grade||'', note:e.note||''
     })),
-    quarter:`${year}Q${quarter}`
+    /* 전체 심사 이력 */
+    allAudits: audits.map(a=>({
+      vendor:a.vendor_name, planDate:a.plan_date||'', auditDate:a.audit_date||'',
+      type:a.audit_type||a.type||'', result:a.result||a.status||'',
+      score:a.score||'', note:a.note||''
+    })),
+    /* 저점수 공급사 */
+    lowScore: evals.filter(e=>(e.total||0)<80).map(e=>({
+      vendor:e.vendor_name, total:e.total, period:e.period
+    })),
   };
   const res=await GeminiAI.analyze(prompt, data, 'sqm');
   if(res.ok) GeminiAI.showResult(`SQM ${year}Q${quarter} AI 분기 계획`, res.result, res.usage);
@@ -9697,16 +9721,24 @@ async _aiSpcAnalyze(itemId){
 2. **이탈 원인 가설** (연속 이탈/주기적/돌발 패턴 구분)
 3. **즉시 조치 사항** (공정 복구를 위한 구체적 액션)
 4. **장기 개선 방향** (근본 원인 제거를 위한 계획)`;
+  /* [v2.185] SPC 전체 측정 raw data 전달 */
   const data={
-    item:{name:item.item_name, process:item.process, char:item.char_name, unit:item.unit},
+    item:{name:item.item_name, process:item.process, char:item.char_name,
+          unit:item.unit, itemCode:item.item_code||''},
     spec:{usl:item.spec_upper, lsl:item.spec_lower, target:item.target},
-    control:{Xbar:+Xbar.toFixed(4), Rbar:+Rbar.toFixed(4), UCLx:+UCLx.toFixed(4), LCLx:+LCLx.toFixed(4)},
+    control:{Xbar:+Xbar.toFixed(4), Rbar:+Rbar.toFixed(4),
+             UCLx:+UCLx.toFixed(4), LCLx:+LCLx.toFixed(4)},
     subgroupSize:n, totalGroups:groups.length,
     outOfControlCount:outOfCtrl.length,
-    recentData:groups.slice(-10).map((g,i)=>({
-      date:g.date, mean:+means[groups.length-10+i]?.toFixed(4),
-      range:+ranges[groups.length-10+i]?.toFixed(4)
-    }))
+    outOfControlDates:outOfCtrl.map(g=>g.date),
+    /* 전체 측정 데이터 */
+    allGroups:groups.map((g,i)=>({
+      date:g.date,
+      mean:+means[i].toFixed(4),
+      range:+ranges[i].toFixed(4),
+      values:g.vals.map(v=>+v.toFixed(4)),
+      outOfControl:means[i]>UCLx||means[i]<LCLx
+    })),
   };
   const res=await GeminiAI.analyze(prompt, data, 'spc');
   if(res.ok) GeminiAI.showResult(`SPC AI 분석 — ${item.process} / ${item.char_name}`, res.result, res.usage);
@@ -9727,15 +9759,58 @@ async _aiHomeInsight(){
 3. **이번 주 집중 업무 추천** (실행 가능한 3가지)
 4. **다음 달 준비 사항** (사전 예방적 조치)
 실무자가 아침에 읽고 바로 행동할 수 있도록 간결하게 작성해 주세요.`;
+  /* [v2.185] 홈 인사이트 — 전체 DB 종합 raw data */
+  const equip=DB.equip||[];
+  const docs=DB.docs||[];
+  const r8d=DB.reports||[];
+  const thisYear=today.slice(0,4);
   const data={
-    thisMonth,
-    nc:{total:nc.length, open:nc.filter(r=>r.status!=='완료').length,
-        thisMonth:nc.filter(r=>(r.date||'').startsWith(thisMonth)).length},
-    inspection:{total:insps.length, fail:insps.filter(r=>r.result==='불합격').length,
-        thisMonth:insps.filter(r=>(r.insp_date||'').startsWith(thisMonth)).length},
-    car:{total:cars.length, open:cars.filter(r=>r.status!=='완료'&&r.status!=='closed').length},
-    vendorEval:{total:evals.length, lowScore:evals.filter(r=>r.total<80).length},
+    today, thisMonth,
+    /* 부적합 */
+    nc:{
+      total:nc.length,
+      open:nc.filter(r=>r.status!=='완료').length,
+      thisMonth:nc.filter(r=>(r.date||'').startsWith(thisMonth)).length,
+      byType:{},byStatus:{},
+      recent:nc.slice(0,20).map(r=>({no:r.no,type:r.type,item:r.item,date:r.date,status:r.status,desc:(r.desc||'').slice(0,50)})),
+    },
+    /* 검사 */
+    inspection:{
+      total:insps.length,
+      fail:insps.filter(r=>r.result==='불합격').length,
+      thisMonth:insps.filter(r=>(r.insp_date||'').startsWith(thisMonth)).length,
+      failRate:insps.length?Math.round(insps.filter(r=>r.result==='불합격').length/insps.length*100):0,
+      recent:insps.filter(r=>r.result==='불합격').slice(0,10).map(r=>({
+        no:r.insp_no,type:r.type,item:r.item_name,date:r.insp_date,vendor:r.vendor
+      })),
+    },
+    /* CAR */
+    car:{
+      total:cars.length,
+      open:cars.filter(r=>r.status!=='완료'&&r.status!=='closed').length,
+      overdue:cars.filter(r=>r.due_date&&r.due_date<today&&r.status!=='완료').length,
+      recent:cars.slice(0,15).map(r=>({no:r.no,title:r.title,status:r.status,dueDate:r.due_date})),
+    },
+    /* 8D */
+    r8d:{total:r8d.length, open:r8d.filter(r=>r.status!=='완료').length},
+    /* 공급사 */
+    vendorEval:{
+      total:evals.length,
+      lowScore:evals.filter(r=>(r.total||0)<80).length,
+      recent:evals.slice(0,10).map(e=>({vendor:e.vendor_name,total:e.total,period:e.period})),
+    },
+    /* 계측기 */
+    equip:{
+      total:equip.length,
+      expired:equip.filter(r=>r.status==='교정만료').length,
+      soon:equip.filter(r=>r.next_cal&&Math.ceil((new Date(r.next_cal)-new Date())/86400000)<=30&&r.status!=='교정만료').length,
+    },
+    /* 문서 */
+    docs:{total:docs.length, active:docs.filter(r=>r.status==='active').length,
+          overdueReview:docs.filter(r=>r.next_review_at&&new Date(r.next_review_at)<new Date()&&r.status==='active').length},
   };
+  nc.forEach(r=>{data.nc.byType[r.type||'기타']=(data.nc.byType[r.type||'기타']||0)+1;});
+  nc.forEach(r=>{data.nc.byStatus[r.status||'미정']=(data.nc.byStatus[r.status||'미정']||0)+1;});
   const res=await GeminiAI.analyze(prompt, data, 'home');
   if(res.ok) GeminiAI.showResult('품질 현황 AI 종합 인사이트', res.result, res.usage);
 },
@@ -9773,7 +9848,8 @@ async _aiDocAnalyze(){
 2. **즉시 조치 필요 문서** (초안/검토중 장기 미완료, 검토 임박 문서)
 3. **문서 유형별 불균형 분석** (누락 또는 과잉 문서 유형)
 4. **ISO 9001 준수 관점 위험 요소** (심사 시 지적될 수 있는 사항)
-5. **이번 달 문서 관리 액션 3가지** (구체적이고 실행 가능한 것)`;
+5. **이번 달 문서 관리 액션 3가지** (구체적이고 실행 가능한 것)
+6. **문서별 상세 검토 의견** (검토 필요 문서 목록의 우선순위와 이유)`;
 
   const data={
     totalDocs:docs.length,
@@ -9887,15 +9963,29 @@ async _aiDocDashAnalyze(){
 5. **다음 달 목표** (측정 가능한 3가지 목표)
 경영자가 읽기 쉽고 행동 가능한 인사이트로 작성해 주세요.`;
 
+  /* [v2.185] 문서 전체 raw data 전달 */
+  const overdueDocs=docs.filter(r=>{
+    if(!r.next_review_at||r.status!=='active') return false;
+    return new Date(r.next_review_at)<today;
+  });
   const data={
     analysisDate:today.toISOString().slice(0,10),
-    totalDocs:docs.length,
-    byStatus, byType,
-    overdueReviewCount:overdueCount,
-    newThisMonth,
+    totalDocs:docs.length, byStatus, byType,
+    overdueReviewCount:overdueCount, newThisMonth,
     activeRate:docs.length>0?Math.round(byStatus.active/docs.length*100):0,
-    reviewReadyRate:((byStatus.active+byStatus.in_review)>0
-      ?Math.round(byStatus.active/(byStatus.active+byStatus.in_review)*100):0)
+    /* 전체 문서 목록 */
+    allDocs:docs.slice(0,60).map(r=>({
+      no:r.doc_no||'', title:r.title||'', type:r.doc_type||'',
+      status:r.status||'', version:r.version||'',
+      owner:r.owner||r.author||'', dept:r.dept||'',
+      createdAt:(r.created_at||'').slice(0,10),
+      nextReview:r.next_review_at||'', reviewCycle:r.review_cycle||''
+    })),
+    /* 검토 기한 초과 문서 */
+    overdueDocs:overdueDocs.slice(0,20).map(r=>({
+      no:r.doc_no, title:r.title, nextReview:r.next_review_at,
+      overdueDays:Math.ceil((today-new Date(r.next_review_at))/86400000)
+    })),
   };
 
   const res=await GeminiAI.analyze(prompt, data, 'doc');
@@ -9946,7 +10036,8 @@ async _ai8dAnalyze(){
 4. **반복 발생 패턴** (유사 제목/원인의 반복 여부)
 5. **완료 촉진 액션 플랜** (단계별 구체적 지원 방안)
 6. **이번 달 완료 목표** (실행 가능한 3건 선정 근거)
-8D 방법론(AIAG/Ford 기준) 관점에서 실무적으로 분석해 주세요.`;
+8D 방법론(AIAG/Ford 기준) 관점에서 실무적으로 분석해 주세요.
+각 진행 중인 8D의 D4(근본원인)와 D5(영구대책)가 부실하면 구체적인 개선 방향도 제시해 주세요.`;
 
   const payload={
     total: data8d.length,
@@ -9998,16 +10089,26 @@ async _aiCarAnalyze(){
 3. **반복 발생 패턴** (동일 원인 2회 이상 반복)
 4. **근본 원인 분석** (8D/5Why 관점)
 5. **이번 달 완료 목표** (실행 가능한 계획)`;
+  /* [v2.185] CAR 전체 raw data 전달 */
   const data={
-    total:cars.length,
+    total:cars.length, today,
+    openCount:open.length, overdueCount:overdue.length,
     byStatus:{},
-    openCount:open.length,
-    overdueCount:overdue.length,
-    recentCars:cars.slice(0,20).map(r=>({
-      no:r.no, title:r.title||r.item, src:r.src,
-      status:r.status, dueDate:r.due_date||r.dueDate,
+    /* 전체 CAR 목록 */
+    allCars:cars.map(r=>({
+      no:r.no, title:r.title||r.item||'', src:r.src||'',
+      status:r.status||'', dueDate:r.due_date||r.dueDate||'',
+      assignee:r.assignee||r.responsible||'',
+      openDate:r.open||r.open_date||'',
+      cause:r.cause||'', action:r.action||'', result:r.result||'',
+      ncRef:r.nc_id||r.nc_no||''
+    })),
+    /* 기한초과 CAR */
+    overdueCars:overdue.map(r=>({
+      no:r.no, title:r.title||r.item, dueDate:r.due_date,
+      overdueDays:r.due_date?Math.ceil((new Date()-new Date(r.due_date))/86400000):0,
       assignee:r.assignee||r.responsible
-    }))
+    })),
   };
   cars.forEach(r=>{data.byStatus[r.status||'미정']=(data.byStatus[r.status||'미정']||0)+1;});
   const res=await GeminiAI.analyze(prompt, data, 'car');
@@ -10029,18 +10130,37 @@ async _aiQualityDash(){
 3. **핵심 위험 요소** TOP 3
 4. **즉시 대응 필요 사항**
 5. **다음 달 품질 목표** (수치 포함)`;
+  /* [v2.185] 품질현황 전체 raw data 전달 */
   const data={
-    thisMonth,
+    today:today.toISOString().slice(0,10), thisMonth,
+    /* 검사 전체 */
     inspection:{
-      total:insps.length,
-      fail:failInsps.length,
-      failRate:failRate+'%',
-      thisMonth:insps.filter(r=>(r.insp_date||'').startsWith(thisMonth)).length
+      total:insps.length, fail:failInsps.length, failRate:failRate+'%',
+      thisMonth:insps.filter(r=>(r.insp_date||'').startsWith(thisMonth)).length,
+      byType:{}, byResult:{},
+      recentFails:failInsps.slice(0,20).map(r=>({
+        no:r.insp_no||'', type:r.type||'', vendor:r.vendor||'',
+        item:r.item_name||'', date:r.insp_date||'',
+        failQty:r.fail_qty||0, note:r.note||''
+      })),
     },
-    nc:{total:nc.length, open:nc.filter(r=>r.status!=='완료').length,
-        thisMonth:nc.filter(r=>(r.date||'').startsWith(thisMonth)).length},
-    car:{total:cars.length, open:cars.filter(r=>r.status!=='완료'&&r.status!=='closed').length}
+    /* NC 전체 */
+    nc:{
+      total:nc.length, open:nc.filter(r=>r.status!=='완료').length,
+      thisMonth:nc.filter(r=>(r.date||'').startsWith(thisMonth)).length,
+      byType:{},
+      recent:nc.slice(0,20).map(r=>({no:r.no,type:r.type,item:r.item,date:r.date,status:r.status,desc:(r.desc||'').slice(0,50)})),
+    },
+    /* CAR 전체 */
+    car:{
+      total:cars.length, open:cars.filter(r=>r.status!=='완료'&&r.status!=='closed').length,
+      overdue:cars.filter(r=>r.due_date&&r.due_date<today.toISOString().slice(0,10)&&r.status!=='완료').length,
+      recent:cars.slice(0,15).map(r=>({no:r.no,title:r.title||r.item,status:r.status,dueDate:r.due_date})),
+    },
   };
+  insps.forEach(r=>{data.inspection.byType[r.type||'기타']=(data.inspection.byType[r.type||'기타']||0)+1;});
+  insps.forEach(r=>{data.inspection.byResult[r.result||'미정']=(data.inspection.byResult[r.result||'미정']||0)+1;});
+  nc.forEach(r=>{data.nc.byType[r.type||'기타']=(data.nc.byType[r.type||'기타']||0)+1;});
   const res=await GeminiAI.analyze(prompt, data, 'quality');
   if(res.ok) GeminiAI.showResult('품질현황 AI 종합 분석', res.result, res.usage);
 },
@@ -10058,12 +10178,31 @@ async _aiEquipAnalyze(){
 3. **30일 이내 교정 예정** (일정 계획 수립)
 4. **교정 주기 최적화 제안** (사용 빈도 및 중요도 기준)
 5. **ISO 9001 MSA 관점 위험 요소**`;
+  /* [v2.184] 전체 raw data 전달 — 실제 계측기명/교정이력 포함 */
   const data={
     total:equip.length,
-    expired:expired.length,
-    expiredList:expired.slice(0,10).map(r=>({name:r.name||r.equip_name,code:r.equip_code||r.code,lastCal:r.last_cal,nextCal:r.next_cal})),
-    soon:soon.length,
-    soonList:soon.slice(0,10).map(r=>({name:r.name||r.equip_name,code:r.equip_code||r.code,nextCal:r.next_cal,daysLeft:Math.ceil((new Date(r.next_cal)-new Date())/86400000)}))
+    today,
+    expiredCount:expired.length,
+    soonCount:soon.length,
+    /* 전체 계측기 목록 (최대 50건) */
+    allEquip:equip.slice(0,50).map(r=>({
+      no:r.no, name:r.name||r.equip_name||'', code:r.equip_code||r.code||'',
+      type:r.equip_type||r.type||'', maker:r.maker||'', range:r.range||'',
+      lastCal:r.last_cal||'', nextCal:r.next_cal||'',
+      calCycle:r.cal_cycle||r.cycle||'', status:r.status||'정상',
+      location:r.location||r.loc||'', operator:r.operator||''
+    })),
+    /* 만료/임박 상세 */
+    expiredList:expired.map(r=>({
+      name:r.name||r.equip_name, code:r.equip_code||r.code,
+      nextCal:r.next_cal, lastCal:r.last_cal,
+      overdueDays:r.next_cal?Math.ceil((new Date()-new Date(r.next_cal))/86400000):0
+    })),
+    soonList:soon.map(r=>({
+      name:r.name||r.equip_name, code:r.equip_code||r.code,
+      nextCal:r.next_cal,
+      daysLeft:Math.ceil((new Date(r.next_cal)-new Date())/86400000)
+    })),
   };
   const res=await GeminiAI.analyze(prompt, data, 'equip');
   if(res.ok) GeminiAI.showResult(`계측기 교정 AI 분석 (총 ${equip.length}개)`, res.result, res.usage);
@@ -10081,14 +10220,18 @@ async _aiCalAnalyze(){
 3. **교정 비용 최적화** (외부교정 vs 자체교정 권고)
 4. **교정 주기 준수율** (예정일 대비 실제 교정일 분석)
 5. **내년도 교정 계획** (우선순위 기반)`;
+  /* [v2.184] 교정 전체 raw data 전달 */
   const data={
     total:cals.length,
     thisYear:cals.filter(r=>(r.cal_date||r.date||'').startsWith(thisYear)).length,
     byResult:{},
-    recentCals:cals.slice(0,20).map(r=>({
-      name:r.name||r.equip_name, code:r.equip_code||r.code,
-      date:r.cal_date||r.date, result:r.result, type:r.cal_type||r.type
-    }))
+    allCals:cals.slice(0,60).map(r=>({
+      no:r.no||'', name:r.name||r.equip_name||'', code:r.equip_code||r.code||'',
+      calDate:r.cal_date||r.date||'', nextCal:r.next_cal||'',
+      result:r.result||'', calType:r.cal_type||r.type||'',
+      agency:r.agency||r.cal_agency||'', cost:r.cost||'',
+      inspector:r.inspector||'', note:r.note||''
+    })),
   };
   cals.forEach(r=>{const rs=r.result||'미정';data.byResult[rs]=(data.byResult[rs]||0)+1;});
   const res=await GeminiAI.analyze(prompt, data, 'cal');
@@ -10105,13 +10248,25 @@ async _aiMsaAnalyze(){
 3. **측정 변동 원인 분석** (계측기 변동 vs 측정자 변동)
 4. **측정 능력 개선 방안** (재교육, 계측기 교체, 측정 방법 개선)
 5. **AIAG MSA 4th Edition 기준 적합성 평가**`;
+  /* [v2.185] MSA 전체 raw data 전달 */
   const data={
     total:msa.length,
-    studies:msa.slice(0,10).map(r=>({
-      name:r.name, equip:r.equip_code||r.equip_name,
-      parts:r.parts, appraisers:r.appraisers, trials:r.trials,
-      grr:r.grr_pct||r.grr, ev:r.ev, av:r.av, tolerance:r.tolerance
-    }))
+    /* 전체 MSA 연구 목록 */
+    allStudies:msa.map(r=>({
+      name:r.name||'', equipCode:r.equip_code||'', equipName:r.equip_name||'',
+      studyDate:r.study_date||r.date||'', studyType:r.study_type||r.type||'',
+      parts:r.parts||0, appraisers:r.appraisers||0, trials:r.trials||0,
+      grr:r.grr_pct||r.grr||0, ev:r.ev||0, av:r.av||0,
+      tolerance:r.tolerance||0, ndcCount:r.ndc||0,
+      ptRatio:r.pt_ratio||0, result:r.result||''
+    })),
+    /* 불량(%GR&R>30%) 시스템 */
+    poorSystems:msa.filter(r=>(r.grr_pct||r.grr||0)>30).map(r=>({
+      name:r.name, equip:r.equip_name||r.equip_code,
+      grr:r.grr_pct||r.grr
+    })),
+    /* 수용(%GR&R 10~30%) */
+    marginalSystems:msa.filter(r=>{const g=r.grr_pct||r.grr||0;return g>=10&&g<=30;}).length,
   };
   const res=await GeminiAI.analyze(prompt, data, 'msa');
   if(res.ok) GeminiAI.showResult(`MSA 측정 시스템 AI 분석 (총 ${msa.length}건)`, res.result, res.usage);
