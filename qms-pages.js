@@ -3711,6 +3711,7 @@ cal(){
     <div id="calCostChart" style="margin-top:16px"></div>`;
   /* [v2.394 P4-3] 교정비용 통계 차트 */
   Pages._calCostChart();
+  window._calRows = DB.cals;  /* [v2.190] 열람 분할 뷰용 */
   Tbl.render({el:'#calTbl',cols:[
     {key:'code',label:'계측기코드', req:true,w:'100px'},
     {key:'name',label:'계측기명',w:'130px'},
@@ -3722,11 +3723,20 @@ cal(){
     {key:'next_date',label:'차기교정일',w:'92px',render:(v,row)=>v||row.next||'-'},
     {key:'cost',label:'비용(원)',w:'86px',align:'right',
       render:v=>v?Number(v).toLocaleString():'—'},
-    {key:'file_url',label:'파일',w:'60px',align:'center',  /* [v2.394] */
-      render:(v,row)=>v
-        ?`<button class="btn bxs bblu" style="font-size:10px;padding:1px 7px"
-            onclick="event.stopPropagation();Pages._calFilePreview('${H.e(v)}')">📎 보기</button>`
-        :'<span style="color:var(--tl);font-size:11px">-</span>'},
+    /* [v2.190] 열람 컬럼 — 화면 분할 미리보기 (문서관리와 동일 패턴) */
+    {key:'id',label:'열람',w:'60px',align:'center',
+      render:(v,row)=>{
+        const safeId=Number(v);
+        const hasFile=!!(row.file_url);
+        if(!hasFile) return '<span style="color:var(--tl);font-size:11px">-</span>';
+        return `<button class="btn bxs bblu" style="font-size:10px;padding:1px 7px"
+              title="교정성적서 열람"
+              onclick="event.stopPropagation();
+                window._calViewTarget={id:${safeId},fileUrl:'${H.e(row.file_url||'')}',
+                  certNo:'${H.e(row.cert_no||row.cert||'')}',name:'${H.e(row.name||'')}',
+                  calDate:'${H.e(row.cal_date||row.date||'')}'};
+                Pages._calSplitView(window._calViewTarget)">👁 열람</button>`;
+      }},
   ],data:DB.cals,onDel:async(ids)=>{
       /* [v2.394] 삭제 경고 팝업 — 교정관리 */
       if(!ids.length){Toast.show('삭제할 항목을 선택하세요.','warn');return;}
@@ -5467,9 +5477,124 @@ _docSplitView:async function(docId, title){
   }
 },
 
-/* [v2.153] 문서 열람 닫기 — Nav.go로 현재 페이지 재진입해 완전 복원 */
-_docSplitClose(page){
-  Nav.go(page||sessionStorage.getItem('qms_page')||'docs');
+/* [v2.190] 교정관리 화면 분할 미리보기
+   문서관리 _docSplitView와 동일한 패턴
+   좌측: 교정이력 목록, 우측: 성적서 파일 미리보기 */
+async _calSplitView(target){
+  const w = document.getElementById('pw');
+  if(!w) return;
+  const curPage = sessionStorage.getItem('qms_page') || 'cal';
+  const fileUrl  = target?.fileUrl  || '';
+  const certNo   = target?.certNo   || '';
+  const calName  = target?.name     || '';
+  const calDate  = target?.calDate  || '';
+
+  /* 파일 타입별 미리보기 HTML */
+  const ext = fileUrl.split('.').pop().toLowerCase().split('?')[0];
+  const imgExts    = ['jpg','jpeg','png','gif','webp','svg','bmp'];
+  const officeExts = ['xlsx','xls','docx','doc','pptx','ppt'];
+  const safeUrl    = H.e(fileUrl);
+  const safeTitle  = H.e(certNo ? `성적서 ${certNo}` : `${calName} 교정성적서`);
+  const subTitle   = H.e(`${calName}${calDate ? ' · ' + calDate : ''}`);
+
+  let previewHtml = '';
+  if(!fileUrl){
+    previewHtml = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        height:100%;min-height:300px;gap:14px;padding:40px 20px;text-align:center">
+      <div style="font-size:48px">📭</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">첨부된 성적서가 없습니다</div>
+      <div style="font-size:13px;color:var(--muted)">교정 등록 시 파일을 첨부해 주세요.</div>
+    </div>`;
+  } else if(ext === 'pdf'){
+    previewHtml = `<iframe src="${safeUrl}" style="width:100%;height:100%;border:none;display:block" title="${safeTitle}"></iframe>`;
+  } else if(imgExts.indexOf(ext) >= 0){
+    previewHtml = `<div style="display:flex;align-items:center;justify-content:center;
+        height:100%;background:#f8fafc;padding:16px">
+      <img src="${safeUrl}" alt="${safeTitle}"
+        style="max-width:100%;max-height:85vh;object-fit:contain;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12)">
+    </div>`;
+  } else if(officeExts.indexOf(ext) >= 0){
+    const encoded = encodeURIComponent(fileUrl);
+    previewHtml = `<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px;background:var(--bg2)">
+        Google Docs Viewer를 통해 표시됩니다</div>
+      <iframe src="https://docs.google.com/viewer?url=${encoded}&embedded=true"
+        style="width:100%;height:calc(100% - 28px);border:none;display:block" title="${safeTitle}"></iframe>`;
+  } else {
+    previewHtml = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        height:100%;gap:14px;padding:40px 20px;text-align:center">
+      <div style="font-size:48px">📄</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text)">${safeTitle}</div>
+      <div style="font-size:12px;color:var(--muted)">이 파일 형식(${H.e(ext)})은 브라우저에서 직접 볼 수 없습니다.</div>
+      <a href="${safeUrl}" download target="_blank" class="btn bpri">⬇ 파일 다운로드</a>
+    </div>`;
+  }
+
+  /* 화면 분할 레이아웃 */
+  w.innerHTML =
+    '<div style="display:flex;gap:14px;align-items:flex-start;min-height:0">' +
+      /* 좌측: 교정이력 목록 */
+      '<div id="calSplitListPane" style="flex:0 0 45%;min-width:0;overflow-x:auto">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+          '<div style="font-size:13px;font-weight:700;color:var(--text)">📋 교정 이력</div>' +
+          '<button class="btn bout bsm" onclick="Pages._calSplitClose()">← 목록으로</button>' +
+        '</div>' +
+        '<div id="calSplitTbl"></div>' +
+      '</div>' +
+      /* 우측: 성적서 미리보기 */
+      '<div style="flex:1;min-width:0;position:sticky;top:12px">' +
+        '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;' +
+          'overflow:hidden;display:flex;flex-direction:column;height:88vh">' +
+          /* 헤더 */
+          '<div style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);' +
+            'padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">' +
+            '<span style="font-size:20px">📋</span>' +
+            '<div style="flex:1;min-width:0">' +
+              `<div style="color:#fff;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${safeTitle}</div>` +
+              `<div style="color:rgba(255,255,255,.75);font-size:11px">${subTitle}</div>` +
+            '</div>' +
+            (fileUrl ? `<a href="${safeUrl}" download target="_blank" class="btn bxs"
+              style="background:rgba(255,255,255,.2);color:#fff;font-size:11px;padding:3px 10px;border:1px solid rgba(255,255,255,.3)">⬇ 다운로드</a>` : '') +
+            '<button class="btn bxs" style="background:rgba(255,255,255,.15);color:#fff;' +
+              'padding:3px 10px;font-size:12px;border:1px solid rgba(255,255,255,.3)"' +
+              'onclick="Pages._calSplitClose()">✕ 닫기</button>' +
+          '</div>' +
+          /* 미리보기 본문 */
+          `<div style="flex:1;overflow:auto;min-height:0">${previewHtml}</div>` +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  /* 좌측 교정이력 목록 재렌더 */
+  const slot = document.getElementById('calSplitTbl');
+  if(!slot) return;
+  slot.innerHTML = '<div id="calTbl"></div>';
+  window._calRows = window._calRows || DB.cals || [];
+  /* 현재 선택된 행 하이라이트를 위해 onRow 콜백 포함 재렌더 */
+  Tbl.render({el:'#calTbl', cols:[
+    {key:'code',  label:'계측기코드', w:'90px'},
+    {key:'name',  label:'계측기명',   w:'110px'},
+    {key:'cal_date', label:'교정일',  w:'82px', render:(v,row)=>v||row.date||'-'},
+    {key:'agency',label:'교정기관',   w:'100px'},
+    {key:'result',label:'결과',       w:'66px', align:'center',
+      render:v=>`<span class="badge ${v==='합격'?'bgrn':v==='조건부합격'?'bamb':'bred'}">${H.e(v||'-')}</span>`},
+    {key:'id',    label:'열람',       w:'54px', align:'center',
+      render:(v,row)=>{
+        const safeId=Number(v); const hasFile=!!(row.file_url);
+        if(!hasFile) return '<span style="color:var(--tl);font-size:11px">-</span>';
+        const isSelected = target && Number(target.id)===safeId;
+        return `<button class="btn bxs ${isSelected?'bpri':'bblu'}" style="font-size:10px;padding:1px 7px"
+          onclick="event.stopPropagation();
+            window._calViewTarget={id:${safeId},fileUrl:'${H.e(row.file_url||'')}',
+              certNo:'${H.e(row.cert_no||row.cert||'')}',name:'${H.e(row.name||'')}',
+              calDate:'${H.e(row.cal_date||row.date||'')}'};
+            Pages._calSplitView(window._calViewTarget)">👁 열람</button>`;
+      }},
+  ], data: window._calRows, ps:15});
+},
+
+/* [v2.190] 교정관리 분할 닫기 */
+_calSplitClose(){
+  Nav.go(sessionStorage.getItem('qms_page') || 'cal');
 },
 
 
