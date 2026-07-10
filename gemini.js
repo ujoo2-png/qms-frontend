@@ -1,3 +1,8 @@
+/* [v2.182] Vercel Edge Function — Groq AI + 다중턴 대화 지원
+   단일 분석: POST { prompt, data, mode }
+   다중턴 채팅: POST { messages: [{role, content}], mode }
+   모델 폴백: llama-3.3-70b → gemma2-9b-it → llama3-70b-8192
+   llama-3.1-70b / mixtral-8x7b 서비스 종료로 제거 */
 export const config = { runtime: 'edge' };
 
 const GROQ_MODELS = [
@@ -14,7 +19,10 @@ const QMS_SYSTEM = `당신은 INNODIS 품질경영시스템(QMS)의 AI 어시스
 async function callGroq(apiKey, messages, model) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 1500 }),
   });
   const json = await res.json();
@@ -33,7 +41,7 @@ export default async function handler(req) {
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'GROQ_API_KEY 미설정.' }), {
+    return new Response(JSON.stringify({ error: 'GROQ_API_KEY 미설정. Vercel 환경변수를 확인하세요.' }), {
       status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   }
@@ -70,9 +78,26 @@ export default async function handler(req) {
         return new Response(JSON.stringify({
           result: text, model,
           usage: {
-            promptTokens: usage.prompt_tokens || 0,
-            outputTokens: usage.completion_tokens || 0,
-            totalTokens:  usage.total_tokens || 0,
+            promptTokens:  usage.prompt_tokens     || 0,
+            outputTokens:  usage.completion_tokens || 0,
+            totalTokens:   usage.total_tokens      || 0,
             requestTime, mode: mode || 'chat',
           }
-        }), { status: 200, headers: { 'Content-Type': 'application/json',
+        }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
+      }
+      if (status === 429 || status === 503) { lastError = json.error?.message || `${model} limit`; continue; }
+      return new Response(JSON.stringify({ error: json.error?.message || 'Groq API 오류' }), {
+        status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    return new Response(JSON.stringify({ error: `잠시 후 재시도하세요. (${lastError || 'rate limit'})` }), {
+      status: 429, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
+
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
+  }
+}
