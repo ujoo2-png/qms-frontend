@@ -7124,7 +7124,17 @@ _carRender(){
           const cls=d<0?'bred':d<=3?'bamb':'bgrn';
           return`<span class="badge ${cls}" style="font-size:10px">${v}</span>`;
         }},
-      /* [v2.192] 결정 버튼 컬럼 */
+      /* [v2.198] 메일 발송 컬럼 */
+      {key:'id', label:'메일', w:'56px', align:'center',
+        render:(v,row)=>{
+          const sent=!!(row.mail_sent);
+          return sent
+            ?`<span style="background:#f97316;color:#fff;font-size:10px;font-weight:700;
+                padding:2px 8px;border-radius:12px">📧 발송</span>`
+            :`<button class="btn bxs bout" style="font-size:10px;padding:2px 6px"
+                onclick="event.stopPropagation();window._carMailRow=DB.cars.find(c=>Number(c.id)===${Number(v)});Pages._carInputMail()">📧</button>`;
+        }},
+      /* [v2.198] 결정 버튼 컬럼 */
       {key:'id', label:'결정', w:'140px', align:'center',
         render:(v,row)=>{
           const done=row.status==='완료'||row.status==='종결'||row.status==='반려';
@@ -7403,7 +7413,8 @@ async car_input(params={}){
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">NC 참조번호</label>
         <input class="fc" id="carInputNcNo" value="${H.e(v('nc_no'))}"
-          placeholder="NC-20260601-001" style="font-family:monospace;color:#7c3aed">
+          placeholder="NC-20260601-001" style="font-family:monospace;color:#7c3aed"
+          onblur="Pages._carInputNcAutofill(this.value)">
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">개시일 *</b></label>
@@ -7434,6 +7445,26 @@ async car_input(params={}){
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">품목명</label>
         <input class="fc" id="carInputItem" value="${H.e(v('item'))}" placeholder="품목코드 입력 시 자동완성" style="background:var(--bg2)">
       </div>
+      <!-- [v2.198] 고객사 / 공급처 / 작업지시번호 -->
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">고객사</label>
+        <input class="fc" id="carInputCustomer" value="${H.e(v('customer'))}"
+          placeholder="예) ㈜대한전자">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">공급처</label>
+        <input class="fc" id="carInputVendor" value="${H.e(v('vendor_name'))}"
+          list="carInputVendorList" placeholder="거래처 검색..."
+          oninput="Pages._carInputVendorAutofill()">
+        <datalist id="carInputVendorList">
+          ${(DB.vendors||[]).map(vn=>`<option value="${H.e(vn.vendor_name||'')}"></option>`).join('')}
+        </datalist>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">작업지시번호</label>
+        <input class="fc" id="carInputWorkOrder" value="${H.e(v('work_order'))}"
+          placeholder="예) WO-20260710-001">
+      </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">상태</label>
         <select class="fc" id="carInputStatus">
@@ -7441,6 +7472,10 @@ async car_input(params={}){
         </select>
       </div>
     </div>
+    <!-- [v2.198] NC 번호 입력 시 자동채우기 안내 -->
+    ${!isEdit?`<div style="margin-top:10px;padding:8px 12px;background:#eff6ff;border-radius:8px;font-size:12px;color:#1d4ed8;display:flex;align-items:center;gap:6px">
+      💡 NC 참조번호 입력 후 <b>Tab</b> 키를 누르면 부적합 정보가 자동으로 채워집니다.
+    </div>`:''}
   </div>
 
   <!-- ② 대책 내용 BODY -->
@@ -7669,6 +7704,9 @@ async _carInputSave(editId){
     no:g('carInputNo'), source:g('carInputSrc'),
     title, nc_id:document.getElementById('carInputNcId')?.value||null,
     nc_no:g('carInputNcNo')||null,
+    customer:g('carInputCustomer')||null,       /* [v2.198] 고객사 */
+    vendor_name:g('carInputVendor')||null,      /* [v2.198] 공급처 */
+    work_order:g('carInputWorkOrder')||null,    /* [v2.198] 작업지시번호 */
     item_code:itemCode||null, item:g('carInputItem')||null,
     open, close_date:g('carInputDue')||null,
     assignee, status:isTemp?'접수':g('carInputStatus')||'접수',
@@ -7762,20 +7800,147 @@ async _carInputSendMention(){
   document.getElementById('carInputMentionMsg').value='';
 },
 
-/* ── 시정조치 입력 — 메일 발송 ── */
+/* ── [v2.198] NC 번호 자동채우기 ── */
+_carInputNcAutofill(ncNo){
+  if(!ncNo) return;
+  const nc=(DB.nc||[]).find(r=>r.no===ncNo.trim());
+  if(!nc){Toast.show('NC 데이터를 찾을 수 없습니다.','warn');return;}
+  /* 각 필드 자동 채우기 */
+  const setVal=(id,val)=>{const el=document.getElementById(id);if(el&&!el.value&&val)el.value=val;};
+  setVal('carInputItemCode', nc.item_code||'');
+  setVal('carInputItem',     nc.item||nc.item_name||'');
+  setVal('carInputCustomer', nc.customer||'');
+  setVal('carInputVendor',   nc.vendor||nc.vendor_name||'');
+  setVal('carInputWorkOrder',nc.work_order||nc.work_order_no||'');
+  /* 제목 자동 채우기 (비어있을 때만) */
+  setVal('carInputTitle', nc.desc||nc.title||'');
+  /* 발생원 자동 설정 */
+  const srcEl=document.getElementById('carInputSrc');
+  if(srcEl&&!srcEl.value&&nc.in_out){
+    const srcMap={'외부':'부적합','내부':'내부심사'};
+    const mapped=srcMap[nc.in_out]||'부적합';
+    srcEl.value=mapped;
+  }
+  Toast.show(`NC ${ncNo} 정보가 자동으로 채워졌습니다.`,'ok');
+},
+
+/* ── [v2.198] 공급처 선택 시 자동채우기 ── */
+_carInputVendorAutofill(){
+  const vendorName=(document.getElementById('carInputVendor')?.value||'').trim();
+  if(!vendorName) return;
+  const vendor=(DB.vendors||[]).find(v=>(v.vendor_name||'')==vendorName);
+  if(!vendor) return;
+  /* 멘션 수신자에 담당자 자동 설정 */
+  const mentionTo=document.getElementById('carInputMentionTo');
+  if(mentionTo&&!mentionTo.value&&vendor.manager){mentionTo.value=vendor.manager;}
+},
+
+/* ── [v2.198] 메일 발송 — 발생원별 수신자 자동결정 + 추가 수신자 + 미리보기 ── */
 async _carInputMail(){
-  const row=window._carInputRow;
-  if(!row){Toast.show('저장 후 메일을 발송할 수 있습니다.','warn');return;}
-  const assignee=row.assignee||'';
-  const user=(DB.users||[]).find(u=>(u.name||u.username)===assignee);
-  const email=user?.email||'';
-  const subject=encodeURIComponent(`[시정조치] ${row.no} — ${row.title}`);
-  const body=encodeURIComponent(
-    `시정조치 번호: ${row.no}\n제목: ${row.title}\n개시일: ${row.open}\n완료기한: ${row.due||'-'}\n담당자: ${row.assignee}\n\n` +
-    `문제기술: ${row.d2_desc||'-'}\n임시대책: ${row.d3_action||'-'}\n\n` +
-    `QMS 시스템에서 확인: https://innodis-qms.vercel.app`
-  );
-  window.open(`mailto:${email}?subject=${subject}&body=${body}`,'_blank');
+  const g=id=>document.getElementById(id)?.value||'';
+  const no=g('carInputNo')||window._carInputRow?.no||'';
+  const title=g('carInputTitle')||window._carInputRow?.title||'';
+  const source=g('carInputSrc')||window._carInputRow?.source||'';
+  const vendor=g('carInputVendor')||window._carInputRow?.vendor_name||'';
+  const customer=g('carInputCustomer')||window._carInputRow?.customer||'';
+  const assignee=g('carInputAssignee')||window._carInputRow?.assignee||'';
+
+  /* 발생원별 수신자 자동 결정 */
+  let autoEmail='', autoName='', emailType='';
+  if(source==='공급사 귀책'||source==='부적합'){
+    /* 공급처 귀책 — 거래처 등록 메일 */
+    const vendorData=(DB.vendors||[]).find(v=>(v.vendor_name||'')==vendor);
+    if(vendorData){
+      autoEmail=vendorData.manager_email||vendorData.email||'';
+      autoName=vendorData.manager||vendorData.vendor_name||vendor;
+      emailType='공급처';
+    }
+  } else {
+    /* 내부 — 담당자 사내 메일 */
+    const userD=(DB.users||[]).find(u=>(u.name||u.username)===assignee);
+    autoEmail=userD?.email||'';
+    autoName=assignee;
+    emailType='내부담당자';
+  }
+
+  /* 메일 발송 팝업 — 미리보기 포함 */
+  Modal.open({
+    title:`📧 시정조치 메일 발송 — ${H.e(no)}`,
+    size:'mlg',
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+          <button class="btn bpri" onclick="Pages._carInputMailSend()">📧 발송</button>`,
+    body:`<div style="padding:4px 0">
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px">
+        <b>${H.e(no)}</b> — ${H.e(title)}
+        ${emailType?`<span style="margin-left:8px;font-size:11px;color:var(--muted)">[${emailType} 발송]</span>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">
+            <b style="color:#e11d48">수신자 *</b> ${autoName?`<span style="color:#059669">(자동: ${H.e(autoName)})</span>`:''}
+          </label>
+          <input class="fc" id="carMailTo" value="${H.e(autoEmail)}" placeholder="이메일 주소">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">추가 수신자</label>
+          <input class="fc" id="carMailCc" placeholder="추가 이메일 (쉼표로 구분)">
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">제목</label>
+        <input class="fc" id="carMailSubject" value="[시정조치요청] ${H.e(no)} — ${H.e(title)}">
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">내용</label>
+        <textarea class="fc" id="carMailBody" rows="6" style="resize:vertical">${H.e(
+`안녕하세요.
+
+아래와 같이 시정조치를 요청드립니다.
+
+■ CAR 번호: ${no}
+■ 제 목: ${title}
+■ 발 생 원: ${source}
+${vendor?'■ 공 급 처: '+vendor+'\n':''}${customer?'■ 고 객 사: '+customer+'\n':''}■ 완료기한: ${g('carInputDue')||window._carInputRow?.close_date||''}
+■ 담 당 자: ${assignee}
+
+조속한 조치 및 회신 부탁드립니다.
+
+감사합니다.
+INNODIS 품질팀`)}</textarea>
+      </div>
+      <div style="font-size:11px;color:var(--muted);padding:6px 10px;background:#fef3c7;border-radius:6px">
+        💡 발송 버튼 클릭 시 기본 메일 앱이 열립니다. 시스템 SMTP 설정이 있으면 자동 발송됩니다.
+      </div>
+    </div>`,
+  });
+},
+
+async _carInputMailSend(){
+  const to=(document.getElementById('carMailTo')?.value||'').trim();
+  const cc=(document.getElementById('carMailCc')?.value||'').trim();
+  const subject=(document.getElementById('carMailSubject')?.value||'').trim();
+  const body=(document.getElementById('carMailBody')?.value||'').trim();
+  if(!to){Toast.show('수신자 이메일을 입력하세요.','warn');return;}
+
+  /* mailto 발송 */
+  const mailtoUrl=`mailto:${encodeURIComponent(to)}${cc?'?cc='+encodeURIComponent(cc):''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(mailtoUrl.replace('?cc=','&cc=').replace('?subject=',cc?'&subject=':'?subject='),'_blank');
+
+  /* 메일 발송 이력 저장 */
+  const carId=window._carInputId||window._carInputRow?.id;
+  if(carId){
+    await SB.addCarHistory({
+      car_id:Number(carId), action:'메일발송',
+      reason:`수신: ${to}${cc?', '+cc:''} / 제목: ${subject}`,
+      changed_by:Auth._u?.name||Auth._u?.username||'',
+      changed_at:new Date().toISOString(),
+    });
+    /* DB 로컬 업데이트 — 메일발송 표시용 */
+    const carIdx=(DB.cars||[]).findIndex(c=>Number(c.id)===Number(carId));
+    if(carIdx>=0) DB.cars[carIdx].mail_sent=true;
+    Toast.show(`메일 발송 완료 — ${to}`,'ok');
+  }
+  Modal.close();
 },
 
 /* ── 시정조치 입력 — 인쇄 ── */
@@ -8237,87 +8402,71 @@ async _carNextStep(row){
 
 /* ── CAR 인쇄 [v2.139] ── */
 _carPrint(row){
+  /* [v2.198] nc_car_print.html 폼 방식으로 교체 — _ncPrint와 동일한 패턴 */
   if(!row){Toast.show('인쇄할 CAR 데이터가 없습니다.','warn');return;}
-  const w=window.open('','_blank','width=1000,height=780,scrollbars=yes');
-  if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
-  const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const why=[row.d4_why1,row.d4_why2,row.d4_why3,row.d4_why4,row.d4_why5];
-  const steps=['접수','대책접수','대책실시','유효성평가','완료'];
-  const si=steps.indexOf(row.status||'접수');
-  const stepsHtml=steps.map((s,i)=>`<td style="text-align:center;background:${i===si?'#dce6f1':i<si?'#e8f5e9':'#fff'};font-weight:${i===si?'bold':'normal'}">${i+1}.${s}</td>`).join('');
-  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
-<title>시정조치요청서(CAR) — ${e(row.no)}</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}
-body{background:#fff;color:#000;font-size:9pt;padding:0}
-@page{size:A4 portrait;margin:10mm 12mm}
-@media print{.no-print{display:none!important}}
-.wrap{width:186mm;margin:0 auto}
-h1{font-size:14pt;font-weight:bold;text-align:center;padding:8px 0;letter-spacing:2px;border-bottom:2pt solid #000;margin-bottom:8px}
-table{border-collapse:collapse;width:100%;margin-bottom:6px}
-td,th{border:.7pt solid #444;padding:3px 6px;vertical-align:middle;font-size:8.5pt}
-.lb{background:#dce6f1;font-weight:bold;white-space:nowrap;width:80px;text-align:center}
-.area{vertical-align:top;padding:4px 6px;min-height:40px}
-.sign td{height:32px;text-align:center}
-.step td{padding:4px;font-size:8pt}
-.hdr{background:#dce6f1;font-weight:bold;text-align:center;font-size:8pt}
-.print-btn{position:fixed;bottom:20px;right:20px;padding:10px 20px;background:#1a5fa8;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer}
-</style></head><body>
-<div class="wrap">
-  <h1>시 정 조 치 요 청 서 (C.A.R)</h1>
-  <!-- 결재란 -->
-  <table class="sign" style="margin-bottom:8px">
-    <tr><td class="hdr" rowspan="2" style="width:60px">작성</td>
-        <td class="hdr" style="width:60px">검토</td>
-        <td class="hdr" style="width:60px">승인</td>
-        <td class="lb" style="width:70px">문서번호</td>
-        <td>IPD-CAR-01</td>
-        <td class="lb" style="width:60px">발행일</td>
-        <td>${e(row.open||'')}</td></tr>
-    <tr><td></td><td></td>
-        <td class="lb">CAR번호</td>
-        <td style="font-family:monospace;font-weight:bold;color:#1a5fa8">${e(row.no)}</td>
-        <td class="lb">진행 상태</td>
-        <td>${e(row.status||'접수')}</td></tr>
-  </table>
-  <!-- 진행 단계 -->
-  <table class="step" style="margin-bottom:8px"><tr class="hdr"><td colspan="5" class="hdr">■ 진행 단계</td></tr><tr>${stepsHtml}</tr></table>
-  <!-- 기본 정보 -->
-  <table>
-    <tr><td class="lb">발생원</td><td>${e(row.src||'')}</td>
-        <td class="lb">NC 참조</td><td style="font-family:monospace;color:#7c3aed">${e(row.nc_no||'-')}</td></tr>
-    <tr><td class="lb">품목코드</td><td style="font-family:monospace">${e(row.item_code||'-')}</td>
-        <td class="lb">품목명</td><td>${e(row.item||'-')}</td></tr>
-    <tr><td class="lb">담당자</td><td>${e(row.assignee||'')}</td>
-        <td class="lb">완료기한</td><td>${e(row.due||'-')}</td></tr>
-    <tr><td class="lb">제목</td><td colspan="3"><b>${e(row.title||'')}</b></td></tr>
-  </table>
-  <!-- 단계별 내용 -->
-  <table style="margin-top:6px">
-    <tr><td class="hdr" colspan="2">① 문제 기술 (D2)</td></tr>
-    <tr><td colspan="2" class="area" style="min-height:44px">${e(row.d2_desc||'')}</td></tr>
-    <tr><td class="hdr" colspan="2">② 임시 대책 (D3)</td></tr>
-    <tr><td colspan="2" class="area">${e(row.d3_action||'')}</td></tr>
-    <tr><td class="hdr" colspan="2">③ 근본 원인 분석 (D4 — 5-Why)</td></tr>
-    ${why.map((w,i)=>`<tr><td class="lb">Why ${i+1}</td><td class="area">${e(w||'')}</td></tr>`).join('')}
-    <tr><td class="hdr">④ 대책 실시 (D5)</td><td class="hdr">실시일: ${e(row.d5_date||'')}</td></tr>
-    <tr><td colspan="2" class="area">${e(row.d5_action||'')}</td></tr>
-    <tr><td class="hdr">⑤ 유효성 평가 (D6)</td>
-        <td class="hdr">평가일: ${e(row.d6_date||'')} / 결과: ${e(row.d6_result||'미평가')}</td></tr>
-    <tr><td colspan="2" class="area">${e(row.d6_verify||'')}</td></tr>
-    <tr><td class="hdr" colspan="2">⑥ 재발 방지 / 수평전개 (D7)</td></tr>
-    <tr><td colspan="2" class="area">${e(row.d7_prevent||'')}</td></tr>
-  </table>
-  ${row.note?`<table style="margin-top:4px"><tr><td class="lb">비고</td><td>${e(row.note)}</td></tr></table>`:''}
-  <table style="margin-top:8px;font-size:7.5pt">
-    <tr><td style="background:#dce6f1;width:33%">㈜이노디스 — IPD-CAR-01(Rev01)</td>
-        <td style="background:#dce6f1;text-align:center">시정조치요청서</td>
-        <td style="background:#dce6f1;text-align:right">A4(210×297mm)</td></tr>
-  </table>
-</div>
-<button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄</button>
-</body></html>`;
-  w.document.open();w.document.write(html);w.document.close();
+  const w=window.open('nc_car_print.html','_blank','width=1200,height=850,scrollbars=yes');
+  if(!w){Toast.show('팝업이 차단되었습니다.','warn');return;}
+  w.addEventListener('load',function(){
+    const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const set=(id,val)=>{const el=w.document.getElementById(id);if(el)el.textContent=val;};
+    /* 기본정보 */
+    set('d_no',         row.no||'');
+    set('d_date',       row.date||row.open||'');
+    set('d_dept',       '품질팀');
+    set('d_customer',   row.customer||'');
+    set('d_item_code',  row.item_code||'');
+    set('d_item',       row.item||'');
+    set('d_work_order', row.work_order||'');
+    set('d_type',       row.source||row.src||'');
+    set('d_desc',       row.d2_desc||'');
+    set('d_dwg',        '');
+    set('d_method',     row.d3_action||'');
+    set('d_ship_qty',   '');
+    set('d_insp_qty',   '');
+    set('d_bad_qty',    '');
+    set('d_rate',       '');
+    set('d_note',       row.note||'');
+    set('d_responsible',row.vendor_name||'');
+    set('d_ccheck',     '');
+    set('d_assignee',   row.assignee||'');
+    set('d_inout',      row.source||'');
+    set('d_action',     row.d5_action||'');
+    /* 5-Why 근본원인 */
+    set('d_why1_occur', row.d4_why1||'');
+    set('d_why2_occur', row.d4_why2||'');
+    set('d_why3_occur', row.d4_why3||'');
+    set('d_why1_out',   '');
+    set('d_why2_out',   '');
+    set('d_why3_out',   '');
+    set('d_cause',      [row.d4_why1,row.d4_why2,row.d4_why3,row.d4_why4,row.d4_why5].filter(Boolean).join(' → ')||'');
+    set('d_act_occur',      row.d5_action||'');
+    set('d_act_occur_date', row.d5_date||'');
+    set('d_act_out',        row.d7_prevent||'');
+    set('d_act_out_date',   row.d6_date||'');
+    /* 결재란 작성자 */
+    ['ap_s1','ap_s2'].forEach(id=>set(id, row.assignee||''));
+    w.focus();
+    setTimeout(()=>w.print(),500);
+  });
+},
+
+/* [v2.198] _carInputPrint — car_input 폼에서 인쇄 */
+_carInputPrint(){
+  const g=id=>document.getElementById(id)?.value||'';
+  const row={
+    no:g('carInputNo'), date:g('carInputOpen'), source:g('carInputSrc'),
+    title:g('carInputTitle'), assignee:g('carInputAssignee'),
+    customer:g('carInputCustomer'), vendor_name:g('carInputVendor'),
+    work_order:g('carInputWorkOrder'), item_code:g('carInputItemCode').split(' — ')[0].trim(),
+    item:g('carInputItem'), close_date:g('carInputDue'),
+    d2_desc:g('carInputD2'), d3_action:g('carInputD3'),
+    d4_why1:g('carInputWhy1'), d4_why2:g('carInputWhy2'), d4_why3:g('carInputWhy3'),
+    d4_why4:g('carInputWhy4'), d4_why5:g('carInputWhy5'),
+    d5_action:g('carInputD5'), d5_date:g('carInputD5Date'),
+    d6_verify:g('carInputD6'), d6_result:g('carInputD6Result'), d6_date:g('carInputD6Date'),
+    d7_prevent:g('carInputD7'), note:g('carInputNote'),
+  };
+  Pages._carPrint(row);
 },
 
 

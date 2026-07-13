@@ -833,9 +833,16 @@ const SB={
   /* ── 시정조치(CAR) ── */
   async getCars(){
     if(!_sb) return DB.cars;
-    /* [v2.394] _sbFetchAll: 1000건 제한 해제 */
     const data=await this._sbFetchAll('corrective_actions','date',false);
     if(data===null){console.warn('[SB] cars 조회 실패');return [];}
+    /* [v2.198] 메일 발송 이력 주입 */
+    try{
+      const {data:hist}=await _sb.from('car_history').select('car_id').eq('action','메일발송');
+      if(hist){
+        const sentIds=new Set(hist.map(h=>Number(h.car_id)));
+        data.forEach(c=>{c.mail_sent=sentIds.has(Number(c.id));});
+      }
+    }catch(e){}
     return data;
   },
   async addCar(row){
