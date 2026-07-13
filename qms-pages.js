@@ -7307,12 +7307,22 @@ async car_input(params={}){
   const w=document.getElementById('pw');
   w.innerHTML='<div class="spin"></div>';
 
+  /* [v2.203] 진입 방식 구분
+     ① 사이드바 클릭 (params={}) → 새 등록 화면 (window._carInputId 초기화)
+     ② 조회에서 행 클릭 (params.carId 있음) → 수정/열람 화면 */
+  const carId = params?.carId || null;
+  if(!carId) {
+    /* 새 등록: 이전 상태 초기화 */
+    window._carInputId = null;
+    window._carInputRow = null;
+  } else {
+    window._carInputId = carId;
+  }
+
   /* 데이터 로딩 */
   const fresh=await SB.getCars();
   if(fresh) DB.cars=fresh;
-  const carId=params?.carId||window._carInputId||null;
   let row=carId?(DB.cars||[]).find(c=>Number(c.id)===Number(carId)):null;
-  window._carInputId=carId;
   window._carInputRow=row||null;
 
   /* 버전 이력 로딩 */
