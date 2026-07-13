@@ -985,6 +985,7 @@ const SB={
       spec_lower:row.spec_lower!=null?Number(row.spec_lower):null,
       target:row.target!=null?Number(row.target):null,
       subgroup_size:row.subgroup_size||5, unit:row.unit||'', note:row.note||'',
+      repeat_count:row.repeat_count||1,   /* [v2.206] 반복 측정 횟수 */
       /* [v2.193] created_by 컬럼 제거 — spc_items 테이블에 없는 컬럼 */
     };
     const {error}=await _sb.from('spc_items').insert(allowed);

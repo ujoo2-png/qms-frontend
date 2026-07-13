@@ -7322,6 +7322,9 @@ async car_input(params={}){
   /* 데이터 로딩 */
   const fresh=await SB.getCars();
   if(fresh) DB.cars=fresh;
+  /* [v2.205] NC 목록 로딩 — NC 참조번호 드롭다운용 */
+  const freshNc=await SB.getNc();
+  if(freshNc) DB.nc=freshNc;
   let row=carId?(DB.cars||[]).find(c=>Number(c.id)===Number(carId)):null;
   window._carInputRow=row||null;
 
@@ -7426,9 +7429,18 @@ async car_input(params={}){
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">NC 참조번호</label>
-        <input class="fc" id="carInputNcNo" value="${H.e(v('nc_no'))}"
-          placeholder="NC-20260601-001" style="font-family:monospace;color:#7c3aed"
-          onblur="Pages._carInputNcAutofill(this.value)">
+        <div style="display:flex;gap:6px;align-items:center">
+          <input class="fc" id="carInputNcNo" value="${H.e(v('nc_no'))}"
+            placeholder="NC-20260601-001" style="font-family:monospace;color:#7c3aed;flex:1"
+            onblur="Pages._carInputNcAutofill(this.value)">
+          <button type="button" class="btn bpri bsm"
+            style="white-space:nowrap;flex-shrink:0"
+            onclick="Pages._carInputNcPop()"
+            title="부적합 목록에서 선택">🔍 선택</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">
+          직접 입력 후 Tab 또는 🔍 선택 버튼으로 부적합 데이터를 불러올 수 있습니다.
+        </div>
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">개시일 *</b></label>
@@ -7910,6 +7922,79 @@ _carInputCalcCost(){
   const etc=Number(document.getElementById('carInputCostEtc')?.value||0);
   const totalEl=document.getElementById('carInputCostTotal');
   if(totalEl) totalEl.value=(mat+proc+etc).toLocaleString()+'원';
+},
+
+/* ── [v2.205] NC 선택 팝업 ── */
+_carInputNcPop(){
+  const nc=DB.nc||[];
+  if(!nc.length){Toast.show('부적합 데이터가 없습니다.','warn');return;}
+  const renderRows=(list)=>list.map(n=>`
+    <tr style="cursor:pointer" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''"
+      onclick="Pages._carInputNcSelect('${H.e(n.no||'')}');Modal.close()">
+      <td style="padding:7px 10px;font-family:monospace;font-size:12px;font-weight:700;color:#7c3aed;white-space:nowrap">${H.e(n.no||'-')}</td>
+      <td style="padding:7px 6px;font-size:11px;color:var(--muted);white-space:nowrap">${H.e(n.date||'-')}</td>
+      <td style="padding:7px 6px"><span class="badge ${n.in_out==='사외'?'bblu':'bgry'}" style="font-size:10px">${H.e(n.in_out||'-')}</span></td>
+      <td style="padding:7px 6px;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${H.e(n.desc||'')}">${H.e(n.desc||'-')}</td>
+      <td style="padding:7px 6px;font-size:11px;white-space:nowrap">${H.e(n.item_code||'-')}</td>
+      <td style="padding:7px 6px;font-size:11px">${H.e(n.assignee||'-')}</td>
+      <td style="padding:7px 6px;text-align:center"><span class="badge ${n.status==='완료'?'bgrn':n.status==='처리중'?'bamb':'bgry'}" style="font-size:10px">${H.e(n.status||'-')}</span></td>
+    </tr>`).join('');
+  Modal.open({title:'📋 부적합 선택 — NC 참조번호 연동',size:'mlg',
+    foot:`<button class="btn bout" onclick="Modal.close()">닫기</button>`,
+    body:`<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input class="fc" id="ncPopSearch" placeholder="🔍 번호·품목·내용·담당자"
+        style="flex:1;min-width:180px;font-size:13px" oninput="Pages._carInputNcPopFilter()">
+      <select class="fsel" id="ncPopStatus" onchange="Pages._carInputNcPopFilter()">
+        <option value="">전체 상태</option>
+        ${[...new Set(nc.map(n=>n.status||'').filter(Boolean))].sort().map(s=>`<option>${H.e(s)}</option>`).join('')}
+      </select>
+      <select class="fsel" id="ncPopInOut" onchange="Pages._carInputNcPopFilter()">
+        <option value="">사내외 전체</option><option>사외</option><option>사내</option>
+      </select>
+      <span id="ncPopCount" style="font-size:12px;color:var(--muted);white-space:nowrap">${nc.length}건</span>
+    </div>
+    <div style="overflow:auto;max-height:420px;border:1px solid var(--brd);border-radius:8px">
+      <table style="width:100%;border-collapse:collapse">
+        <thead style="position:sticky;top:0;background:var(--bg2);z-index:1">
+          <tr>
+            ${['부적합번호','발생일','사내외','내용','품목코드','담당자','상태'].map(h=>`<th style="padding:8px 6px;font-size:11px;font-weight:700;text-align:left;border-bottom:1px solid var(--brd);white-space:nowrap">${h}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody id="ncPopBody">${renderRows(nc)}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--muted)">💡 행 클릭 시 모든 데이터가 자동 채워집니다.</div>`});
+  setTimeout(()=>document.getElementById('ncPopSearch')?.focus(),100);
+},
+_carInputNcPopFilter(){
+  const q=(document.getElementById('ncPopSearch')?.value||'').toLowerCase();
+  const st=document.getElementById('ncPopStatus')?.value||'';
+  const io=document.getElementById('ncPopInOut')?.value||'';
+  const filtered=(DB.nc||[]).filter(n=>{
+    if(q&&![(n.no||''),(n.item_code||''),(n.item||''),(n.desc||''),(n.assignee||'')].join(' ').toLowerCase().includes(q)) return false;
+    if(st&&n.status!==st) return false;
+    if(io&&n.in_out!==io) return false;
+    return true;
+  });
+  const tb=document.getElementById('ncPopBody');
+  const ct=document.getElementById('ncPopCount');
+  if(tb) tb.innerHTML=filtered.map(n=>`
+    <tr style="cursor:pointer" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''"
+      onclick="Pages._carInputNcSelect('${H.e(n.no||'')}');Modal.close()">
+      <td style="padding:7px 10px;font-family:monospace;font-size:12px;font-weight:700;color:#7c3aed;white-space:nowrap">${H.e(n.no||'-')}</td>
+      <td style="padding:7px 6px;font-size:11px;color:var(--muted);white-space:nowrap">${H.e(n.date||'-')}</td>
+      <td style="padding:7px 6px"><span class="badge ${n.in_out==='사외'?'bblu':'bgry'}" style="font-size:10px">${H.e(n.in_out||'-')}</span></td>
+      <td style="padding:7px 6px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px" title="${H.e(n.desc||'')}">${H.e(n.desc||'-')}</td>
+      <td style="padding:7px 6px;font-size:11px;white-space:nowrap">${H.e(n.item_code||'-')}</td>
+      <td style="padding:7px 6px;font-size:11px">${H.e(n.assignee||'-')}</td>
+      <td style="padding:7px 6px;text-align:center"><span class="badge ${n.status==='완료'?'bgrn':n.status==='처리중'?'bamb':'bgry'}" style="font-size:10px">${H.e(n.status||'-')}</span></td>
+    </tr>`).join('');
+  if(ct) ct.textContent=`${filtered.length}건`;
+},
+_carInputNcSelect(ncNo){
+  const el=document.getElementById('carInputNcNo');
+  if(el) el.value=ncNo;
+  Pages._carInputNcAutofill(ncNo);
 },
 
 /* ── [v2.198] NC 번호 자동채우기 ── */
@@ -17368,16 +17453,54 @@ async spc_items(){
 
 /* ── X-bar R 차트 계수 (n=2~10) ──
    ASTM/KS A 3001 기준 A2, D3, D4 계수 */
+/* ════════════════════════════════════════════════════════
+   SPC 관리도 상수 테이블  [v2.206]
+   ────────────────────────────────────────────────────────
+   X-bar / R 관리도 (n ≤ 10):
+     UCL_x̄ = X̄̄ + A2 × R̄       LCL_x̄ = X̄̄ - A2 × R̄
+     UCL_R  = D4 × R̄            LCL_R  = D3 × R̄
+
+   X-bar / S 관리도 (11 ≤ n ≤ 25):
+     UCL_x̄ = X̄̄ + A3 × S̄       LCL_x̄ = X̄̄ - A3 × S̄
+     UCL_S  = B4 × S̄            LCL_S  = B3 × S̄
+     S̄ = (1/k) Σ s_i  (각 서브그룹의 표준편차 평균)
+
+   I-MR 관리도 (n = 1, 개별값):
+     MR_i   = |x_i - x_(i-1)|   (이동 범위)
+     UCL_x  = X̄ + 3 × MR̄/d2   LCL_x = X̄ - 3 × MR̄/d2
+     UCL_MR = D4 × MR̄           d2=1.128, D4=3.267 (n=2 기준)
+
+   출처: AIAG SPC 2nd Edition, ASTM STP-15D
+   ════════════════════════════════════════════════════════ */
 _spcConst:{
-  2:{A2:1.880,D3:0,D4:3.267},
-  3:{A2:1.023,D3:0,D4:2.574},
-  4:{A2:0.729,D3:0,D4:2.282},
-  5:{A2:0.577,D3:0,D4:2.114},
-  6:{A2:0.483,D3:0,D4:2.004},
-  7:{A2:0.419,D3:0.076,D4:1.924},
-  8:{A2:0.373,D3:0.136,D4:1.864},
-  9:{A2:0.337,D3:0.184,D4:1.816},
-  10:{A2:0.308,D3:0.223,D4:1.777},
+  /* ── X-bar/R 관리도 상수 (n = 2~10) ── */
+  /*  n   A2      D3      D4      d2(참고)  */
+  1: {A2:0,     D3:0,    D4:0,    d2:1.000, A3:0,    B3:0,    B4:0,    c4:1.000, type:'IMR'},
+  2: {A2:1.880, D3:0,    D4:3.267,d2:1.128, A3:2.659,B3:0,    B4:3.267,c4:0.7979,type:'R'},
+  3: {A2:1.023, D3:0,    D4:2.574,d2:1.693, A3:1.954,B3:0,    B4:2.568,c4:0.8862,type:'R'},
+  4: {A2:0.729, D3:0,    D4:2.282,d2:2.059, A3:1.628,B3:0,    B4:2.266,c4:0.9213,type:'R'},
+  5: {A2:0.577, D3:0,    D4:2.114,d2:2.326, A3:1.427,B3:0,    B4:2.089,c4:0.9400,type:'R'},
+  6: {A2:0.483, D3:0,    D4:2.004,d2:2.534, A3:1.287,B3:0.030,B4:1.970,c4:0.9515,type:'R'},
+  7: {A2:0.419, D3:0.076,D4:1.924,d2:2.704, A3:1.182,B3:0.118,B4:1.882,c4:0.9594,type:'R'},
+  8: {A2:0.373, D3:0.136,D4:1.864,d2:2.847, A3:1.099,B3:0.185,B4:1.815,c4:0.9650,type:'R'},
+  9: {A2:0.337, D3:0.184,D4:1.816,d2:2.970, A3:1.032,B3:0.239,B4:1.761,c4:0.9693,type:'R'},
+  10:{A2:0.308, D3:0.223,D4:1.777,d2:3.078, A3:0.975,B3:0.284,B4:1.716,c4:0.9727,type:'R'},
+  /* ── X-bar/S 관리도 상수 (n = 11~25) ── */
+  11:{A2:0.285, D3:0.256,D4:1.744,d2:3.173, A3:0.927,B3:0.321,B4:1.679,c4:0.9754,type:'S'},
+  12:{A2:0.266, D3:0.283,D4:1.717,d2:3.258, A3:0.886,B3:0.354,B4:1.646,c4:0.9776,type:'S'},
+  13:{A2:0.249, D3:0.307,D4:1.693,d2:3.336, A3:0.850,B3:0.382,B4:1.618,c4:0.9794,type:'S'},
+  14:{A2:0.235, D3:0.328,D4:1.672,d2:3.407, A3:0.817,B3:0.406,B4:1.594,c4:0.9810,type:'S'},
+  15:{A2:0.223, D3:0.347,D4:1.653,d2:3.472, A3:0.789,B3:0.428,B4:1.572,c4:0.9823,type:'S'},
+  16:{A2:0.212, D3:0.363,D4:1.637,d2:3.532, A3:0.763,B3:0.448,B4:1.552,c4:0.9835,type:'S'},
+  17:{A2:0.203, D3:0.378,D4:1.622,d2:3.588, A3:0.739,B3:0.466,B4:1.534,c4:0.9845,type:'S'},
+  18:{A2:0.194, D3:0.391,D4:1.608,d2:3.640, A3:0.718,B3:0.482,B4:1.518,c4:0.9854,type:'S'},
+  19:{A2:0.187, D3:0.403,D4:1.597,d2:3.689, A3:0.698,B3:0.497,B4:1.503,c4:0.9862,type:'S'},
+  20:{A2:0.180, D3:0.415,D4:1.585,d2:3.735, A3:0.680,B3:0.510,B4:1.490,c4:0.9869,type:'S'},
+  21:{A2:0.173, D3:0.425,D4:1.575,d2:3.778, A3:0.663,B3:0.523,B4:1.477,c4:0.9876,type:'S'},
+  22:{A2:0.167, D3:0.434,D4:1.566,d2:3.819, A3:0.647,B3:0.534,B4:1.466,c4:0.9882,type:'S'},
+  23:{A2:0.162, D3:0.443,D4:1.557,d2:3.858, A3:0.633,B3:0.545,B4:1.455,c4:0.9887,type:'S'},
+  24:{A2:0.157, D3:0.451,D4:1.548,d2:3.895, A3:0.619,B3:0.555,B4:1.445,c4:0.9892,type:'S'},
+  25:{A2:0.153, D3:0.459,D4:1.541,d2:3.931, A3:0.606,B3:0.565,B4:1.435,c4:0.9896,type:'S'},
 },
 
 /* ── SPC 공통 — 항목 select 옵션 생성 ── */
@@ -17468,19 +17591,87 @@ async _spcChartRender(itemId){
   if(!groups.length){el.innerHTML='<div class="card es" style="padding:40px">유효한 측정값 없음</div>';return;}
 
   const n=item.subgroup_size||5;
+  const repeat=item.repeat_count||1;
   const C=Pages._spcConst[n]||Pages._spcConst[5];
-  const means=groups.map(g=>g.vals.reduce((s,v)=>s+v,0)/g.vals.length);
-  const ranges=groups.map(g=>Math.max(...g.vals)-Math.min(...g.vals));
-  const Xbar=means.reduce((s,v)=>s+v,0)/means.length;
-  const Rbar=ranges.reduce((s,v)=>s+v,0)/ranges.length;
-  const UCLx=Xbar+C.A2*Rbar, LCLx=Xbar-C.A2*Rbar;
-  const UCLr=C.D4*Rbar, LCLr=C.D3*Rbar;
+
+  /* ──────────────────────────────────────────────────────
+     관리도 계산 분기  [v2.206]
+
+     ① n = 1  →  I-MR 관리도 (Individual & Moving Range)
+        X̄  = 전체 평균 (전 측정값 평균)
+        MR  = |x_i - x_{i-1}|  (연속 두 값의 절대 차이)
+        MR̄  = 이동범위 평균
+        UCL_x = X̄ + 3 × MR̄/d2   (d2 = 1.128)
+        LCL_x = X̄ - 3 × MR̄/d2
+        UCL_MR = D4 × MR̄           (D4 = 3.267)
+
+     ② n = 2~10  →  X-bar / R 관리도
+        X̄̄  = 서브그룹 평균의 평균 (총 평균)
+        R̄   = 서브그룹 범위(max-min)의 평균
+        UCL_x̄ = X̄̄ + A2 × R̄
+        LCL_x̄ = X̄̄ - A2 × R̄
+        UCL_R  = D4 × R̄
+        LCL_R  = D3 × R̄   (D3=0 이면 LCL=0)
+
+     ③ n = 11~25  →  X-bar / S 관리도
+        s_i  = 각 서브그룹의 표준편차
+        S̄    = 서브그룹 표준편차 평균
+        UCL_x̄ = X̄̄ + A3 × S̄
+        LCL_x̄ = X̄̄ - A3 × S̄
+        UCL_S  = B4 × S̄
+        LCL_S  = B3 × S̄   (B3=0 이면 LCL=0)
+
+     반복 측정(repeat>1): vals 배열은 이미 반복 측정 평균값
+  ────────────────────────────────────────────────────── */
+
   const fmt=v=>v.toFixed(4);
+  let UCLx,LCLx,UCL2,LCL2,Xbar,Rbar,chartType,label2,vals2;
+  const means=groups.map(g=>g.vals.reduce((s,v)=>s+v,0)/g.vals.length);
+
+  if(n===1){
+    /* ① I-MR 관리도 */
+    chartType='IMR';
+    const xs=groups.map(g=>g.vals[0]);            /* 개별값 */
+    Xbar=xs.reduce((s,v)=>s+v,0)/xs.length;
+    const mrs=xs.slice(1).map((v,i)=>Math.abs(v-xs[i]));  /* 이동 범위 */
+    Rbar=mrs.length?mrs.reduce((s,v)=>s+v,0)/mrs.length:0;
+    const d2=1.128,D4mr=3.267;
+    UCLx=Xbar+3*Rbar/d2;  LCLx=Xbar-3*Rbar/d2;
+    UCL2=D4mr*Rbar;        LCL2=0;
+    label2='📊 MR 관리도 (이동 범위)';
+    vals2=[0,...mrs];      /* 첫 점은 MR 없음 */
+    /* I-MR에서 means를 xs로 교체 */
+    means.length=0; xs.forEach(v=>means.push(v));
+  } else if(n<=10){
+    /* ② X-bar/R 관리도 */
+    chartType='XbarR';
+    const ranges=groups.map(g=>Math.max(...g.vals)-Math.min(...g.vals));
+    Xbar=means.reduce((s,v)=>s+v,0)/means.length;
+    Rbar=ranges.reduce((s,v)=>s+v,0)/ranges.length;
+    UCLx=Xbar+C.A2*Rbar;  LCLx=Xbar-C.A2*Rbar;
+    UCL2=C.D4*Rbar;        LCL2=C.D3*Rbar;
+    label2='📊 R 관리도 (범위)';
+    vals2=ranges;
+  } else {
+    /* ③ X-bar/S 관리도 */
+    chartType='XbarS';
+    const stdevs=groups.map(g=>{
+      const m=g.vals.reduce((s,v)=>s+v,0)/g.vals.length;
+      const ss=g.vals.reduce((s,v)=>s+(v-m)**2,0);
+      return Math.sqrt(ss/(g.vals.length-1));
+    });
+    Xbar=means.reduce((s,v)=>s+v,0)/means.length;
+    Rbar=stdevs.reduce((s,v)=>s+v,0)/stdevs.length;  /* S̄ */
+    UCLx=Xbar+C.A3*Rbar;  LCLx=Xbar-C.A3*Rbar;
+    UCL2=C.B4*Rbar;        LCL2=C.B3*Rbar;
+    label2='📊 S 관리도 (표준편차)';
+    vals2=stdevs;
+  }
 
   const xPass=v=>v>=LCLx&&v<=UCLx;
-  const rPass=v=>v>=LCLr&&v<=UCLr;
+  const rPass=v=>v>=LCL2&&v<=UCL2;
   const xOOC=means.filter(v=>!xPass(v)).length;
-  const rOOC=ranges.filter(v=>!rPass(v)).length;
+  const rOOC=vals2.filter(v=>!rPass(v)).length;
 
   /* SVG 생성 헬퍼 */
   const mkChart=(vals,ucl,cl,lcl,pf,label)=>{
@@ -17515,14 +17706,14 @@ async _spcChartRender(itemId){
       <div><div class="sd-val">${groups.length}</div><div class="sd-lbl">서브그룹 수</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:#dcfce7;color:#16a34a">X̄</div>
       <div><div class="sd-val">${fmt(Xbar)}</div><div class="sd-lbl">총 평균</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef9c3;color:#ca8a04">R̄</div>
+    <div class="sd-card"><div class="sd-icon" style="background:#fef9c3;color:#ca8a04">R̄/S̄/MR̄</div>
       <div><div class="sd-val">${fmt(Rbar)}</div><div class="sd-lbl">평균 범위</div></div></div>
     <div class="sd-card"><div class="sd-icon" style="background:${xOOC||rOOC?'#fee2e2':'#dcfce7'};color:${xOOC||rOOC?'#dc2626':'#16a34a'}">${xOOC||rOOC?'⚠️':'✅'}</div>
       <div><div class="sd-val" style="color:${xOOC||rOOC?'#dc2626':'#16a34a'}">${xOOC+rOOC}</div><div class="sd-lbl">이상점 합계</div></div></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
     ${mkChart(means,UCLx,Xbar,LCLx,xPass,'📊 X-bar 관리도 (평균)')}
-    ${mkChart(ranges,UCLr,Rbar,LCLr,rPass,'📊 R 관리도 (범위)')}
+    ${mkChart(vals2,UCL2,Rbar,LCL2,rPass,label2)}
   </div>
   <div class="card" style="margin-top:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -17610,10 +17801,52 @@ async _spcCpkRender(itemId){
     return;
   }
 
+  /* ════════════════════════════════════════════════════════
+     공정능력 지수 (Process Capability Index) 계산  [v2.206]
+     ────────────────────────────────────────────────────────
+     μ   = 전체 측정값의 산술 평균
+     σ   = 전체 측정값의 표본 표준편차 (n-1 분모)
+
+     Cp  = (USL - LSL) / (6σ)
+           공정 산포가 규격 폭에 얼마나 여유 있게 들어오는지
+           (공정 중심 고려 안 함 — 치우침 무관)
+
+     Cpu = (USL - μ) / (3σ)   상한 여유
+     Cpl = (μ - LSL) / (3σ)   하한 여유
+     Cpk = min(Cpu, Cpl)
+           공정 중심 치우침을 반영한 실질 공정능력
+           Cpk = Cp × (1 - k)  단 k = |목표값 - μ| / ((USL-LSL)/2)
+
+     판정 기준 (AIAG / 자동차 산업 기준):
+       Cpk ≥ 1.67 : A급 — 우수  (불량률 < 0.57 ppm)
+       Cpk ≥ 1.33 : B급 — 양호  (불량률 < 64 ppm)
+       Cpk ≥ 1.00 : C급 — 보통  (불량률 < 2700 ppm)
+       Cpk < 1.00  : D급 — 개선 필수
+
+     I-MR 관리도(n=1) 공정능력:
+       σ_IMR = MR̄ / d2  (d2 = 1.128)
+       — 개별값 관리도에서는 이동범위로 σ 추정
+       — 장기 변동이 아닌 단기 공정 내 변동만 반영
+     ════════════════════════════════════════════════════════ */
+
+  const n=item.subgroup_size||1;
   const n2=allVals.length;
   const mean=allVals.reduce((s,v)=>s+v,0)/n2;
-  const std=Math.sqrt(allVals.reduce((s,v)=>s+(v-mean)**2,0)/(n2-1));
   const usl=item.spec_upper, lsl=item.spec_lower, tgt=item.target;
+
+  /* σ 추정 — I-MR vs 일반 */
+  let std, stdMethod;
+  if(n===1){
+    /* I-MR: MR̄/d2 로 σ 추정 */
+    const mrs=allVals.slice(1).map((v,i)=>Math.abs(v-allVals[i]));
+    const MRbar=mrs.length?mrs.reduce((s,v)=>s+v,0)/mrs.length:0;
+    std=MRbar/1.128;
+    stdMethod=`σ = MR̄/d2 = ${MRbar.toFixed(4)}/1.128 (I-MR 방식)`;
+  } else {
+    std=Math.sqrt(allVals.reduce((s,v)=>s+(v-mean)**2,0)/(n2-1));
+    stdMethod=`σ = ${std.toFixed(4)} (표본 표준편차)`;
+  }
+
   if(usl==null||lsl==null){
     el.innerHTML='<div class="card es" style="padding:32px">⚠️ 관리 항목에 USL/LSL(규격 상/하한)을 등록해야 합니다.</div>';
     return;
@@ -17690,6 +17923,17 @@ async _spcCpkRender(itemId){
             <td style="padding:6px 10px;color:${c};font-weight:${g===grade?700:400}">${l}</td>
           </tr>`).join('')}
       </table>
+      <!-- [v2.206] 계산 공식 상세 표시 -->
+      <div style="margin-top:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;font-size:11px;line-height:1.9;color:var(--muted)">
+        <div style="font-weight:700;color:var(--text);margin-bottom:4px">📐 계산 공식</div>
+        <div>μ (평균) = <b>${mean.toFixed(4)}</b> ${item.unit||''}</div>
+        <div>${stdMethod}</div>
+        <div>Cp  = (USL-LSL)/(6σ) = (${usl}-${lsl})/(6×${std.toFixed(4)}) = <b>${cp.toFixed(3)}</b></div>
+        <div>Cpu = (USL-μ)/(3σ) = <b>${cpu.toFixed(3)}</b></div>
+        <div>Cpl = (μ-LSL)/(3σ) = <b>${cpl.toFixed(3)}</b></div>
+        <div>Cpk = min(Cpu, Cpl) = <b style="color:${col}">${cpk.toFixed(3)}</b></div>
+        ${n===1?'<div style="margin-top:4px;color:#7c3aed">※ I-MR 관리도: σ = MR̄/d2(1.128) 로 추정</div>':''}
+      </div>
     </div>
   </div>`;
 },
@@ -17992,9 +18236,31 @@ _spcItemForm(row=null){
       </div>
       <div class="fgroup">
         <label class="fl req"><b style="color:#e11d48">서브그룹 크기 *</b></label>
-        <select class="fc" id="spiN">
-          ${[2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${(row?.subgroup_size||5)==n?'selected':''}>${n}개</option>`).join('')}
+        <select class="fc" id="spiN" onchange="Pages._spcItemNChange(this.value)">
+          <!-- [v2.206] n=1(I-MR 개별값) ~ n=25(X-bar/S) -->
+          <optgroup label="개별값 관리도 (n=1)">
+            <option value="1" ${(row?.subgroup_size||5)==1?'selected':''}>1개 — I-MR (개별값)</option>
+          </optgroup>
+          <optgroup label="X-bar/R 관리도 (n=2~10)">
+            ${[2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${(row?.subgroup_size||5)==n?'selected':''}>${n}개 — X-bar/R</option>`).join('')}
+          </optgroup>
+          <optgroup label="X-bar/S 관리도 (n=11~25)">
+            ${[11,12,13,14,15,16,17,18,19,20,21,22,23,24,25].map(n=>`<option value="${n}" ${(row?.subgroup_size||5)==n?'selected':''}>${n}개 — X-bar/S</option>`).join('')}
+          </optgroup>
         </select>
+        <div id="spiNHint" style="font-size:11px;color:var(--muted);margin-top:3px">
+          ${(()=>{const n=row?.subgroup_size||5;return n===1?'I-MR: 개별값 관리도 — 시료 1개/측정 1회씩 기록':n<=10?`X-bar/R: 관리도 (A2=${Pages._spcConst?.[n]?.A2??'?'}, D4=${Pages._spcConst?.[n]?.D4??'?'})`:`X-bar/S: 표준편차 관리도 (A3=${Pages._spcConst?.[n]?.A3??'?'}, B4=${Pages._spcConst?.[n]?.B4??'?'})`})()}
+        </div>
+      </div>
+      <div class="fgroup">
+        <label class="fl">반복 측정 횟수</label>
+        <select class="fc" id="spiRepeat">
+          <!-- [v2.206] 한 시료를 여러 번 측정 → 평균을 측정값으로 사용 -->
+          ${[1,2,3,4,5].map(r=>`<option value="${r}" ${(row?.repeat_count||1)==r?'selected':''}>${r}회${r>1?' (평균값 저장)':' (단순 측정)'}</option>`).join('')}
+        </select>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">
+          반복 측정 &gt; 1회: 동일 시료를 여러 번 측정하여 평균을 관리도에 사용 (측정 재현성 개선)
+        </div>
       </div>
       <div class="fgroup">
         <label class="fl">단위</label>
@@ -18008,7 +18274,18 @@ _spcItemForm(row=null){
   });
 },
 
-/* [v2.156] 품목 검색 팝업 열기 — SearchPop.items.onRow를 spc 전용으로 임시 설정 */
+/* [v2.206] 서브그룹 크기 변경 시 힌트 갱신 */
+_spcItemNChange(nVal){
+  const n=parseInt(nVal)||5;
+  const C=Pages._spcConst[n];
+  const hint=document.getElementById('spiNHint');
+  if(!hint||!C) return;
+  if(n===1)       hint.textContent='I-MR: 개별값 관리도 — 시료 1개씩 측정, 이동범위로 공정 변동 파악';
+  else if(n<=10)  hint.textContent=`X-bar/R: 범위 관리도 — A2=${C.A2}, D3=${C.D3}, D4=${C.D4}`;
+  else            hint.textContent=`X-bar/S: 표준편차 관리도 — A3=${C.A3}, B3=${C.B3}, B4=${C.B4}`;
+},
+
+
 _spcSearchItem(){
   if(!SearchPop._cfg||!SearchPop._cfg.items){Toast.show('품목 검색 설정이 없습니다.','warn');return;}
   SearchPop._cfg.items.onRow=function(r){
@@ -18055,6 +18332,7 @@ async _spcItemSave(editId){
     char_name:charN, spec_upper:parseFloat(usl), spec_lower:parseFloat(lsl),
     target:g('spiTarget')?parseFloat(g('spiTarget')):null,
     subgroup_size:parseInt(document.getElementById('spiN')?.value||5),
+    repeat_count:parseInt(document.getElementById('spiRepeat')?.value||1), /* [v2.206] 반복 측정 횟수 */
     unit:g('spiUnit'), note:g('spiNote'),
     /* [v2.161] 신규 등록 시 현재 로그인 사용자 자동 세팅 */
     created_by:editId&&editId!='null'?undefined:(Auth._u?.name||Auth._u?.username||null),
@@ -18121,18 +18399,58 @@ async _spcItemDel(id){
    5. 측정 데이터 입력 폼
    ══════════════════════════════════════════════════ */
 _spcDataForm(itemId){
+  /* [v2.206] 측정 데이터 입력 폼
+     ─────────────────────────────────────────
+     n=1       : I-MR 개별값 — 측정값 1개 입력
+     n=2~10    : X-bar/R — 시료 n개 값 입력
+     n=11~25   : X-bar/S — 시료 n개 값 입력 (표준편차 관리도)
+     repeat>1  : 반복 측정 — 동일 시료를 repeat회 측정, 평균 1개를 관리도에 사용
+     ─────────────────────────────────────────  */
   const item=(window._spcItems||[]).find(it=>it.id===Number(itemId));
   if(!item){Toast.show('관리 항목을 먼저 선택하세요.','warn');return;}
   const n=item.subgroup_size||5;
-  const inputs=Array.from({length:n},(_,i)=>
-    `<div class="fgroup"><label class="fl req"><b style="color:#e11d48">측정${i+1} *</b></label>
-     <input class="fc" type="number" step="any" id="spcV${i}" placeholder="${item.target??''}"></div>`
-  ).join('');
+  const repeat=item.repeat_count||1;
+  const C=Pages._spcConst[n]||Pages._spcConst[5];
+  const chartType=n===1?'I-MR':n<=10?'X-bar/R':'X-bar/S';
+
+  /* 입력 필드 생성 */
+  let inputs='';
+  if(repeat>1){
+    /* 반복 측정 모드 — 각 시료마다 repeat 번 측정 */
+    for(let s=0;s<n;s++){
+      inputs+=`<div style="grid-column:1/-1;font-size:12px;font-weight:700;color:var(--muted);
+        padding:6px 0;border-bottom:1px solid var(--brd);margin-top:8px">
+        시료 ${s+1} (${repeat}회 반복 측정 → 자동 평균)
+      </div>`;
+      for(let r=0;r<repeat;r++){
+        inputs+=`<div class="fgroup">
+          <label class="fl">측정 ${r+1}회</label>
+          <input class="fc" type="number" step="any" id="spcV${s}_${r}"
+            placeholder="${item.target??''}"
+            oninput="Pages._spcDataRepeatAvg(${s},${repeat})">
+        </div>`;
+      }
+      inputs+=`<div class="fgroup">
+        <label class="fl" style="color:#059669;font-weight:700">평균값</label>
+        <input class="fc" type="number" step="any" id="spcVavg${s}"
+          placeholder="자동 계산" style="background:var(--bg2);color:#059669;font-weight:700" readonly>
+      </div>`;
+    }
+  } else {
+    /* 일반 모드 */
+    inputs=Array.from({length:n},(_,i)=>`
+      <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">${n===1?'측정값':'측정 '+(i+1)} *</b></label>
+        <input class="fc" type="number" step="any" id="spcV${i}"
+          placeholder="${item.target??''}">
+      </div>`).join('');
+  }
+
   Modal.open({
     title:`+ 측정 데이터 입력 — ${H.e(item.process)} / ${H.e(item.char_name||item.item_name)}`,
     size:'mmd',
     foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
-          <button class="btn bpri btn-f8" onclick="Pages._spcDataSave(${itemId},${n})">💾 저장 <span class="kbd">F8</span></button>`,
+          <button class="btn bpri btn-f8" onclick="Pages._spcDataSave(${itemId},${n},${repeat})">💾 저장 <span class="kbd">F8</span></button>`,
     body:`<div class="fg2" style="padding:4px 0">
       <div class="fgroup ff">
         <label class="fl req"><b style="color:#e11d48">측정일 *</b></label>
@@ -18141,24 +18459,56 @@ _spcDataForm(itemId){
       ${inputs}
       <div class="fgroup ff">
         <label class="fl">메모</label>
-        <input class="fc" id="spcMemo" placeholder="특이사항 등">
+        <input class="fc" id="spcMemo" placeholder="특이사항, 작업조건 등">
       </div>
-      <div style="grid-column:1/-1;font-size:12px;color:var(--muted);padding:8px 10px;background:var(--bg2);border-radius:6px">
-        규격: LSL ${item.spec_lower} ~ USL ${item.spec_upper} ${item.unit||''} / 서브그룹 크기: n=${n}
+      <div style="grid-column:1/-1;font-size:11px;color:var(--muted);padding:10px 12px;
+        background:var(--bg2);border-radius:8px;line-height:1.7">
+        <div style="font-weight:700;margin-bottom:4px;color:var(--text)">📊 관리도 정보</div>
+        <div>• 관리도 유형: <b>${chartType}</b>${repeat>1?` | 반복 측정: ${repeat}회 평균`:''}</div>
+        <div>• 규격: LSL <b>${item.spec_lower??'-'}</b> ~ USL <b>${item.spec_upper??'-'}</b> ${item.unit||''}</div>
+        ${item.target!=null?`<div>• 목표값: <b>${item.target} ${item.unit||''}</b></div>`:''}
+        <div>• 서브그룹 크기: <b>n=${n}</b> ${n===1?'(개별값)':n<=10?'(X-bar/R)':'(X-bar/S)'}</div>
       </div>
     </div>`,
   });
 },
-async _spcDataSave(itemId,n){
+
+/* [v2.206] 반복 측정 평균 자동 계산 */
+_spcDataRepeatAvg(sIdx, repeat){
+  let sum=0, cnt=0;
+  for(let r=0;r<repeat;r++){
+    const el=document.getElementById(`spcV${sIdx}_${r}`);
+    const v=parseFloat(el?.value);
+    if(!isNaN(v)){sum+=v;cnt++;}
+  }
+  const avg=document.getElementById(`spcVavg${sIdx}`);
+  if(avg) avg.value=cnt>0?(sum/cnt).toFixed(4):'';
+},
+async _spcDataSave(itemId,n,repeat=1){
+  /* [v2.206] 측정 데이터 저장
+     반복 측정(repeat>1): 각 시료의 반복 측정 평균을 vals 배열에 저장
+     일반 측정(repeat=1):  각 시료 측정값을 그대로 vals 배열에 저장
+     저장 형식: values = JSON.stringify([v1, v2, ..., vn]) */
   const date=(document.getElementById('spcDate')?.value||'').trim();
   if(!date){Toast.show('측정일을 입력하세요.','warn');return;}
   const vals=[];
-  for(let i=0;i<n;i++){
-    const v=document.getElementById(`spcV${i}`)?.value?.trim();
-    if(v===''||v==null){Toast.show(`측정${i+1} 값을 입력하세요.`,'warn');return;}
-    const num=parseFloat(v);
-    if(isNaN(num)){Toast.show(`측정${i+1}에 숫자를 입력하세요.`,'warn');return;}
-    vals.push(num);
+  if(repeat>1){
+    /* 반복 측정 모드 — 평균값 수집 */
+    for(let s=0;s<n;s++){
+      const avgEl=document.getElementById(`spcVavg${s}`);
+      const v=parseFloat(avgEl?.value);
+      if(isNaN(v)){Toast.show(`시료 ${s+1}의 반복 측정값을 모두 입력하세요.`,'warn');return;}
+      vals.push(v);
+    }
+  } else {
+    /* 일반 모드 */
+    for(let i=0;i<n;i++){
+      const v=document.getElementById(`spcV${i}`)?.value?.trim();
+      if(v===''||v==null){Toast.show(`측정${i+1} 값을 입력하세요.`,'warn');return;}
+      const num=parseFloat(v);
+      if(isNaN(num)){Toast.show(`측정${i+1}에 숫자를 입력하세요.`,'warn');return;}
+      vals.push(num);
+    }
   }
   const res=await SB.addSpcSubgroup({
     spc_item_id:itemId, measured_at:date,
