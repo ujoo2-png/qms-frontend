@@ -7088,7 +7088,7 @@ _carRender(){
   const as=document.getElementById('carAssigneeF')?.value||'';
   const filtered=data.filter(c=>{
     if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
-    if(src&&c.src!==src)return false;
+    if(src&&c.source!==src)return false;
     if(st&&c.status!==st)return false;
     if(as&&c.assignee!==as)return false;
     return true;
@@ -7110,14 +7110,14 @@ _carRender(){
         render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='유효성평가'?'bblu':v==='대책실시'?'bamb':v==='대책접수'?'bpur':v==='반려'?'bred':v==='종결'?'bgry':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'no',       label:'CAR번호', w:'150px', req:true,
         render:v=>`<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
-      {key:'src',      label:'발생원',  w:'72px',
+      {key:'source',      label:'발생원',  w:'72px',
         render:v=>`<span class="badge bpur" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'nc_no',    label:'NC참조',  w:'130px',
         render:v=>v?`<span style="font-family:monospace;font-size:12px;color:#7c3aed">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
       {key:'title',    label:'제목',    w:'*'},
       {key:'assignee', label:'담당자',  w:'72px'},
-      {key:'open',     label:'개시일',  w:'88px'},
-      {key:'due',      label:'완료기한',w:'88px',
+      {key:'date',     label:'개시일',  w:'88px'},
+      {key:'close_date',      label:'완료기한',w:'88px',
         render:v=>{
           if(!v) return '<span style="color:var(--tl)">-</span>';
           const d=Math.ceil((new Date(v)-new Date())/86400000);
@@ -7175,7 +7175,7 @@ _carTab(tab, btn){
     const as=document.getElementById('carAssigneeF')?.value||'';
     const filtered=data.filter(c=>{
       if(q&&![(c.no||''),(c.title||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
-      if(src&&c.src!==src)return false;
+      if(src&&c.source!==src)return false;
       if(st&&c.status!==st)return false;
       if(as&&c.assignee!==as)return false;
       return true;
@@ -7201,7 +7201,7 @@ _carKanbanRender(data){
       </div>
       ${byStep[s].length===0?`<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">없음</div>`
         :byStep[s].map(c=>{
-          const d=c.due?Math.ceil((new Date(c.due)-new Date())/86400000):null;
+          const d=c.close_date?Math.ceil((new Date(c.close_date)-new Date())/86400000):null;
           const dday=d!==null?`<span style="font-size:10px;color:${d<0?'#dc2626':d<=3?'#d97706':'#16a34a'}">${d<0?'D+'+Math.abs(d):'D-'+d}</span>`:'';
           return`<div style="background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer"
             onclick="Nav.go('car_input',{carId:${Number(c.id)}})">
@@ -7397,7 +7397,7 @@ async car_input(params={}){
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">발생원 *</b></label>
         <select class="fc" id="carInputSrc">
-          ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option value="${s}" ${v('src','부적합')===s?'selected':''}>${s}</option>`).join('')}
+          ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option value="${s}" ${v('source','부적합')===s?'selected':''}>${s}</option>`).join('')}
         </select>
       </div>
       <div>
@@ -7407,11 +7407,11 @@ async car_input(params={}){
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">개시일 *</b></label>
-        <input class="fc" type="date" id="carInputOpen" value="${H.e(v('open',today))}">
+        <input class="fc" type="date" id="carInputOpen" value="${H.e(v('date',today))}">
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">완료 기한 *</b></label>
-        <input class="fc" type="date" id="carInputDue" value="${H.e(v('due',H.addDays(today,14)))}">
+        <input class="fc" type="date" id="carInputDue" value="${H.e(v('close_date',H.addDays(today,14)))}">
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px"><b style="color:#e11d48">담당자 *</b></label>
@@ -7666,11 +7666,11 @@ async _carInputSave(editId){
 
   const itemCode=g('carInputItemCode').split(' — ')[0].trim();
   const row={
-    no:g('carInputNo'), src:g('carInputSrc'),
+    no:g('carInputNo'), source:g('carInputSrc'),
     title, nc_id:document.getElementById('carInputNcId')?.value||null,
     nc_no:g('carInputNcNo')||null,
     item_code:itemCode||null, item:g('carInputItem')||null,
-    open, due:g('carInputDue')||null,
+    open, close_date:g('carInputDue')||null,
     assignee, status:isTemp?'접수':g('carInputStatus')||'접수',
     d1_team:g('carInputD1')||null,
     d2_desc:g('carInputD2')||null,
@@ -7904,12 +7904,12 @@ _carStatusRender(){
         render:v=>`<span class="badge ${v==='완료'?'bgrn':'bblu'}" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'no',       label:'CAR번호', w:'150px', req:true,
         render:v=>`<span style="font-family:monospace;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
-      {key:'src',      label:'발생원',  w:'72px',
+      {key:'source',      label:'발생원',  w:'72px',
         render:v=>`<span class="badge bpur" style="font-size:10px">${H.e(v||'-')}</span>`},
       {key:'title',    label:'제목',    w:'*'},
       {key:'assignee', label:'담당자',  w:'72px'},
-      {key:'open',     label:'개시일',  w:'88px'},
-      {key:'due',      label:'완료기한',w:'88px'},
+      {key:'date',     label:'개시일',  w:'88px'},
+      {key:'close_date',      label:'완료기한',w:'88px'},
       {key:'d6_result',label:'평가결과',w:'80px', align:'center',
         render:v=>v?`<span class="badge ${v==='유효'?'bgrn':v==='무효'?'bred':'bamb'}" style="font-size:10px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
     ],
@@ -7995,7 +7995,7 @@ _carForm(row=null, prefillNc=null){
       <div class="fgroup">
         <label class="fl req"><b style="color:#e11d48">발생원 *</b></label>
         <select class="fc" id="carSrc">
-          ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option value="${s}" ${v('src','부적합')===s?'selected':''}>${s}</option>`).join('')}
+          ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option value="${s}" ${v('source','부적합')===s?'selected':''}>${s}</option>`).join('')}
         </select>
       </div>
       <div class="fgroup">
@@ -8005,7 +8005,7 @@ _carForm(row=null, prefillNc=null){
       </div>
       <div class="fgroup">
         <label class="fl req"><b style="color:#e11d48">개시일 *</b></label>
-        <input class="fc" type="date" id="carOpen" value="${H.e(v('open',today))}">
+        <input class="fc" type="date" id="carOpen" value="${H.e(v('date',today))}">
       </div>
       <div class="fgroup" style="grid-column:1/-1">
         <label class="fl req"><b style="color:#e11d48">제목 *</b></label>
@@ -8029,7 +8029,7 @@ _carForm(row=null, prefillNc=null){
       </div>
       <div class="fgroup">
         <label class="fl req"><b style="color:#e11d48">완료 기한 *</b></label>
-        <input class="fc" type="date" id="carDue" value="${H.e(v('due',H.addDays(today,14)))}">
+        <input class="fc" type="date" id="carDue" value="${H.e(v('close_date',H.addDays(today,14)))}">
       </div>
       <div class="fgroup">
         <label class="fl">상태</label>
@@ -8115,11 +8115,11 @@ async _carSave(editId){
   }
 
   const row={
-    no:g('carNo'), src, title,
+    no:g('carNo'), source:src, title,
     nc_id:document.getElementById('carNcId')?.value||null,
     nc_no:g('carNcNo')||null,
     item_code:itemCode||null, item:g('carItem')||null,
-    open, due:due||null, assignee, status:g('carStatus')||'접수',
+    date:open||null, close_date:due||null, assignee, status:g('carStatus')||'접수',
     d2_desc:g('carD2')||null, d3_action:g('carD3')||null,
     d4_why1:g('carWhy1')||null, d4_why2:g('carWhy2')||null,
     d4_why3:g('carWhy3')||null, d4_why4:g('carWhy4')||null,

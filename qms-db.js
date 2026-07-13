@@ -840,37 +840,51 @@ const SB={
   },
   async addCar(row){
     if(!_sb){const id=Math.max(0,...(DB.cars||[]).map(c=>c.id))+1;if(!DB.cars)DB.cars=[];DB.cars.push({id,...row});return{ok:true,id};}
-    /* [v2.196] 컬럼 오류 자동 감지 + 제외 후 재시도
-       오류 메시지에서 없는 컬럼명을 파싱 → 해당 컬럼 제거 후 재시도 (최대 20회) */
-    let payload={
-      no:row.no||'', src:row.src||'부적합', title:row.title||'',
-      nc_id:row.nc_id||null, nc_no:row.nc_no||null,
-      item_code:row.item_code||null, item:row.item||null,
-      open:row.open||null, due:row.due||null,
-      assignee:row.assignee||'', dept:row.dept||'',
-      status:row.status||'접수',
-      note:row.note||null, file_url:row.file_url||null,
-      d1_team:row.d1_team||null,
-      d2_desc:row.d2_desc||null, d3_action:row.d3_action||null,
-      d4_cause:row.d4_cause||null,
-      d4_why1:row.d4_why1||null, d4_why2:row.d4_why2||null,
-      d4_why3:row.d4_why3||null, d4_why4:row.d4_why4||null,
-      d4_why5:row.d4_why5||null,
-      d5_action:row.d5_action||null, d5_date:row.d5_date||null,
-      d6_verify:row.d6_verify||null, d6_result:row.d6_result||null,
-      d6_date:row.d6_date||null,
-      d7_prevent:row.d7_prevent||null,
-      created_by:row.created_by||'',
+    /* [v2.197] 실제 corrective_actions 컬럼명 확정
+       콘솔 로그 분석 결과:
+         없는 컬럼: due, file_url, open, src
+         NOT NULL: date (=개시일)
+       매핑: open→date, due→close_date, src→source, file_url→별도처리 */
+    const payload={
+      no:          row.no||'',
+      title:       row.title||'',
+      date:        row.open||row.date||null,        /* 개시일 — NOT NULL */
+      close_date:  row.due||row.close_date||null,   /* 완료기한 */
+      source:      row.src||row.source||'부적합',   /* 발생원 */
+      nc_id:       row.nc_id||null,
+      nc_no:       row.nc_no||null,
+      item_code:   row.item_code||null,
+      item:        row.item||null,
+      assignee:    row.assignee||'',
+      dept:        row.dept||null,
+      status:      row.status||'접수',
+      note:        row.note||null,
+      /* D1~D7 (SQL ALTER TABLE 후 활성화) */
+      d1_team:     row.d1_team||null,
+      d2_desc:     row.d2_desc||null,
+      d3_action:   row.d3_action||null,
+      d4_cause:    row.d4_cause||null,
+      d4_why1:     row.d4_why1||null,
+      d4_why2:     row.d4_why2||null,
+      d4_why3:     row.d4_why3||null,
+      d4_why4:     row.d4_why4||null,
+      d4_why5:     row.d4_why5||null,
+      d5_action:   row.d5_action||null,
+      d5_date:     row.d5_date||null,
+      d6_verify:   row.d6_verify||null,
+      d6_result:   row.d6_result||null,
+      d6_date:     row.d6_date||null,
+      d7_prevent:  row.d7_prevent||null,
+      created_by:  row.created_by||'',
     };
+    /* 없는 컬럼 자동 제거 후 재시도 (최대 20회) */
     for(let attempt=0; attempt<20; attempt++){
       const {error}=await _sb.from('corrective_actions').insert(payload);
       if(!error){
         if(!DB.cars)DB.cars=[];
-        DB.cars.push({id:Date.now(),...row});
-        if(attempt>0) Toast.show('저장됐습니다. (일부 컬럼 제외됨 — SQL 추가 필요)','warn');
+        DB.cars.push({id:Date.now(),...row, date:payload.date, close_date:payload.close_date, source:payload.source});
         return{ok:true};
       }
-      /* 없는 컬럼명 파싱 → 제거 후 재시도 */
       const colMatch=error.message?.match(/Could not find the '(\w+)' column/);
       if(colMatch&&colMatch[1]&&payload.hasOwnProperty(colMatch[1])){
         console.warn('[SB] 컬럼 없음, 제외:', colMatch[1]);
@@ -880,13 +894,18 @@ const SB={
       Toast.show('CAR 저장 실패: '+error.message,'err');
       return{ok:false};
     }
-    Toast.show('CAR 저장 실패: 테이블 컬럼이 맞지 않습니다.','err');
+    Toast.show('CAR 저장 실패: 컬럼 불일치','err');
     return{ok:false};
   },
   async updateCar(id,patch){
     if(!_sb){const c=(DB.cars||[]).find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    /* [v2.196] 없는 컬럼 자동 제거 후 재시도 */
+    /* [v2.197] 컬럼명 매핑 — open→date, due→close_date, src→source */
     let payload={...patch};
+    if(payload.open!==undefined){payload.date=payload.open;delete payload.open;}
+    if(payload.due!==undefined){payload.close_date=payload.due;delete payload.due;}
+    if(payload.src!==undefined){payload.source=payload.src;delete payload.src;}
+    if(payload.file_url!==undefined) delete payload.file_url;  /* 미지원 컬럼 제거 */
+    /* 없는 컬럼 자동 제거 후 재시도 */
     for(let attempt=0; attempt<20; attempt++){
       const {error}=await _sb.from('corrective_actions').update(payload).eq('id',id);
       if(!error){
@@ -903,7 +922,7 @@ const SB={
       Toast.show('수정 실패: '+error.message,'err');
       return{ok:false};
     }
-    Toast.show('수정 실패: 테이블 컬럼이 맞지 않습니다.','err');
+    Toast.show('수정 실패: 컬럼 불일치','err');
     return{ok:false};
   },
 
