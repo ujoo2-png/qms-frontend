@@ -11382,7 +11382,7 @@ async _aiSpcAnalyze(itemId){
     allGroups:groups.slice(0,30).map((g,i)=>({
       date:g.date,
       mean:+means[i].toFixed(4),
-      range:+ranges[i].toFixed(4),
+      range:+(vals2&&vals2[i]!=null?vals2[i]:0).toFixed(4),
       values:g.vals.map(v=>+v.toFixed(4)),
       outOfControl:means[i]>UCLx||means[i]<LCLx
     })),
@@ -17729,9 +17729,9 @@ async _spcChartRender(itemId){
         <td>${g.date}</td>
         <td style="font-family:monospace;font-size:12px">${g.vals.join(' / ')}</td>
         <td style="text-align:center;font-weight:700;color:${xPass(means[i])?'#16a34a':'#dc2626'}">${means[i].toFixed(4)}</td>
-        <td style="text-align:center">${ranges[i].toFixed(4)}</td>
+        <td style="text-align:ce(vals2[i]??0).toFixed(4)}</td>
         <td style="text-align:center"><span class="badge ${xPass(means[i])?'bgrn':'bred'}" style="font-size:10px">${xPass(means[i])?'정상':'이탈'}</span></td>
-        <td style="text-align:center"><span class="badge ${rPass(ranges[i])?'bgrn':'bred'}" style="font-size:10px">${rPass(ranges[i])?'정상':'이탈'}</span></td>
+        <td style="text-align:center"><span class="badge ${rPass(vals2[i]??0)?'bgrn':'bred'}" style="font-size:10px">${rPass(vals2[i]??0)?'정상':'이탈'}</span></td>
         <td style="color:var(--muted);font-size:12px">${H.e(g.memo)}</td>
         <td style="text-align:center"><button class="btn bxs berr" style="font-size:11px"
           onclick="Pages._spcSubgroupDel(${g.id},${itemId})">✕</button></td>
@@ -18399,75 +18399,106 @@ async _spcItemDel(id){
    5. 측정 데이터 입력 폼
    ══════════════════════════════════════════════════ */
 _spcDataForm(itemId){
-  /* [v2.206] 측정 데이터 입력 폼
-     ─────────────────────────────────────────
-     n=1       : I-MR 개별값 — 측정값 1개 입력
-     n=2~10    : X-bar/R — 시료 n개 값 입력
-     n=11~25   : X-bar/S — 시료 n개 값 입력 (표준편차 관리도)
-     repeat>1  : 반복 측정 — 동일 시료를 repeat회 측정, 평균 1개를 관리도에 사용
-     ─────────────────────────────────────────  */
+  /* [v2.207] 측정 데이터 입력 — 표 형태 UI
+     ┌──────┬──────┬──────┬──────┐
+     │      │시료1 │시료2 │시료3 │ ← n개 시료 (subgroup_size)
+     ├──────┼──────┼──────┼──────┤
+     │측정1회│입력  │입력  │입력  │ ← repeat 행
+     │측정2회│입력  │입력  │입력  │
+     ├──────┼──────┼──────┼──────┤
+     │평균값 │자동  │자동  │자동  │ ← repeat>1일 때만 표시
+     └──────┴──────┴──────┴──────┘
+     n=1(I-MR): 1칸 단순 입력
+  */
   const item=(window._spcItems||[]).find(it=>it.id===Number(itemId));
   if(!item){Toast.show('관리 항목을 먼저 선택하세요.','warn');return;}
   const n=item.subgroup_size||5;
   const repeat=item.repeat_count||1;
-  const C=Pages._spcConst[n]||Pages._spcConst[5];
-  const chartType=n===1?'I-MR':n<=10?'X-bar/R':'X-bar/S';
+  const chartType=n===1?'I-MR (개별값)':n<=10?'X-bar/R 관리도':'X-bar/S 관리도';
 
-  /* 입력 필드 생성 */
-  let inputs='';
-  if(repeat>1){
-    /* 반복 측정 모드 — 각 시료마다 repeat 번 측정 */
-    for(let s=0;s<n;s++){
-      inputs+=`<div style="grid-column:1/-1;font-size:12px;font-weight:700;color:var(--muted);
-        padding:6px 0;border-bottom:1px solid var(--brd);margin-top:8px">
-        시료 ${s+1} (${repeat}회 반복 측정 → 자동 평균)
-      </div>`;
-      for(let r=0;r<repeat;r++){
-        inputs+=`<div class="fgroup">
-          <label class="fl">측정 ${r+1}회</label>
+  /* 표 헤더 (시료 컬럼) */
+  const thCols=(n===1)
+    ? `<th style="${thS}">측정값</th>`
+    : Array.from({length:n},(_,s)=>`<th style="${thS}">시료 ${s+1}</th>`).join('');
+
+  /* 표 본문 (측정 회수 행) */
+  let tbodyRows='';
+  if(n===1){
+    /* I-MR: 단일 입력 */
+    tbodyRows=`<tr>
+      <td style="${tdLab}"><b style="color:#e11d48">측정값 *</b></td>
+      <td style="${tdInp}"><input class="fc" type="number" step="any" id="spcV0_0"
+        placeholder="${item.target??''}"
+        style="width:100%;text-align:center;font-family:monospace;font-size:13px"></td>
+    </tr>`;
+  } else {
+    for(let r=0;r<repeat;r++){
+      const isLast=r===repeat-1;
+      tbodyRows+=`<tr ${isLast&&repeat>1?`style="border-bottom:2px solid var(--brd)"`:''}>
+        <td style="${tdLab}">측정 ${r+1}회${r===0?` <span style="color:#e11d48;font-size:10px">*</span>`:''}
+        </td>
+        ${Array.from({length:n},(_,s)=>`<td style="padding:3px 4px">
           <input class="fc" type="number" step="any" id="spcV${s}_${r}"
             placeholder="${item.target??''}"
-            oninput="Pages._spcDataRepeatAvg(${s},${repeat})">
-        </div>`;
-      }
-      inputs+=`<div class="fgroup">
-        <label class="fl" style="color:#059669;font-weight:700">평균값</label>
-        <input class="fc" type="number" step="any" id="spcVavg${s}"
-          placeholder="자동 계산" style="background:var(--bg2);color:#059669;font-weight:700" readonly>
-      </div>`;
+            style="width:100%;min-width:52px;text-align:center;font-family:monospace;font-size:12px;padding:4px 6px"
+            ${repeat>1?`oninput="Pages._spcDataRepeatAvg(${s},${repeat})"`:''}>
+        </td>`).join('')}
+      </tr>`;
     }
-  } else {
-    /* 일반 모드 */
-    inputs=Array.from({length:n},(_,i)=>`
-      <div class="fgroup">
-        <label class="fl req"><b style="color:#e11d48">${n===1?'측정값':'측정 '+(i+1)} *</b></label>
-        <input class="fc" type="number" step="any" id="spcV${i}"
-          placeholder="${item.target??''}">
-      </div>`).join('');
+    /* 평균행 (반복측정 시) */
+    if(repeat>1){
+      tbodyRows+=`<tr style="background:rgba(5,150,105,0.06)">
+        <td style="${tdLab};color:#059669;font-weight:700">평균값</td>
+        ${Array.from({length:n},(_,s)=>`<td style="padding:3px 4px">
+          <input class="fc" type="number" step="any" id="spcVavg${s}"
+            style="width:100%;min-width:52px;text-align:center;font-family:monospace;
+            font-size:12px;font-weight:700;color:#059669;
+            background:rgba(5,150,105,0.08);padding:4px 6px" readonly
+            placeholder="자동">
+        </td>`).join('')}
+      </tr>`;
+    }
   }
+
+  const thS='padding:6px 8px;background:var(--bg2);font-size:11px;font-weight:700;text-align:center;border:1px solid var(--brd);white-space:nowrap';
+  const tdLab='padding:4px 8px;background:var(--bg2);font-size:11px;font-weight:600;border:1px solid var(--brd);white-space:nowrap;min-width:60px';
+  const tdInp='padding:3px 4px;border:1px solid var(--brd)';
 
   Modal.open({
     title:`+ 측정 데이터 입력 — ${H.e(item.process)} / ${H.e(item.char_name||item.item_name)}`,
-    size:'mmd',
+    size:'mlg',
     foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
           <button class="btn bpri btn-f8" onclick="Pages._spcDataSave(${itemId},${n},${repeat})">💾 저장 <span class="kbd">F8</span></button>`,
-    body:`<div class="fg2" style="padding:4px 0">
-      <div class="fgroup ff">
-        <label class="fl req"><b style="color:#e11d48">측정일 *</b></label>
-        <input class="fc" type="date" id="spcDate" value="${H.today()}">
+    body:`<div style="padding:4px 0">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:12px;font-weight:600;color:var(--muted)"><b style="color:#e11d48">측정일 *</b></label>
+          <input class="fc" type="date" id="spcDate" value="${H.today()}" style="width:150px">
+        </div>
+        <div style="font-size:11px;color:var(--muted);padding:6px 10px;background:var(--bg2);border-radius:6px;line-height:1.6">
+          <b>${chartType}</b> &nbsp;|&nbsp;
+          시료 n=<b>${n}</b> &nbsp;|&nbsp;
+          ${repeat>1?`반복 <b>${repeat}</b>회 → 평균 사용 &nbsp;|&nbsp;`:''}
+          LSL:<b>${item.spec_lower??'-'}</b> ~ USL:<b>${item.spec_upper??'-'}</b> <b>${item.unit||''}</b>
+        </div>
       </div>
-      ${inputs}
-      <div class="fgroup ff">
-        <label class="fl">메모</label>
-        <input class="fc" id="spcMemo" placeholder="특이사항, 작업조건 등">
+      <!-- 표 형태 입력 -->
+      <div style="overflow-x:auto;border:1px solid var(--brd);border-radius:8px">
+        <table style="border-collapse:collapse;width:100%;min-width:${60+n*80}px">
+          <thead>
+            <tr>
+              <th style="${thS};min-width:60px">구 분</th>
+              ${thCols}
+            </tr>
+          </thead>
+          <tbody>
+            ${tbodyRows}
+          </tbody>
+        </table>
       </div>
-      <div style="grid-column:1/-1;font-size:11px;color:var(--muted);padding:10px 12px;
-        background:var(--bg2);border-radius:8px;line-height:1.7">
-        <div style="font-weight:700;margin-bottom:4px;color:var(--text)">📊 관리도 정보</div>
-        <div>• 관리도 유형: <b>${chartType}</b>${repeat>1?` | 반복 측정: ${repeat}회 평균`:''}</div>
-        <div>• 규격: LSL <b>${item.spec_lower??'-'}</b> ~ USL <b>${item.spec_upper??'-'}</b> ${item.unit||''}</div>
-        ${item.target!=null?`<div>• 목표값: <b>${item.target} ${item.unit||''}</b></div>`:''}
-        <div>• 서브그룹 크기: <b>n=${n}</b> ${n===1?'(개별값)':n<=10?'(X-bar/R)':'(X-bar/S)'}</div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:12px;font-weight:600;color:var(--muted)">메모</label>
+        <input class="fc" id="spcMemo" placeholder="특이사항, 작업조건, 작업자 등" style="flex:1;min-width:200px">
       </div>
     </div>`,
   });

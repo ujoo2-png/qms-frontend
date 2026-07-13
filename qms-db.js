@@ -1002,8 +1002,12 @@ const SB={
   },
   async deleteSpcItem(id){
     if(!_sb){DB.spcItems=(DB.spcItems||[]).filter(r=>r.id!==id);return{ok:true};}
-    const {error}=await _sb.from('spc_items').delete().eq('id',id);
-    if(error){Toast.show('SPC 항목 삭제 실패: '+error.message,'err');return{ok:false};}
+    /* [v2.207] FK 제약 해결 — spc_subgroups 먼저 삭제 후 spc_items 삭제
+       spc_subgroups_spc_item_id_fkey: spc_items 삭제 전 하위 데이터 제거 필수 */
+    const {error:e1}=await _sb.from('spc_subgroups').delete().eq('spc_item_id',id);
+    if(e1){Toast.show('측정 데이터 삭제 실패: '+e1.message,'err');return{ok:false};}
+    const {error:e2}=await _sb.from('spc_items').delete().eq('id',id);
+    if(e2){Toast.show('SPC 항목 삭제 실패: '+e2.message,'err');return{ok:false};}
     return{ok:true};
   },
   async getSpcSubgroups(itemId){
