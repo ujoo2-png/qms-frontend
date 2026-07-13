@@ -840,38 +840,69 @@ const SB={
   },
   async addCar(row){
     if(!_sb){const id=Math.max(0,...(DB.cars||[]).map(c=>c.id))+1;if(!DB.cars)DB.cars=[];DB.cars.push({id,...row});return{ok:true,id};}
-    const allowed={
+    /* [v2.194] allowed — corrective_actions 실제 컬럼만 포함
+       D1~D7 컬럼은 Supabase SQL로 추가 필요 — 없으면 기본 컬럼만으로 재시도 */
+    const base={
       no:row.no||'', src:row.src||'부적합', title:row.title||'',
       nc_id:row.nc_id||null, nc_no:row.nc_no||null,
       item_code:row.item_code||null, item:row.item||null,
       open:row.open||null, due:row.due||null,
       assignee:row.assignee||'', dept:row.dept||'',
       status:row.status||'접수',
-      /* 5단계 워크플로 필드 */
-      d1_team:row.d1_team||null,          /* ①대책접수: 팀 구성 */
-      d2_desc:row.d2_desc||null,          /* ①문제 기술 */
-      d3_action:row.d3_action||null,      /* ②임시 대책 */
-      d4_cause:row.d4_cause||null,        /* ③근본 원인 */
+      note:row.note||null, file_url:row.file_url||null,
+    };
+    const d_fields={
+      d1_team:row.d1_team||null,
+      d2_desc:row.d2_desc||null,
+      d3_action:row.d3_action||null,
+      d4_cause:row.d4_cause||null,
       d4_why1:row.d4_why1||null, d4_why2:row.d4_why2||null,
       d4_why3:row.d4_why3||null, d4_why4:row.d4_why4||null,
       d4_why5:row.d4_why5||null,
-      d5_action:row.d5_action||null,      /* ④대책 실시 */
-      d5_date:row.d5_date||null,
-      d6_verify:row.d6_verify||null,      /* ⑤유효성 평가 */
-      d6_result:row.d6_result||null, d6_date:row.d6_date||null,
-      d7_prevent:row.d7_prevent||null,    /* ⑤재발 방지 */
-      note:row.note||null, file_url:row.file_url||null,
+      d5_action:row.d5_action||null, d5_date:row.d5_date||null,
+      d6_verify:row.d6_verify||null, d6_result:row.d6_result||null,
+      d6_date:row.d6_date||null,
+      d7_prevent:row.d7_prevent||null,
       created_by:row.created_by||'',
     };
-    const {error}=await _sb.from('corrective_actions').insert(allowed);
-    if(error){Toast.show('CAR 저장 실패: '+error.message,'err');return{ok:false};}
-    if(!DB.cars)DB.cars=[];DB.cars.push({id:Date.now(),...allowed});return{ok:true};
+    /* 전체 컬럼으로 먼저 시도 */
+    const {data:ins1,error:e1}=await _sb.from('corrective_actions').insert({...base,...d_fields}).select('id').single();
+    if(!e1){
+      const newId=ins1?.id||Date.now();
+      if(!DB.cars)DB.cars=[];
+      DB.cars.push({id:newId,...base,...d_fields});
+      return{ok:true,id:newId};
+    }
+    /* D1~D7 컬럼 없음(schema cache 오류) → 기본 컬럼만 재시도 */
+    if(e1.message&&(e1.message.includes('column')||e1.message.includes('schema'))){
+      console.warn('[SB] D1~D7 컬럼 미존재, 기본 컬럼만 저장:', e1.message);
+      const {data:ins2,error:e2}=await _sb.from('corrective_actions').insert(base).select('id').single();
+      if(e2){Toast.show('CAR 저장 실패: '+e2.message,'err');return{ok:false};}
+      const newId=ins2?.id||Date.now();
+      if(!DB.cars)DB.cars=[];
+      DB.cars.push({id:newId,...base,...d_fields});
+      Toast.show('저장됐습니다 (D1~D7 컬럼 추가 SQL 실행 필요)','warn');
+      return{ok:true,id:newId};
+    }
+    Toast.show('CAR 저장 실패: '+e1.message,'err');
+    return{ok:false};
   },
   async updateCar(id,patch){
-    if(!_sb){const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    const {error}=await _sb.from('corrective_actions').update(patch).eq('id',id);
-    if(error){Toast.show('수정 실패: '+error.message,'err');return{ok:false};}
-    const c=DB.cars.find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};
+    if(!_sb){const c=(DB.cars||[]).find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
+    /* [v2.194] patch에 없는 컬럼 있으면 제거 후 재시도 */
+    const {error:e1}=await _sb.from('corrective_actions').update(patch).eq('id',id);
+    if(!e1){const c=(DB.cars||[]).find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
+    if(e1.message&&(e1.message.includes('column')||e1.message.includes('schema'))){
+      /* 기본 컬럼만 필터링해서 재시도 */
+      const baseKeys=['no','src','title','nc_id','nc_no','item_code','item',
+        'open','due','assignee','dept','status','note','file_url'];
+      const safePatch=Object.fromEntries(Object.entries(patch).filter(([k])=>baseKeys.includes(k)));
+      const {error:e2}=await _sb.from('corrective_actions').update(safePatch).eq('id',id);
+      if(e2){Toast.show('수정 실패: '+e2.message,'err');return{ok:false};}
+      const c=(DB.cars||[]).find(c=>c.id===id);if(c)Object.assign(c,patch);
+      return{ok:true};
+    }
+    Toast.show('수정 실패: '+e1.message,'err');return{ok:false};
   },
 
   /* [v2.192] CAR 이력 저장 */
