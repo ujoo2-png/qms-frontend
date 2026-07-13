@@ -840,9 +840,9 @@ const SB={
   },
   async addCar(row){
     if(!_sb){const id=Math.max(0,...(DB.cars||[]).map(c=>c.id))+1;if(!DB.cars)DB.cars=[];DB.cars.push({id,...row});return{ok:true,id};}
-    /* [v2.195] select('id') 제거 — RLS가 INSERT 후 SELECT를 막아 'due column' 오류 발생
-       insert()만 사용 (기존 방식 복원) + D1~D7 모두 포함 */
-    const allowed={
+    /* [v2.196] 컬럼 오류 자동 감지 + 제외 후 재시도
+       오류 메시지에서 없는 컬럼명을 파싱 → 해당 컬럼 제거 후 재시도 (최대 20회) */
+    let payload={
       no:row.no||'', src:row.src||'부적합', title:row.title||'',
       nc_id:row.nc_id||null, nc_no:row.nc_no||null,
       item_code:row.item_code||null, item:row.item||null,
@@ -850,10 +850,8 @@ const SB={
       assignee:row.assignee||'', dept:row.dept||'',
       status:row.status||'접수',
       note:row.note||null, file_url:row.file_url||null,
-      /* D1~D7 (SQL로 컬럼 추가 후 활성화) */
       d1_team:row.d1_team||null,
-      d2_desc:row.d2_desc||null,
-      d3_action:row.d3_action||null,
+      d2_desc:row.d2_desc||null, d3_action:row.d3_action||null,
       d4_cause:row.d4_cause||null,
       d4_why1:row.d4_why1||null, d4_why2:row.d4_why2||null,
       d4_why3:row.d4_why3||null, d4_why4:row.d4_why4||null,
@@ -864,48 +862,49 @@ const SB={
       d7_prevent:row.d7_prevent||null,
       created_by:row.created_by||'',
     };
-    /* null인 D 필드는 제외 — 없는 컬럼이면 오류 방지 */
-    const dKeys=['d1_team','d2_desc','d3_action','d4_cause',
-      'd4_why1','d4_why2','d4_why3','d4_why4','d4_why5',
-      'd5_action','d5_date','d6_verify','d6_result','d6_date',
-      'd7_prevent','created_by'];
-    /* 전체 컬럼으로 먼저 시도 */
-    const {error:e1}=await _sb.from('corrective_actions').insert(allowed);
-    if(!e1){
-      if(!DB.cars)DB.cars=[];
-      DB.cars.push({id:Date.now(),...allowed});
-      return{ok:true};
+    for(let attempt=0; attempt<20; attempt++){
+      const {error}=await _sb.from('corrective_actions').insert(payload);
+      if(!error){
+        if(!DB.cars)DB.cars=[];
+        DB.cars.push({id:Date.now(),...row});
+        if(attempt>0) Toast.show('저장됐습니다. (일부 컬럼 제외됨 — SQL 추가 필요)','warn');
+        return{ok:true};
+      }
+      /* 없는 컬럼명 파싱 → 제거 후 재시도 */
+      const colMatch=error.message?.match(/Could not find the '(\w+)' column/);
+      if(colMatch&&colMatch[1]&&payload.hasOwnProperty(colMatch[1])){
+        console.warn('[SB] 컬럼 없음, 제외:', colMatch[1]);
+        delete payload[colMatch[1]];
+        continue;
+      }
+      Toast.show('CAR 저장 실패: '+error.message,'err');
+      return{ok:false};
     }
-    /* 컬럼 없음 오류 → D 필드 제거 후 재시도 */
-    if(e1.message&&(e1.message.includes('column')||e1.message.includes('schema'))){
-      console.warn('[SB] 일부 컬럼 미존재, 기본 컬럼만 저장:', e1.message);
-      const safe=Object.fromEntries(Object.entries(allowed).filter(([k])=>!dKeys.includes(k)));
-      const {error:e2}=await _sb.from('corrective_actions').insert(safe);
-      if(e2){Toast.show('CAR 저장 실패: '+e2.message,'err');return{ok:false};}
-      if(!DB.cars)DB.cars=[];
-      DB.cars.push({id:Date.now(),...allowed});
-      Toast.show('저장됐습니다. (D1~D7 SQL 실행 필요)','warn');
-      return{ok:true};
-    }
-    Toast.show('CAR 저장 실패: '+e1.message,'err');
+    Toast.show('CAR 저장 실패: 테이블 컬럼이 맞지 않습니다.','err');
     return{ok:false};
   },
   async updateCar(id,patch){
     if(!_sb){const c=(DB.cars||[]).find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    /* [v2.194] patch에 없는 컬럼 있으면 제거 후 재시도 */
-    const {error:e1}=await _sb.from('corrective_actions').update(patch).eq('id',id);
-    if(!e1){const c=(DB.cars||[]).find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
-    if(e1.message&&(e1.message.includes('column')||e1.message.includes('schema'))){
-      /* 기본 컬럼만 필터링해서 재시도 */
-      const baseKeys=['no','src','title','nc_id','nc_no','item_code','item',
-        'open','due','assignee','dept','status','note','file_url'];
-      const safePatch=Object.fromEntries(Object.entries(patch).filter(([k])=>baseKeys.includes(k)));
-      const {error:e2}=await _sb.from('corrective_actions').update(safePatch).eq('id',id);
-      if(e2){Toast.show('수정 실패: '+e2.message,'err');return{ok:false};}
-      const c=(DB.cars||[]).find(c=>c.id===id);if(c)Object.assign(c,patch);
-      return{ok:true};
+    /* [v2.196] 없는 컬럼 자동 제거 후 재시도 */
+    let payload={...patch};
+    for(let attempt=0; attempt<20; attempt++){
+      const {error}=await _sb.from('corrective_actions').update(payload).eq('id',id);
+      if(!error){
+        const c=(DB.cars||[]).find(c=>c.id===id);
+        if(c)Object.assign(c,patch);
+        return{ok:true};
+      }
+      const colMatch=error.message?.match(/Could not find the '(\w+)' column/);
+      if(colMatch&&colMatch[1]&&payload.hasOwnProperty(colMatch[1])){
+        console.warn('[SB] updateCar 컬럼 없음, 제외:', colMatch[1]);
+        delete payload[colMatch[1]];
+        continue;
+      }
+      Toast.show('수정 실패: '+error.message,'err');
+      return{ok:false};
     }
-    Toast.show('수정 실패: '+e1.message,'err');return{ok:false};
+    Toast.show('수정 실패: 테이블 컬럼이 맞지 않습니다.','err');
+    return{ok:false};
   },
 
   /* [v2.192] CAR 이력 저장 */
