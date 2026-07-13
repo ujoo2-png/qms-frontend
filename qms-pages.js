@@ -17292,6 +17292,8 @@ async spc_items(){
       cols:[
         {key:'item_code', label:'품목코드', w:'90px',
           render:v=>v?`<span style="font-family:monospace;font-size:12px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+        {key:'char_title',label:'측정 제목',  w:'120px',  /* [v2.208] 측정 제목 */
+          render:v=>v?`<span style="font-weight:700;color:var(--pri)">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
         {key:'item_name', label:'품목명', w:'*',
           render:v=>`<span style="font-weight:600">${H.e(v)}</span>`},
         {key:'process',   label:'공정',   w:'90px'},
@@ -17507,12 +17509,13 @@ _spcConst:{
 _spcItemOpts(items, selId){
   if(!items||!items.length) return '<option value="">등록된 항목 없음</option>';
   return items.map(it=>{
-    /* [v2.159] 품목코드 · 품목명 — 관리특성 (단위) 포맷으로 표시 */
+    /* [v2.208] 측정 제목 포함 — char_title · 품목코드 · 품목명 — 관리특성 (단위) */
+    const title=it.char_title?`[${it.char_title}] `:'';
     const code=it.item_code?it.item_code+' · ':'';
     const name=it.item_name||'';
     const char=it.char_name||'';
     const unit=it.unit?` (${it.unit})`:'';
-    const label=`${code}${name}${name&&char?' — ':''}${char}${unit}`;
+    const label=`${title}${code}${name}${name&&char?' — ':''}${char}${unit}`;
     return `<option value="${it.id}" ${it.id==selId?'selected':''}>${H.e(label)}</option>`;
   }).join('');
 },
@@ -18215,6 +18218,11 @@ _spcItemForm(row=null){
         <input class="fc" id="spiName" value="${g('item_name')}" placeholder="코드 선택 시 자동입력 또는 직접 입력">
       </div>
       <div class="fgroup">
+        <label class="fl req"><b style="color:#e11d48">측정 제목 *</b></label>
+        <input class="fc" id="spiTitle" value="${g('char_title')}" placeholder="예) 두께 치수 측정, 인장강도 측정">
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">관리도 구별을 위한 제목 — 목록 및 차트 상단에 표시됩니다.</div>
+      </div>
+      <div class="fgroup">
         <label class="fl req"><b style="color:#e11d48">공정 *</b></label>
         <input class="fc" id="spiProcess" value="${g('process')}" placeholder="예) 가공공정">
       </div>
@@ -18329,12 +18337,13 @@ async _spcItemSave(editId){
   if(parseFloat(usl)<=parseFloat(lsl)){Toast.show('USL은 LSL보다 커야 합니다.','warn');return;}
   const row={
     item_code:g('spiCode')||null, item_name:name||g('spiCode')||'', process,
+    char_title:g('spiTitle')||null,  /* [v2.208] 측정 제목 */
     char_name:charN, spec_upper:parseFloat(usl), spec_lower:parseFloat(lsl),
     target:g('spiTarget')?parseFloat(g('spiTarget')):null,
     subgroup_size:parseInt(document.getElementById('spiN')?.value||5),
     repeat_count:parseInt(document.getElementById('spiRepeat')?.value||1), /* [v2.206] 반복 측정 횟수 */
     unit:g('spiUnit'), note:g('spiNote'),
-    /* [v2.161] 신규 등록 시 현재 로그인 사용자 자동 세팅 */
+    /* [v2.208] created_by — SQL로 컬럼 추가 후 저장 */
     created_by:editId&&editId!='null'?undefined:(Auth._u?.name||Auth._u?.username||null),
   };
   let res;
@@ -18399,22 +18408,16 @@ async _spcItemDel(id){
    5. 측정 데이터 입력 폼
    ══════════════════════════════════════════════════ */
 _spcDataForm(itemId){
-  /* [v2.207] 측정 데이터 입력 — 표 형태 UI
-     ┌──────┬──────┬──────┬──────┐
-     │      │시료1 │시료2 │시료3 │ ← n개 시료 (subgroup_size)
-     ├──────┼──────┼──────┼──────┤
-     │측정1회│입력  │입력  │입력  │ ← repeat 행
-     │측정2회│입력  │입력  │입력  │
-     ├──────┼──────┼──────┼──────┤
-     │평균값 │자동  │자동  │자동  │ ← repeat>1일 때만 표시
-     └──────┴──────┴──────┴──────┘
-     n=1(I-MR): 1칸 단순 입력
-  */
   const item=(window._spcItems||[]).find(it=>it.id===Number(itemId));
   if(!item){Toast.show('관리 항목을 먼저 선택하세요.','warn');return;}
   const n=item.subgroup_size||5;
   const repeat=item.repeat_count||1;
   const chartType=n===1?'I-MR (개별값)':n<=10?'X-bar/R 관리도':'X-bar/S 관리도';
+
+  /* [v2.208] 스타일 상수 — 사용 전에 선언 (thS를 thCols보다 먼저) */
+  const thS='padding:6px 8px;background:var(--bg2);font-size:11px;font-weight:700;text-align:center;border:1px solid var(--brd);white-space:nowrap';
+  const tdLab='padding:4px 8px;background:var(--bg2);font-size:11px;font-weight:600;border:1px solid var(--brd);white-space:nowrap;min-width:60px';
+  const tdInp='padding:3px 4px;border:1px solid var(--brd)';
 
   /* 표 헤더 (시료 컬럼) */
   const thCols=(n===1)
@@ -18459,10 +18462,6 @@ _spcDataForm(itemId){
       </tr>`;
     }
   }
-
-  const thS='padding:6px 8px;background:var(--bg2);font-size:11px;font-weight:700;text-align:center;border:1px solid var(--brd);white-space:nowrap';
-  const tdLab='padding:4px 8px;background:var(--bg2);font-size:11px;font-weight:600;border:1px solid var(--brd);white-space:nowrap;min-width:60px';
-  const tdInp='padding:3px 4px;border:1px solid var(--brd)';
 
   Modal.open({
     title:`+ 측정 데이터 입력 — ${H.e(item.process)} / ${H.e(item.char_name||item.item_name)}`,

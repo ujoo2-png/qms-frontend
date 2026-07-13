@@ -981,12 +981,13 @@ const SB={
     const allowed={
       item_code:row.item_code||null, item_name:row.item_name||'',
       process:row.process||'', char_name:row.char_name||'',
+      char_title:row.char_title||null,           /* [v2.208] 측정 제목 */
       spec_upper:row.spec_upper!=null?Number(row.spec_upper):null,
       spec_lower:row.spec_lower!=null?Number(row.spec_lower):null,
       target:row.target!=null?Number(row.target):null,
       subgroup_size:row.subgroup_size||5, unit:row.unit||'', note:row.note||'',
-      repeat_count:row.repeat_count||1,   /* [v2.206] 반복 측정 횟수 */
-      /* [v2.193] created_by 컬럼 제거 — spc_items 테이블에 없는 컬럼 */
+      repeat_count:row.repeat_count||1,
+      created_by:row.created_by||null,           /* [v2.208] 작성자 */
     };
     const {error}=await _sb.from('spc_items').insert(allowed);
     if(error){Toast.show('SPC 항목 저장 실패: '+error.message,'err');return{ok:false};}
