@@ -7124,28 +7124,32 @@ _carRender(){
           const cls=d<0?'bred':d<=3?'bamb':'bgrn';
           return`<span class="badge ${cls}" style="font-size:10px">${v}</span>`;
         }},
-      /* [v2.198] 메일 발송 컬럼 */
-      {key:'id', label:'메일', w:'56px', align:'center',
+      /* [v2.202] 메일 발송 컬럼 — key:'no' 사용(id 중복 방지) */
+      {key:'no', label:'메일', w:'56px', align:'center',
         render:(v,row)=>{
+          const rowId=Number(row.id);
           const sent=!!(row.mail_sent);
           return sent
             ?`<span style="background:#f97316;color:#fff;font-size:10px;font-weight:700;
                 padding:2px 8px;border-radius:12px">📧 발송</span>`
             :`<button class="btn bxs bout" style="font-size:10px;padding:2px 6px"
-                onclick="event.stopPropagation();window._carMailRow=DB.cars.find(c=>Number(c.id)===${Number(v)});Pages._carInputMail()">📧</button>`;
+                onclick="event.stopPropagation();
+                  window._carMailRow=(DB.cars||[]).find(c=>Number(c.id)===${rowId});
+                  Pages._carInputMail()">📧</button>`;
         }},
-      /* [v2.198] 결정 버튼 컬럼 */
-      {key:'id', label:'결정', w:'140px', align:'center',
+      /* [v2.202] 결정 버튼 컬럼 — row.id 직접 사용(id 중복 방지) */
+      {key:'assignee', label:'결정', w:'140px', align:'center',
         render:(v,row)=>{
+          const rowId=Number(row.id);
           const done=row.status==='완료'||row.status==='종결'||row.status==='반려';
           if(done) return `<span style="font-size:11px;color:var(--muted)">${H.e(row.status)}</span>`;
           return `<div style="display:flex;gap:3px;justify-content:center">
             <button class="btn bxs bgrn" style="font-size:10px;padding:2px 6px"
-              onclick="event.stopPropagation();Pages._carDecide(${Number(v)},'승인')">✅승인</button>
+              onclick="event.stopPropagation();Pages._carDecide(${rowId},'승인')">✅승인</button>
             <button class="btn bxs bred" style="font-size:10px;padding:2px 6px"
-              onclick="event.stopPropagation();Pages._carDecide(${Number(v)},'반려')">🚫반려</button>
+              onclick="event.stopPropagation();Pages._carDecide(${rowId},'반려')">🚫반려</button>
             <button class="btn bxs bgry" style="font-size:10px;padding:2px 6px"
-              onclick="event.stopPropagation();Pages._carDecide(${Number(v)},'종결')">⛔종료</button>
+              onclick="event.stopPropagation();Pages._carDecide(${rowId},'종결')">⛔종료</button>
           </div>`;
         }},
     ],
@@ -7900,25 +7904,64 @@ _carInputCalcCost(){
 
 /* ── [v2.198] NC 번호 자동채우기 ── */
 _carInputNcAutofill(ncNo){
+  /* [v2.202] NC 번호로 부적합 전체 데이터 자동채우기
+     NC에 등록된 모든 필드를 car_input 폼에 연동 */
   if(!ncNo) return;
   const nc=(DB.nc||[]).find(r=>r.no===ncNo.trim());
-  if(!nc){Toast.show('NC 데이터를 찾을 수 없습니다.','warn');return;}
-  /* 각 필드 자동 채우기 */
-  const setVal=(id,val)=>{const el=document.getElementById(id);if(el&&!el.value&&val)el.value=val;};
+  if(!nc){Toast.show('NC 데이터를 찾을 수 없습니다. NC 참조번호를 확인하세요.','warn');return;}
+
+  const setVal=(id,val)=>{
+    const el=document.getElementById(id);
+    if(el&&val){el.value=val;}
+  };
+  const setSelect=(id,val)=>{
+    const el=document.getElementById(id);
+    if(!el||!val) return;
+    const opt=[...el.options].find(o=>o.value===val);
+    if(opt) el.value=val;
+  };
+
+  /* ① 기본정보 */
   setVal('carInputItemCode', nc.item_code||'');
   setVal('carInputItem',     nc.item||nc.item_name||'');
   setVal('carInputCustomer', nc.customer||'');
   setVal('carInputVendor',   nc.vendor||nc.vendor_name||'');
   setVal('carInputWorkOrder',nc.work_order||nc.work_order_no||'');
-  /* 제목 자동 채우기 (비어있을 때만) */
-  setVal('carInputTitle', nc.desc||nc.title||'');
-  /* 발생원 자동 설정 */
+  /* 제목 — NC 내용 기반 */
+  setVal('carInputTitle',    nc.desc||nc.title||'');
+  /* 발생원 */
   const srcEl=document.getElementById('carInputSrc');
-  if(srcEl&&!srcEl.value&&nc.in_out){
-    const srcMap={'외부':'부적합','내부':'내부심사'};
-    const mapped=srcMap[nc.in_out]||'부적합';
-    srcEl.value=mapped;
+  if(srcEl){
+    const srcMap={'외부':'부적합','내부':'내부심사','고객':'고객불만'};
+    srcEl.value=srcMap[nc.in_out]||nc.in_out||'부적합';
   }
+  /* 담당자 */
+  setVal('carInputAssignee', nc.assignee||'');
+  /* 기한 — NC 처리기한 기준 */
+  setVal('carInputDue', nc.due_date||nc.due||'');
+  /* NC ID 저장 */
+  const ncIdEl=document.getElementById('carInputNcId');
+  if(ncIdEl) ncIdEl.value=nc.id||'';
+
+  /* ② 수량/불량 정보 */
+  setVal('carInputShipQty',    nc.ship_qty||'');
+  setVal('carInputInspQty',    nc.insp_qty||nc.qty||'');
+  setVal('carInputBadQty',     nc.qty||nc.bad_qty||'');
+  setVal('carInputDefectType', nc.type||'');
+  setVal('carInputDefectDesc', nc.desc||'');
+  setVal('carInputNcNote',     nc.note||'');
+  /* 처리방법 */
+  setSelect('carInputActionType', nc.action_type||'');
+  /* 불량률 자동계산 */
+  Pages._carInputCalcRate();
+
+  /* ③ D2 문제기술 — NC 발생내용으로 초기값 */
+  const d2El=document.getElementById('carInputD2');
+  if(d2El&&!d2El.value&&nc.desc) d2El.value=nc.desc;
+  /* D3 임시대책 — NC 처리방법으로 초기값 */
+  const d3El=document.getElementById('carInputD3');
+  if(d3El&&!d3El.value&&nc.action) d3El.value=nc.action;
+
   Toast.show(`NC ${ncNo} 정보가 자동으로 채워졌습니다.`,'ok');
 },
 
@@ -8537,7 +8580,7 @@ _carPrint(row){
   '*{box-sizing:border-box;margin:0;padding:0}'+
   'html,body{background:#f0f0f0;font-family:"맑은 고딕","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:9pt;color:#111}'+
   /* === 인쇄 페이지 === */
-  '@page{size:A4 portrait;margin:0}'+
+  '@page{size:A4 landscape;margin:7mm 8mm}'+
   '@media print{'+
     'html,body{background:#fff}'+
     '.page{box-shadow:none!important;margin:0!important;border-radius:0!important}'+
@@ -8546,7 +8589,7 @@ _carPrint(row){
   '}'+
   /* === A4 페이지 컨테이너 === */
   '.page{'+
-    'width:210mm;min-height:297mm;'+
+    'width:276mm;min-height:190mm;'+
     'background:#fff;'+
     'margin:10mm auto;'+
     'padding:8mm 9mm 6mm;'+
