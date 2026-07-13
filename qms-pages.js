@@ -8402,52 +8402,234 @@ async _carNextStep(row){
 
 /* ── CAR 인쇄 [v2.139] ── */
 _carPrint(row){
-  /* [v2.198] nc_car_print.html 폼 방식으로 교체 — _ncPrint와 동일한 패턴 */
+  /* [v2.199] _ncPrint와 동일한 방식 — 빈 창에 document.write
+     nc_car_print.html 로드 방식 제거 → 로그인/메인화면 열림 오류 해결
+     부적합관리 "시정조치 요구서" 양식 그대로 적용, CAR 데이터 매핑 */
   if(!row){Toast.show('인쇄할 CAR 데이터가 없습니다.','warn');return;}
-  const w=window.open('nc_car_print.html','_blank','width=1200,height=850,scrollbars=yes');
-  if(!w){Toast.show('팝업이 차단되었습니다.','warn');return;}
-  w.addEventListener('load',function(){
-    const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const set=(id,val)=>{const el=w.document.getElementById(id);if(el)el.textContent=val;};
-    /* 기본정보 */
-    set('d_no',         row.no||'');
-    set('d_date',       row.date||row.open||'');
-    set('d_dept',       '품질팀');
-    set('d_customer',   row.customer||'');
-    set('d_item_code',  row.item_code||'');
-    set('d_item',       row.item||'');
-    set('d_work_order', row.work_order||'');
-    set('d_type',       row.source||row.src||'');
-    set('d_desc',       row.d2_desc||'');
-    set('d_dwg',        '');
-    set('d_method',     row.d3_action||'');
-    set('d_ship_qty',   '');
-    set('d_insp_qty',   '');
-    set('d_bad_qty',    '');
-    set('d_rate',       '');
-    set('d_note',       row.note||'');
-    set('d_responsible',row.vendor_name||'');
-    set('d_ccheck',     '');
-    set('d_assignee',   row.assignee||'');
-    set('d_inout',      row.source||'');
-    set('d_action',     row.d5_action||'');
-    /* 5-Why 근본원인 */
-    set('d_why1_occur', row.d4_why1||'');
-    set('d_why2_occur', row.d4_why2||'');
-    set('d_why3_occur', row.d4_why3||'');
-    set('d_why1_out',   '');
-    set('d_why2_out',   '');
-    set('d_why3_out',   '');
-    set('d_cause',      [row.d4_why1,row.d4_why2,row.d4_why3,row.d4_why4,row.d4_why5].filter(Boolean).join(' → ')||'');
-    set('d_act_occur',      row.d5_action||'');
-    set('d_act_occur_date', row.d5_date||'');
-    set('d_act_out',        row.d7_prevent||'');
-    set('d_act_out_date',   row.d6_date||'');
-    /* 결재란 작성자 */
-    ['ap_s1','ap_s2'].forEach(id=>set(id, row.assignee||''));
-    w.focus();
-    setTimeout(()=>w.print(),500);
-  });
+  var w=window.open('','_blank','width=1200,height=850,scrollbars=yes');
+  if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
+  var e=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+
+  /* CAR 데이터 → NC 양식 필드 매핑 */
+  var no=e(row.no||''),
+      date=e(row.date||row.open||''),
+      customer=e(row.customer||''),
+      item_code=e(row.item_code||''),
+      item=e(row.item||''),
+      work_order=e(row.work_order||''),
+      type=e(row.source||row.src||''),
+      desc=e(row.d2_desc||''),               /* 문제 기술 → 불량현상 */
+      dwg=e(''),
+      action=e(row.d3_action||''),           /* 임시대책 → 처리방법/즉시조치 */
+      ship_qty=e(''), insp_qty=e(''), bad_qty=e(''), rate=e(''),
+      note=e(row.note||''),
+      responsible=e(row.vendor_name||''),    /* 공급처 → 귀책처 */
+      assignee=e(row.assignee||''),
+      /* 5-Why 근본원인 */
+      why1=e(row.d4_why1||''), why2=e(row.d4_why2||''),
+      why3=e(row.d4_why3||''), why4=e(row.d4_why4||''),
+      why5=e(row.d4_why5||''),
+      cause=e([row.d4_why1,row.d4_why2,row.d4_why3].filter(Boolean).join(' → ')||''),
+      prevent=e(row.d7_prevent||''),         /* 재발방지 */
+      d5_action=e(row.d5_action||''),        /* 대책 실시 */
+      due=e(row.close_date||row.due||''),
+      created_by=e(row.created_by||row.assignee||'');
+
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">'+
+    '<title>시정조치 요청서 — '+no+'</title>'+
+    '<style>'+
+    '*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'+
+    'body{background:#fff;color:#000;font-size:8pt}'+
+    '@page{size:A4 landscape;margin:8mm 8mm 6mm 8mm}'+
+    '@media print{.no-print{display:none!important}}'+
+    '.wrap{width:281mm}'+
+    'table{border-collapse:collapse;width:100%}'+
+    'td{border:.5pt solid #000;padding:1px 4px;vertical-align:middle;font-size:7.5pt}'+
+    '.lb{background:#dce6f1;font-weight:bold;text-align:center;white-space:nowrap;font-size:7pt}'+
+    '.val{background:#fff}'+
+    '.area{vertical-align:top;padding:3px 4px;background:#fff}'+
+    '.ap-hdr{background:#dce6f1;font-weight:bold;text-align:center;font-size:8pt;height:16px}'+
+    '.ap-sign{height:28px;background:#fff}'+
+    '.title{font-size:16pt;font-weight:bold;text-align:center;letter-spacing:3px;border:none;background:#fff}'+
+    '.no-border{border:none;background:#fff}'+
+    '.print-btn{position:fixed;bottom:14px;right:14px;padding:8px 18px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}'+
+    '</style></head><body><div class="wrap">';
+
+  /* ① 결재란 + 제목 */
+  html+='<table style="margin-bottom:2px;table-layout:fixed;width:100%">'+
+    '<colgroup>'+
+    '<col style="width:36px"><col style="width:36px"><col style="width:36px"><col style="width:36px">'+
+    '<col style="width:auto">'+
+    '<col style="width:36px"><col style="width:36px"><col style="width:36px">'+
+    '</colgroup>'+
+    '<tr>'+
+    '<td colspan="4" class="ap-hdr">조치부서 결재</td>'+
+    '<td class="title">시 정 조 치 요 청 서</td>'+
+    '<td colspan="3" class="ap-hdr">발행부서 결재</td>'+
+    '</tr><tr>'+
+    '<td class="ap-hdr">작성</td><td class="ap-hdr">검토</td>'+
+    '<td class="ap-hdr">검토</td><td class="ap-hdr">승인</td>'+
+    '<td rowspan="2" class="no-border"></td>'+
+    '<td class="ap-hdr">작성</td><td class="ap-hdr">검토</td><td class="ap-hdr">승인</td>'+
+    '</tr><tr>'+
+    '<td class="ap-sign" style="text-align:center;font-size:7pt">'+created_by+'</td>'+
+    '<td class="ap-sign"></td><td class="ap-sign"></td><td class="ap-sign"></td>'+
+    '<td class="ap-sign" style="text-align:center;font-size:7pt">'+created_by+'</td>'+
+    '<td class="ap-sign"></td><td class="ap-sign"></td>'+
+    '</tr></table>';
+
+  /* ② 기본정보 */
+  html+='<table><colgroup>'+
+    '<col style="width:14mm"><col style="width:24mm"><col style="width:14mm"><col style="width:24mm">'+
+    '<col style="width:14mm"><col style="width:22mm"><col style="width:14mm"><col style="width:30mm">'+
+    '<col style="width:14mm"><col></colgroup>'+
+    '<tr><td class="lb">CAR번호</td><td class="val" style="font-family:monospace;color:#1a5fa8;font-weight:bold">'+no+'</td>'+
+    '<td class="lb">개시일</td><td class="val">'+date+'</td>'+
+    '<td class="lb">발행부서</td><td class="val">품질팀</td>'+
+    '<td class="lb">고객사명</td><td class="val">'+customer+'</td>'+
+    '<td class="lb">품목코드</td><td class="val">'+item_code+'</td></tr>'+
+    '<tr><td class="lb">품목명</td><td class="val" colspan="3">'+item+'</td>'+
+    '<td class="lb" colspan="2" style="text-align:center">작업지시번호</td>'+
+    '<td class="val" colspan="1">'+work_order+'</td>'+
+    '<td class="lb">발생원</td><td class="lb">공급처</td><td class="val">'+responsible+'</td></tr>'+
+    '<tr><td class="lb">담당자</td><td class="val">'+assignee+'</td>'+
+    '<td class="lb">완료기한</td><td class="val">'+due+'</td>'+
+    '<td class="lb">상태</td><td class="val">'+e(row.status||'접수')+'</td>'+
+    '<td class="lb">NC참조</td><td class="val" colspan="3" style="font-family:monospace;color:#7c3aed">'+e(row.nc_no||'-')+'</td></tr>'+
+    '<tr><td class="lb">제목</td><td class="val" colspan="9" style="font-weight:bold">'+e(row.title||'')+'</td></tr>'+
+    '</table>';
+
+  /* ③ 손실비용 */
+  html+='<table><tr>'+
+    '<td class="lb" rowspan="2" style="width:14mm">상세내역</td>'+
+    '<td class="lb" rowspan="2" style="width:14mm">손실비용</td>'+
+    '<td class="lb">자재비</td><td class="lb">가공비</td><td class="lb">기타</td><td class="lb">계</td></tr>'+
+    '<tr><td class="val" style="height:12px"></td><td class="val"></td><td class="val"></td><td class="val" style="text-align:right">0</td></tr>'+
+    '</table>';
+
+  /* ④ 문제기술/대책 영역 */
+  html+='<table><colgroup><col style="width:48%"><col style="width:36%"><col style="width:8mm"><col style="width:8mm"><col style="width:12mm"></colgroup>'+
+    '<tr><td class="lb">문제 기술 (D2) — 현상 / 내용</td>'+
+    '<td class="lb">시정조치 (D3) — 임시대책</td>'+
+    '<td class="lb" style="font-size:6.5pt">귀책처</td>'+
+    '<td class="lb" style="font-size:6.5pt">C/Check</td>'+
+    '<td class="lb" style="font-size:6.5pt">작업자</td></tr>'+
+    '<tr><td class="val area" style="height:24mm">'+desc+'</td>'+
+    '<td class="val area">'+action+'</td>'+
+    '<td class="val">'+responsible+'</td>'+
+    '<td class="val"></td>'+
+    '<td class="val">'+assignee+'</td></tr></table>';
+
+  /* ⑤ 부적합 구분 */
+  html+='<table><tr><td class="lb" colspan="2" style="width:30mm">부적합 구분</td>'+
+    '<td class="val" style="font-size:7pt;padding:2px 6px">&nbsp;□사람 &nbsp;□설비 &nbsp;□자재 &nbsp;□방법 &nbsp;□기타(　　　　　)</td></tr></table>';
+
+  /* ⑥ 근본원인 분석 (D4 — 5-Why) */
+  html+='<table><colgroup><col style="width:14mm"><col style="width:46%"><col style="width:14mm"><col style="width:12mm"><col><col></colgroup>'+
+    '<tr><td class="lb" rowspan="6" style="writing-mode:vertical-rl;letter-spacing:2px">근본원인분석 (D4)</td>'+
+    '<td class="val area" style="height:9mm" rowspan="2">'+cause+'</td>'+
+    '<td class="lb" rowspan="6">5-Why 분석</td>'+
+    '<td class="lb"></td><td class="lb" style="text-align:center">발 생 원 인</td><td class="lb" style="text-align:center">비 고</td></tr>'+
+    '<tr><td class="lb" style="font-size:6pt;text-align:center">Why 1</td>'+
+    '<td class="val area" style="height:8mm">'+why1+'</td><td class="val area"></td></tr>'+
+    '<tr><td class="val area" style="height:7mm"></td>'+
+    '<td class="lb" style="font-size:6pt;text-align:center">Why 2</td>'+
+    '<td class="val area">'+why2+'</td><td class="val area"></td></tr>'+
+    '<tr><td class="val area" style="height:7mm"></td>'+
+    '<td class="lb" style="font-size:6pt;text-align:center">Why 3</td>'+
+    '<td class="val area">'+why3+'</td><td class="val area"></td></tr>'+
+    '<tr><td class="val area" style="height:7mm"></td>'+
+    '<td class="lb" style="font-size:6pt;text-align:center">Why 4</td>'+
+    '<td class="val area">'+why4+'</td><td class="val area"></td></tr>'+
+    '<tr><td class="val area" style="height:7mm"></td>'+
+    '<td class="lb" style="font-size:6pt;text-align:center">Why 5</td>'+
+    '<td class="val area">'+why5+'</td><td class="val area"></td></tr>'+
+    '</table>';
+
+  /* ⑦ 대책실시 + 재발방지 (D5/D7) */
+  html+='<table><colgroup><col style="width:14mm"><col style="width:12mm"><col><col style="width:14mm"><col><col style="width:14mm"></colgroup>'+
+    '<tr><td class="lb" rowspan="4" style="writing-mode:vertical-rl;letter-spacing:2px">대책실시/재발방지</td>'+
+    '<td class="lb"></td><td class="lb" style="text-align:center">대 책 실 시 (D5)</td>'+
+    '<td class="lb" style="text-align:center">완료일</td>'+
+    '<td class="lb" style="text-align:center">재 발 방 지 (D7)</td>'+
+    '<td class="lb" style="text-align:center">완료일</td></tr>'+
+    '<tr><td class="lb" style="font-size:6.5pt;text-align:center">단기</td>'+
+    '<td class="val area" style="height:9mm">'+d5_action+'</td>'+
+    '<td class="val">'+e(row.d5_date||'')+'</td>'+
+    '<td class="val area">'+prevent+'</td><td class="val">'+due+'</td></tr>'+
+    '<tr><td class="lb" style="font-size:6.5pt;text-align:center">중기</td>'+
+    '<td class="val area" style="height:7mm"></td><td class="val"></td>'+
+    '<td class="val area"></td><td class="val"></td></tr>'+
+    '<tr><td class="lb" style="font-size:6.5pt;text-align:center">장기</td>'+
+    '<td class="val area" style="height:7mm"></td><td class="val"></td>'+
+    '<td class="val area"></td><td class="val"></td></tr>'+
+    '</table>';
+
+  /* ⑧ 유효성 평가 (D6) */
+  html+='<table><tr>'+
+    '<td class="lb" style="width:14mm">유효성평가(D6)</td>'+
+    '<td class="val area" style="height:12mm">'+e(row.d6_verify||'')+'</td>'+
+    '<td class="lb" style="width:14mm">평가결과</td>'+
+    '<td class="val" style="width:18mm">'+e(row.d6_result||'미평가')+'</td>'+
+    '<td class="lb" style="width:14mm">평가일</td>'+
+    '<td class="val" style="width:22mm">'+e(row.d6_date||'')+'</td>'+
+    '</tr></table>';
+
+  /* ⑨ 회람 + 표준류 반영 */
+  html+='<table><colgroup><col style="width:10mm"><col style="width:22mm"><col style="width:10mm"><col style="width:22mm">'+
+    '<col style="width:12mm"><col><col><col><col><col style="width:12mm"></colgroup>'+
+    '<tr><td class="lb" rowspan="4">회람</td>'+
+    '<td class="lb" style="text-align:center">성명</td><td class="lb" rowspan="2">서명</td>'+
+    '<td class="lb" style="text-align:center">성명</td>'+
+    '<td class="lb" rowspan="4" style="writing-mode:vertical-rl;font-size:6.5pt;text-align:center">표준류반영</td>'+
+    '<td class="lb" colspan="2" style="font-size:7pt">□ 관리계획서</td>'+
+    '<td class="lb" colspan="2" style="font-size:7pt">□ FMEA</td>'+
+    '<td class="lb" rowspan="4">첨부</td></tr>'+
+    '<tr><td class="val" style="height:9mm">'+assignee+'</td>'+
+    '<td class="val"></td>'+
+    '<td class="val" colspan="2" style="font-size:7pt">□ 작업표준서</td>'+
+    '<td class="val" colspan="2" style="font-size:7pt">□ 검사기준서</td></tr>'+
+    '<tr><td class="lb" style="text-align:center">성명</td><td class="lb" rowspan="2">서명</td>'+
+    '<td class="lb" style="text-align:center">성명</td>'+
+    '<td class="val" colspan="4" rowspan="2"></td></tr>'+
+    '<tr><td class="val" style="height:9mm"></td><td class="val"></td></tr>'+
+    '</table>';
+
+  /* ⑩ 하단 */
+  html+='<table><tr>'+
+    '<td style="border:.5pt solid #000;background:#dce6f1;font-size:7pt;width:33%">IPD-806-01(Rev01)</td>'+
+    '<td style="border:.5pt solid #000;background:#dce6f1;font-size:7pt;text-align:center;width:34%">㈜이노디스</td>'+
+    '<td style="border:.5pt solid #000;background:#dce6f1;font-size:7pt;text-align:right;width:33%">A4(210mm X 297mm)</td>'+
+    '</tr></table>';
+
+  html+='</div><button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄</button></body></html>';
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+},
+
+/* [v2.199] _carInputPrint — car_input 폼 현재 값으로 인쇄 */
+_carInputPrint(){
+  const g=id=>document.getElementById(id)?.value||'';
+  const row={
+    no:g('carInputNo'), date:g('carInputOpen'), source:g('carInputSrc'),
+    title:g('carInputTitle'), assignee:g('carInputAssignee'),
+    customer:g('carInputCustomer'), vendor_name:g('carInputVendor'),
+    work_order:g('carInputWorkOrder'),
+    item_code:g('carInputItemCode').split(' — ')[0].trim(),
+    item:g('carInputItem'), close_date:g('carInputDue'),
+    nc_no:g('carInputNcNo'),
+    d2_desc:g('carInputD2'), d3_action:g('carInputD3'),
+    d4_why1:g('carInputWhy1'), d4_why2:g('carInputWhy2'),
+    d4_why3:g('carInputWhy3'), d4_why4:g('carInputWhy4'),
+    d4_why5:g('carInputWhy5'),
+    d5_action:g('carInputD5'), d5_date:g('carInputD5Date'),
+    d6_verify:g('carInputD6'), d6_result:g('carInputD6Result'),
+    d6_date:g('carInputD6Date'), d7_prevent:g('carInputD7'),
+    note:g('carInputNote'), status:g('carInputStatus'),
+    created_by:window._carInputRow?.created_by||'',
+  };
+  Pages._carPrint(row);
 },
 
 /* [v2.198] _carInputPrint — car_input 폼에서 인쇄 */
