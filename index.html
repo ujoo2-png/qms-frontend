@@ -15,12 +15,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMS - 품질경영시스템 v2.203</title>
+<title>QMS - 품질경영시스템 v2.204</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- [v2.110] QR 코드 생성 — 마이머신카드 출력용 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<link rel="stylesheet" href="qms-style.css?v=2.203">
+<link rel="stylesheet" href="qms-style.css?v=2.204">
 <!-- Supabase JS SDK CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -80,7 +80,7 @@
         <div class="lo-mark">Q</div>
         <div>
           <div class="lo-sys-name">QMS</div>
-          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.203</div>
+          <div class="lo-sys-sub">품질경영시스템 · Quality Management System · v2.204</div>
         </div>
       </div>
     </div>
@@ -233,7 +233,7 @@
           <span class="lo-link" style="font-size:11px;color:var(--tm)" onclick="Auth.switchTab('login',document.querySelectorAll('.lo-tab')[0])">← 로그인으로 돌아가기</span>
         </div>
       </div>
-    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.203</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
+    <div class="lo-footer">© 2026 QMS 품질경영시스템 &nbsp;|&nbsp; <span id="loginVer">v2.204</span> &nbsp;|&nbsp; 관리자 문의: <span id="adminContactEmail">admin@company.com</span></div>
   </div>
 </div>
 
@@ -244,7 +244,7 @@
       <div class="sbb" onclick="Nav.go('home')">
         <img class="sb-logo-img" src="${App.logo||''}" id="sbLogoImg" style="${App.logo?'':'display:none'}" alt="INNODIS">
         <span class="sb-logo-def" id="sbLogoDef" style="${App.logo?'display:none':''}">QMS</span>
-        <div><div class="bn" style="display:none"></div><div class="bv">v2.203</div></div>
+        <div><div class="bn" style="display:none"></div><div class="bv">v2.204</div></div>
       </div>
       <button class="sbt" onclick="UI.toggleSB()">☰</button>
     </div>
@@ -490,24 +490,85 @@
 
 
 <!-- QMS 분리 파일 로드 순서: db → core → pages → excel → init -->
-<script src="qms-db.js?v=2.203"></script>
-<script src="qms-core.js?v=2.203"></script>
-<script src="qms-pages.js?v=2.203"></script>
-<script src="qms-excel.js?v=2.203"></script>
+<script src="qms-db.js?v=2.204"></script>
+<script src="qms-core.js?v=2.204"></script>
+<script src="qms-pages.js?v=2.204"></script>
+<script src="qms-excel.js?v=2.204"></script>
   <script>/* Cfg 전역 보장 */if(typeof window.Cfg==='undefined'&&typeof Cfg!=='undefined')window.Cfg=Cfg;if(typeof window.ExcelMgr==='undefined'&&typeof ExcelMgr!=='undefined')window.ExcelMgr=ExcelMgr;</script>
-<script src="qms-init.js?v=2.203"></script>
-<!-- [v2.177] 플로팅 AI 버튼 — qms-core.js 로드 후에 배치, 안전한 호출 방식 -->
+<script src="qms-init.js?v=2.204"></script>
+<!-- [v2.204] 플로팅 AI 버튼 — Q 텍스트, 200%, 투명배경, 드래그 이동 -->
 <button id="aiChatFloatBtn"
   onclick="if(window.QmsChat)QmsChat.open();else Toast&&Toast.show('잠시 후 다시 시도하세요.','warn')"
   style="position:fixed;bottom:24px;right:24px;z-index:8999;
-  width:52px;height:52px;border-radius:50%;border:none;
-  background:linear-gradient(135deg,#fbbf24,#f59e0b);
-  box-shadow:0 4px 16px rgba(251,191,36,0.5);
-  font-size:22px;cursor:pointer;transition:transform .2s;
-  display:flex;align-items:center;justify-content:center"
-  title="QMS AI 어시스턴트"
-  onmouseover="this.style.transform='scale(1.1)'"
-  onmouseout="this.style.transform='scale(1)'">🤖</button>
+  width:104px;height:104px;border-radius:50%;border:none;
+  background:rgba(251,191,36,0.08);
+  box-shadow:0 2px 12px rgba(0,0,0,0.10);
+  font-size:52px;font-weight:900;color:#f59e0b;
+  cursor:grab;transition:box-shadow .2s,background .2s;
+  display:flex;align-items:center;justify-content:center;
+  user-select:none;letter-spacing:-2px;font-family:'맑은 고딕',sans-serif"
+  title="QMS AI 어시스턴트 (드래그로 이동 가능)"
+  onmouseover="this.style.background='rgba(251,191,36,0.18)';this.style.boxShadow='0 4px 20px rgba(245,158,11,0.3)'"
+  onmouseout="this.style.background='rgba(251,191,36,0.08)';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.10)'">Q</button>
+<script>
+/* [v2.204] 플로팅 버튼 드래그 이동 — left/top 기준 */
+(function(){
+  var btn=document.getElementById('aiChatFloatBtn');
+  if(!btn) return;
+  var dragging=false, startX=0, startY=0, startL=0, startT=0, moved=false;
+  btn.addEventListener('mousedown',function(e){
+    if(e.button!==0) return;
+    dragging=true; moved=false;
+    var r=btn.getBoundingClientRect();
+    startX=e.clientX; startY=e.clientY;
+    startL=r.left; startT=r.top;
+    btn.style.right='auto'; btn.style.bottom='auto';
+    btn.style.left=startL+'px'; btn.style.top=startT+'px';
+    btn.style.cursor='grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging) return;
+    var dx=e.clientX-startX, dy=e.clientY-startY;
+    if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+    var nx=Math.max(0,Math.min(window.innerWidth-104,startL+dx));
+    var ny=Math.max(0,Math.min(window.innerHeight-104,startT+dy));
+    btn.style.left=nx+'px'; btn.style.top=ny+'px';
+  });
+  document.addEventListener('mouseup',function(e){
+    if(!dragging) return;
+    dragging=false;
+    btn.style.cursor='grab';
+    if(moved) e.stopImmediatePropagation();
+  });
+  /* 드래그 중 click 억제 */
+  btn.addEventListener('click',function(e){
+    if(moved){moved=false;e.stopImmediatePropagation();e.preventDefault();}
+  },true);
+  /* 터치 지원 */
+  btn.addEventListener('touchstart',function(e){
+    var t=e.touches[0];
+    var r=btn.getBoundingClientRect();
+    dragging=true; moved=false;
+    startX=t.clientX; startY=t.clientY;
+    startL=r.left; startT=r.top;
+    btn.style.right='auto'; btn.style.bottom='auto';
+    btn.style.left=startL+'px'; btn.style.top=startT+'px';
+  },{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(!dragging) return;
+    var t=e.touches[0];
+    var dx=t.clientX-startX, dy=t.clientY-startY;
+    if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+    var nx=Math.max(0,Math.min(window.innerWidth-104,startL+dx));
+    var ny=Math.max(0,Math.min(window.innerHeight-104,startT+dy));
+    btn.style.left=nx+'px'; btn.style.top=ny+'px';
+  },{passive:true});
+  document.addEventListener('touchend',function(){
+    dragging=false;
+  });
+})();
+</script>
 
 
 
