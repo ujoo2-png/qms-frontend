@@ -5500,6 +5500,13 @@ _docSplitView:async function(docId, title){
   }
 },
 
+/* [v2.209] _docSplitClose — 문서 열람 분할 뷰 닫기
+   '← 목록으로' / '✕ 닫기' 버튼 onclick에서 호출
+   Nav.go(page)로 현재 페이지 재진입 → 완전 복원 */
+_docSplitClose(page){
+  Nav.go(page||sessionStorage.getItem('qms_page')||'docs');
+},
+
 /* [v2.190] 교정관리 화면 분할 미리보기
    문서관리 _docSplitView와 동일한 패턴
    좌측: 교정이력 목록, 우측: 성적서 파일 미리보기 */
