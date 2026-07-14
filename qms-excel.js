@@ -814,36 +814,64 @@ var ExcelMgr=window.ExcelMgr={
         return null;
       },
     },
-    /* [v2.192] CAR 시정조치 엑셀 스키마 */
+    /* [v2.210] CAR 시정조치 엑셀 스키마 — DB 실제 컬럼명 기준으로 전면 수정
+   목록 컬럼(no/source/date/close_date/...)과 완전히 일치
+   과거 자료 이관을 위한 전체 컬럼 포함 */
     car:{
       title:'시정조치(CAR)',
+      dupLabel:'CAR번호',
       cols:[
-        {key:'no',          label:'CAR번호',   req:true,  sample:'CAR-20260710-001'},
-        {key:'src',         label:'발생원',    req:true,  sample:'부적합'},
-        {key:'title',       label:'제목',      req:true,  sample:'치수 불량 시정조치'},
-        {key:'nc_no',       label:'NC참조번호', sample:'NC-20260710-001'},
-        {key:'item_code',   label:'품목코드',   sample:'ITEM-001'},
-        {key:'item',        label:'품목명',    sample:'알루미늄 바'},
-        {key:'open',        label:'개시일',    req:true,  sample:'2026-07-10'},
-        {key:'due',         label:'완료기한',   sample:'2026-07-24'},
-        {key:'assignee',    label:'담당자',    req:true,  sample:'홍길동'},
-        {key:'status',      label:'상태',      sample:'접수'},
-        {key:'d1_team',     label:'D1 팀구성', sample:'품질팀'},
-        {key:'d2_desc',     label:'D2 문제기술', sample:'치수 불량 발생'},
-        {key:'d3_action',   label:'D3 임시대책', sample:'불량품 격리 조치'},
-        {key:'d4_why1',     label:'D4 Why1',   sample:'측정 오류'},
-        {key:'d4_why2',     label:'D4 Why2',   sample:'계측기 미교정'},
-        {key:'d4_why3',     label:'D4 Why3',   sample:'교정 주기 미준수'},
-        {key:'d5_action',   label:'D5 대책실시', sample:'계측기 교정 실시'},
-        {key:'d5_date',     label:'D5 실시일',   sample:'2026-07-15'},
-        {key:'d6_verify',   label:'D6 유효성평가', sample:'재발 없음 확인'},
-        {key:'d6_result',   label:'D6 평가결과',  sample:'유효'},
-        {key:'d7_prevent',  label:'D7 재발방지',  sample:'교정 주기 관리 강화'},
-        {key:'note',        label:'비고',         sample:''},
+        /* ── 기본정보 ── */
+        {key:'no',           label:'CAR번호',    req:true,  sample:'CAR-20260710-001'},
+        {key:'source',       label:'발생원',     req:true,  sample:'부적합'},        /* DB: source (구 src 아님) */
+        {key:'title',        label:'제목',       req:true,  sample:'치수 불량 시정조치'},
+        {key:'status',       label:'상태',                  sample:'접수'},
+        {key:'date',         label:'개시일',     req:true,  sample:'2026-07-10'},    /* DB: date (구 open 아님) */
+        {key:'close_date',   label:'완료기한',              sample:'2026-07-24'},    /* DB: close_date (구 due 아님) */
+        {key:'assignee',     label:'담당자',     req:true,  sample:'홍길동'},
+        {key:'nc_no',        label:'NC참조번호',             sample:'NC-20260710-001'},
+        {key:'item_code',    label:'품목코드',               sample:'ITEM-001'},
+        {key:'item',         label:'품목명',                 sample:'알루미늄 바'},
+        {key:'customer',     label:'고객사',                 sample:'㈜대한전자'},
+        {key:'vendor_name',  label:'공급처',                 sample:'㈜ABC부품'},
+        {key:'work_order',   label:'작업지시번호',            sample:'WO-20260710-001'},
+        /* ── 수량/불량 정보 ── */
+        {key:'ship_qty',     label:'납품수량',               sample:'1000'},
+        {key:'insp_qty',     label:'검사수량',               sample:'1000'},
+        {key:'bad_qty',      label:'불량수량',               sample:'15'},
+        {key:'defect_rate',  label:'불량률(%)',              sample:'1.50%'},
+        {key:'defect_type',  label:'불량유형',               sample:'치수불량'},
+        {key:'defect_desc',  label:'불량현상',               sample:'외경 0.2mm 초과'},
+        {key:'action_type',  label:'처리방법',               sample:'선별'},
+        {key:'nc_note',      label:'부적합비고',             sample:'입고검사 중 발견'},
+        /* ── 손실비용 ── */
+        {key:'cost_material',label:'자재비(원)',              sample:'50000'},
+        {key:'cost_process', label:'가공비(원)',              sample:'30000'},
+        {key:'cost_etc',     label:'기타비용(원)',            sample:'10000'},
+        {key:'cost_total',   label:'손실합계(원)',            sample:'90000'},
+        /* ── 대책 내용 D1~D7 ── */
+        {key:'d1_team',      label:'D1 팀구성',              sample:'품질팀 홍길동'},
+        {key:'d2_desc',      label:'D2 문제기술',            sample:'외경 치수 불량 발생'},
+        {key:'d3_action',    label:'D3 임시대책',            sample:'불량품 격리 조치'},
+        {key:'d4_why1',      label:'D4 Why1',               sample:'측정 오류'},
+        {key:'d4_why2',      label:'D4 Why2',               sample:'계측기 미교정'},
+        {key:'d4_why3',      label:'D4 Why3',               sample:'교정 주기 미준수'},
+        {key:'d4_why4',      label:'D4 Why4',               sample:'관리 기준 없음'},
+        {key:'d4_why5',      label:'D4 Why5',               sample:'표준 미비'},
+        {key:'d5_action',    label:'D5 대책실시',            sample:'계측기 교정 실시'},
+        {key:'d5_date',      label:'D5 실시일',              sample:'2026-07-15'},
+        {key:'d6_verify',    label:'D6 유효성평가',          sample:'재발 없음 확인'},
+        {key:'d6_result',    label:'D6 평가결과',            sample:'유효'},
+        {key:'d6_date',      label:'D6 평가일',              sample:'2026-07-20'},
+        {key:'d7_prevent',   label:'D7 재발방지',            sample:'교정 주기 관리 강화'},
+        {key:'note',         label:'비고',                   sample:''},
       ],
       addFn: async (row)=>{
+        /* [v2.210] 엑셀 row → DB row 변환
+           엑셀 컬럼명이 DB 컬럼명과 완전히 일치하도록 스키마 정의함
+           → 별도 변환 없이 바로 addCar 호출 가능 */
         const res=await SB.addCar(row);
-        return res?.ok?null:`CAR 저장 실패`;
+        return res?.ok?null:`CAR 저장 실패 (no=${row.no})`;
       },
     },
     nc:{

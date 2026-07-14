@@ -847,17 +847,15 @@ const SB={
   },
   async addCar(row){
     if(!_sb){const id=Math.max(0,...(DB.cars||[]).map(c=>c.id))+1;if(!DB.cars)DB.cars=[];DB.cars.push({id,...row});return{ok:true,id};}
-    /* [v2.197] 실제 corrective_actions 컬럼명 확정
-       콘솔 로그 분석 결과:
-         없는 컬럼: due, file_url, open, src
-         NOT NULL: date (=개시일)
-       매핑: open→date, due→close_date, src→source, file_url→별도처리 */
+    /* [v2.210] payload — DB 실제 컬럼명 기준 전체 포함
+       엑셀 업로드·직접 입력 모두 동일한 경로로 저장
+       없는 컬럼은 자동 감지 후 제거 재시도 방식 유지 */
     const payload={
       no:          row.no||'',
       title:       row.title||'',
-      date:        row.open||row.date||null,        /* 개시일 — NOT NULL */
-      close_date:  row.due||row.close_date||null,   /* 완료기한 */
-      source:      row.src||row.source||'부적합',   /* 발생원 */
+      date:        row.date||row.open||null,         /* 개시일 (NOT NULL) */
+      close_date:  row.close_date||row.due||null,    /* 완료기한 */
+      source:      row.source||row.src||'부적합',    /* 발생원 */
       nc_id:       row.nc_id||null,
       nc_no:       row.nc_no||null,
       item_code:   row.item_code||null,
@@ -866,25 +864,39 @@ const SB={
       dept:        row.dept||null,
       status:      row.status||'접수',
       note:        row.note||null,
-      /* D1~D7 (SQL ALTER TABLE 후 활성화) */
+      /* [v2.198] 고객사 / 공급처 / 작업지시 */
+      customer:    row.customer||null,
+      vendor_name: row.vendor_name||null,
+      work_order:  row.work_order||null,
+      /* [v2.201] 수량 / 불량 정보 */
+      ship_qty:    row.ship_qty||null,
+      insp_qty:    row.insp_qty||null,
+      bad_qty:     row.bad_qty||null,
+      defect_rate: row.defect_rate||null,
+      defect_type: row.defect_type||null,
+      defect_desc: row.defect_desc||null,
+      action_type: row.action_type||null,
+      nc_note:     row.nc_note||null,
+      /* [v2.201] 손실비용 */
+      cost_material:row.cost_material||null,
+      cost_process: row.cost_process||null,
+      cost_etc:    row.cost_etc||null,
+      cost_total:  row.cost_total||null,
+      /* D1~D7 대책 */
       d1_team:     row.d1_team||null,
       d2_desc:     row.d2_desc||null,
       d3_action:   row.d3_action||null,
       d4_cause:    row.d4_cause||null,
-      d4_why1:     row.d4_why1||null,
-      d4_why2:     row.d4_why2||null,
-      d4_why3:     row.d4_why3||null,
-      d4_why4:     row.d4_why4||null,
+      d4_why1:     row.d4_why1||null, d4_why2:row.d4_why2||null,
+      d4_why3:     row.d4_why3||null, d4_why4:row.d4_why4||null,
       d4_why5:     row.d4_why5||null,
-      d5_action:   row.d5_action||null,
-      d5_date:     row.d5_date||null,
-      d6_verify:   row.d6_verify||null,
-      d6_result:   row.d6_result||null,
+      d5_action:   row.d5_action||null, d5_date:row.d5_date||null,
+      d6_verify:   row.d6_verify||null, d6_result:row.d6_result||null,
       d6_date:     row.d6_date||null,
       d7_prevent:  row.d7_prevent||null,
       created_by:  row.created_by||'',
     };
-    /* 없는 컬럼 자동 제거 후 재시도 (최대 20회) */
+    /* 없는 컬럼 자동 감지 후 제거 재시도 (최대 20회) */
     for(let attempt=0; attempt<20; attempt++){
       const {error}=await _sb.from('corrective_actions').insert(payload);
       if(!error){
