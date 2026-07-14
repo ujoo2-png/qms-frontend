@@ -956,19 +956,7 @@ var ExcelMgr=window.ExcelMgr={
       ],
       dupKey:'no', dupLabel:'문서번호', getData:()=>DB.docs,
     },
-    car:{
-      title:'시정조치(CAR)',
-      cols:[
-        {key:'no',       label:'CAR번호',  req:true,  sample:'CAR-20260601-001'},
-        {key:'src',      label:'발생원',   req:true,  sample:'부적합'},
-        {key:'title',    label:'제목',     req:true,  sample:'개선 조치'},
-        {key:'open',     label:'개시일',   req:false, sample:'2026-06-01'},
-        {key:'due',      label:'완료기한', req:false, sample:'2026-06-30'},
-        {key:'assignee', label:'담당자',   req:false, sample:'김품질'},
-        {key:'status',   label:'상태',     req:false, sample:'접수'},
-      ],
-      dupKey:'no', dupLabel:'CAR번호', getData:()=>DB.cars,
-    },
+
   
     /* [v2.394] 검사 기준서 스키마 */
     insp_std:{
