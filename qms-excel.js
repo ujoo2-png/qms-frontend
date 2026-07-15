@@ -873,6 +873,7 @@ var ExcelMgr=window.ExcelMgr={
         const res=await SB.addCar(row);
         return res?.ok?null:`CAR 저장 실패 (no=${row.no})`;
       },
+      getData:()=>DB.cars,  /* [v2.212] 중복 체크용 — dupLabel:'CAR번호' 기준 */
     },
     nc:{
       title:'부적합관리',
