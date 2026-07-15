@@ -1264,7 +1264,8 @@ var ExcelMgr=window.ExcelMgr={
         this._ws=ws; /* [v2.394] ws 저장 — 날짜 변환에 사용 */
         const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
         /* [v2.394] 날짜 필드 변환 — 엑셀 시리얼/Date객체 → YYYY-MM-DD */
-        const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','next_date','purchase_date','request_date']);
+        const _DATE_KEYS=new Set(['insp_date','created_at','updated_at','date','open','due','last','next','cal_date','next_date','purchase_date','request_date',
+          'due_date','close_date','closed_date','d5_date','d6_date']); /* [v2.215] CAR 날짜 컬럼 추가 */
         const _cvDate=(v,ci,ri)=>{
           try{
             const addr=XLSX.utils.encode_cell({r:ri,c:ci});
