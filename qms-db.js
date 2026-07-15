@@ -854,8 +854,8 @@ const SB={
       no:          row.no||'',
       title:       row.title||'',
       date:        row.date||row.open||null,         /* 개시일 (NOT NULL) */
-      close_date:  row.close_date||row.due||null,    /* 완료기한 */
-      source:      row.source||row.src||'부적합',    /* 발생원 */
+      due_date:    row.due_date||row.close_date||row.due||null, /* [v2.214] 완료기한: due_date */
+      type:        row.type||row.source||row.src||'부적합',     /* [v2.214] 발생원: type */
       nc_id:       row.nc_id||null,
       nc_no:       row.nc_no||null,
       item_code:   row.item_code||null,
@@ -920,10 +920,11 @@ const SB={
     if(!_sb){const c=(DB.cars||[]).find(c=>c.id===id);if(c)Object.assign(c,patch);return{ok:true};}
     /* [v2.197] 컬럼명 매핑 — open→date, due→close_date, src→source */
     let payload={...patch};
+    /* [v2.214] 컬럼명 정규화 */
     if(payload.open!==undefined){payload.date=payload.open;delete payload.open;}
-    if(payload.due!==undefined){payload.close_date=payload.due;delete payload.due;}
-    if(payload.src!==undefined){payload.source=payload.src;delete payload.src;}
-    if(payload.file_url!==undefined) delete payload.file_url;  /* 미지원 컬럼 제거 */
+    if(payload.due!==undefined||payload.close_date!==undefined){payload.due_date=payload.due||payload.close_date;delete payload.due;delete payload.close_date;}
+    if(payload.src!==undefined||payload.source!==undefined){payload.type=payload.src||payload.source;delete payload.src;delete payload.source;}
+    if(payload.file_url!==undefined) delete payload.file_url;
     /* 없는 컬럼 자동 제거 후 재시도 */
     for(let attempt=0; attempt<20; attempt++){
       const {error}=await _sb.from('corrective_actions').update(payload).eq('id',id);

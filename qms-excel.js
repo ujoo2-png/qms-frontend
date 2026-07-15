@@ -823,11 +823,11 @@ var ExcelMgr=window.ExcelMgr={
       cols:[
         /* ── 기본정보 ── */
         {key:'no',           label:'CAR번호',    req:true,  sample:'CAR-20260710-001'},
-        {key:'source',       label:'발생원',     req:true,  sample:'부적합'},        /* DB: source (구 src 아님) */
+        {key:'type',         label:'발생원',     req:true,  sample:'부적합'},        /* DB: source (구 src 아님) */
         {key:'title',        label:'제목',       req:true,  sample:'치수 불량 시정조치'},
         {key:'status',       label:'상태',                  sample:'접수'},
         {key:'date',         label:'개시일',     req:true,  sample:'2026-07-10'},    /* DB: date (구 open 아님) */
-        {key:'close_date',   label:'완료기한',              sample:'2026-07-24'},    /* DB: close_date (구 due 아님) */
+        {key:'due_date',     label:'완료기한',              sample:'2026-07-24'},    /* DB: close_date (구 due 아님) */
         {key:'assignee',     label:'담당자',     req:true,  sample:'홍길동'},
         {key:'nc_no',        label:'NC참조번호',             sample:'NC-20260710-001'},
         {key:'item_code',    label:'품목코드',               sample:'ITEM-001'},
@@ -2123,6 +2123,36 @@ var ExcelMgr=window.ExcelMgr={
         status:H.equipStatus(r.next),next:_toDate(r.next),last:_toDate(r.last),
         updated_at:null,created_at:_toDate(r.created_at)};
       if(tblMap[pKey]==='inspections') return{type:r.type||'',vendor:r.vendor||'',insp_no:r.insp_no||'',insp_date:r.insp_date||'',inspector:r.inspector||'',item_code:r.item_code||'',item_name:r.item_name||'',spec:r.spec||'',insp_method:r.insp_method||'',result:r.result||'',qty:Number(r.qty)||0,pass_qty:Number(r.pass_qty)||0,fail_qty:Number(r.fail_qty)||0,defect_rate:Number(r.defect_rate)||0,wo_no:r.wo_no||'',note:r.note||'',created_at:r.created_at||null,updated_at:r.updated_at||null};
+      /* [v2.213] 시정조치(CAR) — DB 실제 컬럼명으로 정확히 매핑
+         active/created_at/updated_at 제외, addCar allowed와 동일 */
+      if(pKey==='car') return{
+        no:r.no||'', title:r.title||'',
+        date:r.date||r.open||null,           /* 개시일 (NOT NULL) */
+        due_date:r.due_date||r.close_date||r.due||null,  /* [v2.214] *//* 완료기한 */
+        type:r.type||r.source||r.src||'부적합',  /* [v2.214] */    /* 발생원 */
+        assignee:r.assignee||'',
+        status:r.status||'접수',
+        nc_no:r.nc_no||null,
+        item_code:r.item_code||null, item:r.item||null,
+        customer:r.customer||null,
+        vendor_name:r.vendor_name||null,
+        work_order:r.work_order||null,
+        ship_qty:r.ship_qty||null,   insp_qty:r.insp_qty||null,
+        bad_qty:r.bad_qty||null,     defect_rate:r.defect_rate||null,
+        defect_type:r.defect_type||null, defect_desc:r.defect_desc||null,
+        action_type:r.action_type||null, nc_note:r.nc_note||null,
+        cost_material:r.cost_material||null, cost_process:r.cost_process||null,
+        cost_etc:r.cost_etc||null,   cost_total:r.cost_total||null,
+        d1_team:r.d1_team||null,
+        d2_desc:r.d2_desc||null,     d3_action:r.d3_action||null,
+        d4_why1:r.d4_why1||null,     d4_why2:r.d4_why2||null,
+        d4_why3:r.d4_why3||null,     d4_why4:r.d4_why4||null,
+        d4_why5:r.d4_why5||null,
+        d5_action:r.d5_action||null, d5_date:r.d5_date||null,
+        d6_verify:r.d6_verify||null, d6_result:r.d6_result||null,
+        d6_date:r.d6_date||null,     d7_prevent:r.d7_prevent||null,
+        note:r.note||null,
+      };
       return r;
     };
     const toSafeRow=(pKey,r)=>{const tbl=tblMap[pKey];const safe=SAFE_COLS[tbl];if(!safe)return toFullRow(pKey,r);return Object.fromEntries(safe.map(k=>[k,r[k]!==undefined?r[k]:'']));};
