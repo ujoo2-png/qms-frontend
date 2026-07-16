@@ -353,6 +353,17 @@ const Auth={
           if(docs) DB.docs    = docs;
           if(cars) DB.cars    = cars;
           if(vd)   DB.vendors = vd;
+          /* [v2.224] 미연동 메뉴 DB 추가 로딩 — AI 어시스턴트 전 메뉴 접근 */
+          Promise.all([
+            SB.getInspections?.(), SB.getVendorEvals?.(), SB.getVendorAudits?.(),
+            SB.getMsa?.(), SB.getReports?.(),
+          ]).then(([insp,evals,vaudits,msa,r8d])=>{
+            if(insp)    DB.inspections   = insp;
+            if(evals)   DB.vendor_evals  = evals;
+            if(vaudits) DB.vendor_audits = vaudits;
+            if(msa)     DB.msa           = msa;
+            if(r8d)     DB.reports       = r8d;
+          }).catch(e=>console.warn('[enterApp] 추가 DB 로드 오류:',e));
         }
       }catch(e){ console.warn('[enterApp] DB 로드 오류:', e); }
       Nav.go('home');
@@ -2653,6 +2664,17 @@ window.QmsChat = {
 
       dataCtx = `${label} | NC미결 ${ncOpen.length}건, CAR미완료 ${carOpen.length}건, 교정만료 ${calExpired.length}개`;
 
+      /* [v2.224] 미연동 메뉴 데이터 추가 */
+      const equips    = DB.equip||[];
+      const lots      = DB.lots||DB.lot_trace||[];
+      const holds     = DB.holds||DB.insp_holds||[];
+      const disposes  = DB.disposes||DB.nc_dispose||[];
+      const inspStds  = DB.insp_stds||DB.insp_std||[];
+      const sqmDelivs = DB.sqm_deliveries||DB.sqm_delivery||[];
+      const sqmPlans  = DB.sqm_plans||DB.sqm_plan||[];
+      const audits_in = DB.audits||DB.audit_items||[];
+      const docDists  = DB.doc_distributions||DB.doc_dist||[];
+
       fullSummary = [
         `[INNODIS QMS 전체 현황 — ${today} | 현재화면: ${label}]`,
         '',
@@ -2662,22 +2684,31 @@ window.QmsChat = {
         '',
         `■ 검사: 총 ${insps.length}건, 불합격 ${inspFail.length}건 (불합격률 ${insps.length?Math.round(inspFail.length/insps.length*100):0}%)`,
         inspFail.length ? `  최근 불합격: ${inspFail.slice(0,5).map(r=>`${r.vendor||''} ${r.item_name||''} (${r.insp_date||''})`).join(' / ')}` : '  불합격 없음',
+        holds.length ? `  홀드: ${holds.length}건, 재검사: ${holds.filter(r=>r.reinsp_result).length}건 완료` : '',
+        inspStds.length ? `  검사표준: ${inspStds.length}건 등록` : '',
         '',
-        `■ CAR 개선활동: 총 ${cars.length}건, 미완료 ${carOpen.length}건, 기한초과 ${carOverdue.length}건`,
+        `■ CAR 시정조치: 총 ${cars.length}건, 미완료 ${carOpen.length}건, 기한초과 ${carOverdue.length}건`,
         carOpen.length ? `  미완료 목록: ${carOpen.slice(0,5).map(r=>`[${r.no||''}] ${r.title||r.item||''} (D:${r.due_date||'미정'})`).join(' / ')}` : '  미완료 없음',
         '',
         `■ 8D Report: 총 ${r8d.length}건, 진행 ${r8dOpen.length}건`,
         r8dOpen.length ? `  진행중: ${r8dOpen.slice(0,5).map(r=>`[${r.no||''}] ${r.title||''} (${r.status||''})`).join(' / ')}` : '  진행중 없음',
+        disposes.length ? `■ 반품/폐기: ${disposes.length}건 (반품 ${disposes.filter(r=>r.type==='반품').length}건 / 폐기 ${disposes.filter(r=>r.type==='폐기').length}건)` : '',
         '',
         `■ 공급사(SQM): ${vendors.length}개 등록, 평가이력 ${evals.length}건, 심사이력 ${audits.length}건, 저점수 ${lowScore.length}개`,
         lowScore.length ? `  저점수 공급사: ${lowScore.slice(0,5).map(e=>`${e.vendor_name||''} ${e.total||0}점`).join(', ')}` : '  저점수 공급사 없음',
+        sqmPlans.length ? `  납기계획: ${sqmPlans.length}건, 납기이력: ${sqmDelivs.length}건` : '',
         '',
         `■ 계측기: 총 ${equip.length}개, 교정만료 ${calExpired.length}개, D-30이내 ${calSoon.length}개`,
         calExpired.length ? `  만료 계측기: ${calExpired.slice(0,5).map(r=>`${r.name||r.equip_name||''}`).join(', ')}` : '  만료 없음',
         `  교정이력: 총 ${cals.length}건`,
         '',
+        `■ 제조설비: ${equips.filter(r=>r.category!=='measuring').length}개 등록`,
+        equips.filter(r=>r.status==='고장').length ? `  고장 설비: ${equips.filter(r=>r.status==='고장').map(r=>r.name||'').join(', ')}` : '',
+        lots.length ? `■ LOT 추적: ${lots.length}건 이력` : '',
+        '',
         `■ 문서관리: 총 ${docs.length}건, 유효 ${docs.filter(r=>r.status==='active').length}건, 검토초과 ${docsOverdue.length}건`,
         docsOverdue.length ? `  검토초과: ${docsOverdue.slice(0,5).map(r=>`${r.title||''} (${r.next_review_at||''})`).join(' / ')}` : '  검토초과 없음',
+        docDists.length ? `  배포이력: ${docDists.length}건` : '',
         '',
         `■ SPC: 관리항목 ${spcItems.length}개`,
         spcItems.length ? `  항목: ${spcItems.slice(0,5).map(r=>`${r.item_name||''}-${r.char_name||''}`).join(', ')}` : '',
@@ -2685,7 +2716,10 @@ window.QmsChat = {
         `■ MSA: 연구 ${msa.length}건`,
         msa.filter(r=>(r.grr_pct||r.grr||0)>30).length ?
           `  불량시스템: ${msa.filter(r=>(r.grr_pct||r.grr||0)>30).map(r=>r.name||'').join(', ')}` : '',
+        audits_in.length ? `■ 내부심사: ${audits_in.length}건` : '',
       ].filter(Boolean).join('\n');
+
+
 
     } catch(e) { dataCtx = label; fullSummary = `[현재 페이지: ${label}]`; }
 

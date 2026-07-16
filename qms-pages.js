@@ -7335,10 +7335,10 @@ h1{font-size:13pt;font-weight:900;margin-bottom:1.5mm;letter-spacing:0.5px}
 .sign-box{
   position:absolute;top:0;right:0;
   display:flex;border:0.6pt solid #888;border-radius:4px;overflow:hidden;
-  width:225mm;font-size:9pt
+  width:75mm;font-size:9pt
 }
-.sign-cell{flex:1;text-align:center;border-right:0.6pt solid #888}
-.sign-cell:last-child{border-right:none}
+.sign-cell{flex:1;text-align:center}
+.sign-cell+.sign-cell{border-left:0.6pt solid #888}
 .sign-lbl{padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888}
 .sign-body{height:26px}
 /* 표 */
