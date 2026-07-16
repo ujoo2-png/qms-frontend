@@ -7360,12 +7360,13 @@ tr.even td{background:#f5f8fd}
       <h1>고객불만관리대장 (${e(titleYear)})</h1>
       <div class="meta">
         <span>총 <b style="color:#111">${filtered.length}</b>건</span>
+        <span>발생원: <b>고객불만</b></span>
+        ${df||dt_?`<span>기간: ${e(df||'처음')} ~ ${e(dt_||'현재')}</span>`:yr?`<span>기간: ${e(yr)}년</span>`:''}
         ${cu?`<span>고객사: <b>${e(cu)}</b></span>`:''}
         ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
-        ${df||dt_?`<span>기간: ${e(df||'처음')} ~ ${e(dt_||'현재')}</span>`:''}
       </div>
     </div>
-    <div class="sign-box">
+    <div class="sign-box" style="margin-left:auto;flex-shrink:0">
       <div class="sign-cell"><div class="sign-lbl">작성</div><div class="sign-body"></div></div>
       <div class="sign-cell"><div class="sign-lbl">검토</div><div class="sign-body"></div></div>
       <div class="sign-cell"><div class="sign-lbl">승인</div><div class="sign-body"></div></div>
