@@ -7249,15 +7249,15 @@ _carRender(){
 },
 
 /* ─────────────────────────────────────────────────────
-   [v2.219] 고객불만관리대장 출력
-   현재 필터된 데이터 기준 A4 가로 출력
-   빈 창 document.write 방식
+   [v2.221] 고객불만관리대장 출력
+   서명란: 우측 상단 box형 / 고객불만 자동필터 / 페이지번호 우측하단
    ───────────────────────────────────────────────────── */
 _carComplaintPrint(){
-  const data=window._carStatusAllData||[];
+  /* 고객불만 자동 필터 + 현재 검색 조건 결합 */
+  const data=(window._carStatusAllData||[]).filter(c=>
+    c.type==='고객불만'||c.source==='고객불만'||c.type==='고객불만관리'
+  );
   const q=(document.getElementById('csSearch')?.value||'').toLowerCase();
-  const src=document.getElementById('csSrcF')?.value||'';
-  const st=document.getElementById('csStatusF')?.value||'';
   const as=document.getElementById('csAssigneeF')?.value||'';
   const yr=document.getElementById('csYearF')?.value||'';
   const ic=(document.getElementById('csItemCodeF')?.value||'').toLowerCase();
@@ -7265,11 +7265,9 @@ _carComplaintPrint(){
   const vd=(document.getElementById('csVendorF')?.value||'').toLowerCase();
   const df=document.getElementById('csDateFrom')?.value||'';
   const dt_=document.getElementById('csDateTo')?.value||'';
+
   const filtered=data.filter(c=>{
     if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.item_code||''),(c.assignee||''),(c.customer||''),(c.vendor_name||''),(c.defect_desc||'')].join(' ').toLowerCase().includes(q))return false;
-    if(src&&c.type!==src&&c.source!==src)return false;
-    if(st==='진행'){if(!['대책접수','대책실시'].includes(c.status))return false;}
-    else if(st&&c.status!==st)return false;
     if(as&&c.assignee!==as)return false;
     if(yr&&!(c.date||'').startsWith(yr))return false;
     if(ic&&!(c.item_code||'').toLowerCase().includes(ic))return false;
@@ -7279,14 +7277,17 @@ _carComplaintPrint(){
     if(dt_&&c.date&&c.date>dt_)return false;
     return true;
   }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-  if(!filtered.length){Toast.show('출력할 데이터가 없습니다.','warn');return;}
+
+  if(!filtered.length){Toast.show('출력할 고객불만 데이터가 없습니다.','warn');return;}
+
   const titleYear=yr?`${yr}년`:
     df&&dt_?`${df.slice(0,7)}~${dt_.slice(0,7)}`:
-    df?`${df.slice(0,4)}년 이후`:dt_?`${dt_.slice(0,4)}년 이전`:
     ([...new Set(filtered.map(c=>(c.date||'').slice(0,4)).filter(Boolean))].sort().join('·')+'년')||'전체';
+
   const w=window.open('','_blank','width=1300,height=900,scrollbars=yes');
   if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
   const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
   const cols=[
     {label:'NO.',           w:'24px',  fn:(c,i)=>String(i+1)},
     {label:'게시일',         w:'68px',  fn:c=>e(c.date||'')},
@@ -7306,50 +7307,68 @@ _carComplaintPrint(){
   ];
   const thHtml=cols.map(c=>`<th style="width:${c.w}">${c.label}</th>`).join('');
   const tbodyHtml=filtered.map((c,i)=>
-    `<tr>${cols.map(col=>`<td style="width:${col.w}">${col.fn(c,i)}</td>`).join('')}</tr>`
+    `<tr class="${i%2===1?'even':''}">${cols.map(col=>`<td style="width:${col.w}">${col.fn(c,i)}</td>`).join('')}</tr>`
   ).join('');
+
   const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
 <title>고객불만관리대장 ${e(titleYear)}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:'맑은 고딕','Malgun Gothic',sans-serif}
 body{background:#fff;font-size:8pt;color:#000}
-@page{size:A4 landscape;margin:8mm 7mm 6mm}
-@media print{.no-print{display:none!important}}
+@page{
+  size:A4 landscape;
+  margin:10mm 8mm 14mm;
+  @bottom-right{
+    content:"" counter(page) " / " counter(pages);
+    font-size:8pt;color:#999;font-family:'맑은 고딕',sans-serif
+  }
+}
+@media print{
+  .no-print{display:none!important}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 .wrap{width:276mm}
-h1{font-size:13pt;font-weight:900;margin-bottom:3mm;letter-spacing:0.5px}
-.meta{font-size:7.5pt;color:#555;margin-bottom:3mm;display:flex;flex-wrap:wrap;gap:12px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4mm}
+h1{font-size:13pt;font-weight:900;margin-bottom:1.5mm;letter-spacing:0.5px}
+.meta{font-size:7.5pt;color:#777;display:flex;flex-wrap:wrap;gap:10px}
+/* 서명란 — box형 */
+.sign-box{display:flex;border:0.6pt solid #888;border-radius:4px;overflow:hidden;font-size:9pt}
+.sign-cell{width:50px;text-align:center}
+.sign-cell+.sign-cell{border-left:0.6pt solid #888}
+.sign-lbl{padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888}
+.sign-body{height:26px}
+/* 표 */
 table{border-collapse:collapse;width:100%;table-layout:fixed}
 th{background:#d6e4f0;font-size:7pt;font-weight:700;text-align:center;
-   border:0.5pt solid #444;padding:3px 2px;white-space:nowrap}
-td{font-size:7pt;border:0.5pt solid #999;padding:3px 3px;vertical-align:top;
+   border:0.5pt solid #888;padding:3px 2px;white-space:nowrap}
+td{font-size:7pt;border:0.5pt solid #bbb;padding:3px 3px;vertical-align:top;
    word-break:break-word;line-height:1.4;min-height:14px}
-tr:nth-child(even) td{background:#f7f9fc}
-td:first-child{text-align:center;color:#888;font-size:7pt}
+td:first-child{text-align:center;color:#999;font-size:7pt}
 td:last-child{text-align:center;font-weight:700;color:#1a5fa8;font-size:7pt}
-.footer{margin-top:5mm;display:flex;justify-content:space-between;align-items:flex-end}
-.sign-box{display:flex;gap:8mm}
-.sign{border:0.5pt solid #aaa;width:28mm;text-align:center;padding:2mm}
-.sign-lbl{font-size:6.5pt;color:#666;margin-bottom:6mm}
+tr.even td{background:#f5f8fd}
+/* 하단 */
+.footer{margin-top:4mm;font-size:7pt;color:#bbb}
+/* 화면 전용 페이지 번호 표시 */
+.page-note{text-align:right;font-size:8pt;color:#aaa;margin-top:3mm}
 .print-btn{position:fixed;bottom:14px;right:14px;padding:8px 22px;
   background:#1a56db;color:#fff;border:none;border-radius:6px;
   font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
 </style></head><body>
 <div class="wrap">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3mm">
+  <div class="header">
     <div>
-      <h1 style="margin-bottom:1mm">고객불만관리대장 (${e(titleYear)})</h1>
+      <h1>고객불만관리대장 (${e(titleYear)})</h1>
       <div class="meta">
-        <span>총 <b>${filtered.length}</b>건</span>
-        ${src?`<span>발생원: <b>${e(src)}</b></span>`:''}
+        <span>총 <b style="color:#111">${filtered.length}</b>건</span>
         ${cu?`<span>고객사: <b>${e(cu)}</b></span>`:''}
         ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
         ${df||dt_?`<span>기간: ${e(df||'처음')} ~ ${e(dt_||'현재')}</span>`:''}
-        <span style="color:#aaa">출력일: ${new Date().toLocaleDateString('ko-KR')}</span>
       </div>
     </div>
-    <!-- 서명란 우측 상단 -->
     <div class="sign-box">
-      ${['작성','검토','승인'].map(r=>`<div class="sign"><div class="sign-lbl">${r}</div></div>`).join('')}
+      <div class="sign-cell"><div class="sign-lbl">작성</div><div class="sign-body"></div></div>
+      <div class="sign-cell"><div class="sign-lbl">검토</div><div class="sign-body"></div></div>
+      <div class="sign-cell"><div class="sign-lbl">승인</div><div class="sign-body"></div></div>
     </div>
   </div>
   <table>
@@ -7357,7 +7376,8 @@ td:last-child{text-align:center;font-weight:700;color:#1a5fa8;font-size:7pt}
     <thead><tr>${thHtml}</tr></thead>
     <tbody>${tbodyHtml||`<tr><td colspan="${cols.length}" style="text-align:center;padding:10px;color:#aaa">데이터 없음</td></tr>`}</tbody>
   </table>
-  <div style="margin-top:4mm;font-size:7pt;color:#aaa;text-align:left">㈜이노디스 · 품질관리부</div>
+  <div class="footer">㈜이노디스 · 품질관리부</div>
+  <div class="page-note no-print">인쇄 시 페이지 번호(1/N)가 우측 하단에 자동 표기됩니다.</div>
 </div>
 <button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
 </body></html>`;
