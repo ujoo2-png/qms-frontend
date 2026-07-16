@@ -7248,6 +7248,122 @@ _carRender(){
   if(kb&&kb.style.display!=='none') Pages._carKanbanRender(filtered);
 },
 
+/* ─────────────────────────────────────────────────────
+   [v2.219] 고객불만관리대장 출력
+   현재 필터된 데이터 기준 A4 가로 출력
+   빈 창 document.write 방식
+   ───────────────────────────────────────────────────── */
+_carComplaintPrint(){
+  const data=window._carStatusAllData||[];
+  const q=(document.getElementById('csSearch')?.value||'').toLowerCase();
+  const src=document.getElementById('csSrcF')?.value||'';
+  const st=document.getElementById('csStatusF')?.value||'';
+  const as=document.getElementById('csAssigneeF')?.value||'';
+  const yr=document.getElementById('csYearF')?.value||'';
+  const ic=(document.getElementById('csItemCodeF')?.value||'').toLowerCase();
+  const cu=(document.getElementById('csCustomerF')?.value||'').toLowerCase();
+  const vd=(document.getElementById('csVendorF')?.value||'').toLowerCase();
+  const df=document.getElementById('csDateFrom')?.value||'';
+  const dt_=document.getElementById('csDateTo')?.value||'';
+  const filtered=data.filter(c=>{
+    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.item_code||''),(c.assignee||''),(c.customer||''),(c.vendor_name||''),(c.defect_desc||'')].join(' ').toLowerCase().includes(q))return false;
+    if(src&&c.type!==src&&c.source!==src)return false;
+    if(st==='진행'){if(!['대책접수','대책실시'].includes(c.status))return false;}
+    else if(st&&c.status!==st)return false;
+    if(as&&c.assignee!==as)return false;
+    if(yr&&!(c.date||'').startsWith(yr))return false;
+    if(ic&&!(c.item_code||'').toLowerCase().includes(ic))return false;
+    if(cu&&!(c.customer||'').toLowerCase().includes(cu))return false;
+    if(vd&&![(c.vendor_name||''),(c.customer||'')].join(' ').toLowerCase().includes(vd))return false;
+    if(df&&c.date&&c.date<df)return false;
+    if(dt_&&c.date&&c.date>dt_)return false;
+    return true;
+  }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(!filtered.length){Toast.show('출력할 데이터가 없습니다.','warn');return;}
+  const titleYear=yr?`${yr}년`:
+    df&&dt_?`${df.slice(0,7)}~${dt_.slice(0,7)}`:
+    df?`${df.slice(0,4)}년 이후`:dt_?`${dt_.slice(0,4)}년 이전`:
+    ([...new Set(filtered.map(c=>(c.date||'').slice(0,4)).filter(Boolean))].sort().join('·')+'년')||'전체';
+  const w=window.open('','_blank','width=1300,height=900,scrollbars=yes');
+  if(!w){Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.','warn');return;}
+  const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const cols=[
+    {label:'NO.',           w:'24px',  fn:(c,i)=>String(i+1)},
+    {label:'게시일',         w:'68px',  fn:c=>e(c.date||'')},
+    {label:'고객사',         w:'74px',  fn:c=>e(c.customer||'')},
+    {label:'품목코드',       w:'84px',  fn:c=>e(c.item_code||'')},
+    {label:'품목명',         w:'96px',  fn:c=>e(c.item||'')},
+    {label:'불량현상',       w:'116px', fn:c=>e(c.defect_desc||'')},
+    {label:'처리방법',       w:'56px',  fn:c=>e(c.action_type||'')},
+    {label:'임시대책(D3)',   w:'124px', fn:c=>e(c.d3_action||'')},
+    {label:'부적합현상(D2)', w:'124px', fn:c=>e(c.d2_desc||'')},
+    {label:'대책실시(D5)',   w:'124px', fn:c=>e(c.d5_action||'')},
+    {label:'귀책처',         w:'68px',  fn:c=>e(c.vendor_name||'')},
+    {label:'대책실시일',     w:'64px',  fn:c=>e(c.d5_date||'')},
+    {label:'담당자',         w:'50px',  fn:c=>e(c.assignee||'')},
+    {label:'유효성평가일',   w:'64px',  fn:c=>e(c.d6_date||'')},
+    {label:'상태',           w:'54px',  fn:c=>e(c.status||'')},
+  ];
+  const thHtml=cols.map(c=>`<th style="width:${c.w}">${c.label}</th>`).join('');
+  const tbodyHtml=filtered.map((c,i)=>
+    `<tr>${cols.map(col=>`<td style="width:${col.w}">${col.fn(c,i)}</td>`).join('')}</tr>`
+  ).join('');
+  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>고객불만관리대장 ${e(titleYear)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'맑은 고딕','Malgun Gothic',sans-serif}
+body{background:#fff;font-size:8pt;color:#000}
+@page{size:A4 landscape;margin:8mm 7mm 6mm}
+@media print{.no-print{display:none!important}}
+.wrap{width:276mm}
+h1{font-size:13pt;font-weight:900;margin-bottom:3mm;letter-spacing:0.5px}
+.meta{font-size:7.5pt;color:#555;margin-bottom:3mm;display:flex;flex-wrap:wrap;gap:12px}
+table{border-collapse:collapse;width:100%;table-layout:fixed}
+th{background:#d6e4f0;font-size:7pt;font-weight:700;text-align:center;
+   border:0.5pt solid #444;padding:3px 2px;white-space:nowrap}
+td{font-size:7pt;border:0.5pt solid #999;padding:3px 3px;vertical-align:top;
+   word-break:break-word;line-height:1.4;min-height:14px}
+tr:nth-child(even) td{background:#f7f9fc}
+td:first-child{text-align:center;color:#888;font-size:7pt}
+td:last-child{text-align:center;font-weight:700;color:#1a5fa8;font-size:7pt}
+.footer{margin-top:5mm;display:flex;justify-content:space-between;align-items:flex-end}
+.sign-box{display:flex;gap:8mm}
+.sign{border:0.5pt solid #aaa;width:28mm;text-align:center;padding:2mm}
+.sign-lbl{font-size:6.5pt;color:#666;margin-bottom:6mm}
+.print-btn{position:fixed;bottom:14px;right:14px;padding:8px 22px;
+  background:#1a56db;color:#fff;border:none;border-radius:6px;
+  font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+</style></head><body>
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3mm">
+    <div>
+      <h1 style="margin-bottom:1mm">고객불만관리대장 (${e(titleYear)})</h1>
+      <div class="meta">
+        <span>총 <b>${filtered.length}</b>건</span>
+        ${src?`<span>발생원: <b>${e(src)}</b></span>`:''}
+        ${cu?`<span>고객사: <b>${e(cu)}</b></span>`:''}
+        ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
+        ${df||dt_?`<span>기간: ${e(df||'처음')} ~ ${e(dt_||'현재')}</span>`:''}
+        <span style="color:#aaa">출력일: ${new Date().toLocaleDateString('ko-KR')}</span>
+      </div>
+    </div>
+    <!-- 서명란 우측 상단 -->
+    <div class="sign-box">
+      ${['작성','검토','승인'].map(r=>`<div class="sign"><div class="sign-lbl">${r}</div></div>`).join('')}
+    </div>
+  </div>
+  <table>
+    <colgroup>${cols.map(c=>`<col style="width:${c.w}">`).join('')}</colgroup>
+    <thead><tr>${thHtml}</tr></thead>
+    <tbody>${tbodyHtml||`<tr><td colspan="${cols.length}" style="text-align:center;padding:10px;color:#aaa">데이터 없음</td></tr>`}</tbody>
+  </table>
+  <div style="margin-top:4mm;font-size:7pt;color:#aaa;text-align:left">㈜이노디스 · 품질관리부</div>
+</div>
+<button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+</body></html>`;
+  w.document.open(); w.document.write(html); w.document.close();
+},
+
 /* [v2.217] 날짜 퀵버튼 */
 _carDateQuick(fromDays,toDays){
   const fmt=d=>{const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
@@ -8393,6 +8509,7 @@ async car_status(){
     <div><div class="ptit">📊 시정조치 현황</div>
          <div class="psub">전체 시정조치 현황 · 상태·년도·고객사별 조회</div></div>
     <div class="pac">
+      <button class="btn bpri bsm" onclick="Pages._carComplaintPrint()">🖨️ 고객불만관리대장 출력</button>
       <button class="btn bout bsm" onclick="Nav.go('car_input')">✍️ 신규 입력</button>
     </div>
   </div>
