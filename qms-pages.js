@@ -7054,24 +7054,49 @@ async car(){
       <div><div class="sd-val">${byStatus['반려']||0}</div><div class="sd-lbl">반려</div></div></div>
   </div>
 
-  <!-- 검색 필터 -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-    <input class="fc" id="carSearch" style="width:220px;font-size:13px"
-      placeholder="🔍 CAR번호·제목·품목·담당자"
-      oninput="Pages._carRender()">
-    <select class="fsel" id="carSrcF" onchange="Pages._carRender()">
-      <option value="">전체 발생원</option>
-      ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option value="${s}">${s}</option>`).join('')}
-    </select>
-    <select class="fsel" id="carStatusF" onchange="Pages._carRender()">
-      <option value="">전체 상태</option>
-      ${['접수','대책접수','대책실시','유효성평가','완료','반려','종결'].map(s=>`<option value="${s}">${s}</option>`).join('')}
-    </select>
-    <select class="fsel" id="carAssigneeF" onchange="Pages._carRender()">
-      <option value="">전체 담당자</option>
-      ${[...new Set(data.map(c=>c.assignee||'').filter(Boolean))].sort().map(a=>`<option value="${a}">${H.e(a)}</option>`).join('')}
-    </select>
-    <button class="btn bout bsm" onclick="document.getElementById('carSearch').value='';document.getElementById('carSrcF').value='';document.getElementById('carStatusF').value='';document.getElementById('carAssigneeF').value='';Pages._carRender()">🔄 초기화</button>
+  <!-- [v2.217] 검색 상단 헤더 — F3 팝업 제거, 인라인 필터로 전환 -->
+  <div style="background:var(--bg2);border:1px solid var(--brd);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+    <!-- 1행: 키워드 + 드롭다운 필터 -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <input class="fc" id="carSearch" style="width:210px;font-size:13px"
+        placeholder="🔍 CAR번호·제목·품목·담당자"
+        oninput="Pages._carRender()">
+      <select class="fsel" id="carSrcF" onchange="Pages._carRender()">
+        <option value="">전체 발생원</option>
+        ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option>${s}</option>`).join('')}
+      </select>
+      <select class="fsel" id="carStatusF" onchange="Pages._carRender()">
+        <option value="">전체 상태</option>
+        ${['접수','대책접수','대책실시','유효성평가','완료','반려','종결'].map(s=>`<option>${s}</option>`).join('')}
+      </select>
+      <select class="fsel" id="carAssigneeF" onchange="Pages._carRender()">
+        <option value="">전체 담당자</option>
+        ${[...new Set(data.map(c=>c.assignee||'').filter(Boolean))].sort().map(a=>`<option value="${a}">${H.e(a)}</option>`).join('')}
+      </select>
+      <input class="fc" id="carItemCodeF" style="width:120px;font-size:12px"
+        placeholder="품목코드" oninput="Pages._carRender()">
+      <input class="fc" id="carCustomerF" style="width:110px;font-size:12px"
+        placeholder="고객사" oninput="Pages._carRender()">
+      <button class="btn bout bsm" onclick="Pages._carFilterReset()">🔄 초기화</button>
+    </div>
+    <!-- 2행: 날짜 검색 + 퀵버튼 -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap">개시일</span>
+      <input type="date" class="fc" id="carDateFrom" style="width:130px;font-size:12px"
+        onchange="Pages._carRender()">
+      <span style="font-size:12px;color:var(--muted)">~</span>
+      <input type="date" class="fc" id="carDateTo" style="width:130px;font-size:12px"
+        onchange="Pages._carRender()">
+      <!-- 날짜 퀵버튼 -->
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${[['오늘',0,0],['이번주',-6,0],['이번달',-29,0],['3개월',-89,0],['올해',-364,0]].map(([lb,from,to])=>`
+          <button class="btn bxs bgry bsm" style="font-size:11px;padding:2px 8px"
+            onclick="Pages._carDateQuick(${from},${to})">${lb}</button>`).join('')}
+      </div>
+      <span style="font-size:11px;color:var(--muted);margin-left:4px">
+        총 <b id="carFilterCnt">${data.length}</b>건
+      </span>
+    </div>
   </div>
 
   <!-- 탭: 목록/칸반 -->
@@ -7093,70 +7118,88 @@ _carRender(){
   const src=document.getElementById('carSrcF')?.value||'';
   const st=document.getElementById('carStatusF')?.value||'';
   const as=document.getElementById('carAssigneeF')?.value||'';
+  /* [v2.217] 신규 필터 */
+  const ic=(document.getElementById('carItemCodeF')?.value||'').toLowerCase();
+  const cu=(document.getElementById('carCustomerF')?.value||'').toLowerCase();
+  const df=document.getElementById('carDateFrom')?.value||'';
+  const dt_=document.getElementById('carDateTo')?.value||'';
+
   const filtered=data.filter(c=>{
-    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
-    if(src&&c.type!==src)return false;
+    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.item_code||''),(c.assignee||''),(c.customer||''),(c.defect_desc||'')].join(' ').toLowerCase().includes(q))return false;
+    if(src&&c.type!==src&&c.source!==src)return false;
     if(st&&c.status!==st)return false;
     if(as&&c.assignee!==as)return false;
+    if(ic&&!(c.item_code||'').toLowerCase().includes(ic))return false;
+    if(cu&&!(c.customer||'').toLowerCase().includes(cu))return false;
+    if(df&&c.date&&c.date<df)return false;
+    if(dt_&&c.date&&c.date>dt_)return false;
     return true;
   });
+  const cntEl=document.getElementById('carFilterCnt');
+  if(cntEl) cntEl.textContent=filtered.length;
+
   Tbl.render({
     el:'#carTbl',
     rowStyle:(row)=>{
       if(row.status==='완료'||row.status==='종결') return '';
       if(row.status==='반려') return 'background:rgba(254,226,226,0.4);';
-      if(row.due){
-        const d=Math.ceil((new Date(row.due)-new Date())/86400000);
-        if(d<0) return 'background:rgba(254,226,226,0.5);';
-        if(d<=3) return 'background:rgba(254,243,199,0.5);';
-      }
+      const d=row.due_date?Math.ceil((new Date(row.due_date)-new Date())/86400000):null;
+      if(d!==null&&d<0) return 'background:rgba(254,226,226,0.5);';
+      if(d!==null&&d<=3) return 'background:rgba(254,243,199,0.5);';
       return '';
     },
     cols:[
-      {key:'status',   label:'상태',    w:'80px', align:'center',
-        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='유효성평가'?'bblu':v==='대책실시'?'bamb':v==='대책접수'?'bpur':v==='반려'?'bred':v==='종결'?'bgry':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
-      {key:'no',       label:'CAR번호', w:'150px', req:true,
-        render:v=>`<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
-      {key:'type',      label:'발생원',  w:'72px',
+      {key:'status',   label:'상태',    w:'76px', align:'center',
+        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='유효성평가'?'bblu':v==='대책실시'?'bamb':v==='대책접수'?'bpur':v==='반려'?'bred':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'no',       label:'CAR번호', w:'146px', req:true,
+        render:v=>`<span style="font-family:monospace;font-size:12px;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
+      {key:'type',     label:'발생원',  w:'66px',
         render:v=>`<span class="badge bpur" style="font-size:10px">${H.e(v||'-')}</span>`},
-      {key:'nc_no',    label:'NC참조',  w:'130px',
-        render:v=>v?`<span style="font-family:monospace;font-size:12px;color:#7c3aed">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      /* [v2.217] 추가 컬럼 */
+      {key:'item_code',label:'품목코드',w:'98px',
+        render:v=>v?`<span style="font-family:monospace;font-size:11px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'item',     label:'품목명',  w:'110px',
+        render:v=>v?`<span style="font-size:12px" title="${H.e(v)}">${H.e(v.length>12?v.slice(0,12)+'…':v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'customer', label:'고객사',  w:'88px',
+        render:v=>v?`<span style="font-size:12px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'vendor_name',label:'귀책처',w:'88px',
+        render:v=>v?`<span style="font-size:12px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'defect_desc',label:'불량현상',w:'110px',
+        render:v=>v?`<span style="font-size:11px;color:var(--muted)" title="${H.e(v)}">${H.e(v.length>14?v.slice(0,14)+'…':v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'nc_no',    label:'NC참조',  w:'118px',
+        render:v=>v?`<span style="font-family:monospace;font-size:11px;color:#7c3aed">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
       {key:'title',    label:'제목',    w:'*'},
-      {key:'assignee', label:'담당자',  w:'72px'},
-      {key:'date',     label:'개시일',  w:'88px'},
-      {key:'due_date',      label:'완료기한',w:'88px',
+      {key:'assignee', label:'담당자',  w:'66px'},
+      {key:'date',     label:'개시일',  w:'84px'},
+      {key:'due_date', label:'완료기한',w:'92px',
         render:v=>{
           if(!v) return '<span style="color:var(--tl)">-</span>';
           const d=Math.ceil((new Date(v)-new Date())/86400000);
           const cls=d<0?'bred':d<=3?'bamb':'bgrn';
-          return`<span class="badge ${cls}" style="font-size:10px">${v}</span>`;
+          return`<span class="badge ${cls}" style="font-size:10px">${v} <b>${d<0?'D+'+Math.abs(d):'D-'+d}</b></span>`;
         }},
-      /* [v2.202] 메일 발송 컬럼 — key:'no' 사용(id 중복 방지) */
-      {key:'no', label:'메일', w:'56px', align:'center',
+      /* [v2.202] 메일 */
+      {key:'no', label:'메일', w:'50px', align:'center',
         render:(v,row)=>{
           const rowId=Number(row.id);
-          const sent=!!(row.mail_sent);
-          return sent
-            ?`<span style="background:#f97316;color:#fff;font-size:10px;font-weight:700;
-                padding:2px 8px;border-radius:12px">📧 발송</span>`
-            :`<button class="btn bxs bout" style="font-size:10px;padding:2px 6px"
-                onclick="event.stopPropagation();
-                  window._carMailRow=(DB.cars||[]).find(c=>Number(c.id)===${rowId});
-                  Pages._carInputMail()">📧</button>`;
+          return row.mail_sent
+            ?`<span style="background:#f97316;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">📧</span>`
+            :`<button class="btn bxs bout" style="font-size:10px;padding:1px 5px"
+                onclick="event.stopPropagation();window._carMailRow=(DB.cars||[]).find(c=>Number(c.id)===${rowId});Pages._carInputMail()">📧</button>`;
         }},
-      /* [v2.202] 결정 버튼 컬럼 — row.id 직접 사용(id 중복 방지) */
-      {key:'assignee', label:'결정', w:'140px', align:'center',
+      /* [v2.202] 결정 */
+      {key:'assignee', label:'결정', w:'138px', align:'center',
         render:(v,row)=>{
           const rowId=Number(row.id);
           const done=row.status==='완료'||row.status==='종결'||row.status==='반려';
           if(done) return `<span style="font-size:11px;color:var(--muted)">${H.e(row.status)}</span>`;
-          return `<div style="display:flex;gap:3px;justify-content:center">
-            <button class="btn bxs bgrn" style="font-size:10px;padding:2px 6px"
-              onclick="event.stopPropagation();Pages._carDecide(${rowId},'승인')">✅승인</button>
-            <button class="btn bxs bred" style="font-size:10px;padding:2px 6px"
-              onclick="event.stopPropagation();Pages._carDecide(${rowId},'반려')">🚫반려</button>
-            <button class="btn bxs bgry" style="font-size:10px;padding:2px 6px"
-              onclick="event.stopPropagation();Pages._carDecide(${rowId},'종결')">⛔종료</button>
+          return `<div style="display:flex;gap:2px;justify-content:center">
+            <button class="btn bxs bgrn" style="font-size:10px;padding:1px 5px"
+              onclick="event.stopPropagation();Pages._carDecide(${rowId},'승인')">✅</button>
+            <button class="btn bxs bred" style="font-size:10px;padding:1px 5px"
+              onclick="event.stopPropagation();Pages._carDecide(${rowId},'반려')">🚫</button>
+            <button class="btn bxs bgry" style="font-size:10px;padding:1px 5px"
+              onclick="event.stopPropagation();Pages._carDecide(${rowId},'종결')">⛔</button>
           </div>`;
         }},
     ],
@@ -7177,9 +7220,30 @@ _carRender(){
       });
     }
   });
-  /* 칸반도 같이 갱신 */
   const kb=document.getElementById('carKanbanPane');
   if(kb&&kb.style.display!=='none') Pages._carKanbanRender(filtered);
+},
+
+/* [v2.217] 날짜 퀵버튼 */
+_carDateQuick(fromDays,toDays){
+  const fmt=d=>{const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
+  const today=new Date();
+  const from=new Date(today); from.setDate(today.getDate()+fromDays);
+  const to_=new Date(today);  to_.setDate(today.getDate()+toDays);
+  const df=document.getElementById('carDateFrom'); if(df) df.value=fmt(from);
+  const dt=document.getElementById('carDateTo');   if(dt) dt.value=fmt(to_);
+  Pages._carRender();
+},
+
+/* [v2.217] 필터 초기화 */
+_carFilterReset(){
+  ['carSearch','carItemCodeF','carCustomerF','carDateFrom','carDateTo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  ['carSrcF','carStatusF','carAssigneeF'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  Pages._carRender();
 },
 
 /* [v2.192] 탭 전환 */
@@ -7207,34 +7271,56 @@ _carTab(tab, btn){
 
 /* [v2.192] 칸반 렌더 */
 _carKanbanRender(data){
+  /* [v2.217] 칸반 UI 개선 — 카드에 고객사/품목/귀책처/D-day 배지 강화 */
   const el=document.getElementById('carKanbanPane');
   if(!el) return;
   const steps=['접수','대책접수','대책실시','유효성평가','완료'];
-  const colors={접수:'#6366f1',대책접수:'#a855f7',대책실시:'#f59e0b',유효성평가:'#3b82f6',완료:'#22c55e'};
+  const stepColors={접수:'#6366f1',대책접수:'#a855f7',대책실시:'#f59e0b',유효성평가:'#3b82f6',완료:'#22c55e'};
+  const stepBg={접수:'rgba(99,102,241,0.08)',대책접수:'rgba(168,85,247,0.08)',대책실시:'rgba(245,158,11,0.08)',유효성평가:'rgba(59,130,246,0.08)',완료:'rgba(34,197,94,0.08)'};
   const byStep={};
   steps.forEach(s=>{byStep[s]=data.filter(c=>c.status===s);});
-  el.innerHTML=`<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">
-  ${steps.map(s=>`
-    <div style="flex:0 0 220px;background:var(--bg2);border-radius:10px;padding:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:700;color:${colors[s]}">${s}</div>
-        <span style="background:${colors[s]};color:#fff;border-radius:99px;padding:1px 8px;font-size:11px">${byStep[s].length}</span>
+  el.innerHTML=`
+  <div style="display:flex;gap:10px;overflow-x:auto;padding:4px 2px 12px;min-height:400px">
+  ${steps.map(s=>{
+    const items=byStep[s];
+    return`<div style="flex:0 0 230px;background:${stepBg[s]};border:1.5px solid ${stepColors[s]}33;border-radius:12px;padding:10px 8px">
+      <!-- 컬럼 헤더 -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 2px">
+        <div style="font-size:12px;font-weight:800;color:${stepColors[s]};letter-spacing:0.3px">${s}</div>
+        <span style="background:${stepColors[s]};color:#fff;border-radius:99px;padding:1px 9px;font-size:11px;font-weight:700">${items.length}</span>
       </div>
-      ${byStep[s].length===0?`<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">없음</div>`
-        :byStep[s].map(c=>{
+      <!-- 카드 목록 -->
+      ${items.length===0
+        ?`<div style="padding:24px 0;text-align:center;color:var(--muted);font-size:12px;opacity:0.6">항목 없음</div>`
+        :items.map(c=>{
           const d=c.due_date?Math.ceil((new Date(c.due_date)-new Date())/86400000):null;
-          const dday=d!==null?`<span style="font-size:10px;color:${d<0?'#dc2626':d<=3?'#d97706':'#16a34a'}">${d<0?'D+'+Math.abs(d):'D-'+d}</span>`:'';
-          return`<div style="background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer"
+          const ddayColor=d===null?'var(--muted)':d<0?'#dc2626':d<=3?'#d97706':'#16a34a';
+          const ddayText=d===null?'기한없음':d<0?`D+${Math.abs(d)}`:d===0?'D-Day':`D-${d}`;
+          const urgentBorder=d!==null&&d<0?'border-left:3px solid #dc2626':d!==null&&d<=3?'border-left:3px solid #f59e0b':'';
+          return`<div style="background:var(--card);border:1px solid var(--brd);${urgentBorder};border-radius:9px;padding:10px 10px 8px;margin-bottom:7px;cursor:pointer;transition:box-shadow .15s"
+            onmouseover="this.style.boxShadow='0 2px 10px rgba(0,0,0,0.10)'"
+            onmouseout="this.style.boxShadow=''"
             onclick="Nav.go('car_input',{carId:${Number(c.id)}})">
-            <div style="font-size:11px;font-family:monospace;color:#1a5fa8;margin-bottom:4px">${H.e(c.no||'-')}</div>
-            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${H.e(c.title||'')}">${H.e(c.title||'-')}</div>
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:11px;color:var(--muted)">${H.e(c.assignee||'-')}</span>
-              ${dday}
+            <!-- CAR 번호 -->
+            <div style="font-size:10px;font-family:monospace;color:#1a5fa8;font-weight:700;margin-bottom:5px">${H.e(c.no||'-')}</div>
+            <!-- 제목 -->
+            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:7px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical" title="${H.e(c.title||'')}">${H.e(c.title||'-')}</div>
+            <!-- 품목 -->
+            ${c.item?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${H.e(c.item)}">📦 ${H.e(c.item)}</div>`:''}
+            <!-- 고객사/귀책처 -->
+            ${c.customer||c.vendor_name?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px">
+              ${c.customer?`<span style="background:rgba(59,130,246,0.1);color:#2563eb;padding:1px 5px;border-radius:4px;font-size:10px">${H.e(c.customer)}</span>`:''}
+              ${c.vendor_name?`<span style="background:rgba(168,85,247,0.1);color:#7c3aed;padding:1px 5px;border-radius:4px;font-size:10px;margin-left:3px">${H.e(c.vendor_name)}</span>`:''}
+            </div>`:''}
+            <!-- 하단: 담당자 + D-day -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid var(--brd)">
+              <span style="font-size:10px;color:var(--muted)">👤 ${H.e(c.assignee||'-')}</span>
+              <span style="font-size:10px;font-weight:700;color:${ddayColor}">${ddayText}</span>
             </div>
           </div>`;
         }).join('')}
-    </div>`).join('')}
+    </div>`;
+  }).join('')}
   </div>`;
 },
 
