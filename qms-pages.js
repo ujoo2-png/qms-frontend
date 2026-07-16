@@ -7328,13 +7328,17 @@ body{background:#fff;font-size:8pt;color:#000}
   body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 .wrap{width:276mm}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4mm}
+.header{position:relative;margin-bottom:4mm;min-height:18mm}
 h1{font-size:13pt;font-weight:900;margin-bottom:1.5mm;letter-spacing:0.5px}
-.meta{font-size:7.5pt;color:#777;display:flex;flex-wrap:wrap;gap:10px}
-/* 서명란 — box형 */
-.sign-box{display:flex;border:0.6pt solid #888;border-radius:4px;overflow:hidden;font-size:9pt}
-.sign-cell{width:50px;text-align:center}
-.sign-cell+.sign-cell{border-left:0.6pt solid #888}
+.meta{font-size:7.5pt;color:#777;display:flex;flex-wrap:wrap;gap:10px;max-width:195mm}
+/* 서명란 — A4 가로 210mm~285mm 우측 고정 */
+.sign-box{
+  position:absolute;top:0;right:0;
+  display:flex;border:0.6pt solid #888;border-radius:4px;overflow:hidden;
+  width:225mm;font-size:9pt
+}
+.sign-cell{flex:1;text-align:center;border-right:0.6pt solid #888}
+.sign-cell:last-child{border-right:none}
 .sign-lbl{padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888}
 .sign-body{height:26px}
 /* 표 */
@@ -7366,7 +7370,7 @@ tr.even td{background:#f5f8fd}
         ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
       </div>
     </div>
-    <div class="sign-box" style="margin-left:auto;flex-shrink:0">
+    <div class="sign-box">
       <div class="sign-cell"><div class="sign-lbl">작성</div><div class="sign-body"></div></div>
       <div class="sign-cell"><div class="sign-lbl">검토</div><div class="sign-body"></div></div>
       <div class="sign-cell"><div class="sign-lbl">승인</div><div class="sign-body"></div></div>
