@@ -1533,6 +1533,37 @@ var ExcelMgr=window.ExcelMgr={
         created_at:  row.created_at||null,
         updated_at:  null,
       };
+      /* [v2.216] CAR 시정조치 — active/created_at/updated_at 제외
+         toFullRow(car)와 동일한 컬럼 명세 */
+      if(page==='car') return{
+        no:          row.no||'',
+        title:       row.title||'',
+        date:        row.date||row.open||null,
+        due_date:    row.due_date||row.close_date||row.due||null,
+        type:        row.type||row.source||row.src||'부적합',
+        assignee:    row.assignee||'',
+        status:      row.status||'접수',
+        nc_no:       row.nc_no||null,
+        item_code:   row.item_code||null, item:row.item||null,
+        customer:    row.customer||null,
+        vendor_name: row.vendor_name||null,
+        work_order:  row.work_order||null,
+        ship_qty:    row.ship_qty||null,   insp_qty:row.insp_qty||null,
+        bad_qty:     row.bad_qty||null,    defect_rate:row.defect_rate||null,
+        defect_type: row.defect_type||null, defect_desc:row.defect_desc||null,
+        action_type: row.action_type||null, nc_note:row.nc_note||null,
+        cost_material:row.cost_material||null, cost_process:row.cost_process||null,
+        cost_etc:    row.cost_etc||null,   cost_total:row.cost_total||null,
+        d1_team:     row.d1_team||null,
+        d2_desc:     row.d2_desc||null,    d3_action:row.d3_action||null,
+        d4_why1:     row.d4_why1||null,    d4_why2:row.d4_why2||null,
+        d4_why3:     row.d4_why3||null,    d4_why4:row.d4_why4||null,
+        d4_why5:     row.d4_why5||null,
+        d5_action:   row.d5_action||null,  d5_date:row.d5_date||null,
+        d6_verify:   row.d6_verify||null,  d6_result:row.d6_result||null,
+        d6_date:     row.d6_date||null,    d7_prevent:row.d7_prevent||null,
+        note:        row.note||null,
+      };
       /* 기타: 내부 필드(_dup, _validErr 등) 제거 후 반환 */
       const clean={...row};
       delete clean._dup; delete clean._keyVal;
