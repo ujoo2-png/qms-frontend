@@ -7042,23 +7042,37 @@ async car(){
     </div>
   </div>
   <div class="stat-dash" style="margin-bottom:12px">
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">🔧</div>
+    <!-- [v2.218] 대시보드 카드 클릭 → 필터 적용 (엑셀 고급필터 방식) -->
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carDashFilter('status','')" title="전체 보기">
+      <div class="sd-icon" style="background:#fef3c7;color:#d97706">🔧</div>
       <div><div class="sd-val">${data.length}</div><div class="sd-lbl">전체</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#ede9fe;color:#7c3aed">📋</div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carDashFilter('status','접수')" title="접수 필터">
+      <div class="sd-icon" style="background:#ede9fe;color:#7c3aed">📋</div>
       <div><div class="sd-val">${byStatus['접수']||0}</div><div class="sd-lbl">접수</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fce7f3;color:#ec4899">⚙️</div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carDashFilter('status','진행')" title="진행 필터">
+      <div class="sd-icon" style="background:#fce7f3;color:#ec4899">⚙️</div>
       <div><div class="sd-val">${(byStatus['대책접수']||0)+(byStatus['대책실시']||0)}</div><div class="sd-lbl">진행</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#dcfce7;color:#16a34a">✅</div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carDashFilter('status','완료')" title="완료 필터">
+      <div class="sd-icon" style="background:#dcfce7;color:#16a34a">✅</div>
       <div><div class="sd-val">${byStatus['완료']||0}</div><div class="sd-lbl">완료</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚫</div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carDashFilter('status','반려')" title="반려 필터">
+      <div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚫</div>
       <div><div class="sd-val">${byStatus['반려']||0}</div><div class="sd-lbl">반려</div></div></div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carDashFilter('overdue','')" title="기한초과 필터">
+      <div class="sd-icon" style="background:#fff7ed;color:#ea580c">⏰</div>
+      <div><div class="sd-val">${data.filter(c=>c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&c.status!=='완료'&&c.status!=='종결').length}</div><div class="sd-lbl">기한초과</div></div></div>
+    <!-- [v2.218] 발생년도 카드 -->
+    ${[...new Set(data.map(c=>(c.date||'').slice(0,4)).filter(Boolean))].sort().reverse().slice(0,4).map(yr=>`
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carDashFilter('year','${yr}')" title="${yr}년 필터">
+      <div class="sd-icon" style="background:#f0f9ff;color:#0284c7">📅</div>
+      <div><div class="sd-val">${data.filter(c=>(c.date||'').startsWith(yr)).length}</div><div class="sd-lbl">${yr}년</div></div></div>`).join('')}
   </div>
 
-  <!-- [v2.217] 검색 상단 헤더 — F3 팝업 제거, 인라인 필터로 전환 -->
+  <!-- [v2.218] 검색 상단 헤더 -->
   <div style="background:var(--bg2);border:1px solid var(--brd);border-radius:10px;padding:12px 14px;margin-bottom:12px">
-    <!-- 1행: 키워드 + 드롭다운 필터 -->
+    <!-- 1행: 키워드 + 드롭다운 + 텍스트 필터 -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-      <input class="fc" id="carSearch" style="width:210px;font-size:13px"
+      <input class="fc" id="carSearch" style="width:200px;font-size:13px"
         placeholder="🔍 CAR번호·제목·품목·담당자"
         oninput="Pages._carRender()">
       <select class="fsel" id="carSrcF" onchange="Pages._carRender()">
@@ -7073,29 +7087,33 @@ async car(){
         <option value="">전체 담당자</option>
         ${[...new Set(data.map(c=>c.assignee||'').filter(Boolean))].sort().map(a=>`<option value="${a}">${H.e(a)}</option>`).join('')}
       </select>
-      <input class="fc" id="carItemCodeF" style="width:120px;font-size:12px"
-        placeholder="품목코드" oninput="Pages._carRender()">
-      <input class="fc" id="carCustomerF" style="width:110px;font-size:12px"
-        placeholder="고객사" oninput="Pages._carRender()">
+      <select class="fsel" id="carYearF" onchange="Pages._carRender()">
+        <option value="">전체 년도</option>
+        ${[...new Set(data.map(c=>(c.date||'').slice(0,4)).filter(Boolean))].sort().reverse().map(y=>`<option value="${y}">${y}년</option>`).join('')}
+      </select>
       <button class="btn bout bsm" onclick="Pages._carFilterReset()">🔄 초기화</button>
     </div>
-    <!-- 2행: 날짜 검색 + 퀵버튼 -->
+    <!-- 2행: 품목코드·고객사·귀책처·공급사 + 날짜 -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <input class="fc" id="carItemCodeF" style="width:110px;font-size:12px"
+        placeholder="품목코드" oninput="Pages._carRender()">
+      <input class="fc" id="carCustomerF" style="width:100px;font-size:12px"
+        placeholder="고객사" oninput="Pages._carRender()">
+      <input class="fc" id="carVendorF" style="width:100px;font-size:12px"
+        placeholder="귀책처/공급사" oninput="Pages._carRender()">
+    </div>
+    <!-- 3행: 날짜 + 퀵버튼 -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <span style="font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap">개시일</span>
-      <input type="date" class="fc" id="carDateFrom" style="width:130px;font-size:12px"
-        onchange="Pages._carRender()">
+      <input type="date" class="fc" id="carDateFrom" style="width:128px;font-size:12px" onchange="Pages._carRender()">
       <span style="font-size:12px;color:var(--muted)">~</span>
-      <input type="date" class="fc" id="carDateTo" style="width:130px;font-size:12px"
-        onchange="Pages._carRender()">
-      <!-- 날짜 퀵버튼 -->
+      <input type="date" class="fc" id="carDateTo" style="width:128px;font-size:12px" onchange="Pages._carRender()">
       <div style="display:flex;gap:4px;flex-wrap:wrap">
-        ${[['오늘',0,0],['이번주',-6,0],['이번달',-29,0],['3개월',-89,0],['올해',-364,0]].map(([lb,from,to])=>`
+        ${[['오늘',0,0],['이번주',-6,0],['이번달',-29,0],['3개월',-89,0],['올해',-364,0]].map(([lb,f,t])=>`
           <button class="btn bxs bgry bsm" style="font-size:11px;padding:2px 8px"
-            onclick="Pages._carDateQuick(${from},${to})">${lb}</button>`).join('')}
+            onclick="Pages._carDateQuick(${f},${t})">${lb}</button>`).join('')}
       </div>
-      <span style="font-size:11px;color:var(--muted);margin-left:4px">
-        총 <b id="carFilterCnt">${data.length}</b>건
-      </span>
+      <span style="font-size:11px;color:var(--muted);margin-left:4px">총 <b id="carFilterCnt">${data.length}</b>건</span>
     </div>
   </div>
 
@@ -7118,21 +7136,27 @@ _carRender(){
   const src=document.getElementById('carSrcF')?.value||'';
   const st=document.getElementById('carStatusF')?.value||'';
   const as=document.getElementById('carAssigneeF')?.value||'';
-  /* [v2.217] 신규 필터 */
+  const yr=document.getElementById('carYearF')?.value||'';      /* [v2.218] 년도 */
   const ic=(document.getElementById('carItemCodeF')?.value||'').toLowerCase();
   const cu=(document.getElementById('carCustomerF')?.value||'').toLowerCase();
+  const vd=(document.getElementById('carVendorF')?.value||'').toLowerCase(); /* [v2.218] 귀책처/공급사 */
   const df=document.getElementById('carDateFrom')?.value||'';
   const dt_=document.getElementById('carDateTo')?.value||'';
+  const overdue=document.getElementById('carOverdueF')?.dataset?.active==='1'; /* 기한초과 */
 
   const filtered=data.filter(c=>{
-    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.item_code||''),(c.assignee||''),(c.customer||''),(c.defect_desc||'')].join(' ').toLowerCase().includes(q))return false;
+    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.item_code||''),(c.assignee||''),(c.customer||''),(c.vendor_name||''),(c.defect_desc||'')].join(' ').toLowerCase().includes(q))return false;
     if(src&&c.type!==src&&c.source!==src)return false;
-    if(st&&c.status!==st)return false;
+    if(st==='진행'){if(!['대책접수','대책실시'].includes(c.status))return false;}
+    else if(st&&c.status!==st)return false;
     if(as&&c.assignee!==as)return false;
+    if(yr&&!(c.date||'').startsWith(yr))return false;          /* [v2.218] 년도 */
     if(ic&&!(c.item_code||'').toLowerCase().includes(ic))return false;
     if(cu&&!(c.customer||'').toLowerCase().includes(cu))return false;
+    if(vd&&![(c.vendor_name||''),(c.customer||'')].join(' ').toLowerCase().includes(vd))return false; /* [v2.218] */
     if(df&&c.date&&c.date<df)return false;
     if(dt_&&c.date&&c.date>dt_)return false;
+    if(overdue){const d=c.due_date?Math.ceil((new Date(c.due_date)-new Date())/86400000):null;if(d===null||d>=0||['완료','종결'].includes(c.status))return false;}
     return true;
   });
   const cntEl=document.getElementById('carFilterCnt');
@@ -7235,14 +7259,34 @@ _carDateQuick(fromDays,toDays){
   Pages._carRender();
 },
 
-/* [v2.217] 필터 초기화 */
+/* [v2.218] 대시보드 카드 클릭 → 해당 필터 즉시 적용 */
+_carDashFilter(type, value){
+  Pages._carFilterReset();
+  if(type==='status'&&value==='진행'){
+    document.getElementById('carStatusF').value='진행';
+  } else if(type==='status'&&value){
+    document.getElementById('carStatusF').value=value;
+  } else if(type==='year'&&value){
+    document.getElementById('carYearF').value=value;
+  } else if(type==='overdue'){
+    const el=document.getElementById('carOverdueF');
+    if(el) el.dataset.active='1';
+  }
+  Pages._carRender();
+  /* 목록 탭으로 전환 */
+  const listBtn=document.querySelector('.stab-btn[data-tab="list"]');
+  if(listBtn) Pages._carTab('list', listBtn);
+},
+
+/* [v2.218] 필터 초기화 */
 _carFilterReset(){
-  ['carSearch','carItemCodeF','carCustomerF','carDateFrom','carDateTo'].forEach(id=>{
+  ['carSearch','carItemCodeF','carCustomerF','carVendorF','carDateFrom','carDateTo'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  ['carSrcF','carStatusF','carAssigneeF'].forEach(id=>{
+  ['carSrcF','carStatusF','carAssigneeF','carYearF'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
+  const od=document.getElementById('carOverdueF'); if(od) od.dataset.active='';
   Pages._carRender();
 },
 
@@ -8337,41 +8381,98 @@ async car_status(){
   const fresh=await SB.getCars();
   if(fresh) DB.cars=fresh;
   const allData=DB.cars||[];
-  /* 승인 = 유효성평가 이상 상태 */
-  const approvedData=allData.filter(c=>['유효성평가','완료'].includes(c.status));
-  const byStatus={유효성평가:0,완료:0};
-  approvedData.forEach(c=>{if(byStatus[c.status]!==undefined)byStatus[c.status]++;});
+  const data=allData;  /* 전체 데이터 사용 (car_status도 전체 조회) */
+  const byStatus={};
+  data.forEach(c=>{byStatus[c.status]=(byStatus[c.status]||0)+1;});
+  const overdueCnt=data.filter(c=>c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status)).length;
+  const closedCnt=byStatus['완료']||0;
+  const totalCnt=data.length;
 
   w.innerHTML=`
   <div class="ph">
     <div><div class="ptit">📊 시정조치 현황</div>
-         <div class="psub">승인된 시정조치 현황 · 상태 변경 이력 조회</div></div>
+         <div class="psub">전체 시정조치 현황 · 상태·년도·고객사별 조회</div></div>
     <div class="pac">
       <button class="btn bout bsm" onclick="Nav.go('car_input')">✍️ 신규 입력</button>
     </div>
   </div>
+
+  <!-- [v2.218] 대시보드 — 카드 클릭 → 필터 적용 -->
   <div class="stat-dash" style="margin-bottom:12px">
-    <div class="sd-card"><div class="sd-icon" style="background:#eff6ff;color:#2563eb">📋</div>
-      <div><div class="sd-val">${approvedData.length}</div><div class="sd-lbl">승인 건수</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#f0fdf4;color:#16a34a">✅</div>
-      <div><div class="sd-val">${byStatus['완료']||0}</div><div class="sd-lbl">완료</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#fef3c7;color:#d97706">⚙️</div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carStatusDashFilter('status','')" title="전체">
+      <div class="sd-icon" style="background:#fef3c7;color:#d97706">🔧</div>
+      <div><div class="sd-val">${totalCnt}</div><div class="sd-lbl">전체</div></div></div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carStatusDashFilter('status','접수')" title="접수">
+      <div class="sd-icon" style="background:#ede9fe;color:#7c3aed">📋</div>
+      <div><div class="sd-val">${byStatus['접수']||0}</div><div class="sd-lbl">접수</div></div></div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carStatusDashFilter('status','진행')" title="진행">
+      <div class="sd-icon" style="background:#fce7f3;color:#ec4899">⚙️</div>
+      <div><div class="sd-val">${(byStatus['대책접수']||0)+(byStatus['대책실시']||0)}</div><div class="sd-lbl">진행</div></div></div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carStatusDashFilter('status','유효성평가')" title="유효성평가">
+      <div class="sd-icon" style="background:#eff6ff;color:#2563eb">🔍</div>
       <div><div class="sd-val">${byStatus['유효성평가']||0}</div><div class="sd-lbl">유효성평가</div></div></div>
-    <div class="sd-card"><div class="sd-icon" style="background:#f5f3ff;color:#7c3aed">📈</div>
-      <div><div class="sd-val">${allData.length>0?Math.round(byStatus['완료']/allData.length*100):0}%</div><div class="sd-lbl">완료율</div></div></div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carStatusDashFilter('status','완료')" title="완료">
+      <div class="sd-icon" style="background:#dcfce7;color:#16a34a">✅</div>
+      <div><div class="sd-val">${closedCnt}</div><div class="sd-lbl">완료</div></div></div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carStatusDashFilter('status','반려')" title="반려">
+      <div class="sd-icon" style="background:#fee2e2;color:#dc2626">🚫</div>
+      <div><div class="sd-val">${byStatus['반려']||0}</div><div class="sd-lbl">반려</div></div></div>
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carStatusDashFilter('overdue','')" title="기한초과">
+      <div class="sd-icon" style="background:#fff7ed;color:#ea580c">⏰</div>
+      <div><div class="sd-val">${overdueCnt}</div><div class="sd-lbl">기한초과</div></div></div>
+    <div class="sd-card" style="cursor:default">
+      <div class="sd-icon" style="background:#f5f3ff;color:#7c3aed">📈</div>
+      <div><div class="sd-val">${totalCnt>0?Math.round(closedCnt/totalCnt*100):0}%</div><div class="sd-lbl">완료율</div></div></div>
+    <!-- 발생년도 -->
+    ${[...new Set(data.map(c=>(c.date||'').slice(0,4)).filter(Boolean))].sort().reverse().slice(0,4).map(yr=>`
+    <div class="sd-card" style="cursor:pointer" onclick="Pages._carStatusDashFilter('year','${yr}')" title="${yr}년">
+      <div class="sd-icon" style="background:#f0f9ff;color:#0284c7">📅</div>
+      <div><div class="sd-val">${data.filter(c=>(c.date||'').startsWith(yr)).length}</div><div class="sd-lbl">${yr}년</div></div></div>`).join('')}
   </div>
 
-  <!-- 검색 -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-    <input class="fc" id="carStatusSearch" style="width:200px;font-size:13px"
-      placeholder="🔍 CAR번호·제목·담당자"
-      oninput="Pages._carStatusRender()">
-    <select class="fsel" id="carStatusFilter" onchange="Pages._carStatusRender()">
-      <option value="">승인 전체</option>
-      <option value="유효성평가">유효성평가</option>
-      <option value="완료">완료</option>
-    </select>
-    <button class="btn bout bsm" onclick="document.getElementById('carStatusSearch').value='';document.getElementById('carStatusFilter').value='';Pages._carStatusRender()">🔄 초기화</button>
+  <!-- 검색 상단 헤더 -->
+  <div style="background:var(--bg2);border:1px solid var(--brd);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <input class="fc" id="csSearch" style="width:200px;font-size:13px"
+        placeholder="🔍 CAR번호·제목·품목·담당자" oninput="Pages._carStatusRender()">
+      <select class="fsel" id="csSrcF" onchange="Pages._carStatusRender()">
+        <option value="">전체 발생원</option>
+        ${['부적합','내부심사','고객불만','외부심사','기타'].map(s=>`<option>${s}</option>`).join('')}
+      </select>
+      <select class="fsel" id="csStatusF" onchange="Pages._carStatusRender()">
+        <option value="">전체 상태</option>
+        ${['접수','대책접수','대책실시','유효성평가','완료','반려','종결'].map(s=>`<option>${s}</option>`).join('')}
+      </select>
+      <select class="fsel" id="csAssigneeF" onchange="Pages._carStatusRender()">
+        <option value="">전체 담당자</option>
+        ${[...new Set(data.map(c=>c.assignee||'').filter(Boolean))].sort().map(a=>`<option value="${a}">${H.e(a)}</option>`).join('')}
+      </select>
+      <select class="fsel" id="csYearF" onchange="Pages._carStatusRender()">
+        <option value="">전체 년도</option>
+        ${[...new Set(data.map(c=>(c.date||'').slice(0,4)).filter(Boolean))].sort().reverse().map(y=>`<option value="${y}">${y}년</option>`).join('')}
+      </select>
+      <button class="btn bout bsm" onclick="Pages._carStatusFilterReset()">🔄 초기화</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <input class="fc" id="csItemCodeF" style="width:110px;font-size:12px"
+        placeholder="품목코드" oninput="Pages._carStatusRender()">
+      <input class="fc" id="csCustomerF" style="width:100px;font-size:12px"
+        placeholder="고객사" oninput="Pages._carStatusRender()">
+      <input class="fc" id="csVendorF" style="width:100px;font-size:12px"
+        placeholder="귀책처/공급사" oninput="Pages._carStatusRender()">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap">개시일</span>
+      <input type="date" class="fc" id="csDateFrom" style="width:128px;font-size:12px" onchange="Pages._carStatusRender()">
+      <span style="font-size:12px;color:var(--muted)">~</span>
+      <input type="date" class="fc" id="csDateTo" style="width:128px;font-size:12px" onchange="Pages._carStatusRender()">
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${[['오늘',0,0],['이번주',-6,0],['이번달',-29,0],['3개월',-89,0],['올해',-364,0]].map(([lb,f,t])=>`
+          <button class="btn bxs bgry bsm" style="font-size:11px;padding:2px 8px"
+            onclick="Pages._carStatusDateQuick(${f},${t})">${lb}</button>`).join('')}
+      </div>
+      <span style="font-size:11px;color:var(--muted);margin-left:4px">총 <b id="csFilterCnt">${totalCnt}</b>건</span>
+    </div>
   </div>
 
   <!-- 탭 -->
@@ -8382,33 +8483,76 @@ async car_status(){
   <div id="carStatusListPane"><div id="carStatusTbl"></div></div>
   <div id="carStatusKanbanPane" style="display:none"></div>`;
 
-  window._carStatusData=approvedData;
+  window._carStatusAllData=data;
   Pages._carStatusRender();
 },
-
 _carStatusRender(){
-  const data=window._carStatusData||[];
-  const q=(document.getElementById('carStatusSearch')?.value||'').toLowerCase();
-  const st=document.getElementById('carStatusFilter')?.value||'';
+  /* [v2.218] car()와 동일한 필터 패턴 */
+  const data=window._carStatusAllData||[];
+  const q=(document.getElementById('csSearch')?.value||'').toLowerCase();
+  const src=document.getElementById('csSrcF')?.value||'';
+  const st=document.getElementById('csStatusF')?.value||'';
+  const as=document.getElementById('csAssigneeF')?.value||'';
+  const yr=document.getElementById('csYearF')?.value||'';
+  const ic=(document.getElementById('csItemCodeF')?.value||'').toLowerCase();
+  const cu=(document.getElementById('csCustomerF')?.value||'').toLowerCase();
+  const vd=(document.getElementById('csVendorF')?.value||'').toLowerCase();
+  const df=document.getElementById('csDateFrom')?.value||'';
+  const dt_=document.getElementById('csDateTo')?.value||'';
+
   const filtered=data.filter(c=>{
-    if(q&&![(c.no||''),(c.title||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
-    if(st&&c.status!==st)return false;
+    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.item_code||''),(c.assignee||''),(c.customer||''),(c.vendor_name||''),(c.defect_desc||'')].join(' ').toLowerCase().includes(q))return false;
+    if(src&&c.type!==src&&c.source!==src)return false;
+    if(st==='진행'){if(!['대책접수','대책실시'].includes(c.status))return false;}
+    else if(st&&c.status!==st)return false;
+    if(as&&c.assignee!==as)return false;
+    if(yr&&!(c.date||'').startsWith(yr))return false;
+    if(ic&&!(c.item_code||'').toLowerCase().includes(ic))return false;
+    if(cu&&!(c.customer||'').toLowerCase().includes(cu))return false;
+    if(vd&&![(c.vendor_name||''),(c.customer||'')].join(' ').toLowerCase().includes(vd))return false;
+    if(df&&c.date&&c.date<df)return false;
+    if(dt_&&c.date&&c.date>dt_)return false;
     return true;
   });
+  const cntEl=document.getElementById('csFilterCnt');
+  if(cntEl) cntEl.textContent=filtered.length;
+
   Tbl.render({
     el:'#carStatusTbl',
+    rowStyle:(row)=>{
+      if(row.status==='완료'||row.status==='종결') return '';
+      if(row.status==='반려') return 'background:rgba(254,226,226,0.4);';
+      const d=row.due_date?Math.ceil((new Date(row.due_date)-new Date())/86400000):null;
+      if(d!==null&&d<0) return 'background:rgba(254,226,226,0.5);';
+      if(d!==null&&d<=3) return 'background:rgba(254,243,199,0.5);';
+      return '';
+    },
     cols:[
-      {key:'status',   label:'상태',    w:'80px', align:'center',
-        render:v=>`<span class="badge ${v==='완료'?'bgrn':'bblu'}" style="font-size:10px">${H.e(v||'-')}</span>`},
-      {key:'no',       label:'CAR번호', w:'150px', req:true,
-        render:v=>`<span style="font-family:monospace;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
-      {key:'type',      label:'발생원',  w:'72px',
+      {key:'status',    label:'상태',    w:'76px', align:'center',
+        render:v=>`<span class="badge ${v==='완료'?'bgrn':v==='유효성평가'?'bblu':v==='대책실시'?'bamb':v==='대책접수'?'bpur':v==='반려'?'bred':'bgry'}" style="font-size:10px">${H.e(v||'-')}</span>`},
+      {key:'no',        label:'CAR번호', w:'146px', req:true,
+        render:v=>`<span style="font-family:monospace;font-size:12px;font-weight:700;color:#1a5fa8">${H.e(v||'-')}</span>`},
+      {key:'type',      label:'발생원',  w:'66px',
         render:v=>`<span class="badge bpur" style="font-size:10px">${H.e(v||'-')}</span>`},
-      {key:'title',    label:'제목',    w:'*'},
-      {key:'assignee', label:'담당자',  w:'72px'},
-      {key:'date',     label:'개시일',  w:'88px'},
-      {key:'due_date',      label:'완료기한',w:'88px'},
-      {key:'d6_result',label:'평가결과',w:'80px', align:'center',
+      {key:'item_code', label:'품목코드',w:'98px',
+        render:v=>v?`<span style="font-family:monospace;font-size:11px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'item',      label:'품목명',  w:'110px',
+        render:v=>v?`<span style="font-size:12px" title="${H.e(v)}">${H.e(v.length>12?v.slice(0,12)+'…':v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'customer',  label:'고객사',  w:'88px',
+        render:v=>v?`<span style="font-size:12px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'vendor_name',label:'귀책처', w:'88px',
+        render:v=>v?`<span style="font-size:12px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
+      {key:'title',     label:'제목',    w:'*'},
+      {key:'assignee',  label:'담당자',  w:'66px'},
+      {key:'date',      label:'개시일',  w:'84px'},
+      {key:'due_date',  label:'완료기한',w:'92px',
+        render:v=>{
+          if(!v) return '<span style="color:var(--tl)">-</span>';
+          const d=Math.ceil((new Date(v)-new Date())/86400000);
+          const cls=d<0?'bred':d<=3?'bamb':'bgrn';
+          return`<span class="badge ${cls}" style="font-size:10px">${v} <b>${d<0?'D+'+Math.abs(d):'D-'+d}</b></span>`;
+        }},
+      {key:'d6_result', label:'평가결과',w:'76px', align:'center',
         render:v=>v?`<span class="badge ${v==='유효'?'bgrn':v==='무효'?'bred':'bamb'}" style="font-size:10px">${H.e(v)}</span>`:'<span style="color:var(--tl)">-</span>'},
     ],
     data:filtered,
@@ -8418,6 +8562,92 @@ _carStatusRender(){
   if(kb&&kb.style.display!=='none') Pages._carStatusKanbanRender(filtered);
 },
 
+_carStatusTab(tab, btn){
+  document.querySelectorAll('.stab-btn').forEach(b=>b.classList.toggle('on',b===btn));
+  document.getElementById('carStatusListPane').style.display=tab==='list'?'':'none';
+  const kb=document.getElementById('carStatusKanbanPane');
+  kb.style.display=tab==='kanban'?'':'none';
+  if(tab==='kanban') Pages._carStatusKanbanRender(window._carStatusAllData||[]);
+},
+
+/* [v2.218] 대시보드 카드 클릭 필터 */
+_carStatusDashFilter(type, value){
+  Pages._carStatusFilterReset();
+  if(type==='status'&&value==='진행') document.getElementById('csStatusF').value='진행';
+  else if(type==='status'&&value) document.getElementById('csStatusF').value=value;
+  else if(type==='year'&&value) document.getElementById('csYearF').value=value;
+  Pages._carStatusRender();
+  const listBtn=document.querySelector('.stab-btn[data-tab="list"]');
+  if(listBtn) Pages._carStatusTab('list',listBtn);
+},
+
+/* [v2.218] 날짜 퀵버튼 */
+_carStatusDateQuick(fromDays,toDays){
+  const fmt=d=>{const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
+  const today=new Date();
+  const from=new Date(today); from.setDate(today.getDate()+fromDays);
+  const to_=new Date(today);  to_.setDate(today.getDate()+toDays);
+  const df=document.getElementById('csDateFrom'); if(df) df.value=fmt(from);
+  const dt=document.getElementById('csDateTo');   if(dt) dt.value=fmt(to_);
+  Pages._carStatusRender();
+},
+
+/* [v2.218] 필터 초기화 */
+_carStatusFilterReset(){
+  ['csSearch','csItemCodeF','csCustomerF','csVendorF','csDateFrom','csDateTo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  ['csSrcF','csStatusF','csAssigneeF','csYearF'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  Pages._carStatusRender();
+},
+
+_carStatusKanbanRender(data){
+  /* [v2.218] 칸반 — car_status 전체 단계 표시 */
+  const el=document.getElementById('carStatusKanbanPane');
+  if(!el) return;
+  const steps=['접수','대책접수','대책실시','유효성평가','완료'];
+  const stepColors={접수:'#6366f1',대책접수:'#a855f7',대책실시:'#f59e0b',유효성평가:'#3b82f6',완료:'#22c55e'};
+  const stepBg={접수:'rgba(99,102,241,0.08)',대책접수:'rgba(168,85,247,0.08)',대책실시:'rgba(245,158,11,0.08)',유효성평가:'rgba(59,130,246,0.08)',완료:'rgba(34,197,94,0.08)'};
+  const byStep={};
+  steps.forEach(s=>{byStep[s]=data.filter(c=>c.status===s);});
+  el.innerHTML=`
+  <div style="display:flex;gap:10px;overflow-x:auto;padding:4px 2px 12px;min-height:400px">
+  ${steps.map(s=>{
+    const items=byStep[s];
+    return`<div style="flex:0 0 220px;background:${stepBg[s]};border:1.5px solid ${stepColors[s]}33;border-radius:12px;padding:10px 8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;color:${stepColors[s]}">${s}</div>
+        <span style="background:${stepColors[s]};color:#fff;border-radius:99px;padding:1px 9px;font-size:11px;font-weight:700">${items.length}</span>
+      </div>
+      ${items.length===0
+        ?`<div style="padding:24px 0;text-align:center;color:var(--muted);font-size:12px;opacity:0.6">항목 없음</div>`
+        :items.map(c=>{
+          const d=c.due_date?Math.ceil((new Date(c.due_date)-new Date())/86400000):null;
+          const ddayColor=d===null?'var(--muted)':d<0?'#dc2626':d<=3?'#d97706':'#16a34a';
+          const ddayText=d===null?'기한없음':d<0?`D+${Math.abs(d)}`:d===0?'D-Day':`D-${d}`;
+          const urgentBorder=d!==null&&d<0?'border-left:3px solid #dc2626':d!==null&&d<=3?'border-left:3px solid #f59e0b':'';
+          return`<div style="background:var(--card);border:1px solid var(--brd);${urgentBorder};border-radius:9px;padding:10px;margin-bottom:7px;cursor:pointer"
+            onmouseover="this.style.boxShadow='0 2px 10px rgba(0,0,0,0.10)'"
+            onmouseout="this.style.boxShadow=''"
+            onclick="Nav.go('car_input',{carId:${Number(c.id)}})">
+            <div style="font-size:10px;font-family:monospace;color:#1a5fa8;font-weight:700;margin-bottom:5px">${H.e(c.no||'-')}</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:7px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${H.e(c.title||'-')}</div>
+            ${c.customer||c.vendor_name?`<div style="font-size:10px;margin-bottom:4px">
+              ${c.customer?`<span style="background:rgba(59,130,246,0.1);color:#2563eb;padding:1px 5px;border-radius:4px;font-size:10px">${H.e(c.customer)}</span>`:''}
+              ${c.vendor_name?`<span style="background:rgba(168,85,247,0.1);color:#7c3aed;padding:1px 5px;border-radius:4px;font-size:10px;margin-left:3px">${H.e(c.vendor_name)}</span>`:''}
+            </div>`:''}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid var(--brd)">
+              <span style="font-size:10px;color:var(--muted)">👤 ${H.e(c.assignee||'-')}</span>
+              <span style="font-size:10px;font-weight:700;color:${ddayColor}">${ddayText}</span>
+            </div>
+          </div>`;
+        }).join('')}
+    </div>`;
+  }).join('')}
+  </div>`;
+},
 _carStatusTab(tab, btn){
   document.querySelectorAll('.stab-btn').forEach(b=>b.classList.toggle('on',b===btn));
   document.getElementById('carStatusListPane').style.display=tab==='list'?'':'none';
