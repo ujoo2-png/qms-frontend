@@ -7328,15 +7328,12 @@ body{background:#fff;font-size:8pt;color:#000}
   body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 .wrap{width:276mm}
-.header{position:relative;margin-bottom:4mm;min-height:18mm}
+.header-wrap{width:100%;border-collapse:collapse;margin-bottom:4mm}
+.header-title{vertical-align:top;padding:0}
+.header-sign{vertical-align:top;padding:0;padding-left:4mm;width:75mm}
 h1{font-size:13pt;font-weight:900;margin-bottom:1.5mm;letter-spacing:0.5px}
-.meta{font-size:7.5pt;color:#777;display:flex;flex-wrap:wrap;gap:10px;max-width:195mm}
-/* 서명란 — A4 가로 210mm~285mm 우측 고정 */
-.sign-box{
-  position:absolute;top:0;right:0;
-  display:flex;border:0.6pt solid #888;border-radius:4px;overflow:hidden;
-  width:75mm;font-size:9pt
-}
+.meta{font-size:7.5pt;color:#777;display:flex;flex-wrap:wrap;gap:10px}
+.sign-box{display:flex;border:0.6pt solid #888;border-radius:4px;overflow:hidden;width:75mm;font-size:9pt}
 .sign-cell{flex:1;text-align:center}
 .sign-cell+.sign-cell{border-left:0.6pt solid #888}
 .sign-lbl{padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888}
@@ -7359,23 +7356,27 @@ tr.even td{background:#f5f8fd}
   font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
 </style></head><body>
 <div class="wrap">
-  <div class="header">
-    <div>
-      <h1>고객불만관리대장 (${e(titleYear)})</h1>
-      <div class="meta">
-        <span>총 <b style="color:#111">${filtered.length}</b>건</span>
-        <span>발생원: <b>고객불만</b></span>
-        ${df||dt_?`<span>기간: ${e(df||'처음')} ~ ${e(dt_||'현재')}</span>`:yr?`<span>기간: ${e(yr)}년</span>`:''}
-        ${cu?`<span>고객사: <b>${e(cu)}</b></span>`:''}
-        ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
-      </div>
-    </div>
-    <div class="sign-box">
-      <div class="sign-cell"><div class="sign-lbl">작성</div><div class="sign-body"></div></div>
-      <div class="sign-cell"><div class="sign-lbl">검토</div><div class="sign-body"></div></div>
-      <div class="sign-cell"><div class="sign-lbl">승인</div><div class="sign-body"></div></div>
-    </div>
-  </div>
+  <table class="header-wrap">
+    <tr>
+      <td class="header-title">
+        <h1>고객불만관리대장 (${e(titleYear)})</h1>
+        <div class="meta">
+          <span>총 <b style="color:#111">${filtered.length}</b>건</span>
+          <span>발생원: <b>고객불만</b></span>
+          ${df||dt_?`<span>기간: ${e(df||'처음')} ~ ${e(dt_||'현재')}</span>`:yr?`<span>기간: ${e(yr)}년</span>`:''}
+          ${cu?`<span>고객사: <b>${e(cu)}</b></span>`:''}
+          ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
+        </div>
+      </td>
+      <td class="header-sign">
+        <div class="sign-box">
+          <div class="sign-cell"><div class="sign-lbl">작성</div><div class="sign-body"></div></div>
+          <div class="sign-cell"><div class="sign-lbl">검토</div><div class="sign-body"></div></div>
+          <div class="sign-cell"><div class="sign-lbl">승인</div><div class="sign-body"></div></div>
+        </div>
+      </td>
+    </tr>
+  </table>
   <table>
     <colgroup>${cols.map(c=>`<col style="width:${c.w}">`).join('')}</colgroup>
     <thead><tr>${thHtml}</tr></thead>
