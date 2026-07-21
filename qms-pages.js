@@ -7315,45 +7315,27 @@ _carComplaintPrint(){
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:'맑은 고딕','Malgun Gothic',sans-serif}
 body{background:#fff;font-size:8pt;color:#000}
-@page{
-  size:A4 landscape;
-  margin:10mm 8mm 14mm;
-  @bottom-right{
-    content:"" counter(page) " / " counter(pages);
-    font-size:8pt;color:#999;font-family:'맑은 고딕',sans-serif
-  }
-}
-@media print{
-  .no-print{display:none!important}
-  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-}
-.wrap{width:276mm}
-.header-wrap{width:100%;border-collapse:collapse;margin-bottom:4mm}
-.header-title{vertical-align:top;padding:0}
-.header-sign{vertical-align:top;padding:0;padding-left:4mm;width:75mm}
+@page{size:A4 landscape;margin:10mm 12mm 14mm 8mm;
+  @bottom-right{content:counter(page) " / " counter(pages);font-size:8pt;color:#999;font-family:'맑은 고딕',sans-serif}}
+@media print{.no-print{display:none!important}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.wrap{width:277mm}
+.header-wrap{width:277mm;border-collapse:collapse;margin-bottom:4mm;table-layout:fixed}
+.header-title{width:202mm;vertical-align:top;padding:0;padding-right:4mm}
+.header-sign{width:75mm;vertical-align:top;padding:0}
 h1{font-size:13pt;font-weight:900;margin-bottom:1.5mm;letter-spacing:0.5px}
 .meta{font-size:7.5pt;color:#777;display:flex;flex-wrap:wrap;gap:10px}
-.sign-box{display:flex;border:0.6pt solid #888;border-radius:4px;overflow:hidden;width:75mm;font-size:9pt}
-.sign-cell{flex:1;text-align:center}
+.sign-box{display:table;width:75mm;border-collapse:collapse;border:0.6pt solid #888}
+.sign-cell{display:table-cell;width:25mm;text-align:center}
 .sign-cell+.sign-cell{border-left:0.6pt solid #888}
-.sign-lbl{padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888}
-.sign-body{height:26px}
-/* 표 */
-table{border-collapse:collapse;width:100%;table-layout:fixed}
-th{background:#d6e4f0;font-size:7pt;font-weight:700;text-align:center;
-   border:0.5pt solid #888;padding:3px 2px;white-space:nowrap}
-td{font-size:7pt;border:0.5pt solid #bbb;padding:3px 3px;vertical-align:top;
-   word-break:break-word;line-height:1.4;min-height:14px}
-td:first-child{text-align:center;color:#999;font-size:7pt}
-td:last-child{text-align:center;font-weight:700;color:#1a5fa8;font-size:7pt}
+.sign-lbl{display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888}
+.sign-body{display:block;height:26px}
+table{border-collapse:collapse;width:277mm;table-layout:fixed}
+th{background:#d6e4f0;font-size:7pt;font-weight:700;text-align:center;border:0.5pt solid #888;padding:3px 2px;white-space:nowrap}
+td{font-size:7pt;border:0.5pt solid #bbb;padding:3px 3px;vertical-align:top;word-break:break-word;line-height:1.4;min-height:14px}
+td:first-child{text-align:center;color:#999}td:last-child{text-align:center;font-weight:700;color:#1a5fa8}
 tr.even td{background:#f5f8fd}
-/* 하단 */
 .footer{margin-top:4mm;font-size:7pt;color:#bbb}
-/* 화면 전용 페이지 번호 표시 */
-.page-note{text-align:right;font-size:8pt;color:#aaa;margin-top:3mm}
-.print-btn{position:fixed;bottom:14px;right:14px;padding:8px 22px;
-  background:#1a56db;color:#fff;border:none;border-radius:6px;
-  font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.print-btn{position:fixed;bottom:14px;right:14px;padding:8px 22px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 </style></head><body>
 <div class="wrap">
   <table class="header-wrap">
