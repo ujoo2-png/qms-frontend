@@ -2963,3 +2963,328 @@ document.addEventListener('keydown', e=>{
 document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('aiChatOverlay')?.addEventListener('click', ()=>QmsChat.close());
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   [v2.236] QmsWorkflow — Auto Workflow 엔진
+   1순위: 자동 트리거 체인 (검사→NC→CAR, SPC→NC, 교정 만료)
+   2순위: 자동 에스컬레이션 (D-day 초과, 홀드 장기화, SQM 저점수)
+   3순위: AI 예측/예방 (불량 패턴, 공급사 리스크, 설비 PM)
+   4순위: 공유/소통 (주간 리포트, QnA AI 초안)
+   ═══════════════════════════════════════════════════════════════ */
+window.QmsWorkflow = {
+
+  _today(){ return new Date().toISOString().slice(0,10); },
+  _addDays(s,n){ const d=new Date(s); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); },
+  _dday(s){ if(!s) return null; return Math.ceil((new Date(s)-new Date())/86400000); },
+  _fmt(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; },
+
+  /* ── 1순위: 자동 트리거 체인 ── */
+
+  /* [1-1] 검사 불합격 → NC 자동 생성 */
+  async autoCreateNcFromInsp(insp){
+    if(insp.result!=='불합격') return null;
+    const existing=(DB.nc||[]).find(n=>n.ref_no===insp.insp_no);
+    if(existing) return null;
+    const today=this._today();
+    const ncRow={
+      no:`NC-${today.replace(/-/g,'')}-A${String(Math.floor(Math.random()*900)+100)}`,
+      date:today, type:'검사불합격',
+      item_code:insp.item_code||'', item:insp.item_name||insp.item||'',
+      vendor:insp.vendor||insp.vendor_name||'', qty:insp.qty||0,
+      desc:`[자동생성] 검사 불합격 — ${insp.item_name||''} (${insp.insp_no||''})`,
+      status:'미결', ref_no:insp.insp_no||'', created_by:'시스템',
+      assignee:insp.inspector||insp.assignee||'', auto_from:'insp',
+    };
+    const res=await SB.addNc?.(ncRow);
+    if(res?.ok){
+      if(!DB.nc) DB.nc=[];
+      DB.nc.unshift({id:res.id,...ncRow});
+      Toast.show(`✅ NC 자동생성: ${ncRow.no}`,'ok',5000);
+      await this._autoMention(ncRow.assignee,`[자동알림] 검사불합격→NC 자동생성\n품목:${ncRow.item}\nNC:${ncRow.no}`,'insp_nc');
+      return ncRow;
+    }
+    return null;
+  },
+
+  /* [1-2] NC 심각도 기준 → CAR 자동 생성 */
+  async autoCreateCarFromNc(nc, threshold=10){
+    const need=(Number(nc.qty)||0)>=threshold||['고객불만','중대불량','반복불량'].includes(nc.type)||nc.auto_car_required;
+    if(!need) return null;
+    if((DB.cars||[]).find(c=>c.nc_no===nc.no)) return null;
+    const today=this._today();
+    const carRow={
+      no:`CAR-${today.replace(/-/g,'')}-${String(Math.floor(Math.random()*900)+100)}`,
+      date:today, due_date:this._addDays(today,14),
+      type:nc.type||'부적합',
+      title:`[자동생성] ${nc.item||''} ${nc.type||''} 시정조치`,
+      nc_no:nc.no, item_code:nc.item_code||'', item:nc.item||'',
+      customer:nc.customer||'', vendor_name:nc.vendor||'',
+      assignee:nc.assignee||'', status:'접수', d2_desc:nc.desc||'',
+      created_by:'시스템', auto_from:'nc',
+    };
+    const res=await SB.addCar?.(carRow);
+    if(res?.ok){
+      if(!DB.cars) DB.cars=[];
+      DB.cars.unshift({id:res.id,...carRow});
+      Toast.show(`✅ CAR 자동생성: ${carRow.no}`,'ok',5000);
+      await this._autoMention(carRow.assignee,`[자동알림] NC→CAR 자동생성\nCAR:${carRow.no}\n기한:${carRow.due_date}`,'nc_car');
+      return carRow;
+    }
+    return null;
+  },
+
+  /* [1-3] SPC 관리한계 이탈 → NC 자동 생성 */
+  async autoCreateNcFromSpc(spcItem, vtype='관리한계이탈'){
+    const today=this._today();
+    if((DB.nc||[]).find(n=>n.ref_no===`SPC-${spcItem.id}`&&n.date===today)) return null;
+    const ncRow={
+      no:`NC-${today.replace(/-/g,'')}-S${String(spcItem.id).padStart(3,'0')}`,
+      date:today, type:'SPC이탈',
+      item_code:spcItem.item_code||'', item:spcItem.item_name||'',
+      desc:`[자동생성] SPC ${vtype} — ${spcItem.char_name||''} (Cpk:${spcItem.cpk||'?'})`,
+      status:'미결', ref_no:`SPC-${spcItem.id}`, created_by:'시스템',
+      assignee:spcItem.created_by||'', auto_from:'spc',
+    };
+    const res=await SB.addNc?.(ncRow);
+    if(res?.ok){
+      if(!DB.nc) DB.nc=[];
+      DB.nc.unshift({id:res.id,...ncRow});
+      Toast.show(`⚠️ SPC이탈→NC 자동생성: ${ncRow.no}`,'warn',6000);
+      await this._autoMention(ncRow.assignee,`[자동알림] SPC ${vtype} 감지\n품목:${ncRow.item}\nNC:${ncRow.no}`,'spc_nc');
+      return ncRow;
+    }
+    return null;
+  },
+
+  /* [1-4] 교정 만료 D-30 → 자동 알림 */
+  async checkCalibrationExpiry(){
+    const cals=DB.cals||[]; const today=this._today();
+    const warned=JSON.parse(localStorage.getItem('_wf_cal')||'{}');
+    for(const cal of cals){
+      if(!cal.next) continue;
+      const d=this._dday(cal.next); if(d===null||d<0||d>30) continue;
+      const key=`${cal.id}_${cal.next}`;
+      if(warned[key]) continue;
+      warned[key]=today;
+      const nm=cal.name||cal.equip_name||'';
+      const msg=d===0?`[긴급] 교정 만료 당일: ${nm}`:`[교정만료 D-${d}] ${nm} — ${cal.next}`;
+      Toast.show(msg,d<=7?'err':'warn',8000);
+      await this._autoMention(cal.assignee||cal.user,msg,'cal_expiry');
+    }
+    localStorage.setItem('_wf_cal',JSON.stringify(warned));
+  },
+
+  /* ── 2순위: 자동 에스컬레이션 ── */
+
+  /* [2-1] CAR D-day 초과 → 에스컬레이션 */
+  async checkCarEscalation(){
+    const cars=DB.cars||[]; const today=this._today(); let cnt=0;
+    const warned=JSON.parse(localStorage.getItem('_wf_car_esc')||'{}');
+    for(const car of cars){
+      if(['완료','종결','반려'].includes(car.status)||!car.due_date) continue;
+      const d=this._dday(car.due_date); if(d===null||d>=0) continue;
+      const key=`${car.id}_${car.due_date}`; if(warned[key]) continue;
+      warned[key]=today; cnt++;
+      const msg=`[에스컬레이션] CAR 기한 ${Math.abs(d)}일 초과\n${car.no} — ${car.title||''}\n담당:${car.assignee||''}, 기한:${car.due_date}`;
+      await this._autoMention(car.assignee,msg,'car_overdue');
+      for(const u of (DB.users||[]).filter(u=>u.role==='admin').slice(0,2))
+        await this._autoMention(u.username,msg,'car_overdue_admin');
+    }
+    localStorage.setItem('_wf_car_esc',JSON.stringify(warned));
+    if(cnt>0) Toast.show(`⏰ CAR 기한초과 ${cnt}건 에스컬레이션 발송`,'warn',6000);
+    return cnt;
+  },
+
+  /* [2-2] 홀드 장기화 7일↑ → 처리 요청 */
+  async checkHoldEscalation(days=7){
+    const holds=DB.holds||[]; const today=this._today();
+    const warned=JSON.parse(localStorage.getItem('_wf_hold')||'{}');
+    for(const h of holds){
+      if(h.status==='해제') continue;
+      const d=this._dday(h.hold_date); if(d===null||d>-days) continue;
+      const key=`${h.id}`; if(warned[key]) continue;
+      warned[key]=today;
+      const msg=`[홀드 장기화 ${Math.abs(d)}일] ${h.item||''} ${h.qty||''}개\n폐기/반품/특채 결정 필요`;
+      Toast.show(msg,'warn',8000);
+      await this._autoMention(h.assignee,msg,'hold_long');
+    }
+    localStorage.setItem('_wf_hold',JSON.stringify(warned));
+  },
+
+  /* [2-3] SQM 저점수 공급사 → 개선 요청 */
+  async checkSqmEscalation(threshold=60){
+    const evals=DB.vendor_evals||[]; const today=this._today();
+    const warned=JSON.parse(localStorage.getItem('_wf_sqm')||'{}');
+    const byVendor={};
+    for(const ev of evals){
+      if(!byVendor[ev.vendor_id]||ev.eval_date>byVendor[ev.vendor_id].eval_date)
+        byVendor[ev.vendor_id]=ev;
+    }
+    for(const ev of Object.values(byVendor)){
+      const score=Number(ev.total||ev.score||0); if(score>=threshold) continue;
+      const key=`${ev.vendor_id}_${ev.eval_date}`; if(warned[key]) continue;
+      warned[key]=today;
+      const vName=(DB.vendors||[]).find(v=>v.id===ev.vendor_id)?.name||ev.vendor_name||ev.vendor_id;
+      Toast.show(`[SQM 저점수] ${vName} — ${score}점`,'warn',6000);
+    }
+    localStorage.setItem('_wf_sqm',JSON.stringify(warned));
+  },
+
+  /* [2-4] 내부심사 지적 → CAR 미연결 알림 */
+  async checkAuditToCarLink(){
+    for(const a of DB.audits||[]){
+      if(a.status!=='지적'&&a.status!=='부적합') continue;
+      if((DB.cars||[]).find(c=>c.nc_no===a.no||c.title?.includes(a.no))) continue;
+      console.log('[WF] 내부심사 CAR 미연결:', a.no);
+    }
+  },
+
+  /* ── 3순위: AI 예측/예방 ── */
+
+  /* [3-1] 불량 패턴 → 재발 위험 예측 */
+  async predictDefectRisk(){
+    const nc=DB.nc||[]; const m3=new Date(); m3.setMonth(m3.getMonth()-3);
+    const recent=nc.filter(n=>n.date&&new Date(n.date)>=m3);
+    const byItem={}; for(const n of recent){ const k=n.item_code||n.item||''; if(k) byItem[k]=(byItem[k]||0)+1; }
+    const risks=Object.entries(byItem).filter(([,c])=>c>=3).sort((a,b)=>b[1]-a[1]).slice(0,5)
+      .map(([item,cnt])=>({item,cnt,level:cnt>=5?'높음':'보통',msg:`${item} — 3개월 ${cnt}회 불량`}));
+    window._wfDefectRisks=risks; return risks;
+  },
+
+  /* [3-2] 공급사 리스크 사전 경보 */
+  async predictVendorRisk(){
+    const nc=DB.nc||[]; const m3=new Date(); m3.setMonth(m3.getMonth()-3);
+    const byV={};
+    for(const n of nc.filter(n=>n.date&&new Date(n.date)>=m3)){
+      const k=n.vendor||n.vendor_name||''; if(k) byV[k]=(byV[k]||0)+1;
+    }
+    const risks=Object.entries(byV).filter(([,c])=>c>=2)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([vendor,ncCnt])=>({vendor,ncCnt,level:ncCnt>=4?'고위험':'주의'}));
+    window._wfVendorRisks=risks; return risks;
+  },
+
+  /* [3-3] 설비 PM 예측 */
+  async predictEquipFailure(){
+    const equips=DB.equip||[]; const preds=[];
+    for(const eq of equips){
+      if(!eq.next_pm) continue;
+      const d=this._dday(eq.next_pm); if(d===null||d<0||d>14) continue;
+      preds.push({equip:eq.name||eq.code||'',nextPm:eq.next_pm,dday:d});
+    }
+    if(preds.length>0) Toast.show(`🔧 설비 PM 임박 ${preds.length}건`,'warn',5000);
+    return preds.sort((a,b)=>a.dday-b.dday);
+  },
+
+  /* [3-4] LOT + NC 연계 → 영향 LOT 홀드 제안 */
+  async checkLotRisk(ncRow){
+    if(!ncRow?.lot_no) return [];
+    const lots=(DB.lots||[]).filter(l=>l.lot_no===ncRow.lot_no||l.item_code===ncRow.item_code);
+    if(lots.length>0) Toast.show(`⚠️ NC 연관 LOT ${lots.length}건 홀드 검토 필요`,'warn',8000);
+    return lots;
+  },
+
+  /* ── 4순위: 공유/소통 ── */
+
+  /* [4-1] 주간 품질 리포트 */
+  generateWeeklyReport(){
+    const today=new Date(); const weekAgo=new Date(today); weekAgo.setDate(today.getDate()-7);
+    const fmt=d=>d.toISOString().slice(0,10);
+    const wS=fmt(weekAgo), wE=fmt(today);
+    const nc=(DB.nc||[]).filter(n=>n.date>=wS&&n.date<=wE);
+    const cars=(DB.cars||[]).filter(c=>c.date>=wS&&c.date<=wE);
+    const insps=(DB.inspections||[]).filter(i=>i.insp_date>=wS&&i.insp_date<=wE);
+    const fails=insps.filter(i=>i.result==='불합격');
+    const carOvd=(DB.cars||[]).filter(c=>c.due_date<wE&&!['완료','종결'].includes(c.status));
+    const byItem={}; for(const n of nc){ byItem[n.item||'기타']=(byItem[n.item||'기타']||0)+1; }
+    const top3=Object.entries(byItem).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const failRate=insps.length?Math.round(fails.length/insps.length*100):0;
+    const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>주간 품질 리포트 ${wS}~${wE}</title>
+<style>*{font-family:'맑은 고딕',sans-serif;margin:0;padding:0;box-sizing:border-box}
+body{background:#f8f9fa;padding:20px;font-size:13px}
+.wrap{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+h1{font-size:18px;font-weight:700;margin-bottom:4px}.sub{font-size:12px;color:#888;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.card{background:#f8f9fa;border-radius:8px;padding:12px;text-align:center}
+.card .val{font-size:24px;font-weight:700;color:#1a5fa8}.card .lbl{font-size:11px;color:#888;margin-top:4px}
+.warn .val{color:#d97706}.danger .val{color:#dc2626}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th{background:#f1f5f9;font-size:12px;padding:7px;text-align:left;border-bottom:1px solid #e2e8f0}
+td{padding:7px;border-bottom:1px solid #f1f5f9;font-size:12px}
+.sec{margin-bottom:18px}.sec h2{font-size:14px;font-weight:600;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #e2e8f0}
+.print-btn{position:fixed;bottom:14px;right:14px;padding:8px 20px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
+</style></head><body><div class="wrap">
+<h1>📊 주간 품질 리포트</h1>
+<div class="sub">기간: ${wS} ~ ${wE} &nbsp;|&nbsp; ㈜이노디스 품질관리부</div>
+<div class="grid">
+<div class="card"><div class="val">${insps.length}</div><div class="lbl">검사 건수</div></div>
+<div class="card ${fails.length>0?'warn':''}"><div class="val">${fails.length}</div><div class="lbl">불합격 (${failRate}%)</div></div>
+<div class="card ${nc.length>0?'warn':''}"><div class="val">${nc.length}</div><div class="lbl">신규 NC</div></div>
+<div class="card ${carOvd.length>0?'danger':''}"><div class="val">${carOvd.length}</div><div class="lbl">CAR 기한초과</div></div>
+</div>
+${top3.length?`<div class="sec"><h2>불량 다발 품목 TOP3</h2>
+<table><thead><tr><th>순위</th><th>품목</th><th>발생</th></tr></thead><tbody>
+${top3.map(([item,cnt],i)=>`<tr><td>${i+1}</td><td>${item}</td><td><b>${cnt}건</b></td></tr>`).join('')}
+</tbody></table></div>`:''}
+${cars.length?`<div class="sec"><h2>이번주 신규 CAR (${cars.length}건)</h2>
+<table><thead><tr><th>번호</th><th>제목</th><th>담당자</th><th>완료기한</th></tr></thead><tbody>
+${cars.slice(0,8).map(c=>`<tr><td>${c.no||''}</td><td>${c.title||''}</td><td>${c.assignee||''}</td><td>${c.due_date||''}</td></tr>`).join('')}
+</tbody></table></div>`:''}
+${carOvd.length?`<div class="sec"><h2 style="color:#dc2626">⏰ CAR 기한초과 (${carOvd.length}건)</h2>
+<table><thead><tr><th>번호</th><th>제목</th><th>담당자</th><th>초과</th></tr></thead><tbody>
+${carOvd.slice(0,8).map(c=>`<tr><td>${c.no||''}</td><td>${c.title||''}</td><td>${c.assignee||''}</td><td style="color:#dc2626">${Math.abs(this._dday(c.due_date))}일</td></tr>`).join('')}
+</tbody></table></div>`:''}
+<div style="margin-top:14px;font-size:11px;color:#aaa;text-align:right">QMS Auto Workflow 자동 생성</div>
+</div>
+<button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄/PDF</button>
+</body></html>`;
+    const w=window.open('','_blank','width=860,height=700,scrollbars=yes');
+    if(!w){Toast.show('팝업 차단 — 허용 후 다시 시도','warn');return;}
+    w.document.open(); w.document.write(html); w.document.close();
+    Toast.show('📊 주간 리포트 생성 완료','ok');
+  },
+
+  /* [4-2] QnA AI 자동 답변 초안 */
+  async autoQnaReply(qnaItem){
+    if(!qnaItem?.content) return null;
+    const prompt=`아래 품질 관련 질문에 전문적이고 간결한 답변 초안을 작성해주세요 (담당자 검토용).
+질문: ${qnaItem.content}
+작성자: ${qnaItem.author||'사용자'}
+형식: 핵심 답변 2~3문장 + 관련 조치사항(있을 경우)`;
+    const res=await GeminiAI.analyze(prompt,null,'qna_auto');
+    return res?.ok?res.result:null;
+  },
+
+  /* ── 공통: 자동 멘션 발송 ── */
+  async _autoMention(toUser,msg,type='auto'){
+    if(!toUser||!msg) return;
+    try{
+      const row={to_user:toUser,from_user:'SYSTEM',content:msg,page:type,read:false,created_at:new Date().toISOString()};
+      await SB.addMention?.(row);
+      if(!DB.mentions) DB.mentions=[];
+      DB.mentions.unshift({id:Date.now(),...row});
+    }catch(e){ console.warn('[WF] 멘션 실패:',e); }
+  },
+
+  /* ── 워크플로우 실행 ── */
+  async run(){
+    try{
+      await this.checkCalibrationExpiry();
+      await this.checkCarEscalation();
+      await this.checkHoldEscalation();
+      await this.checkSqmEscalation();
+      await this.checkAuditToCarLink();
+      await this.predictDefectRisk();
+      await this.predictVendorRisk();
+      await this.predictEquipFailure();
+      console.log('[QmsWorkflow] ✅ Auto Workflow 완료');
+    }catch(e){ console.warn('[QmsWorkflow] 오류:',e); }
+  },
+
+  /* 30분마다 주기 실행 */
+  startScheduler(){
+    this.run();
+    setInterval(()=>this.run(), 30*60*1000);
+  },
+};

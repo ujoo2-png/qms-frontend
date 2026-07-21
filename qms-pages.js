@@ -91,7 +91,12 @@ async home(){
         <div class="hw-hdr-stat">
           <div>${today}</div>
           <div>미결 <strong style="color:#ef4444">${ncO}건</strong> &nbsp;·&nbsp; 교정만료 <strong style="color:#f59e0b">${eqE}건</strong> &nbsp;·&nbsp; CAR <strong style="color:#3b82f6">${carO}건</strong></div>
+          <!-- [v2.236] 주간 리포트 버튼 -->
+          <button class="btn bout bxs" style="font-size:11px;padding:3px 10px;margin-top:4px"
+            onclick="QmsWorkflow.generateWeeklyReport()">📊 주간 리포트</button>
         </div>
+        <!-- [v2.236] Auto Workflow 인사이트 패널 -->
+        <div id="wfInsightPanel" style="background:rgba(254,243,199,0.6);border:1px solid #fbbf24;border-radius:8px;padding:6px 10px;margin:6px 0;min-height:20px"></div>
         <!-- A안: 👤 이름(개인정보수정) + 🚪 로그아웃 버튼 나란히 -->
         <div class="hw-profile-btn" onclick="Pages._profileEdit()" title="개인정보 수정">
           <div class="hw-profile-avatar">${H.e(loginUser.name.charAt(0))}</div>
@@ -266,9 +271,34 @@ async home(){
   Pages._homeApplyCardOrder();
   /* [v2.65] 드래그앤드롭 초기화 */
   Pages._homeInitDrag();
-  /* [v2.228] 홈화면 버전 동적 표시 — .bv 태그에서 읽어오기 */
+  /* [v2.228] 홈화면 버전 동적 표시 */
   const hwVer=document.getElementById('hwVer');
   if(hwVer) hwVer.textContent=document.querySelector('.bv')?.textContent||'';
+  /* [v2.236] Auto Workflow 인사이트 패널 렌더 */
+  setTimeout(()=>Pages._renderWfInsight(), 1000);
+},
+
+/* [v2.236] 홈화면 Auto Workflow 인사이트 패널 */
+_renderWfInsight(){
+  const el=document.getElementById('wfInsightPanel');
+  if(!el) return;
+  const risks=window._wfDefectRisks||[];
+  const vRisks=window._wfVendorRisks||[];
+  const carOvd=(DB.cars||[]).filter(c=>c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status));
+  const calSoon=(DB.cals||[]).filter(c=>c.next&&Math.ceil((new Date(c.next)-new Date())/86400000)<=30&&Math.ceil((new Date(c.next)-new Date())/86400000)>=0);
+  const items=[];
+  if(carOvd.length>0) items.push({icon:'⏰',color:'#dc2626',msg:`CAR 기한 초과 ${carOvd.length}건`});
+  if(calSoon.length>0) items.push({icon:'🔬',color:'#d97706',msg:`교정 만료 임박 ${calSoon.length}건`});
+  if(risks.length>0) items.push({icon:'📊',color:'#7c3aed',msg:`재발 위험 품목: ${risks[0]?.item||''} 외 ${risks.length-1}건`});
+  if(vRisks.length>0) items.push({icon:'🏭',color:'#d97706',msg:`리스크 공급사: ${vRisks[0]?.vendor||''} 외 ${vRisks.length-1}개`});
+  if(items.length===0){
+    el.innerHTML='<span style="font-size:12px;color:var(--muted)">✅ 이상 없음</span>';
+    return;
+  }
+  el.innerHTML=items.map(it=>`<div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 0">
+    <span>${it.icon}</span>
+    <span style="color:${it.color};font-weight:600">${it.msg}</span>
+  </div>`).join('');
 },
 
 /* ── 개인정보 수정 ── */
@@ -2788,6 +2818,8 @@ async _ncSave(){
     const res=await SB.addNc(row);
     if(!res?.ok) return;
     Toast.show('부적합이 등록되었습니다.','ok');
+    /* [v2.236] Auto Workflow: NC → CAR 자동 생성 트리거 */
+    if(window.QmsWorkflow) setTimeout(()=>QmsWorkflow.autoCreateCarFromNc({...row,id:res.id}),500);
   }
   Modal.close();
   Pages._ncRender();
@@ -6733,7 +6765,9 @@ _qnaDetail:async function(id){
           '<option value="in_progress"'+(r.status==='in_progress'?' selected':'')+'>처리중</option>'+
           '<option value="resolved"'+(r.status==='resolved'?' selected':'')+'>해결됨</option>'+
           '<option value="closed"'+(r.status==='closed'?' selected':'')+'>닫힘</option>'+
-        '</select>':'')+
+        '</select>'+
+        /* [v2.236] AI 답변 초안 버튼 */
+        '<button class="btn bxs bpur" style="font-size:11px;padding:3px 8px;margin-left:6px" onclick="Pages._qnaAiDraft('+r.id+')">🤖 AI 초안</button>':'')+
       '</div>'+
       '<div style="font-size:16px;font-weight:700;margin-bottom:6px">'+H.e(r.title)+'</div>'+
       '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">'+
@@ -6790,6 +6824,24 @@ _qnaDelReply:async function(replyId,qnaId){
     onOk:async function(){var r=await SB.deleteQnaReply(replyId);if(r.ok){Toast.show('삭제됨','ok');Modal.close();Pages._qnaDetail(qnaId);}}
   });
 },
+/* [v2.236] QnA AI 답변 초안 생성 */
+_qnaAiDraft:async function(id){
+  const r=await SB.getQnaById(id);
+  if(!r) return;
+  Toast.show('🤖 AI 답변 초안 생성 중...','info',3000);
+  const draft=await QmsWorkflow.autoQnaReply({content:r.body||r.title,author:r.author});
+  if(!draft){Toast.show('AI 초안 생성 실패','err');return;}
+  /* 답변 입력창에 초안 자동 입력 */
+  const replyEl=document.getElementById('qnaReplyText')||document.querySelector('[id*="qnaReply"]');
+  if(replyEl){
+    replyEl.value=`[AI 초안 — 검토 후 수정하세요]\n\n${draft}`;
+    replyEl.focus();
+    Toast.show('✅ AI 답변 초안이 입력창에 삽입됐습니다.','ok');
+  } else {
+    Modal.alert({title:'🤖 AI 답변 초안',body:`<div style="white-space:pre-wrap;font-size:13px;line-height:1.7;padding:12px;background:var(--bg2);border-radius:8px">${H.e(draft)}</div>`,size:'mlg'});
+  }
+},
+
 _qnaChgStatus:async function(id,st){
   var r=await SB.updateQna(id,{status:st});
   if(r.ok){Toast.show('상태 변경됨','ok');window._qnaRows=await SB.getQna();Pages._qnaApply();}

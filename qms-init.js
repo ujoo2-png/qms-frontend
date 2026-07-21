@@ -128,6 +128,8 @@ function setupHotkeys(){
           }
         }catch(e){ console.warn('[세션복원] DB 로드 오류:', e); }
         Nav.go(savedPage);
+        /* [v2.236] Auto Workflow 스케줄러 시작 */
+        setTimeout(()=>{ if(window.QmsWorkflow) QmsWorkflow.startScheduler(); }, 3000);
         /* [v2.65] 세션 복원 후 Magic Indicator 초기화 */
         setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 200);
         if(savedPage !== 'home'){
