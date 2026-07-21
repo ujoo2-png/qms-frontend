@@ -85,8 +85,8 @@ async home(){
           :`<span class="hw-hdr-logo-def">QMS</span>`}
         <div class="hw-hdr-center">
           <div class="hw-hdr-title">QMS 품질경영시스템</div>
-          <!-- ★★★ 버전표기: 홈화면 카드 헤더 — 버전 변경 시 반드시 이 줄 수정 ★★★ -->
-          <div class="hw-hdr-sub">Quality Management System · v2.182</div>
+          <!-- [v2.228] 버전: index.html .bv 에서 동적 읽기 — 하드코딩 제거 -->
+          <div class="hw-hdr-sub">Quality Management System · <span id="hwVer"></span></div>
         </div>
         <div class="hw-hdr-stat">
           <div>${today}</div>
@@ -266,6 +266,9 @@ async home(){
   Pages._homeApplyCardOrder();
   /* [v2.65] 드래그앤드롭 초기화 */
   Pages._homeInitDrag();
+  /* [v2.228] 홈화면 버전 동적 표시 — .bv 태그에서 읽어오기 */
+  const hwVer=document.getElementById('hwVer');
+  if(hwVer) hwVer.textContent=document.querySelector('.bv')?.textContent||'';
 },
 
 /* ── 개인정보 수정 ── */
