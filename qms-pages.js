@@ -7346,7 +7346,7 @@ tr.even td{background:#f5f8fd}
 .print-btn{position:fixed;bottom:14px;right:14px;padding:8px 22px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 </style></head><body>
 <div class="wrap">
-  <div class="header-row">
+  <div style="display:flex;width:277mm;margin-bottom:4mm;align-items:flex-start">
     <div style="flex:0 0 202mm;width:202mm;padding-right:4mm">
       <h1>고객불만관리대장 (${e(titleYear)})</h1>
       <div class="meta">
@@ -7357,7 +7357,7 @@ tr.even td{background:#f5f8fd}
         ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
       </div>
     </div>
-    <div style="flex:0 0 75mm;width:75mm;min-width:75mm;max-width:75mm;margin-left:auto">
+    <div style="flex:0 0 75mm;width:75mm;min-width:75mm;max-width:75mm">
       <div style="display:flex;width:75mm;border:0.6pt solid #888">
         <div style="flex:0 0 25mm;width:25mm;text-align:center">
           <div style="display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888">작성</div>
@@ -7368,6 +7368,32 @@ tr.even td{background:#f5f8fd}
           <div style="display:block;height:26px"></div>
         </div>
         <div style="flex:0 0 25mm;width:25mm;text-align:center;border-left:0.6pt solid #888">
+          <div style="display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888">승인</div>
+          <div style="display:block;height:26px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+      <h1>고객불만관리대장 (${e(titleYear)})</h1>
+      <div class="meta">
+        <span>총 <b style="color:#111">${filtered.length}</b>건</span>
+        <span>발생원: <b>고객불만</b></span>
+        ${df||dt_?`<span>기간: ${e(df||'처음')} ~ ${e(dt_||'현재')}</span>`:yr?`<span>기간: ${e(yr)}년</span>`:''}
+        ${cu?`<span>고객사: <b>${e(cu)}</b></span>`:''}
+        ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
+      </div>
+    </div>
+    <div style="flex:0 0 67mm;width:67mm;min-width:67mm;max-width:67mm">
+      <div style="display:flex;width:67mm;border:0.6pt solid #888">
+        <div style="flex:0 0 22.3mm;width:22.3mm;text-align:center">
+          <div style="display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888">작성</div>
+          <div style="display:block;height:26px"></div>
+        </div>
+        <div style="flex:0 0 22.3mm;width:22.3mm;text-align:center;border-left:0.6pt solid #888">
+          <div style="display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888">검토</div>
+          <div style="display:block;height:26px"></div>
+        </div>
+        <div style="flex:0 0 22.4mm;width:22.4mm;text-align:center;border-left:0.6pt solid #888">
           <div style="display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888">승인</div>
           <div style="display:block;height:26px"></div>
         </div>
