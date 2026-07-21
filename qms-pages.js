@@ -1821,6 +1821,15 @@ _inspSave2(type){
     qty,pass_qty:pqty,fail_qty:fqty,defect_rate:rate,note:g('if_note'),
   });
   Toast.show('검사가 등록되었습니다.','ok');
+  /* [v2.237] Auto Workflow: 불합격 시 NC 자동생성 트리거 */
+  if(g('if_result')==='불합격'&&window.QmsWorkflow){
+    const inspRow={
+      insp_no:no, insp_date:date, result:'불합격',
+      item_code:code, item_name:name, vendor, qty,
+      inspector:ins, assignee:ins,
+    };
+    setTimeout(()=>QmsWorkflow.autoCreateNcFromInsp(inspRow), 500);
+  }
   Modal.close();
   Pages._insp(type);
 },
@@ -2245,6 +2254,10 @@ async quality_dash(){
       <div class="pac">
         <button class="btn bsm ai-loading-btn" style="background:#fbbf24;color:#1f2937;border:none;font-weight:700" onclick="Pages._aiQualityDash()" title="AI로 품질 현황 종합 분석">🤖 AI 분석</button>
         <button class="btn bout bsm" onclick="Pages._qdashExcel()">📥 엑셀 내보내기</button>
+        <!-- [v2.237] 고객사별 공유 대시보드 -->
+        <button class="btn bsm" style="background:#7c3aed;color:#fff;border:none" onclick="Pages._customerShareDash()">🔗 고객사 공유</button>
+        <!-- [v2.236] 주간 리포트 -->
+        <button class="btn bsm bout" onclick="QmsWorkflow.generateWeeklyReport()">📊 주간 리포트</button>
       </div>
     </div>
 
@@ -2427,6 +2440,158 @@ _qdashDate(){
 },
 
 /* 엑셀 내보내기 */
+/* [v2.237] 고객사별 품질 현황 공유 대시보드 */
+_customerShareDash(){
+  const insps  = DB.inspections||[];
+  const nc     = DB.nc||[];
+  const cars   = DB.cars||[];
+  /* 고객사 목록 */
+  const customers=[...new Set([
+    ...insps.map(i=>i.vendor||'').filter(Boolean),
+    ...nc.map(n=>n.customer||'').filter(Boolean),
+    ...cars.map(c=>c.customer||'').filter(Boolean),
+  ])].sort();
+
+  if(!customers.length){Toast.show('고객사 데이터가 없습니다.','warn');return;}
+
+  /* 고객사 선택 모달 */
+  Modal.open({
+    title:'🔗 고객사별 품질 현황 공유',
+    size:'msm',
+    body:`<div style="margin-bottom:12px;font-size:13px;color:var(--muted)">
+      공유할 고객사를 선택하면 품질 현황 보고서(HTML)가 생성됩니다.<br>
+      링크 복사 또는 인쇄/PDF로 공유하세요.
+    </div>
+    <select class="fc" id="shareCustomerSel" style="width:100%;margin-bottom:8px">
+      <option value="">-- 고객사 선택 --</option>
+      ${customers.map(c=>`<option value="${H.e(c)}">${H.e(c)}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:6px;margin-top:4px">
+      <select class="fsel" id="shareYearSel">
+        ${[...new Set(insps.map(i=>(i.insp_date||'').slice(0,4)).filter(Boolean))].sort().reverse()
+          .map(y=>`<option value="${y}">${y}년</option>`).join('')}
+      </select>
+      <span style="line-height:32px;font-size:12px;color:var(--muted)">기준 연도</span>
+    </div>`,
+    foot:`<button class="btn bout" onclick="Modal.close()">취소</button>
+          <button class="btn bpri" onclick="Pages._generateCustomerDash()">📊 보고서 생성</button>`
+  });
+},
+
+_generateCustomerDash(){
+  const customer=document.getElementById('shareCustomerSel')?.value;
+  const year=document.getElementById('shareYearSel')?.value;
+  if(!customer){Toast.show('고객사를 선택하세요.','warn');return;}
+  Modal.close();
+
+  const insps  =(DB.inspections||[]).filter(i=>(i.vendor||'')===(customer)&&(i.insp_date||'').startsWith(year||''));
+  const nc     =(DB.nc||[]).filter(n=>(n.customer||n.vendor||'')===(customer)&&(n.date||'').startsWith(year||''));
+  const cars   =(DB.cars||[]).filter(c=>(c.customer||'')===(customer)&&(c.date||'').startsWith(year||''));
+  const fails  =insps.filter(i=>i.result==='불합격');
+  const ncOpen =nc.filter(n=>n.status==='미결');
+  const carDone=cars.filter(c=>['완료','종결'].includes(c.status));
+  const failRate=insps.length?Math.round(fails.length/insps.length*100):0;
+
+  /* 월별 불량률 집계 */
+  const byMonth={};
+  for(const i of insps){
+    const m=(i.insp_date||'').slice(0,7); if(!m) continue;
+    if(!byMonth[m]) byMonth[m]={total:0,fail:0};
+    byMonth[m].total++; if(i.result==='불합격') byMonth[m].fail++;
+  }
+  const months=Object.keys(byMonth).sort();
+  const monthRows=months.map(m=>{
+    const {total,fail}=byMonth[m];
+    const rate=total?Math.round(fail/total*100):0;
+    return`<tr><td>${m}</td><td>${total}</td><td>${fail}</td>
+      <td style="color:${rate>=5?'#dc2626':rate>=2?'#d97706':'#16a34a'};font-weight:700">${rate}%</td></tr>`;
+  }).join('');
+
+  const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>${e(customer)} 품질 현황 ${year||''}</title>
+<style>
+*{font-family:'맑은 고딕','Malgun Gothic',sans-serif;margin:0;padding:0;box-sizing:border-box}
+body{background:#f8f9fa;padding:24px;font-size:13px;color:#111}
+.wrap{max-width:900px;margin:0 auto}
+.header{background:linear-gradient(135deg,#1a5fa8,#7c3aed);color:#fff;padding:24px;border-radius:12px;margin-bottom:20px}
+.header h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.header .sub{font-size:13px;opacity:.8}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card .val{font-size:26px;font-weight:700;color:#1a5fa8}
+.card .lbl{font-size:11px;color:#888;margin-top:4px}
+.card.warn .val{color:#d97706}.card.danger .val{color:#dc2626}.card.ok .val{color:#16a34a}
+.section{background:#fff;border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.section h2{font-size:14px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;color:#1a5fa8}
+table{width:100%;border-collapse:collapse}
+th{background:#f1f5f9;font-size:12px;padding:8px;text-align:left;border-bottom:1px solid #e2e8f0}
+td{padding:8px;border-bottom:1px solid #f8f9fa;font-size:12px}
+.badge{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700}
+.ok-b{background:#dcfce7;color:#16a34a}.warn-b{background:#fef3c7;color:#d97706}.err-b{background:#fee2e2;color:#dc2626}
+.footer{text-align:center;font-size:11px;color:#aaa;margin-top:20px}
+.print-btn{position:fixed;bottom:16px;right:16px;padding:10px 22px;background:#1a56db;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer}
+@media print{.print-btn{display:none}}
+</style></head><body>
+<div class="wrap">
+  <div class="header">
+    <h1>📊 ${e(customer)} 품질 현황 보고서</h1>
+    <div class="sub">기간: ${e(year||'전체')}년 &nbsp;|&nbsp; 생성일: ${new Date().toLocaleDateString('ko-KR')} &nbsp;|&nbsp; ㈜이노디스 품질관리팀</div>
+  </div>
+  <div class="grid">
+    <div class="card"><div class="val">${insps.length}</div><div class="lbl">검사 건수</div></div>
+    <div class="card ${failRate>=5?'danger':failRate>=2?'warn':'ok'}">
+      <div class="val">${failRate}%</div><div class="lbl">불합격률</div></div>
+    <div class="card ${nc.length>0?'warn':'ok'}">
+      <div class="val">${nc.length}</div><div class="lbl">NC 발생</div></div>
+    <div class="card ${cars.length>0?'warn':'ok'}">
+      <div class="val">${cars.length}</div><div class="lbl">시정조치</div></div>
+    <div class="card ok">
+      <div class="val">${cars.length?Math.round(carDone.length/cars.length*100):100}%</div>
+      <div class="lbl">CAR 완료율</div></div>
+  </div>
+
+  ${months.length?`<div class="section">
+    <h2>월별 검사 현황</h2>
+    <table><thead><tr><th>월</th><th>검사수</th><th>불합격</th><th>불합격률</th></tr></thead>
+    <tbody>${monthRows}</tbody></table>
+  </div>`:''}
+
+  ${nc.length?`<div class="section">
+    <h2>부적합 현황 (${nc.length}건)</h2>
+    <table><thead><tr><th>NC번호</th><th>품목</th><th>불량유형</th><th>상태</th><th>발생일</th></tr></thead>
+    <tbody>${nc.slice(0,15).map(n=>`<tr>
+      <td style="font-family:monospace">${e(n.no)}</td>
+      <td>${e(n.item||'-')}</td>
+      <td>${e(n.type||'-')}</td>
+      <td><span class="badge ${n.status==='완료'?'ok-b':n.status==='미결'?'err-b':'warn-b'}">${e(n.status||'-')}</span></td>
+      <td>${e(n.date||'-')}</td>
+    </tr>`).join('')}</tbody></table>
+  </div>`:''}
+
+  ${cars.length?`<div class="section">
+    <h2>시정조치 현황 (${cars.length}건)</h2>
+    <table><thead><tr><th>CAR번호</th><th>제목</th><th>담당자</th><th>완료기한</th><th>상태</th></tr></thead>
+    <tbody>${cars.slice(0,15).map(c=>`<tr>
+      <td style="font-family:monospace;color:#1a5fa8;font-weight:700">${e(c.no)}</td>
+      <td>${e(c.title||'-')}</td>
+      <td>${e(c.assignee||'-')}</td>
+      <td>${e(c.due_date||'-')}</td>
+      <td><span class="badge ${['완료','종결'].includes(c.status)?'ok-b':'warn-b'}">${e(c.status||'-')}</span></td>
+    </tr>`).join('')}</tbody></table>
+  </div>`:''}
+
+  <div class="footer">본 보고서는 ㈜이노디스 QMS Auto Workflow에 의해 자동 생성되었습니다.</div>
+</div>
+<button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF</button>
+</body></html>`;
+
+  const w=window.open('','_blank','width=1000,height=800,scrollbars=yes');
+  if(!w){Toast.show('팝업 차단 — 허용 후 다시 시도','warn');return;}
+  w.document.open(); w.document.write(html); w.document.close();
+  Toast.show(`📊 ${customer} 품질 현황 보고서 생성 완료`,'ok');
+},
+
 _qdashExcel(){
   /* [v2.65 Q7] SheetJS 실제 엑셀 생성 */
   var rows=DB.inspections||[];
@@ -9921,11 +10086,41 @@ _auditToCar(row){
   try{checklist=JSON.parse(row.checklist||'[]');}catch(e){checklist=[];}
   const findings=checklist.filter(c=>c.result==='경미부적합'||c.result==='중대부적합');
   const titleSummary=findings.map(f=>`[${f.clause}] ${f.item}: ${f.note||f.result}`).join(' / ');
-  Modal.close();
-  Pages._carForm(null,{
-    src:'내부심사', nc_no:row.no,
-    title:`내부심사 발견사항 — ${row.scope}`,
-    note:titleSummary,
+  /* [v2.237] Auto Workflow: 자동 CAR 생성 또는 수동 입력 선택 */
+  Modal.confirm({
+    title:'🔧 CAR 발행 방식 선택',
+    msg:`<div style="margin-bottom:10px"><b>${H.e(row.no)}</b> 심사에서 발견사항 <b>${findings.length}건</b>이 있습니다.</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="padding:10px;background:#ede9fe;border-radius:8px;font-size:13px">
+          <b>⚡ 자동 생성</b> — 발견사항을 즉시 CAR로 자동 생성합니다
+        </div>
+        <div style="padding:10px;background:#f0f9ff;border-radius:8px;font-size:13px">
+          <b>✏️ 수동 입력</b> — CAR 입력 폼을 열어 직접 작성합니다
+        </div>
+      </div>`,
+    okText:'⚡ 자동 생성',
+    cancelText:'✏️ 수동 입력',
+    onOk:async()=>{
+      /* 자동 CAR 생성 */
+      if(window.QmsWorkflow){
+        const ncLike={
+          no:`AUDIT-${row.no}`, type:'내부심사',
+          item:`내부심사 ${row.scope||''}`,
+          desc:titleSummary, assignee:row.auditor||'',
+          auto_car_required:true, qty:findings.length,
+        };
+        const car=await QmsWorkflow.autoCreateCarFromNc(ncLike,0);
+        if(car){
+          Modal.close();
+          Toast.show(`✅ CAR 자동 생성 완료: ${car.no}`,'ok',5000);
+          Pages._auditRender2();
+        }
+      }
+    },
+    onCancel:()=>{
+      Modal.close();
+      Nav.go('car_input',{src:'내부심사',nc_no:row.no,title:`내부심사 발견사항 — ${row.scope}`,note:titleSummary});
+    }
   });
 },
 
@@ -19060,6 +19255,33 @@ async _spcDataSave(itemId,n,repeat=1){
   });
   if(!res?.ok) return;
   Toast.show('측정 데이터가 저장되었습니다.','ok');
+  /* [v2.237] Auto Workflow: SPC 이탈 감지 → NC 자동생성 */
+  if(window.QmsWorkflow){
+    const item=(DB.spc_items||[]).find(s=>s.id===itemId);
+    if(item){
+      /* Cpk 계산 — 저장된 최신 데이터 기준 */
+      const latestData=(DB.spc_data||[]).filter(d=>d.item_id===itemId).slice(-25);
+      if(latestData.length>=5){
+        const vals=latestData.flatMap(d=>{
+          try{return JSON.parse(d.values||'[]');}catch{return[];}
+        });
+        if(vals.length>=5){
+          const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+          const std=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length)||1;
+          const usl=Number(item.usl||0), lsl=Number(item.lsl||0);
+          if(usl>lsl){
+            const cpk=Math.min((usl-mean)/(3*std),(mean-lsl)/(3*std));
+            if(cpk<1.0){
+              setTimeout(()=>QmsWorkflow.autoCreateNcFromSpc({
+                ...item, cpk:cpk.toFixed(2),
+                created_by:document.getElementById('spcCreatedBy')?.value||Auth._u?.name||''
+              },'Cpk<1.0'), 600);
+            }
+          }
+        }
+      }
+    }
+  }
   Modal.close();
   await Pages._spcChartRender(itemId);
 },
