@@ -7292,21 +7292,21 @@ _carComplaintPrint(){
   const e=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   const cols=[
-    {label:'NO.',           w:'24px',  fn:(c,i)=>String(i+1)},
-    {label:'게시일',         w:'68px',  fn:c=>e(c.date||'')},
-    {label:'고객사',         w:'74px',  fn:c=>e(c.customer||'')},
-    {label:'품목코드',       w:'84px',  fn:c=>e(c.item_code||'')},
-    {label:'품목명',         w:'96px',  fn:c=>e(c.item||'')},
-    {label:'불량현상',       w:'116px', fn:c=>e(c.defect_desc||'')},
-    {label:'처리방법',       w:'56px',  fn:c=>e(c.action_type||'')},
-    {label:'임시대책(D3)',   w:'124px', fn:c=>e(c.d3_action||'')},
-    {label:'부적합현상(D2)', w:'124px', fn:c=>e(c.d2_desc||'')},
-    {label:'대책실시(D5)',   w:'124px', fn:c=>e(c.d5_action||'')},
-    {label:'귀책처',         w:'68px',  fn:c=>e(c.vendor_name||'')},
-    {label:'대책실시일',     w:'64px',  fn:c=>e(c.d5_date||'')},
-    {label:'담당자',         w:'50px',  fn:c=>e(c.assignee||'')},
-    {label:'유효성평가일',   w:'64px',  fn:c=>e(c.d6_date||'')},
-    {label:'상태',           w:'54px',  fn:c=>e(c.status||'')},
+    {label:'NO.',           w:'5.6mm',  fn:(c,i)=>String(i+1)},
+    {label:'게시일',         w:'15.8mm',  fn:c=>e(c.date||'')},
+    {label:'고객사',         w:'17.2mm',  fn:c=>e(c.customer||'')},
+    {label:'품목코드',       w:'19.6mm',  fn:c=>e(c.item_code||'')},
+    {label:'품목명',         w:'22.3mm',  fn:c=>e(c.item||'')},
+    {label:'불량현상',       w:'27.0mm', fn:c=>e(c.defect_desc||'')},
+    {label:'처리방법',       w:'13.0mm',  fn:c=>e(c.action_type||'')},
+    {label:'임시대책(D3)',   w:'28.9mm', fn:c=>e(c.d3_action||'')},
+    {label:'부적합현상(D2)', w:'28.9mm', fn:c=>e(c.d2_desc||'')},
+    {label:'대책실시(D5)',   w:'28.9mm', fn:c=>e(c.d5_action||'')},
+    {label:'귀책처',         w:'15.8mm',  fn:c=>e(c.vendor_name||'')},
+    {label:'대책실시일',     w:'14.9mm',  fn:c=>e(c.d5_date||'')},
+    {label:'담당자',         w:'11.6mm',  fn:c=>e(c.assignee||'')},
+    {label:'유효성평가일',   w:'14.9mm',  fn:c=>e(c.d6_date||'')},
+    {label:'상태',           w:'12.6mm',  fn:c=>e(c.status||'')},
   ];
   const thHtml=cols.map(c=>`<th style="width:${c.w}">${c.label}</th>`).join('');
   const tbodyHtml=filtered.map((c,i)=>
@@ -7346,8 +7346,8 @@ tr.even td{background:#f5f8fd}
 .print-btn{position:fixed;bottom:14px;right:14px;padding:8px 22px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 </style></head><body>
 <div class="wrap">
-  <div style="position:relative;width:100%;margin-bottom:4mm">
-    <div style="max-width:calc(100% - 76mm)">
+  <div style="position:relative;width:277mm;margin-bottom:4mm;min-height:18mm">
+    <div style="width:202mm;min-height:14mm">
       <h1>고객불만관리대장 (${e(titleYear)})</h1>
       <div class="meta">
         <span>총 <b style="color:#111">${filtered.length}</b>건</span>
@@ -7357,21 +7357,19 @@ tr.even td{background:#f5f8fd}
         ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
       </div>
     </div>
-    <div style="position:absolute;top:0;right:0;width:75mm">
-      <table style="width:75mm;border-collapse:collapse;border:0.6pt solid #888;table-layout:fixed">
-        <colgroup><col style="width:25mm"><col style="width:25mm"><col style="width:25mm"></colgroup>
-        <tr>
-          <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:2px 0;text-align:center">작성</th>
-          <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:2px 0;text-align:center">검토</th>
-          <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:2px 0;text-align:center">승인</th>
-        </tr>
-        <tr>
-          <td style="border:0.6pt solid #888;height:22px"></td>
-          <td style="border:0.6pt solid #888;height:22px"></td>
-          <td style="border:0.6pt solid #888;height:22px"></td>
-        </tr>
-      </table>
-    </div>
+    <table style="position:absolute;top:0;right:0;width:75mm;border-collapse:collapse;table-layout:fixed">
+      <colgroup><col style="width:25mm"><col style="width:25mm"><col style="width:25mm"></colgroup>
+      <tr>
+        <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:3px 0;text-align:center">작성</th>
+        <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:3px 0;text-align:center">검토</th>
+        <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:3px 0;text-align:center">승인</th>
+      </tr>
+      <tr>
+        <td style="border:0.6pt solid #888;height:20px"></td>
+        <td style="border:0.6pt solid #888;height:20px"></td>
+        <td style="border:0.6pt solid #888;height:20px"></td>
+      </tr>
+    </table>
   </div>
 
   <table>
