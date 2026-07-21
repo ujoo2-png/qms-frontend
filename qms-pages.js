@@ -7346,8 +7346,8 @@ tr.even td{background:#f5f8fd}
 .print-btn{position:fixed;bottom:14px;right:14px;padding:8px 22px;background:#1a56db;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 </style></head><body>
 <div class="wrap">
-  <div style="display:flex;width:277mm;margin-bottom:4mm;align-items:flex-start">
-    <div style="flex:0 0 202mm;width:202mm;padding-right:4mm">
+  <div style="position:relative;width:100%;margin-bottom:4mm">
+    <div style="max-width:calc(100% - 76mm)">
       <h1>고객불만관리대장 (${e(titleYear)})</h1>
       <div class="meta">
         <span>총 <b style="color:#111">${filtered.length}</b>건</span>
@@ -7357,21 +7357,20 @@ tr.even td{background:#f5f8fd}
         ${vd?`<span>귀책처: <b>${e(vd)}</b></span>`:''}
       </div>
     </div>
-    <div style="flex:0 0 75mm;width:75mm;min-width:75mm;max-width:75mm">
-      <div style="display:flex;width:75mm;border:0.6pt solid #888">
-        <div style="flex:0 0 25mm;width:25mm;text-align:center">
-          <div style="display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888">작성</div>
-          <div style="display:block;height:26px"></div>
-        </div>
-        <div style="flex:0 0 25mm;width:25mm;text-align:center;border-left:0.6pt solid #888">
-          <div style="display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888">검토</div>
-          <div style="display:block;height:26px"></div>
-        </div>
-        <div style="flex:0 0 25mm;width:25mm;text-align:center;border-left:0.6pt solid #888">
-          <div style="display:block;padding:2px 0;background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border-bottom:0.6pt solid #888">승인</div>
-          <div style="display:block;height:26px"></div>
-        </div>
-      </div>
+    <div style="position:absolute;top:0;right:0;width:75mm">
+      <table style="width:75mm;border-collapse:collapse;border:0.6pt solid #888;table-layout:fixed">
+        <colgroup><col style="width:25mm"><col style="width:25mm"><col style="width:25mm"></colgroup>
+        <tr>
+          <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:2px 0;text-align:center">작성</th>
+          <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:2px 0;text-align:center">검토</th>
+          <th style="background:#d6e4f0;font-size:7.5pt;font-weight:700;color:#1a3050;border:0.6pt solid #888;padding:2px 0;text-align:center">승인</th>
+        </tr>
+        <tr>
+          <td style="border:0.6pt solid #888;height:22px"></td>
+          <td style="border:0.6pt solid #888;height:22px"></td>
+          <td style="border:0.6pt solid #888;height:22px"></td>
+        </tr>
+      </table>
     </div>
   </div>
 
