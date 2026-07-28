@@ -4406,6 +4406,11 @@ async docs(){
         '<option value="">전체 유형</option>'+
         Object.entries(Pages._DT).map(function(e){return'<option value="'+e[0]+'">'+e[1]+'</option>';}).join('')+
       '</select>'+
+      /* [v2.238] 표준 분류 필터 */
+      '<select class="fsel" id="docStdF" onchange="Pages._docStdFilter(this.value)">'+
+        '<option value="">전체 표준</option>'+
+        Pages._getDocStdTypes().map(function(s){return'<option value="'+H.e(s.code)+'">'+H.e(s.label)+'</option>';}).join('')+
+      '</select>'+
       '<button class="btn bout bsm" onclick="SearchPop.open(\'docs\')" title="통합 검색 팝업 (F3)">🔎 Search <span class="kbd">F3</span></button>'+
     '</div>'+
 
@@ -4420,7 +4425,7 @@ async docs(){
     '<div id="docKanbanPane" style="display:none"><div id="docKanban"></div></div>';
 
   /* 전역 필터 초기화 */
-  window._docSt=''; window._docTp=''; window._docKw='';
+  window._docSt=''; window._docTp=''; window._docKw=''; window._docStd=''; /* [v2.238] */
   Pages._docRender();
   Pages._docKanban();
 },
@@ -4455,18 +4460,37 @@ _docViewTab:function(tab,btn){
   }
 },
 /* 인라인 필터 핸들러 */
+/* [v2.238] 표준분류 목록 — settings docstd 탭에서 관리 */
+_getDocStdTypes:function(){
+  var saved=localStorage.getItem('_docStdTypes');
+  if(saved){try{return JSON.parse(saved);}catch(e){}}
+  return[
+    {code:'iso9001',   label:'ISO 9001'},
+    {code:'iso14001',  label:'ISO 14001'},
+    {code:'iso45001',  label:'ISO 45001'},
+    {code:'iso27001',  label:'ISO 27001'},
+    {code:'individual',label:'개별'},
+    {code:'etc',       label:'기타'},
+  ];
+},
+
 _docKwFilter:function(v){window._docKw=v; Pages._docRender();},
 _docTpFilter:function(v){window._docTp=v; Pages._docRender();},
-/* 필터 적용 후 rows 반환 */
+/* [v2.238] 표준분류 필터 */
+_docStdFilter:function(v){window._docStd=v; Pages._docRender();},
+
 _docFiltered:function(){
   var rows=window._docRows||[];
   rows=rows.filter(function(r){return r.status!=='deleted';});
   var st=window._docSt||''; var tp=window._docTp||''; var kw=(window._docKw||'').toLowerCase();
+  var std=window._docStd||''; /* [v2.238] 표준분류 필터 */
   if(st) rows=rows.filter(function(r){return r.status===st;});
   if(tp) rows=rows.filter(function(r){return r.doc_type===tp;});
+  if(std) rows=rows.filter(function(r){return r.standard_type===std;});
   if(kw) rows=rows.filter(function(r){
     return (r.title||'').toLowerCase().includes(kw)||
            (r.doc_no||'').toLowerCase().includes(kw)||
+           (r.standard_type||'').toLowerCase().includes(kw)||
            (r.tags||[]).some(function(t){return t.toLowerCase().includes(kw);});
   });
   return rows;
@@ -4494,6 +4518,13 @@ _docRender:function(){
         }},
       {key:'doc_type',      label:'유형',       w:'78px', align:'center',
         render:function(v){return'<span class="badge bblu" style="font-size:10px">'+(Pages._DT[v]||v||'-')+'</span>';}},
+      /* [v2.238] 표준 분류 컬럼 */
+      {key:'standard_type', label:'표준분류',   w:'90px', align:'center',
+        render:function(v){
+          if(!v) return'<span style="color:var(--tl)">-</span>';
+          var label=Pages._getDocStdTypes().find(function(s){return s.code===v;});
+          return'<span class="badge bpur" style="font-size:10px">'+(label?label.label:H.e(v))+'</span>';
+        }},
       {key:'current_ver',   label:'버전',       w:'58px', align:'center',
         render:function(v){return'<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px">'+H.e(v||'-')+'</span>';}},
       {key:'status',        label:'상태',       w:'72px', align:'center',
@@ -4643,6 +4674,20 @@ _docForm:function(editDoc){
       '<div class="fgroup"><label class="fl req">문서번호</label><input class="fc" id="fnDocNo" placeholder="예: QP-001" value="'+H.e(editDoc?editDoc.doc_no:'')+'"></div>'+
       '<div class="fgroup"><label class="fl req">문서 제목</label><input class="fc" id="fnTitle" placeholder="예: 수입검사 절차서" value="'+H.e(editDoc?editDoc.title:'')+'"></div>'+
       '<div class="fgroup"><label class="fl req">문서 유형</label><select class="fc" id="fnType">'+dtOpts+'</select></div>'+
+      /* [v2.238] 표준 분류 */
+      '<div class="fgroup"><label class="fl">표준 분류</label>'+
+        '<select class="fc" id="fnStdType">'+
+          '<option value="">선택 안함</option>'+
+          Pages._getDocStdTypes().map(function(s){return'<option value="'+H.e(s.code)+'"'+(editDoc&&editDoc.standard_type===s.code?' selected':'')+'>'+H.e(s.label)+'</option>';}).join('')+
+        '</select>'+
+      '</div>'+
+      /* [v2.238] 버전 수동 입력 — 신규 v1.0 자동, 기존 문서 직접 입력 가능 */
+      '<div class="fgroup"><label class="fl">버전</label>'+
+        '<div style="display:flex;gap:8px;align-items:center">'+
+          '<input class="fc" id="fnVersion" placeholder="예: v1.0, v2.3" style="max-width:110px" value="'+(editDoc?H.e(editDoc.current_ver||'v1.0'):'v1.0')+'">'+
+          '<span style="font-size:12px;color:var(--muted)">기존 문서 등록 시 실제 버전 입력</span>'+
+        '</div>'+
+      '</div>'+
       '<div class="fgroup"><label class="fl">분류</label><select class="fc" id="fnCat"><option value="">선택 안함</option>'+Object.keys(Pages._DC).map(function(x){return'<option value="'+x+'"'+(editDoc&&editDoc.category===x?' selected':'')+'>'+Pages._DC[x]+'</option>';}).join('')+'</select></div>'+
       '<div class="fgroup"><label class="fl">검토 주기</label><select class="fc" id="fnCycle">'+
         ['annual','biannual','quarterly','monthly'].map(function(c){
@@ -4673,6 +4718,8 @@ _docSave:async function(editId){
   var tags=(document.getElementById('fnTags')?.value||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
   var row={doc_no:docNo,title:title,doc_type:document.getElementById('fnType')?.value,
            category:document.getElementById('fnCat')?.value||null,
+           standard_type:document.getElementById('fnStdType')?.value||null, /* [v2.238] 표준분류 */
+           current_ver:document.getElementById('fnVersion')?.value?.trim()||'v1.0', /* [v2.238] 버전 수동입력 */
            review_cycle:document.getElementById('fnCycle')?.value||'annual',
            next_review_at:document.getElementById('fnNextReview')?.value||null,
            dept:document.getElementById('fnDept')?.value?.trim()||null,
@@ -6313,9 +6360,24 @@ async doc_recommend(){
       '<div style="font-size:13px;color:var(--muted)">태그 기반 연관 문서 탐색 · 유사 문서 추천</div>'+
     '</div></div>'+
 
-    /* ① 문서 선택 */
+    /* ① 문서 선택 — [v2.238] 검색 조건 추가 */
     '<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px 18px;margin-bottom:16px">'+
-      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📄 기준 문서 선택</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--text)">📄 기준 문서 선택</div>'+
+        '<button class="btn bpri bsm" onclick="Pages._rcShowDiagram()" title="연관 문서 네트워크 다이어그램">🕸️ 연관 다이어그램</button>'+
+      '</div>'+
+      /* [v2.238] 검색 조건 */
+      '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">'+
+        '<input type="text" class="fsel" id="rcSearch" placeholder="문서번호, 제목 검색..." style="flex:2;min-width:160px" oninput="Pages._rcSearchFilter()">'+
+        '<select class="fsel" id="rcTypeF" onchange="Pages._rcSearchFilter()" style="min-width:110px">'+
+          '<option value="">전체 유형</option>'+
+          Object.entries(Pages._DT).map(function(e){return'<option value="'+e[0]+'">'+e[1]+'</option>';}).join('')+
+        '</select>'+
+        '<select class="fsel" id="rcStdF" onchange="Pages._rcSearchFilter()" style="min-width:110px">'+
+          '<option value="">전체 표준</option>'+
+          Pages._getDocStdTypes().map(function(s){return'<option value="'+H.e(s.code)+'">'+H.e(s.label)+'</option>';}).join('')+
+        '</select>'+
+      '</div>'+
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'+
         '<select class="fsel" id="rcDocSel" style="flex:1;min-width:220px;padding:9px 12px" onchange="Pages._rcLoadRecommend(this.value)">'+
           '<option value="">— 문서를 선택하세요 —</option>'+
@@ -6325,6 +6387,8 @@ async doc_recommend(){
         '</select>'+
         '<div id="rcTagBadges" style="display:flex;gap:4px;flex-wrap:wrap"></div>'+
       '</div>'+
+      /* [v2.238] 연관 다이어그램 패널 */
+      '<div id="rcDiagramPanel" style="display:none;margin-top:16px"></div>'+
     '</div>'+
 
     /* ② 연관 문서 결과 */
@@ -6356,6 +6420,93 @@ async doc_recommend(){
     '</div>';
 
   window._rcDocRows=rows;
+},
+
+/* [v2.238] 연관문서 검색 필터 */
+_rcSearchFilter:function(){
+  var kw=(document.getElementById('rcSearch')?.value||'').toLowerCase();
+  var tp=document.getElementById('rcTypeF')?.value||'';
+  var std=document.getElementById('rcStdF')?.value||'';
+  var rows=window._rcDocRows||[];
+  var filtered=rows.filter(function(r){
+    if(r.status!=='active') return false;
+    if(tp&&r.doc_type!==tp) return false;
+    if(std&&r.standard_type!==std) return false;
+    if(kw&&!(r.doc_no||'').toLowerCase().includes(kw)&&!(r.title||'').toLowerCase().includes(kw)) return false;
+    return true;
+  });
+  var sel=document.getElementById('rcDocSel');
+  if(!sel) return;
+  sel.innerHTML='<option value="">— 문서를 선택하세요 —</option>'+
+    filtered.map(function(r){return'<option value="'+r.id+'">'+H.e(r.doc_no)+' '+H.e(r.title)+'</option>';}).join('');
+},
+
+/* [v2.238] 연관 문서 네트워크 다이어그램 (애니메이션 SVG) */
+_rcShowDiagram:function(){
+  var panel=document.getElementById('rcDiagramPanel');
+  if(!panel) return;
+  if(panel.style.display!=='none'){panel.style.display='none';return;}
+  var rows=(window._rcDocRows||[]).filter(function(r){return r.status==='active';});
+  if(!rows.length){Toast.show('문서 데이터가 없습니다.','warn');return;}
+
+  /* 태그 기반 연관 관계 구축 */
+  var edges=[];
+  for(var i=0;i<Math.min(rows.length,30);i++){
+    for(var j=i+1;j<Math.min(rows.length,30);j++){
+      var tagsA=rows[i].tags||[], tagsB=rows[j].tags||[];
+      var common=tagsA.filter(function(t){return tagsB.includes(t);});
+      if(common.length>0) edges.push({a:i,b:j,weight:common.length,tags:common});
+    }
+  }
+
+  /* SVG 레이아웃 — 원형 배치 */
+  var N=Math.min(rows.length,20);
+  var cx=320,cy=180,R=140;
+  var nodes=[];
+  for(var k=0;k<N;k++){
+    var angle=(k/N)*2*Math.PI - Math.PI/2;
+    nodes.push({
+      x:Math.round(cx+R*Math.cos(angle)),
+      y:Math.round(cy+R*Math.sin(angle)),
+      doc:rows[k],
+    });
+  }
+
+  /* 색상 — 유형별 */
+  var colors={'procedure':'#1a5fa8','record':'#059669','form':'#d97706','manual':'#7c3aed','standard':'#dc2626'};
+  function nodeColor(r){return colors[r.doc_type]||'#64748b';}
+
+  var edgeSvg=edges.filter(function(e){return e.a<N&&e.b<N;}).map(function(e){
+    var a=nodes[e.a],b=nodes[e.b];
+    var w=Math.min(3,e.weight);
+    return'<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="#94a3b8" stroke-width="'+w+'" stroke-dasharray="4 2" opacity="0.5"><animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2s" repeatCount="indefinite"/></line>';
+  }).join('');
+
+  var nodeSvg=nodes.map(function(n,i){
+    var c=nodeColor(n.doc);
+    var label=(n.doc.doc_no||n.doc.title||'').slice(0,8);
+    return'<g style="cursor:pointer" onclick="Pages._rcLoadRecommend(\''+n.doc.id+'\')">'+
+      '<circle cx="'+n.x+'" cy="'+n.y+'" r="22" fill="'+c+'" fill-opacity="0.15" stroke="'+c+'" stroke-width="1.5">'+
+        '<animate attributeName="r" values="20;22;20" dur="'+(2+i*0.1)+'s" repeatCount="indefinite"/>'+
+      '</circle>'+
+      '<text x="'+n.x+'" y="'+(n.y+1)+'" text-anchor="middle" dominant-baseline="central" style="font-size:9px;fill:'+c+';font-weight:700">'+H.e(label)+'</text>'+
+    '</g>';
+  }).join('');
+
+  /* 범례 */
+  var legend=Object.entries(colors).map(function(e,i){
+    return'<g><circle cx="'+(20+i*90)+'" cy="348" r="5" fill="'+e[1]+'"/><text x="'+(29+i*90)+'" y="348" dominant-baseline="central" style="font-size:10px;fill:#64748b">'+e[0]+'</text></g>';
+  }).join('');
+
+  panel.style.display='';
+  panel.innerHTML=
+    '<div style="border:1px solid var(--brd);border-radius:12px;padding:12px;background:var(--card);overflow:auto">'+
+    '<div style="font-size:13px;font-weight:700;margin-bottom:8px">🕸️ 연관 문서 네트워크 (클릭하면 선택됩니다)</div>'+
+    '<svg width="100%" viewBox="0 0 640 370" style="max-height:370px">'+
+      edgeSvg+nodeSvg+legend+
+    '</svg>'+
+    '<div style="font-size:11px;color:var(--muted);margin-top:4px">선이 많을수록 공통 태그가 많습니다. 최대 20개 문서 표시.</div>'+
+    '</div>';
 },
 
 /* 선택 문서 기준 연관 문서 로드 */
@@ -11505,6 +11656,8 @@ async settings(){
     if(tab==='sbdash') setTimeout(()=>Pages._renderSbDash(),0);
     if(tab==='aidash') setTimeout(()=>Pages._renderAiDash(),0);
     if(tab==='codemgmt') Pages._renderCodeMgmt();
+    /* [v2.238] 표준분류 관리 */
+    if(tab==='docstd') Pages._renderDocStd();
   };
 
   const MENU_GROUPS=[
@@ -11714,6 +11867,8 @@ async settings(){
       onclick="renderTab('aidash')"
       style="border-radius:8px">🤖 AI 대시보드</button>
     <button class="btn stab-btn ${isAdmin?'':'bout'}" data-tab="codemgmt" onclick="${isAdmin?`renderTab('codemgmt')`:`Toast.show('관리자만 접근 가능합니다.','warn')`}" style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}">&#128203; 코드 관리${isAdmin?'':' 🔒'}</button>
+    <!-- [v2.238] 표준분류 관리 탭 -->
+    <button class="btn stab-btn ${isAdmin?'':'bout'}" data-tab="docstd" onclick="${isAdmin?`renderTab('docstd')`:`Toast.show('관리자만 접근 가능합니다.','warn')`}" style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}">&#128196; 표준분류 관리${isAdmin?'':' 🔒'}</button>
   </div>
 
   <!-- 일반 설정 탭 -->
@@ -11854,6 +12009,54 @@ async settings(){
   </div>`;
 
   window.renderTab=renderTab;
+},
+
+/* [v2.238] 표준분류 관리 함수들 */
+_renderDocStd:function(){
+  var el=document.getElementById('docStdList'); if(!el)return;
+  var types=Pages._getDocStdTypes();
+  el.innerHTML='<table class="ctbl" style="width:100%"><thead><tr><th>코드</th><th>라벨</th><th>관리</th></tr></thead><tbody>'+
+    types.map(function(s,i){
+      return'<tr>'+
+        '<td><code>'+H.e(s.code)+'</code></td>'+
+        '<td><input class="fc" style="padding:4px 8px;font-size:13px" value="'+H.e(s.label)+'" onchange="Pages._docStdEdit('+i+',this.value)"></td>'+
+        '<td><button class="btn berr bsm" onclick="Pages._docStdDel('+i+')">삭제</button></td>'+
+      '</tr>';
+    }).join('')+
+  '</tbody></table>';
+},
+_docStdAdd:function(){
+  Modal.prompt({title:'표준분류 추가',fields:[
+    {id:'stdCode',label:'코드 (영문)',placeholder:'예: iatf16949'},
+    {id:'stdLabel',label:'표시명',placeholder:'예: IATF 16949'},
+  ],onOk:function(vals){
+    if(!vals.stdCode||!vals.stdLabel){Toast.show('코드와 라벨을 모두 입력하세요.','warn');return;}
+    var types=Pages._getDocStdTypes();
+    if(types.find(function(s){return s.code===vals.stdCode;})){Toast.show('이미 존재하는 코드입니다.','warn');return;}
+    types.push({code:vals.stdCode.trim(),label:vals.stdLabel.trim()});
+    localStorage.setItem('_docStdTypes',JSON.stringify(types));
+    Pages._renderDocStd();
+    Toast.show('표준분류 추가됨','ok');
+  }});
+},
+_docStdEdit:function(idx,newLabel){
+  var types=Pages._getDocStdTypes();
+  if(types[idx]) types[idx].label=newLabel;
+  localStorage.setItem('_docStdTypes',JSON.stringify(types));
+  Toast.show('저장됨','ok',1500);
+},
+_docStdDel:function(idx){
+  var types=Pages._getDocStdTypes();
+  var target=types[idx];
+  if(!target)return;
+  Modal.confirm({title:'삭제 확인',msg:'<b>'+H.e(target.label)+'</b> 분류를 삭제하시겠습니까?',danger:true,
+    onOk:function(){
+      types.splice(idx,1);
+      localStorage.setItem('_docStdTypes',JSON.stringify(types));
+      Pages._renderDocStd();
+      Toast.show('삭제됨','ok');
+    }
+  });
 },
 
 async sysusers(){
