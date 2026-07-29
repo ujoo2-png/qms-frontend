@@ -1144,6 +1144,7 @@ const SB={
     file_name:row.file_name||null,
     /* [v2.151] 작성자 저장 — 로그인 사용자명 */
     created_by:row.created_by||null,
+    standard_type:row.standard_type||null, /* [v2.239] 표준분류 */
   };
   /* [v2.65 D1-2] select().single()으로 삽입된 id 반환 */
   var res=await _sb.from('doc_master').insert(allowed).select('id').single();
