@@ -4512,7 +4512,83 @@ _getDocStdTypes:function(){
 },
 
 /* [v2.241] 표준분류별 문서 카드 뷰 */
-_docStdView:function(stdCode){  /* [v2.242] 표준분류별 문서 목록형 뷰: 유형→문서번호→문서제목→상태→버전→부서→작성일→개정사유 */  var el=document.getElementById('docStdView'); if(!el) return;  var rows=(window._docRows||[]).filter(function(r){    return r.status!=='deleted' && r.standard_type===stdCode;  });  var label=Pages._getDocStdTypes().find(function(s){return s.code===stdCode;});  var labelTxt=label?label.label:stdCode;  if(!rows.length){    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:28px;margin-bottom:8px">📭</div><div>'+H.e(labelTxt)+'에 등록된 문서가 없습니다.</div></div>';    return;  }  var html=    '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px">'+      '<span class="badge bpur" style="font-size:13px">'+H.e(labelTxt)+'</span>'+      '<span style="font-size:13px;color:var(--muted)">총 '+rows.length+'건</span>'+    '</div>'+    '<div style="overflow-x:auto">'+    '<table class="ctbl" style="width:100%;font-size:13px;table-layout:fixed">'+      '<colgroup>'+        '<col style="width:78px">'+        '<col style="width:110px">'+        '<col>'+        '<col style="width:72px">'+        '<col style="width:58px">'+        '<col style="width:70px">'+        '<col style="width:88px">'+        '<col style="width:160px">'+      '</colgroup>'+      '<thead><tr>'+        '<th>유형</th><th>문서번호</th><th>문서 제목</th>'+        '<th>상태</th><th>버전</th><th>부서</th><th>작성일</th><th>개정사유</th>'+      '</tr></thead>'+      '<tbody>'+        rows.map(function(r,i){          return'<tr style="cursor:pointer" onclick="Pages.doc_history('+r.id+')">'+            '<td style="text-align:center"><span class="badge bblu" style="font-size:10px">'+(Pages._DT[r.doc_type]||r.doc_type||'-')+'</span></td>'+            '<td><span style="font-family:monospace;font-size:12px;font-weight:700;color:#1a5fa8;cursor:pointer" title="개정이력 보기" onclick="event.stopPropagation();Pages.doc_history('+r.id+')">'+H.e(r.doc_no||'-')+'</span></td>'+            '<td style="font-weight:500">'+H.e(r.title||'-')+'</td>'+            '<td style="text-align:center">'+Pages._dBadge(r.status)+'</td>'+            '<td style="text-align:center"><span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span></td>'+            '<td style="text-align:center">'+H.e(r.dept||'-')+'</td>'+            '<td style="text-align:center;font-size:12px">'+H.e((r.created_at||'').slice(0,10)||'-')+'</td>'+            '<td style="font-size:12px;color:var(--muted)">'+H.e(r.summary||r.change_summary||'-')+'</td>'+          '</tr>';        }).join('')+      '</tbody>'+    '</table></div>';  el.innerHTML=html;},
+_docStdView:function(stdCode){
+  /* [v2.243] 표준분류별 문서 목록형 뷰 — 균일 너비, 깔끔한 UI */
+  var el=document.getElementById('docStdView'); if(!el) return;
+  var rows=(window._docRows||[]).filter(function(r){
+    return r.status!=='deleted' && r.standard_type===stdCode;
+  });
+  var label=Pages._getDocStdTypes().find(function(s){return s.code===stdCode;});
+  var labelTxt=label?label.label:stdCode;
+  if(!rows.length){
+    el.innerHTML='<div style="text-align:center;padding:48px 0;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">📭</div><div style="font-size:14px">'+H.e(labelTxt)+'에 등록된 문서가 없습니다.</div></div>';
+    return;
+  }
+  /* 상태 배지 색 */
+  var statusStyle={active:'background:#d1fae5;color:#065f46',in_review:'background:#dbeafe;color:#1e40af',
+                   draft:'background:#fef3c7;color:#92400e',obsolete:'background:#f3f4f6;color:#6b7280'};
+  var statusLabel={active:'유효',in_review:'검토중',draft:'초안',obsolete:'폐기'};
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+      '<span style="background:#ede9fe;color:#5b21b6;font-size:13px;font-weight:700;padding:3px 12px;border-radius:20px">'+H.e(labelTxt)+'</span>'+
+      '<span style="font-size:13px;color:var(--muted)">총 <b>'+rows.length+'</b>건</span>'+
+    '</div>'+
+    '<div style="overflow-x:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">'+
+    '<colgroup>'+
+      '<col style="width:76px">'+   /* 유형 */
+      '<col style="width:120px">'+  /* 문서번호 */
+      '<col>'+                       /* 문서 제목 */
+      '<col style="width:68px">'+   /* 상태 */
+      '<col style="width:56px">'+   /* 버전 */
+      '<col style="width:72px">'+   /* 부서 */
+      '<col style="width:86px">'+   /* 작성일 */
+      '<col style="width:140px">'+  /* 개정사유 */
+    '</colgroup>'+
+    '<thead><tr style="background:var(--bg2);border-bottom:2px solid var(--brd)">'+
+      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">유형</th>'+
+      '<th style="padding:8px 10px;font-size:12px;font-weight:700;color:var(--muted)">문서번호</th>'+
+      '<th style="padding:8px 10px;font-size:12px;font-weight:700;color:var(--muted)">문서 제목</th>'+
+      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">상태</th>'+
+      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">버전</th>'+
+      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">부서</th>'+
+      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">작성일</th>'+
+      '<th style="padding:8px 10px;font-size:12px;font-weight:700;color:var(--muted)">개정사유</th>'+
+    '</tr></thead>'+
+    '<tbody>'+
+      rows.map(function(r,i){
+        var st=r.status||'draft';
+        var stStyle=statusStyle[st]||'background:#f3f4f6;color:#6b7280';
+        var stLabel=statusLabel[st]||st;
+        return'<tr style="border-bottom:1px solid var(--brd);cursor:pointer;transition:background .12s"'+
+          ' onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'"'+
+          ' onclick="Pages.doc_history('+r.id+')">'+
+          '<td style="padding:9px 10px;text-align:center">'+
+            '<span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">'+
+              H.e(Pages._DT[r.doc_type]||r.doc_type||'-')+
+            '</span>'+
+          '</td>'+
+          '<td style="padding:9px 10px">'+
+            '<span style="font-family:monospace;font-size:12px;font-weight:700;color:#1a5fa8;cursor:pointer"'+
+              ' title="클릭하여 개정이력 보기"'+
+              ' onclick="event.stopPropagation();Pages.doc_history('+r.id+')">'+
+              H.e(r.doc_no||'-')+
+            '</span>'+
+          '</td>'+
+          '<td style="padding:9px 10px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+H.e(r.title||'-')+'</td>'+
+          '<td style="padding:9px 10px;text-align:center">'+
+            '<span style="'+stStyle+';font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">'+stLabel+'</span>'+
+          '</td>'+
+          '<td style="padding:9px 10px;text-align:center">'+
+            '<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span>'+
+          '</td>'+
+          '<td style="padding:9px 10px;text-align:center;font-size:12px;color:var(--muted)">'+H.e(r.dept||'-')+'</td>'+
+          '<td style="padding:9px 10px;text-align:center;font-size:12px;color:var(--muted)">'+H.e((r.created_at||'').slice(0,10)||'-')+'</td>'+
+          '<td style="padding:9px 10px;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+H.e(r.summary||r.change_summary||'-')+'</td>'+
+        '</tr>';
+      }).join('')+
+    '</tbody></table></div>';
+},
 _docKwFilter:function(v){window._docKw=v; Pages._docRender();},
 _docTpFilter:function(v){window._docTp=v; Pages._docRender();},
 /* [v2.238] 표준분류 필터 */
@@ -4960,18 +5036,24 @@ async doc_approval(){
       return;
     }
 
-    var html='<div style="overflow-x:auto"><table class="dt" style="width:100%;font-size:13px;table-layout:fixed">'+
+    var html='<div style="overflow-x:auto"><table class="dt" style="width:100%;font-size:13px;table-layout:auto">'+
       '<colgroup>'+
-        '<col style="width:48px">'+   /* 구분(아이콘) */
-        '<col style="width:90px">'+   /* 표준분류 */
-        '<col>'+                       /* 문서 제목 (나머지) */
-        '<col style="width:64px">'+   /* 버전 */
-        '<col style="width:80px">'+   /* 유형 */
-        '<col style="width:200px">'+  /* 개정 사유 */
-        '<col style="width:90px">'+   /* 처리 */
+        '<col style="width:46px">'+
+        '<col style="width:88px">'+
+        '<col>'+
+        '<col style="width:58px">'+
+        '<col style="width:72px">'+
+        '<col style="width:150px">'+
+        '<col style="width:86px">'+
       '</colgroup>'+
       '<thead><tr>'+
-        '<th>구분</th><th>표준분류</th><th>문서 제목</th><th>버전</th><th>유형</th><th>개정 사유</th><th>처리</th>'+
+        '<th style="text-align:center">구분</th>'+
+        '<th>표준분류</th>'+
+        '<th>문서 제목</th>'+
+        '<th style="text-align:center">버전</th>'+
+        '<th style="text-align:center">유형</th>'+
+        '<th>개정 사유</th>'+
+        '<th style="text-align:center">처리</th>'+
       '</tr></thead><tbody>';
     list.forEach(function(a){
       var ver=a.doc_ver||{};
@@ -12125,18 +12207,36 @@ _renderDocStd:function(){
   }).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--tl);padding:16px">표준분류가 없습니다.</td></tr>';
 },
 _docStdAdd:function(){
-  Modal.prompt({title:'표준분류 추가',fields:[
-    {id:'stdCode',label:'코드 (영문)',placeholder:'예: iatf16949'},
-    {id:'stdLabel',label:'표시명',placeholder:'예: IATF 16949'},
-  ],onOk:function(vals){
-    if(!vals.stdCode||!vals.stdLabel){Toast.show('코드와 라벨을 모두 입력하세요.','warn');return;}
-    var types=Pages._getDocStdTypes();
-    if(types.find(function(s){return s.code===vals.stdCode;})){Toast.show('이미 존재하는 코드입니다.','warn');return;}
-    types.push({code:vals.stdCode.trim(),label:vals.stdLabel.trim()});
-    localStorage.setItem('_docStdTypes',JSON.stringify(types));
-    Pages._renderDocStd();
-    Toast.show('표준분류 추가됨','ok');
-  }});
+  /* [v2.243] Modal.prompt 없음 → Modal.open으로 교체 */
+  Modal.open({title:'📁 표준분류 추가', size:'sm',
+    body:
+      '<div class="fgroup">' +
+        '<label class="fl"><b style="color:#e11d48">코드 *</b></label>' +
+        '<input class="fc" id="stdAddCode" placeholder="예: iatf16949 (영문/숫자/언더바)">' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:3px">문서 등록 시 식별자로 사용됩니다.</div>' +
+      '</div>' +
+      '<div class="fgroup">' +
+        '<label class="fl"><b style="color:#e11d48">표시명 *</b></label>' +
+        '<input class="fc" id="stdAddLabel" placeholder="예: IATF 16949">' +
+      '</div>',
+    foot:
+      '<button class="btn bout" onclick="Modal.close()">취소</button>' +
+      '<button class="btn bpri" onclick="Pages._docStdAddSave()">추가</button>',
+  });
+  setTimeout(function(){ document.getElementById('stdAddCode')?.focus(); }, 100);
+},
+_docStdAddSave:function(){
+  var code=(document.getElementById('stdAddCode')?.value||'').trim().replace(/[^a-zA-Z0-9_]/g,'');
+  var label=(document.getElementById('stdAddLabel')?.value||'').trim();
+  if(!code){Toast.show('코드는 영문/숫자/언더바만 입력 가능합니다.','warn');return;}
+  if(!label){Toast.show('표시명을 입력하세요.','warn');return;}
+  var types=Pages._getDocStdTypes();
+  if(types.find(function(s){return s.code===code;})){Toast.show('이미 존재하는 코드입니다.','warn');return;}
+  types.push({code:code, label:label});
+  localStorage.setItem('_docStdTypes', JSON.stringify(types));
+  Modal.close();
+  Pages._renderDocStd();
+  Toast.show('표준분류 추가됨: '+label,'ok');
 },
 _docStdEdit:function(idx,newLabel){
   var types=Pages._getDocStdTypes();
