@@ -4460,7 +4460,6 @@ _docViewTab:function(tab,btn){
   }
 },
 /* 인라인 필터 핸들러 */
-/* [v2.238] 표준분류 목록 — settings docstd 탭에서 관리 */
 _getDocStdTypes:function(){
   var saved=localStorage.getItem('_docStdTypes');
   if(saved){try{return JSON.parse(saved);}catch(e){}}
@@ -4505,9 +4504,7 @@ _docRender:function(){
   Tbl.render({
     el:'#docTbl',
     cols:[
-      /* [v2.239] 컬럼 순서: 선택(checkbox내장)→No→표준분류→유형→문서번호→제목→버전→상태→다음검토일→부서→작성자→작성일→파일→열람 */
-      {key:'_no',           label:'No.',        w:'44px', align:'center',
-        render:function(v,row,idx){return'<span style="color:var(--tl);font-size:12px">'+(idx+1)+'</span>';}},
+      /* [v2.240] 컬럼 순서: 표준분류→유형→문서번호→제목→버전→상태→다음검토일→부서→작성자→작성일→파일→열람 */
       {key:'standard_type', label:'표준분류',   w:'90px', align:'center',
         render:function(v){
           if(!v) return'<span style="color:var(--tl)">-</span>';
@@ -4927,7 +4924,7 @@ async doc_approval(){
       '<colgroup><col style="width:60px"><col><col style="width:90px"><col style="width:95px">'+
       '<col style="width:260px"><col style="width:280px"></colgroup>'+
       '<thead><tr>'+
-        '<th>구분</th><th>문서 제목</th><th>버전</th><th>유형</th><th>개정 사유</th><th>처리</th>'+
+        '<th>구분</th><th>표준분류</th><th>문서 제목</th><th>버전</th><th>유형</th><th>개정 사유</th><th>처리</th>'+
       '</tr></thead><tbody>';
     list.forEach(function(a){
       var ver=a.doc_ver||{};
@@ -4938,6 +4935,8 @@ async doc_approval(){
       html+=
         '<tr>'+
           '<td style="text-align:center;font-size:16px">'+(a.step_type==='approver'?'🔏':'🔍')+'</td>'+
+          /* [v2.240] 표준분류 */
+          '<td style="text-align:center">'+(function(){var std=dm.standard_type||'';if(!std)return'<span style="color:var(--tl)">-</span>';var lb=Pages._getDocStdTypes().find(function(s){return s.code===std;});return'<span class="badge bpur" style="font-size:10px">'+(lb?H.e(lb.label):H.e(std))+'</span>';}())+'</td>'+
           '<td style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+H.e(docTitle)+'">'+H.e(docTitle)+'</td>'+
           '<td style="text-align:center"><span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+H.e(verNo)+'</span></td>'+
           '<td style="text-align:center"><span class="badge bblu" style="font-size:10px">'+(a.step_type==='approver'?'🔏 최종결재':'🔍 검토')+'</span></td>'+
@@ -5904,6 +5903,7 @@ async doc_history(docId){
         /* 하단: 메타 그리드 */
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));">'+
           [['📌 상태',Pages._dBadge(doc.status)],
+           ['📁 표준분류',(function(){var std=doc.standard_type||'';if(!std)return'<span style="color:var(--tl)">-</span>';var lb=Pages._getDocStdTypes().find(function(s){return s.code===std;});return'<span class="badge bpur" style="font-size:11px">'+(lb?H.e(lb.label):H.e(std))+'</span>';}())],
            ['🏢 담당부서',H.e(doc.dept||'-')],
            ['📅 다음 검토일',H.e(doc.next_review_at||'-')+' '+Pages._dDay(doc.next_review_at)],
            ['📎 첨부 파일',filesBtnHtml],
@@ -6136,6 +6136,7 @@ _distRender:function(rows){
       created_at:r.created_at?new Date(r.created_at).toLocaleString('ko-KR'):'',
       doc_no:r.doc&&r.doc.doc_no||'-',
       doc_title:r.doc&&r.doc.title||'-',
+      standard_type:r.doc&&r.doc.standard_type||'', /* [v2.240] 표준분류 */
       action:r.action||'-',
       user_name:r.user&&r.user.name||'외부',
       dept:r.user&&r.user.dept||r.dept||'-',
@@ -6150,6 +6151,13 @@ _distRender:function(rows){
     {key:'created_at',  label:'일시',       w:'140px'},
     {key:'doc_no',      label:'문서번호',   w:distNoW,render:function(v){return'<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8">'+H.e(v)+'</span>';}},
     {key:'doc_title',   label:'문서 제목'},
+    /* [v2.240] 표준분류 컬럼 */
+    {key:'standard_type',label:'표준분류', w:'88px',align:'center',
+      render:function(v){
+        if(!v)return'<span style="color:var(--tl)">-</span>';
+        var lb=Pages._getDocStdTypes().find(function(s){return s.code===v;});
+        return'<span class="badge bpur" style="font-size:10px">'+(lb?H.e(lb.label):H.e(v))+'</span>';
+      }},
     {key:'action',      label:'액션',       w:'100px',align:'center',render:function(v){return'<span class="badge '+(cls[v]||'bgry')+'" style="font-size:10px">'+(lb[v]||H.e(v))+'</span>';}},
     {key:'user_name',   label:'사용자',     w:'80px'},
     {key:'dept',        label:'부서',       w:'70px'},
@@ -6362,6 +6370,8 @@ async doc_recommend(){
   var rows=[];
   try{ rows=await SB.getDocMaster(); }catch(e){}
 
+  /* [v2.240] 전역 설정 — 검색/다이어그램에서 즉시 사용 */
+  window._rcDocRows=rows;
   /* 태그 빈도 집계 */
   var tagMap={};
   rows.forEach(function(r){
@@ -6436,7 +6446,6 @@ async doc_recommend(){
       '</div>'+
     '</div>';
 
-  window._rcDocRows=rows;
 },
 
 /* [v2.238] 연관문서 검색 필터 */
@@ -7314,6 +7323,13 @@ _recRender:function(rows){
   Tbl.render({
     el:'#recTbl',
     cols:[
+      /* [v2.240] 표준분류 컬럼 추가 */
+      {key:'standard_type', label:'표준분류',  w:'86px', align:'center',
+        render:function(v){
+          if(!v)return'<span style="color:var(--tl)">-</span>';
+          var lb=Pages._getDocStdTypes().find(function(s){return s.code===v;});
+          return'<span class="badge bpur" style="font-size:10px">'+(lb?H.e(lb.label):H.e(v))+'</span>';
+        }},
       {key:'doc_no',        label:'기록번호',   w:recNoW,
         render:function(v,row){
           return'<span style="font-family:monospace;font-size:13px;font-weight:700;color:#1a5fa8;cursor:pointer" onclick="Pages.doc_history('+row.id+')">'+H.e(v||'-')+'</span>';
@@ -11673,8 +11689,6 @@ async settings(){
     if(tab==='sbdash') setTimeout(()=>Pages._renderSbDash(),0);
     if(tab==='aidash') setTimeout(()=>Pages._renderAiDash(),0);
     if(tab==='codemgmt') { Pages._renderCodeMgmt(); Pages._renderDocStd(); }
-    /* [v2.238] 표준분류 관리 — codemgmt 탭으로 통합됨 */
-    if(tab==='docstd') { Pages._renderCodeMgmt(); Pages._renderDocStd(); }
   };
 
   const MENU_GROUPS=[
@@ -11885,7 +11899,6 @@ async settings(){
       style="border-radius:8px">🤖 AI 대시보드</button>
     <button class="btn stab-btn ${isAdmin?'':'bout'}" data-tab="codemgmt" onclick="${isAdmin?`renderTab('codemgmt')`:`Toast.show('관리자만 접근 가능합니다.','warn')`}" style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}">&#128203; 코드 관리${isAdmin?'':' 🔒'}</button>
     <!-- [v2.238] 표준분류 관리 탭 -->
-    <button class="btn stab-btn ${isAdmin?'':'bout'}" data-tab="docstd" onclick="${isAdmin?`renderTab('docstd')`:`Toast.show('관리자만 접근 가능합니다.','warn')`}" style="border-radius:8px;${isAdmin?'':'opacity:.5;cursor:not-allowed'}">&#128196; 표준분류 관리${isAdmin?'':' 🔒'}</button>
   </div>
 
   <!-- 일반 설정 탭 -->
