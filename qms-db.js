@@ -1102,6 +1102,13 @@ const SB={
     if(error){Toast.show('코드 추가 실패: '+error.message,'err');return {ok:false};}
     return {ok:true};
   },
+  /* [v2.242] 코드 라벨 수정 */
+  async updateCodeType(category,code,label){
+    if(!_sb) return {ok:false};
+    var {error}=await _sb.from('code_types').update({label}).eq('category',category).eq('code',code);
+    if(error){Toast.show('코드 수정 실패: '+error.message,'err');return {ok:false};}
+    return {ok:true};
+  },
   async deleteCodeType(id){
     if(!_sb) return {ok:false};
     var {error}=await _sb.from('code_types').delete().eq('id',id);
@@ -1810,9 +1817,9 @@ SB.getDocApprovals=async function(docVerId){
 };
 SB.getMyPendingApprovals=async function(userId){
   if(!_sb)return[];
-  /* doc_ver_id → doc_versions, doc_id → doc_master 중첩 조인 */
+  /* doc_ver_id → doc_versions, doc_id → doc_master 중첩 조인 (standard_type 포함) */
   var res=await _sb.from('doc_approvals')
-    .select('*, doc_ver:doc_ver_id(id,ver_no,change_summary,doc_id,doc_master:doc_id(title))')
+    .select('*, doc_ver:doc_ver_id(id,ver_no,change_summary,doc_id,doc_master:doc_id(id,title,doc_no,doc_type,current_ver,standard_type,dept))')
     .eq('approver_id',userId).eq('action','pending')
     .order('created_at',{ascending:false});
   if(res.error){console.warn('[SB] getMyPendingApprovals:',res.error.message);return[];}
