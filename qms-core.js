@@ -370,9 +370,41 @@ const Auth={
       Toast.show('로그인되었습니다.','ok');
       /* [v2.65] Magic Indicator 초기화 — 로그인 후 topbar DOM 완성 후 실행 */
       setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 150);
-      /* [v2.394] 로그인 시 keepalive 자동 실행 */
-      setTimeout(async()=>{
-        try{if(_sb){await _sb.from('users').select('id').limit(1);localStorage.setItem('qms_keepalive',new Date().toISOString().slice(0,16).replace('T',' '));}}catch(e){}},2000);
+      /* [v2.244] keepalive — 로그인 시 즉시 + 4시간마다 반복 ping (Supabase 7일 일시정지 방지)
+         - 이전: setTimeout 1회만 → 앱 미사용 7일 후 프로젝트 일시정지됨
+         - 수정: setInterval(4시간)으로 앱이 열려있는 동안 주기적으로 DB 접촉
+         - localStorage에 마지막 ping 시각 저장 → 4일 초과 시 재방문 경고 */
+      (function _startKeepalive(){
+        const PING_INTERVAL = 4 * 60 * 60 * 1000; // 4시간
+        const WARN_DAYS     = 4;                   // 4일 미접속 시 경고
+        async function _ping(){
+          try{
+            if(!_sb) return;
+            await _sb.from('users').select('id').limit(1);
+            const now = new Date().toISOString().slice(0,16).replace('T',' ');
+            localStorage.setItem('qms_keepalive', now);
+            console.log('[Keepalive] ✅ Supabase ping 성공 —', now);
+          }catch(e){ console.warn('[Keepalive] ⚠️ ping 실패:', e.message); }
+        }
+        // 로그인 직후 2초 뒤 즉시 1회
+        setTimeout(_ping, 2000);
+        // 4시간마다 반복
+        if(window._keepaliveTimer) clearInterval(window._keepaliveTimer);
+        window._keepaliveTimer = setInterval(_ping, PING_INTERVAL);
+        // 마지막 ping 시각 확인 — 4일 이상 지났으면 경고
+        const lastPing = localStorage.getItem('qms_keepalive');
+        if(lastPing){
+          const diffDays = (Date.now() - new Date(lastPing)) / 86400000;
+          if(diffDays >= WARN_DAYS){
+            setTimeout(()=>{
+              Toast.show(
+                `⚠️ 마지막 접속으로부터 ${Math.floor(diffDays)}일 경과 — Supabase 일시정지 여부를 확인하세요.`,
+                'warn', 8000
+              );
+            }, 3000);
+          }
+        }
+      })();
       /* [v2.394] 로그인 직후 멘션 배지 갱신 */
       setTimeout(()=>TopNav.updateMentionBadge(),500);
     })();
