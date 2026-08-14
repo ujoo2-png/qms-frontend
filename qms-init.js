@@ -130,6 +130,8 @@ function setupHotkeys(){
         Nav.go(savedPage);
         /* [v2.236] Auto Workflow 스케줄러 시작 */
         setTimeout(()=>{ if(window.QmsWorkflow) QmsWorkflow.startScheduler(); }, 3000);
+        /* [v2.244] 세션 복원 시에도 keepalive 재시작 (로그인 버튼 없이 재방문 시 누락됐던 문제) */
+        setTimeout(()=>{ if(window.Auth) Auth._startKeepalive(); }, 2500);
         /* [v2.65] 세션 복원 후 Magic Indicator 초기화 */
         setTimeout(()=>{ if(typeof TopNav!=='undefined') TopNav._initIndicator(); }, 200);
         if(savedPage !== 'home'){

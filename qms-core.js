@@ -374,36 +374,64 @@ const Auth={
          - 이전: setTimeout 1회만 → 앱 미사용 7일 후 프로젝트 일시정지됨
          - 수정: setInterval(4시간)으로 앱이 열려있는 동안 주기적으로 DB 접촉
          - localStorage에 마지막 ping 시각 저장 → 4일 초과 시 재방문 경고 */
-      (function _startKeepalive(){
-        const PING_INTERVAL = 4 * 60 * 60 * 1000; // 4시간
-        const WARN_DAYS     = 4;                   // 4일 미접속 시 경고
-        async function _ping(){
+      /* [v2.244] keepalive — Auth 메서드화 (로그인/세션복원 양쪽에서 호출)
+         무료 플랜 전략:
+         ① 앱이 열려있는 동안 4시간마다 ping
+         ② Page Visibility API: 탭이 다시 보일 때 4시간 이상 지났으면 즉시 ping
+         ③ 크로스탭 중복 방지: localStorage 타임스탬프로 이미 다른 탭이 ping했으면 skip
+         ④ 마지막 ping이 4일 이상 지났으면 경고 Toast (Supabase 일시정지 위험 알림)  */
+      Auth._startKeepalive=function(){
+        const PING_MS   = 4 * 60 * 60 * 1000;  // 4시간
+        const WARN_DAYS = 4;                     // 4일 초과 경고
+        const LS_KEY    = 'qms_keepalive';
+
+        async function _ping(force){
+          const last = localStorage.getItem(LS_KEY);
+          const elapsed = last ? Date.now() - new Date(last).getTime() : Infinity;
+          // 크로스탭 중복 방지 — 강제 아니면서 4시간 안 지났으면 skip
+          if(!force && elapsed < PING_MS){ return; }
           try{
             if(!_sb) return;
             await _sb.from('users').select('id').limit(1);
             const now = new Date().toISOString().slice(0,16).replace('T',' ');
-            localStorage.setItem('qms_keepalive', now);
-            console.log('[Keepalive] ✅ Supabase ping 성공 —', now);
+            localStorage.setItem(LS_KEY, now);
+            console.log('[Keepalive] ✅ ping 성공 —', now);
           }catch(e){ console.warn('[Keepalive] ⚠️ ping 실패:', e.message); }
         }
-        // 로그인 직후 2초 뒤 즉시 1회
-        setTimeout(_ping, 2000);
-        // 4시간마다 반복
+
+        // 로그인/복원 즉시 1회
+        setTimeout(()=>_ping(true), 2000);
+
+        // 4시간마다 반복 (기존 타이머 제거 후 재시작)
         if(window._keepaliveTimer) clearInterval(window._keepaliveTimer);
-        window._keepaliveTimer = setInterval(_ping, PING_INTERVAL);
-        // 마지막 ping 시각 확인 — 4일 이상 지났으면 경고
-        const lastPing = localStorage.getItem('qms_keepalive');
-        if(lastPing){
-          const diffDays = (Date.now() - new Date(lastPing)) / 86400000;
+        window._keepaliveTimer = setInterval(()=>_ping(false), PING_MS);
+
+        // Page Visibility API — 탭이 다시 활성화될 때 체크
+        if(!window._keepaliveVisListener){
+          window._keepaliveVisListener = function(){
+            if(document.visibilityState === 'visible') _ping(false);
+          };
+          document.addEventListener('visibilitychange', window._keepaliveVisListener);
+        }
+
+        // 4일 이상 미접속 경고
+        const last = localStorage.getItem(LS_KEY);
+        if(last){
+          const diffDays = (Date.now() - new Date(last).getTime()) / 86400000;
           if(diffDays >= WARN_DAYS){
             setTimeout(()=>{
-              Toast.show(
-                `⚠️ 마지막 접속으로부터 ${Math.floor(diffDays)}일 경과 — Supabase 일시정지 여부를 확인하세요.`,
-                'warn', 8000
-              );
+              if(typeof Toast !== 'undefined'){
+                Toast.show(
+                  `⚠️ 마지막 접속 ${Math.floor(diffDays)}일 경과 — Supabase 일시정지 위험. 관리자에게 문의하세요.`,
+                  'warn', 10000
+                );
+              }
             }, 3000);
           }
         }
+      };
+      (function _startKeepalive(){
+        Auth._startKeepalive();
       })();
       /* [v2.394] 로그인 직후 멘션 배지 갱신 */
       setTimeout(()=>TopNav.updateMentionBadge(),500);
