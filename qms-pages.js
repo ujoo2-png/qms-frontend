@@ -7777,8 +7777,146 @@ _carRender(){
       });
     }
   });
+
+  /* [v2.245] 필터된 결과 전역 저장 — 인쇄/Excel에서 참조 */
+  window._carFiltered = filtered;
+
+  /* [v2.245] footer — 인쇄 + Excel + 통계 요약 */
+  const oldFooter = document.getElementById('carFooter');
+  if(oldFooter) oldFooter.remove();
+  const footerEl = document.createElement('div');
+  footerEl.id = 'carFooter';
+  const done   = filtered.filter(c=>['완료','종결'].includes(c.status)).length;
+  const overF  = filtered.filter(c=>c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status)).length;
+  const doneRate = filtered.length ? Math.round(done/filtered.length*100) : 0;
+  footerEl.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;'
+    +'padding:12px 14px;background:var(--bg2);border:1px solid var(--brd);border-radius:10px;margin-top:12px">'
+    // 좌측: 통계 요약
+    + '<div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap">'
+    +   '<span>조회 <b>'+filtered.length+'</b>건</span>'
+    +   '<span style="color:#16a34a">완료/종결 <b>'+done+'</b>건</span>'
+    +   '<span style="color:#dc2626">기한초과 <b>'+overF+'</b>건</span>'
+    +   '<span style="color:#1a5fa8">완료율 <b>'+doneRate+'%</b></span>'
+    + '</div>'
+    // 우측: 버튼 2개
+    + '<div style="display:flex;gap:8px">'
+    +   '<button class="btn bsm" style="background:#1a56db;color:#fff;border:none;font-weight:600;gap:4px"'
+    +     ' onclick="Pages._carPrint()" title="현재 검색 결과를 A4로 인쇄 / PDF 저장">🖨️ 인쇄 / PDF</button>'
+    +   '<button class="btn bsm" style="background:#059669;color:#fff;border:none;font-weight:600"'
+    +     ' onclick="Pages._carExcel()" title="현재 검색 결과를 Excel로 내보내기">📥 Excel 내보내기</button>'
+    + '</div>'
+    + '</div>';
+  const listPane = document.getElementById('carListPane');
+  if(listPane) listPane.after(footerEl);
+
   const kb=document.getElementById('carKanbanPane');
   if(kb&&kb.style.display!=='none') Pages._carKanbanRender(filtered);
+},
+
+/* [v2.245] 시정조치 인쇄 / PDF 미리보기 */
+_carPrint(){
+  const rows=window._carFiltered||DB.cars||[];
+  if(!rows.length){Toast.show('출력할 데이터가 없습니다.','warn');return;}
+  const q=document.getElementById('carSearch')?.value||'';
+  const st=document.getElementById('carStatusF')?.value||'전체';
+  const yr=document.getElementById('carYearF')?.value||'전체';
+  const df=document.getElementById('carDateFrom')?.value||'';
+  const dt=document.getElementById('carDateTo')?.value||'';
+  const condTxt=[q?`키워드:${q}`:'',st!=='전체'?`상태:${st}`:'',yr!=='전체'?`년도:${yr}`:'',df||dt?`기간:${df||'~'}~${dt||'~'}`:''].filter(Boolean).join(' | ')||'전체';
+  const done=rows.filter(c=>['완료','종결'].includes(c.status)).length;
+  const overF=rows.filter(c=>c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status)).length;
+  const doneRate=rows.length?Math.round(done/rows.length*100):0;
+  const statusColor={완료:'#16a34a',종결:'#6b7280',반려:'#dc2626',접수:'#7c3aed',대책접수:'#2563eb',대책실시:'#d97706',유효성평가:'#0891b2'};
+  const sbadge=s=>`<span style="background:${(statusColor[s]||'#6b7280')}22;color:${statusColor[s]||'#6b7280'};font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;border:1px solid ${(statusColor[s]||'#6b7280')}44">${H.e(s||'-')}</span>`;
+  const ddayStr=v=>{if(!v)return'-';const d=Math.ceil((new Date(v)-new Date())/86400000);const c=d<0?'#dc2626':d<=3?'#d97706':'#16a34a';return`${v} <b style="color:${c}">${d<0?'D+'+Math.abs(d):'D-'+d}</b>`;};
+  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>시정조치 현황</title>
+<style>
+*{font-family:'맑은 고딕','Malgun Gothic',sans-serif;margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;font-size:11px;color:#111}
+@page{size:A4 landscape;margin:10mm 8mm 12mm 8mm}
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #1a5fa8}
+.hdr h1{font-size:15px;font-weight:700;color:#1a5fa8}
+.hdr .sub{font-size:10px;color:#888;text-align:right}
+.summary{display:flex;gap:16px;margin-bottom:8px;padding:6px 10px;background:#f8f9fa;border-radius:6px;font-size:11px}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{background:#1a5fa8;color:#fff;padding:5px 6px;text-align:center;font-weight:700;white-space:nowrap}
+td{padding:4px 6px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
+tr:nth-child(even) td{background:#f9fafb}
+.actions{position:fixed;bottom:16px;right:16px;display:flex;gap:8px}
+.btn-p{padding:8px 20px;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700}
+@media print{.actions{display:none}}
+@media screen{body{padding:20px;background:#f3f4f6}.wrap{background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}}
+</style></head><body>
+<div class="wrap">
+  <div class="hdr"><h1>📋 시정조치 현황</h1><div class="sub">㈜이노디스&nbsp;|&nbsp;출력: ${new Date().toLocaleString('ko-KR')}</div></div>
+  <div class="summary">
+    <span>검색결과 <b>${rows.length}</b>건</span>
+    <span>완료/종결 <b style="color:#16a34a">${done}</b>건</span>
+    <span>기한초과 <b style="color:#dc2626">${overF}</b>건</span>
+    <span>완료율 <b>${doneRate}%</b></span>
+    <span style="color:#555">🔎 ${H.e(condTxt)}</span>
+  </div>
+  <table><thead><tr>
+    <th style="width:28px">No</th><th style="width:54px">상태</th>
+    <th style="width:130px">CAR번호</th><th style="width:58px">발생원</th>
+    <th style="width:70px">품목코드</th><th style="width:88px">품목명</th>
+    <th style="width:72px">고객사</th><th style="width:70px">귀책처</th>
+    <th>제목 / 불량현상</th>
+    <th style="width:52px">담당자</th><th style="width:68px">개시일</th>
+    <th style="width:88px">완료기한</th>
+  </tr></thead><tbody>
+  ${rows.map((c,i)=>`<tr>
+    <td style="text-align:center;color:#888">${i+1}</td>
+    <td style="text-align:center">${sbadge(c.status)}</td>
+    <td style="font-family:monospace;font-size:10px;font-weight:700;color:#1a5fa8">${H.e(c.no||'-')}</td>
+    <td style="text-align:center">${H.e(c.type||'-')}</td>
+    <td style="font-family:monospace;font-size:10px">${H.e(c.item_code||'-')}</td>
+    <td>${H.e((c.item||'').slice(0,12)||'-')}</td>
+    <td>${H.e(c.customer||'-')}</td>
+    <td>${H.e(c.vendor_name||'-')}</td>
+    <td>${H.e((c.title||c.defect_desc||'-').slice(0,40))}</td>
+    <td style="text-align:center">${H.e(c.assignee||'-')}</td>
+    <td style="text-align:center">${H.e(c.date||'-')}</td>
+    <td style="text-align:center">${ddayStr(c.due_date)}</td>
+  </tr>`).join('')}
+  </tbody></table>
+  <div style="margin-top:10px;font-size:9px;color:#aaa;text-align:right">㈜이노디스 QMS · 시정조치 현황 · ${new Date().toLocaleString('ko-KR')} · ${rows.length}건</div>
+</div>
+<div class="actions">
+  <button class="btn-p" style="background:#fff;color:#1a56db;border:1px solid #1a56db" onclick="window.close()">✕ 닫기</button>
+  <button class="btn-p" style="background:#1a56db;color:#fff" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+</div>
+</body></html>`;
+  const w=window.open('','_blank','width=1100,height=800,scrollbars=yes');
+  if(!w){Toast.show('팝업 차단 — 허용 후 다시 시도','warn');return;}
+  w.document.open();w.document.write(html);w.document.close();
+},
+
+/* [v2.245] 시정조치 Excel(CSV) 내보내기 */
+_carExcel(){
+  const rows=window._carFiltered||DB.cars||[];
+  if(!rows.length){Toast.show('내보낼 데이터가 없습니다.','warn');return;}
+  const BOM='\uFEFF';
+  const esc=v=>{if(v===null||v===undefined)return'';const s=String(v).replace(/"/g,'""');return(s.includes(',')||s.includes('\n')||s.includes('"'))?`"${s}"`:s;};
+  const dday=v=>{if(!v)return'';const d=Math.ceil((new Date(v)-new Date())/86400000);return d<0?`D+${Math.abs(d)} 초과`:`D-${d}`;};
+  const headers=['No','CAR번호','상태','발생원','품목코드','품목명','고객사','귀책처/공급사','제목/불량현상','담당자','개시일','완료기한','D-day','NC참조','비고'];
+  const csvRows=[headers,...rows.map((c,i)=>[
+    i+1,c.no||'',c.status||'',c.type||c.source||'',c.item_code||'',c.item||'',
+    c.customer||'',c.vendor_name||'',c.title||c.defect_desc||'',c.assignee||'',
+    c.date||'',c.due_date||'',dday(c.due_date),c.nc_no||'',c.note||'',
+  ])];
+  const csv=BOM+csvRows.map(r=>r.map(esc).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const cond=document.getElementById('carStatusF')?.value||'전체';
+  a.download=`시정조치현황_${cond}_${today}.csv`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  Toast.show(`📥 Excel 내보내기 완료 — ${rows.length}건`,'ok');
 },
 
 /* ─────────────────────────────────────────────────────
