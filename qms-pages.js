@@ -4521,6 +4521,11 @@ _docStdView:function(stdCode){
 },
 /* [v2.250] 표준분류별 문서 목록형 뷰 — 자동너비 + 헤더클릭정렬 + 검색 + 파일 */
 _docStdViewRender:function(stdCode,labelTxt){
+  /* [v2.251]
+     - table-layout:fixed + colgroup px 지정 (마우스 드래그 리사이즈 지원)
+     - FM.btn 타원형 (border-radius:4px, height 축소)
+     - 파일/열람 컬럼 추가
+     - 컬럼 드래그 리사이즈 */
   var el=document.getElementById('docStdView'); if(!el) return;
   var kw=(document.getElementById('docStdKw')?.value||'').toLowerCase();
   var allRows=(window._docRows||[]).filter(function(r){
@@ -4547,21 +4552,31 @@ _docStdViewRender:function(stdCode,labelTxt){
   var stLb={active:'유효',in_review:'검토중',draft:'초안',obsolete:'폐기'};
   var stIcon=function(s){
     return '<span style="'+H.e(stBg[s]||'background:#f3f4f6;color:#6b7280')+
-      ';font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">'+
+      ';font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap">'+
       H.e(stLb[s]||s||'-')+'</span>';
   };
 
-  /* 정렬 헤더 — data-attribute로 따옴표 충돌 방지 */
-  var sortTh=function(key,lbl,align){
+  /* 정렬 헤더 — data-attribute 방식 */
+  var sortTh=function(key,lbl,align,extra){
     var ic=(sk===key)?(sd>0?'&#9650;':'&#9660;'):'&#8645;';
     var col=(sk===key)?'color:#1a5fa8;font-weight:800':'color:var(--muted)';
     var alignCss=align?'text-align:'+align+';':'';
     var nsd=(sk===key)?(-sd):1;
-    return '<th data-sk="'+H.e(key)+'" data-sd="'+nsd+'" data-std="'+H.e(stdCode)+'" data-lbl="'+H.e(labelTxt||'')+'"'+
-      ' onclick="window._docStdSort={key:this.dataset.sk,dir:parseInt(this.dataset.sd)};'+
-      'Pages._docStdViewRender(this.dataset.std,this.dataset.lbl)"'+
-      ' style="padding:8px 10px;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;'+alignCss+'user-select:none">'+
-      H.e(lbl)+'&nbsp;<span style="font-size:10px;'+col+'">'+ic+'</span></th>';
+    return '<th class="rz-th" data-sk="'+H.e(key)+'" data-sd="'+nsd+'" data-std="'+H.e(stdCode)+'" data-lbl="'+H.e(labelTxt||'')+'"'+
+      ' onclick="if(!window._rzDragging){window._docStdSort={key:this.dataset.sk,dir:parseInt(this.dataset.sd)};'+
+      'Pages._docStdViewRender(this.dataset.std,this.dataset.lbl)}"'+
+      ' style="padding:7px 8px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;position:relative;'+(alignCss)+(extra||'')+'">'
+      +H.e(lbl)+'&nbsp;<span style="font-size:9px;'+col+'">'+ic+'</span>'+
+      /* 리사이즈 핸들 */
+      '<span class="rz-handle" onmousedown="Pages._docStdRzStart(event,this.parentElement)"'+
+        ' style="position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;background:transparent;'
+        +'z-index:1" onclick="event.stopPropagation()"></span>'+
+      '</th>';
+  };
+  var plainTh=function(lbl,align,extra){
+    return '<th style="padding:7px 8px;font-size:12px;font-weight:700;white-space:nowrap;position:relative;'+
+      (align?'text-align:'+align+';':'')+(extra||'')+'">'
+      +H.e(lbl)+'</th>';
   };
 
   if(!rows.length && !kw){
@@ -4585,15 +4600,26 @@ _docStdViewRender:function(stdCode,labelTxt){
           ' style="padding:5px 10px;border:1px solid var(--brd);border-radius:6px;font-size:12px;width:200px">'+
         (kw?
           '<button data-std="'+H.e(stdCode)+'" data-lbl="'+H.e(labelTxt||'')+'"'+
-          ' onclick="document.getElementById(\'docStdKw\').value=\'\';'+
-          'Pages._docStdViewRender(this.dataset.std,this.dataset.lbl)"'+
-          ' style="font-size:11px;padding:4px 8px;border:1px solid var(--brd);border-radius:4px;cursor:pointer">&#10005;</button>'
+          ' onclick="document.getElementById(\'docStdKw\').value=\'\';Pages._docStdViewRender(this.dataset.std,this.dataset.lbl)"'+
+          ' style="font-size:11px;padding:3px 8px;border:1px solid var(--brd);border-radius:4px;cursor:pointer">&#10005;</button>'
         :'')+
       '</div>'+
     '</div>'+
-    /* 테이블 */
-    '<div style="overflow-x:auto">'+
-    '<table class="ctbl" style="width:100%;font-size:13px;table-layout:auto;border-collapse:collapse">'+
+    /* 테이블 — table-layout:fixed + colgroup으로 드래그 리사이즈 지원 */
+    '<div style="overflow-x:auto" id="docStdTblWrap">'+
+    '<table id="docStdTbl" style="width:100%;font-size:13px;table-layout:fixed;border-collapse:collapse">'+
+    '<colgroup>'+
+      '<col id="docStdCol_type" style="width:64px">'+
+      '<col id="docStdCol_doc_no" style="width:110px">'+
+      '<col id="docStdCol_title">'+
+      '<col id="docStdCol_status" style="width:56px">'+
+      '<col id="docStdCol_ver" style="width:48px">'+
+      '<col id="docStdCol_dept" style="width:58px">'+
+      '<col id="docStdCol_date" style="width:80px">'+
+      '<col id="docStdCol_summary">'+
+      '<col id="docStdCol_file" style="width:52px">'+
+      '<col id="docStdCol_view" style="width:44px">'+
+    '</colgroup>'+
     '<thead><tr style="background:var(--bg2);border-bottom:2px solid var(--brd)">'+
       sortTh('doc_type','유형','center')+
       sortTh('doc_no','문서번호','')+
@@ -4602,38 +4628,87 @@ _docStdViewRender:function(stdCode,labelTxt){
       sortTh('current_ver','버전','center')+
       sortTh('dept','부서','center')+
       sortTh('created_at','작성일','center')+
-      '<th style="padding:8px 10px;font-size:13px;font-weight:700;white-space:nowrap">개정사유</th>'+
-      '<th style="padding:8px 10px;font-size:13px;font-weight:700;text-align:center;width:52px">파일</th>'+
+      plainTh('개정사유','')+
+      plainTh('파일','center')+
+      plainTh('열람','center')+
     '</tr></thead>'+
     '<tbody>'+
     (!rows.length?
-      '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">검색 결과가 없습니다.</td></tr>'
+      '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--muted)">검색 결과가 없습니다.</td></tr>'
     :rows.map(function(r,i){
       var evenBg=(i%2===1)?'background:var(--bg2)':'';
+      /* 파일 버튼 — 타원형으로 축소 */
+      var fkey='doc-'+r.id;
+      var hasFile=FM.has(fkey);
+      var fileBtn='<button onclick="event.stopPropagation();FM.modal(\''+fkey+'\')"'+
+        ' style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid '+(hasFile?'#3b82f6':'#d1d5db')+
+        ';background:'+(hasFile?'#eff6ff':'#f9fafb')+';color:'+(hasFile?'#1d4ed8':'#9ca3af')+
+        ';cursor:pointer;white-space:nowrap;line-height:1.4">'+
+        (hasFile?'📎 '+FM.get(fkey).length+'개':'📎 없음')+'</button>';
+      /* 열람 버튼 */
+      var viewBtn='<button onclick="event.stopPropagation();'+
+        'window._docViewTarget={id:'+r.id+',title:\''+H.e((r.title||'').replace(/'/g,"\\'"))+'\''+'};'+
+        'Pages._docSplitView('+r.id+',\''+H.e((r.title||'').replace(/'/g,"\\'"))+'\')"'+
+        ' style="font-size:10px;padding:2px 5px;border-radius:4px;border:1px solid #e5e7eb;'+
+        'background:#f0f9ff;color:#0369a1;cursor:pointer;white-space:nowrap;line-height:1.4">👁</button>';
       return '<tr onclick="Pages.doc_history('+r.id+')"'+
         ' style="border-bottom:1px solid var(--brd);cursor:pointer;'+evenBg+'"'+
         ' onmouseover="this._bg=this.style.background;this.style.background=\'#eef2ff\'"'+
         ' onmouseout="this.style.background=this._bg||\'\'">'+
-        '<td style="padding:8px 10px;text-align:center;white-space:nowrap">'+
-          '<span style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+
+        '<td style="padding:6px 8px;text-align:center;overflow:hidden">'+
+          '<span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap;display:inline-block">'+
             H.e(Pages._DT[r.doc_type]||r.doc_type||'-')+'</span></td>'+
-        '<td style="padding:8px 10px;white-space:nowrap">'+
-          '<span style="font-family:monospace;font-size:12px;font-weight:700;color:#1a5fa8"'+
-            ' onclick="event.stopPropagation();Pages.doc_history('+r.id+')"'+
-            ' title="클릭: 개정이력">'+H.e(r.doc_no||'-')+'</span></td>'+
-        '<td style="padding:8px 10px;font-weight:500;min-width:140px">'+H.e(r.title||'-')+'</td>'+
-        '<td style="padding:8px 10px;text-align:center;white-space:nowrap">'+stIcon(r.status)+'</td>'+
-        '<td style="padding:8px 10px;text-align:center;white-space:nowrap">'+
-          '<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+
+        '<td style="padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+          '<span style="font-family:monospace;font-size:11px;font-weight:700;color:#1a5fa8"'+
+            ' onclick="event.stopPropagation();Pages.doc_history('+r.id+')" title="클릭: 개정이력">'+H.e(r.doc_no||'-')+'</span></td>'+
+        '<td style="padding:6px 8px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+H.e(r.title||'')+'">'+H.e(r.title||'-')+'</td>'+
+        '<td style="padding:6px 8px;text-align:center;overflow:hidden">'+stIcon(r.status)+'</td>'+
+        '<td style="padding:6px 8px;text-align:center;overflow:hidden">'+
+          '<span style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap">'+
             H.e(r.current_ver||'-')+'</span></td>'+
-        '<td style="padding:8px 10px;text-align:center;white-space:nowrap;font-size:12px;color:var(--muted)">'+H.e(r.dept||'-')+'</td>'+
-        '<td style="padding:8px 10px;text-align:center;white-space:nowrap;font-size:12px;color:var(--muted)">'+
+        '<td style="padding:6px 8px;text-align:center;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+H.e(r.dept||'-')+'</td>'+
+        '<td style="padding:6px 8px;text-align:center;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden">'+
           H.e((r.created_at||'').slice(0,10)||'-')+'</td>'+
-        '<td style="padding:8px 10px;font-size:12px;color:var(--muted)">'+H.e(r.summary||r.change_summary||'-')+'</td>'+
-        '<td style="padding:8px 6px;text-align:center" onclick="event.stopPropagation()">'+FM.btn('doc-'+r.id)+'</td>'+
+        '<td style="padding:6px 8px;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+H.e(r.summary||r.change_summary||'')+'">'+
+          H.e(r.summary||r.change_summary||'-')+'</td>'+
+        '<td style="padding:4px 4px;text-align:center;overflow:hidden" onclick="event.stopPropagation()">'+fileBtn+'</td>'+
+        '<td style="padding:4px 4px;text-align:center;overflow:hidden" onclick="event.stopPropagation()">'+viewBtn+'</td>'+
       '</tr>';
     }).join(''))+
     '</tbody></table></div>';
+
+  /* 컬럼 드래그 리사이즈 초기화 */
+  Pages._docStdRzInit();
+},
+
+/* [v2.251] 컬럼 리사이즈 — mousedown → mousemove → mouseup */
+_docStdRzStart:function(e,th){
+  e.preventDefault();
+  window._rzDragging=true;
+  var startX=e.pageX;
+  var startW=th.offsetWidth;
+  var col=document.getElementById('docStdCol_'+th.dataset.sk);
+  var onMove=function(e2){
+    var w=Math.max(30,startW+(e2.pageX-startX));
+    th.style.width=w+'px';
+    if(col) col.style.width=w+'px';
+  };
+  var onUp=function(){
+    window._rzDragging=false;
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onUp);
+  };
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
+},
+_docStdRzInit:function(){
+  /* 리사이즈 핸들 mousedown 이벤트 — 동적 렌더 후 재등록 */
+  var handles=document.querySelectorAll('#docStdTbl .rz-handle');
+  handles.forEach(function(h){
+    h.addEventListener('mousedown',function(e){
+      Pages._docStdRzStart(e,h.parentElement);
+    });
+  });
 },
 _docKwFilter:function(v){window._docKw=v; Pages._docRender();},
 _docTpFilter:function(v){window._docTp=v; Pages._docRender();},
