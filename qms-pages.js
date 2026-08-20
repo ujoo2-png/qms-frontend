@@ -7893,30 +7893,55 @@ tr:nth-child(even) td{background:#f9fafb}
   w.document.open();w.document.write(html);w.document.close();
 },
 
-/* [v2.245] 시정조치 Excel(CSV) 내보내기 */
+/* [v2.247] 시정조치 Excel(.xlsx) 내보내기 — SheetJS 사용 */
 _carExcel(){
   const rows=window._carFiltered||DB.cars||[];
   if(!rows.length){Toast.show('내보낼 데이터가 없습니다.','warn');return;}
-  const BOM='\uFEFF';
-  const esc=v=>{if(v===null||v===undefined)return'';const s=String(v).replace(/"/g,'""');return(s.includes(',')||s.includes('\n')||s.includes('"'))?`"${s}"`:s;};
+  if(typeof XLSX==='undefined'){Toast.show('Excel 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.','warn');return;}
+
   const dday=v=>{if(!v)return'';const d=Math.ceil((new Date(v)-new Date())/86400000);return d<0?`D+${Math.abs(d)} 초과`:`D-${d}`;};
+
+  /* ── 시트1: 시정조치 목록 ── */
   const headers=['No','CAR번호','상태','발생원','품목코드','품목명','고객사','귀책처/공급사','제목/불량현상','담당자','개시일','완료기한','D-day','NC참조','비고'];
-  const csvRows=[headers,...rows.map((c,i)=>[
-    i+1,c.no||'',c.status||'',c.type||c.source||'',c.item_code||'',c.item||'',
-    c.customer||'',c.vendor_name||'',c.title||c.defect_desc||'',c.assignee||'',
-    c.date||'',c.due_date||'',dday(c.due_date),c.nc_no||'',c.note||'',
-  ])];
-  const csv=BOM+csvRows.map(r=>r.map(esc).join(',')).join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
+  const listData=[
+    headers,
+    ...rows.map((c,i)=>[
+      i+1, c.no||'', c.status||'', c.type||c.source||'',
+      c.item_code||'', c.item||'', c.customer||'', c.vendor_name||'',
+      c.title||c.defect_desc||'', c.assignee||'',
+      c.date||'', c.due_date||'', dday(c.due_date), c.nc_no||'', c.note||'',
+    ])
+  ];
+
+  /* ── 시트2: 통계 요약 ── */
+  const statuses=['접수','대책접수','대책실시','유효성평가','완료','반려','종결'];
+  const byStatus={};
+  statuses.forEach(s=>{byStatus[s]=rows.filter(c=>c.status===s).length;});
+  const done=rows.filter(c=>['완료','종결'].includes(c.status)).length;
+  const over=rows.filter(c=>c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status)).length;
+  const summaryData=[
+    ['구분','건수','비율(%)'],
+    ...statuses.map(s=>[s, byStatus[s], rows.length?Math.round(byStatus[s]/rows.length*100):0]),
+    ['', '', ''],
+    ['합계', rows.length, 100],
+    ['완료/종결', done, rows.length?Math.round(done/rows.length*100):0],
+    ['기한초과', over, rows.length?Math.round(over/rows.length*100):0],
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(listData);
+  /* 열 너비 */
+  ws1['!cols']=[{wch:5},{wch:22},{wch:8},{wch:8},{wch:10},{wch:14},{wch:10},{wch:10},{wch:30},{wch:8},{wch:10},{wch:10},{wch:10},{wch:18},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws1, '시정조치목록');
+
+  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+  ws2['!cols']=[{wch:12},{wch:8},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws2, '통계요약');
+
   const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
   const cond=document.getElementById('carStatusF')?.value||'전체';
-  a.download=`시정조치현황_${cond}_${today}.csv`;
-  document.body.appendChild(a);a.click();
-  document.body.removeChild(a);URL.revokeObjectURL(url);
-  Toast.show(`📥 Excel 내보내기 완료 — ${rows.length}건`,'ok');
+  XLSX.writeFile(wb, `시정조치현황_${cond}_${today}.xlsx`);
+  Toast.show(`📥 Excel 내보내기 완료 — ${rows.length}건 (2시트)`,'ok');
 },
 
 /* ─────────────────────────────────────────────────────
@@ -8051,6 +8076,69 @@ tr.even td{background:#f5f8fd}
 <button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
 </body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
+},
+
+/* [v2.247] 고객불만관리대장 Excel(.xlsx) 내보내기 — 3시트 구성
+   시트1: 고객불만 목록 | 시트2: 고객사별 통계 | 시트3: 월별 추이 */
+_carComplaintExcel(){
+  if(typeof XLSX==='undefined'){Toast.show('Excel 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.','warn');return;}
+
+  /* 고객불만 데이터 필터 */
+  const allData=window._carStatusAllData||DB.cars||[];
+  const q=(document.getElementById('csSearch')?.value||'').toLowerCase();
+  const as=document.getElementById('csAssigneeF')?.value||'';
+  const yr=document.getElementById('csYearF')?.value||'';
+  const cu=(document.getElementById('csCustomerF')?.value||'').toLowerCase();
+  const rows=allData.filter(c=>{
+    if(!(c.type==='고객불만'||c.source==='고객불만'||c.type==='고객불만관리'))return false;
+    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.customer||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
+    if(as&&c.assignee!==as)return false;
+    if(yr&&!(c.date||'').startsWith(yr))return false;
+    if(cu&&!(c.customer||'').toLowerCase().includes(cu))return false;
+    return true;
+  });
+  if(!rows.length){Toast.show('출력할 고객불만 데이터가 없습니다.','warn');return;}
+
+  const dday=v=>{if(!v)return'';const d=Math.ceil((new Date(v)-new Date())/86400000);return d<0?`D+${Math.abs(d)} 초과`:`D-${d}`;};
+
+  /* ── 시트1: 고객불만 목록 ── */
+  const h1=['No','CAR번호','상태','고객사','귀책처/공급사','품목코드','품목명','불량현상','담당자','개시일','완료기한','D-day','8D제출일','NC참조','비고'];
+  const list=[h1,...rows.map((c,i)=>[
+    i+1, c.no||'', c.status||'', c.customer||'', c.vendor_name||'',
+    c.item_code||'', c.item||'', c.title||c.defect_desc||'', c.assignee||'',
+    c.date||'', c.due_date||'', dday(c.due_date),
+    c.d8_date||'', c.nc_no||'', c.note||'',
+  ])];
+
+  /* ── 시트2: 고객사별 통계 ── */
+  const byCust={};
+  rows.forEach(c=>{const k=c.customer||'미입력';if(!byCust[k])byCust[k]={total:0,done:0,over:0};byCust[k].total++;if(['완료','종결'].includes(c.status))byCust[k].done++;if(c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status))byCust[k].over++;});
+  const h2=['고객사','총건수','완료','기한초과','완료율(%)'];
+  const custStat=[h2,...Object.entries(byCust).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>[k,v.total,v.done,v.over,v.total?Math.round(v.done/v.total*100):0])];
+
+  /* ── 시트3: 월별 추이 ── */
+  const byMonth={};
+  rows.forEach(c=>{const m=(c.date||'').slice(0,7);if(!m)return;if(!byMonth[m])byMonth[m]={total:0,done:0};byMonth[m].total++;if(['완료','종결'].includes(c.status))byMonth[m].done++;});
+  const h3=['년월','발생건수','완료건수','완료율(%)'];
+  const monthStat=[h3,...Object.keys(byMonth).sort().map(m=>[m,byMonth[m].total,byMonth[m].done,Math.round(byMonth[m].done/byMonth[m].total*100)])];
+
+  const wb=XLSX.utils.book_new();
+
+  const ws1=XLSX.utils.aoa_to_sheet(list);
+  ws1['!cols']=[{wch:5},{wch:22},{wch:8},{wch:12},{wch:12},{wch:10},{wch:14},{wch:30},{wch:8},{wch:10},{wch:10},{wch:10},{wch:10},{wch:18},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws1, '고객불만목록');
+
+  const ws2=XLSX.utils.aoa_to_sheet(custStat);
+  ws2['!cols']=[{wch:16},{wch:8},{wch:8},{wch:8},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws2, '고객사별통계');
+
+  const ws3=XLSX.utils.aoa_to_sheet(monthStat);
+  ws3['!cols']=[{wch:10},{wch:8},{wch:8},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws3, '월별추이');
+
+  const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, `고객불만관리대장_${today}.xlsx`);
+  Toast.show(`📥 고객불만관리대장 Excel 완료 — ${rows.length}건 (3시트)`,'ok');
 },
 
 /* [v2.217] 날짜 퀵버튼 */
@@ -9199,6 +9287,8 @@ async car_status(){
          <div class="psub">전체 시정조치 현황 · 상태·년도·고객사별 조회</div></div>
     <div class="pac">
       <button class="btn bpri bsm" onclick="Pages._carComplaintPrint()">🖨️ 고객불만관리대장 출력</button>
+      <!-- [v2.247] 고객불만 Excel 내보내기 -->
+      <button class="btn bsm" style="background:#059669;color:#fff;border:none;font-weight:600" onclick="Pages._carComplaintExcel()">📥 Excel 내보내기</button>
       <button class="btn bout bsm" onclick="Nav.go('car_input')">✍️ 신규 입력</button>
     </div>
   </div>
