@@ -7894,56 +7894,7 @@ tr:nth-child(even) td{background:#f9fafb}
 },
 
 /* [v2.247] 시정조치 Excel(.xlsx) 내보내기 — SheetJS 사용 */
-_carExcel(){
-  const rows=window._carFiltered||DB.cars||[];
-  if(!rows.length){Toast.show('내보낼 데이터가 없습니다.','warn');return;}
-  if(typeof XLSX==='undefined'){Toast.show('Excel 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.','warn');return;}
-
-  const dday=v=>{if(!v)return'';const d=Math.ceil((new Date(v)-new Date())/86400000);return d<0?`D+${Math.abs(d)} 초과`:`D-${d}`;};
-
-  /* ── 시트1: 시정조치 목록 ── */
-  const headers=['No','CAR번호','상태','발생원','품목코드','품목명','고객사','귀책처/공급사','제목/불량현상','담당자','개시일','완료기한','D-day','NC참조','비고'];
-  const listData=[
-    headers,
-    ...rows.map((c,i)=>[
-      i+1, c.no||'', c.status||'', c.type||c.source||'',
-      c.item_code||'', c.item||'', c.customer||'', c.vendor_name||'',
-      c.title||c.defect_desc||'', c.assignee||'',
-      c.date||'', c.due_date||'', dday(c.due_date), c.nc_no||'', c.note||'',
-    ])
-  ];
-
-  /* ── 시트2: 통계 요약 ── */
-  const statuses=['접수','대책접수','대책실시','유효성평가','완료','반려','종결'];
-  const byStatus={};
-  statuses.forEach(s=>{byStatus[s]=rows.filter(c=>c.status===s).length;});
-  const done=rows.filter(c=>['완료','종결'].includes(c.status)).length;
-  const over=rows.filter(c=>c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status)).length;
-  const summaryData=[
-    ['구분','건수','비율(%)'],
-    ...statuses.map(s=>[s, byStatus[s], rows.length?Math.round(byStatus[s]/rows.length*100):0]),
-    ['', '', ''],
-    ['합계', rows.length, 100],
-    ['완료/종결', done, rows.length?Math.round(done/rows.length*100):0],
-    ['기한초과', over, rows.length?Math.round(over/rows.length*100):0],
-  ];
-
-  const wb = XLSX.utils.book_new();
-  const ws1 = XLSX.utils.aoa_to_sheet(listData);
-  /* 열 너비 */
-  ws1['!cols']=[{wch:5},{wch:22},{wch:8},{wch:8},{wch:10},{wch:14},{wch:10},{wch:10},{wch:30},{wch:8},{wch:10},{wch:10},{wch:10},{wch:18},{wch:16}];
-  XLSX.utils.book_append_sheet(wb, ws1, '시정조치목록');
-
-  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
-  ws2['!cols']=[{wch:12},{wch:8},{wch:10}];
-  XLSX.utils.book_append_sheet(wb, ws2, '통계요약');
-
-  const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
-  const cond=document.getElementById('carStatusF')?.value||'전체';
-  XLSX.writeFile(wb, `시정조치현황_${cond}_${today}.xlsx`);
-  Toast.show(`📥 Excel 내보내기 완료 — ${rows.length}건 (2시트)`,'ok');
-},
-
+_carExcel(){  const rows=window._carFiltered||DB.cars||[];  if(!rows.length){Toast.show('내보낼 데이터가 없습니다.','warn');return;}  if(typeof XLSX==='undefined'){Toast.show('Excel 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.','warn');return;}  const v=c=>c===null||c===undefined?'':String(c);  const dday=d=>{if(!d)return'';const n=Math.ceil((new Date(d)-new Date())/86400000);return n<0?`D+${Math.abs(n)} 초과`:`D-${n}`;};  const cost=c=>c?Number(String(c).replace(/[^\d.-]/g,''))||'':'';  /* [v2.248] 시트1: car_input 폼과 동일한 전체 컬럼 */  const headers=[    'No','CAR번호','상태','발생원(유형)','NC참조번호','제목',    '고객사','귀책처/공급사','작업지시번호','품목코드','품목명',    '개시일','완료기한','D-day','담당자','작성자',    /* 불량현상 */    '출하수량','검사수량','불량수량','불량률(%)','불량유형','불량현상','처리방법','비고(NC)',    /* 손실비용 */    '재료비손실','공정손실','기타손실','총손실비용',    /* 8D */    'D1.팀구성','D2.문제기술','D3.긴급대책',    'D4.근본원인(WHY1)','D4.근본원인(WHY2)','D4.근본원인(WHY3)',    'D4.근본원인(WHY4)','D4.근본원인(WHY5)',    'D5.시정조치','D5.완료예정일',    'D6.유효성검증','D6.검증결과','D6.검증일',    'D7.재발방지','특이사항',  ];  const listData=[headers,...rows.map((c,i)=>[    i+1,           v(c.no),          v(c.status),    v(c.type||c.source),    v(c.nc_no),    v(c.title),       v(c.customer),  v(c.vendor_name),    v(c.work_order),v(c.item_code),  v(c.item),    v(c.date||c.open),v(c.due_date), dday(c.due_date),v(c.assignee),v(c.created_by),    cost(c.ship_qty),cost(c.insp_qty),cost(c.bad_qty),v(c.defect_rate),    v(c.defect_type),v(c.defect_desc),v(c.action_type),v(c.nc_note),    cost(c.cost_material),cost(c.cost_process),cost(c.cost_etc),cost(c.cost_total),    v(c.d1_team),  v(c.d2_desc),    v(c.d3_action),    v(c.d4_why1),  v(c.d4_why2),    v(c.d4_why3),   v(c.d4_why4),  v(c.d4_why5),    v(c.d5_action),v(c.d5_date),    v(c.d6_verify),v(c.d6_result),  v(c.d6_date),    v(c.d7_prevent),v(c.note),  ])];  /* 시트2: 통계 요약 */  const statuses=['접수','대책접수','대책실시','유효성평가','완료','반려','종결'];  const byStatus={};  statuses.forEach(s=>{byStatus[s]=rows.filter(c=>c.status===s).length;});  const done=rows.filter(c=>['완료','종결'].includes(c.status)).length;  const over=rows.filter(c=>c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status)).length;  const summaryData=[    ['구분','건수','비율(%)'],    ...statuses.map(s=>[s,byStatus[s],rows.length?Math.round(byStatus[s]/rows.length*100):0]),    ['','',''],    ['합계',rows.length,100],    ['완료/종결 계',done,rows.length?Math.round(done/rows.length*100):0],    ['기한초과',over,rows.length?Math.round(over/rows.length*100):0],    ['','',''],    ['출력일시',new Date().toLocaleString('ko-KR'),''],    ['검색조건',document.getElementById('carStatusF')?.value||'전체',''],  ];  const wb=XLSX.utils.book_new();  const ws1=XLSX.utils.aoa_to_sheet(listData);  ws1['!cols']=[    {wch:5},{wch:22},{wch:8},{wch:8},{wch:18},{wch:28},    {wch:10},{wch:12},{wch:12},{wch:10},{wch:14},    {wch:10},{wch:10},{wch:10},{wch:8},{wch:8},    {wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:24},{wch:10},{wch:16},    {wch:10},{wch:10},{wch:10},{wch:12},    {wch:20},{wch:30},{wch:24},    {wch:20},{wch:20},{wch:20},{wch:20},{wch:20},    {wch:24},{wch:10},    {wch:20},{wch:16},{wch:10},    {wch:24},{wch:20},  ];  ws1['!freeze']={xSplit:0,ySplit:1};  XLSX.utils.book_append_sheet(wb,ws1,'시정조치목록');  const ws2=XLSX.utils.aoa_to_sheet(summaryData);  ws2['!cols']=[{wch:14},{wch:8},{wch:10}];  XLSX.utils.book_append_sheet(wb,ws2,'통계요약');  const today=new Date().toISOString().slice(0,10).replace(/-/g,'');  const cond=document.getElementById('carStatusF')?.value||'전체';  XLSX.writeFile(wb,`시정조치현황_${cond}_${today}.xlsx`);  Toast.show(`📥 Excel 내보내기 완료 — ${rows.length}건 / ${headers.length}컬럼 (2시트)`,'ok');},
 /* ─────────────────────────────────────────────────────
    [v2.221] 고객불만관리대장 출력
    서명란: 우측 상단 box형 / 고객불만 자동필터 / 페이지번호 우측하단
