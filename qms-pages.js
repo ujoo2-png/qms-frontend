@@ -4513,80 +4513,126 @@ _getDocStdTypes:function(){
 
 /* [v2.241] 표준분류별 문서 카드 뷰 */
 _docStdView:function(stdCode){
-  /* [v2.243] 표준분류별 문서 목록형 뷰 — 균일 너비, 깔끔한 UI */
-  var el=document.getElementById('docStdView'); if(!el) return;
-  var rows=(window._docRows||[]).filter(function(r){
-    return r.status!=='deleted' && r.standard_type===stdCode;
-  });
+  /* [v2.250] 정렬 초기화 후 렌더 위임 */
   var label=Pages._getDocStdTypes().find(function(s){return s.code===stdCode;});
   var labelTxt=label?label.label:stdCode;
-  if(!rows.length){
-    el.innerHTML='<div style="text-align:center;padding:48px 0;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">📭</div><div style="font-size:14px">'+H.e(labelTxt)+'에 등록된 문서가 없습니다.</div></div>';
+  if(!window._docStdSort) window._docStdSort={key:'doc_no',dir:1};
+  Pages._docStdViewRender(stdCode,labelTxt);
+},
+/* [v2.250] 표준분류별 문서 목록형 뷰 — 자동너비 + 헤더클릭정렬 + 검색 + 파일 */
+_docStdViewRender:function(stdCode,labelTxt){
+  var el=document.getElementById('docStdView'); if(!el) return;
+  var kw=(document.getElementById('docStdKw')?.value||'').toLowerCase();
+  var allRows=(window._docRows||[]).filter(function(r){
+    return r.status!=='deleted' && r.standard_type===stdCode;
+  });
+  var rows=kw?allRows.filter(function(r){
+    return [(r.doc_no||''),(r.title||''),(r.dept||''),(r.created_by||'')]
+      .join(' ').toLowerCase().includes(kw);
+  }):allRows;
+
+  /* 정렬 */
+  var sk=window._docStdSort.key||'doc_no';
+  var sd=window._docStdSort.dir||1;
+  rows=rows.slice().sort(function(a,b){
+    return String(a[sk]||'').localeCompare(String(b[sk]||''),'ko')*sd;
+  });
+
+  var stBg={
+    active:'background:#d1fae5;color:#065f46',
+    in_review:'background:#dbeafe;color:#1e40af',
+    draft:'background:#fef3c7;color:#92400e',
+    obsolete:'background:#f3f4f6;color:#6b7280'
+  };
+  var stLb={active:'유효',in_review:'검토중',draft:'초안',obsolete:'폐기'};
+  var stIcon=function(s){
+    return '<span style="'+H.e(stBg[s]||'background:#f3f4f6;color:#6b7280')+
+      ';font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">'+
+      H.e(stLb[s]||s||'-')+'</span>';
+  };
+
+  /* 정렬 헤더 — data-attribute로 따옴표 충돌 방지 */
+  var sortTh=function(key,lbl,align){
+    var ic=(sk===key)?(sd>0?'&#9650;':'&#9660;'):'&#8645;';
+    var col=(sk===key)?'color:#1a5fa8;font-weight:800':'color:var(--muted)';
+    var alignCss=align?'text-align:'+align+';':'';
+    var nsd=(sk===key)?(-sd):1;
+    return '<th data-sk="'+H.e(key)+'" data-sd="'+nsd+'" data-std="'+H.e(stdCode)+'" data-lbl="'+H.e(labelTxt||'')+'"'+
+      ' onclick="window._docStdSort={key:this.dataset.sk,dir:parseInt(this.dataset.sd)};'+
+      'Pages._docStdViewRender(this.dataset.std,this.dataset.lbl)"'+
+      ' style="padding:8px 10px;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;'+alignCss+'user-select:none">'+
+      H.e(lbl)+'&nbsp;<span style="font-size:10px;'+col+'">'+ic+'</span></th>';
+  };
+
+  if(!rows.length && !kw){
+    el.innerHTML='<div style="text-align:center;padding:48px 0;color:var(--muted)">'+
+      '<div style="font-size:32px;margin-bottom:8px">&#128449;</div>'+
+      '<div style="font-size:14px">'+H.e(labelTxt)+'에 등록된 문서가 없습니다.</div></div>';
     return;
   }
-  /* 상태 배지 색 */
-  var statusStyle={active:'background:#d1fae5;color:#065f46',in_review:'background:#dbeafe;color:#1e40af',
-                   draft:'background:#fef3c7;color:#92400e',obsolete:'background:#f3f4f6;color:#6b7280'};
-  var statusLabel={active:'유효',in_review:'검토중',draft:'초안',obsolete:'폐기'};
+
   el.innerHTML=
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+    /* 헤더바 */
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">'+
       '<span style="background:#ede9fe;color:#5b21b6;font-size:13px;font-weight:700;padding:3px 12px;border-radius:20px">'+H.e(labelTxt)+'</span>'+
-      '<span style="font-size:13px;color:var(--muted)">총 <b>'+rows.length+'</b>건</span>'+
+      '<span style="font-size:13px;color:var(--muted)">총 <b>'+rows.length+'</b>건'+
+        (kw?' / 전체 <b>'+allRows.length+'</b>건 중':'')+
+      '</span>'+
+      '<div style="margin-left:auto;display:flex;gap:6px;align-items:center">'+
+        '<input type="text" id="docStdKw" placeholder="문서번호, 제목, 부서..." value="'+H.e(kw)+'"'+
+          ' data-std="'+H.e(stdCode)+'" data-lbl="'+H.e(labelTxt||'')+'"'+
+          ' oninput="Pages._docStdViewRender(this.dataset.std,this.dataset.lbl)"'+
+          ' style="padding:5px 10px;border:1px solid var(--brd);border-radius:6px;font-size:12px;width:200px">'+
+        (kw?
+          '<button data-std="'+H.e(stdCode)+'" data-lbl="'+H.e(labelTxt||'')+'"'+
+          ' onclick="document.getElementById(\'docStdKw\').value=\'\';'+
+          'Pages._docStdViewRender(this.dataset.std,this.dataset.lbl)"'+
+          ' style="font-size:11px;padding:4px 8px;border:1px solid var(--brd);border-radius:4px;cursor:pointer">&#10005;</button>'
+        :'')+
+      '</div>'+
     '</div>'+
+    /* 테이블 */
     '<div style="overflow-x:auto">'+
-    '<table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">'+
-    '<colgroup>'+
-      '<col style="width:76px">'+   /* 유형 */
-      '<col style="width:120px">'+  /* 문서번호 */
-      '<col>'+                       /* 문서 제목 */
-      '<col style="width:68px">'+   /* 상태 */
-      '<col style="width:56px">'+   /* 버전 */
-      '<col style="width:72px">'+   /* 부서 */
-      '<col style="width:86px">'+   /* 작성일 */
-      '<col style="width:140px">'+  /* 개정사유 */
-    '</colgroup>'+
+    '<table class="ctbl" style="width:100%;font-size:13px;table-layout:auto;border-collapse:collapse">'+
     '<thead><tr style="background:var(--bg2);border-bottom:2px solid var(--brd)">'+
-      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">유형</th>'+
-      '<th style="padding:8px 10px;font-size:12px;font-weight:700;color:var(--muted)">문서번호</th>'+
-      '<th style="padding:8px 10px;font-size:12px;font-weight:700;color:var(--muted)">문서 제목</th>'+
-      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">상태</th>'+
-      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">버전</th>'+
-      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">부서</th>'+
-      '<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)">작성일</th>'+
-      '<th style="padding:8px 10px;font-size:12px;font-weight:700;color:var(--muted)">개정사유</th>'+
+      sortTh('doc_type','유형','center')+
+      sortTh('doc_no','문서번호','')+
+      sortTh('title','문서 제목','')+
+      sortTh('status','상태','center')+
+      sortTh('current_ver','버전','center')+
+      sortTh('dept','부서','center')+
+      sortTh('created_at','작성일','center')+
+      '<th style="padding:8px 10px;font-size:13px;font-weight:700;white-space:nowrap">개정사유</th>'+
+      '<th style="padding:8px 10px;font-size:13px;font-weight:700;text-align:center;width:52px">파일</th>'+
     '</tr></thead>'+
     '<tbody>'+
-      rows.map(function(r,i){
-        var st=r.status||'draft';
-        var stStyle=statusStyle[st]||'background:#f3f4f6;color:#6b7280';
-        var stLabel=statusLabel[st]||st;
-        return'<tr style="border-bottom:1px solid var(--brd);cursor:pointer;transition:background .12s"'+
-          ' onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'\'"'+
-          ' onclick="Pages.doc_history('+r.id+')">'+
-          '<td style="padding:9px 10px;text-align:center">'+
-            '<span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">'+
-              H.e(Pages._DT[r.doc_type]||r.doc_type||'-')+
-            '</span>'+
-          '</td>'+
-          '<td style="padding:9px 10px">'+
-            '<span style="font-family:monospace;font-size:12px;font-weight:700;color:#1a5fa8;cursor:pointer"'+
-              ' title="클릭하여 개정이력 보기"'+
-              ' onclick="event.stopPropagation();Pages.doc_history('+r.id+')">'+
-              H.e(r.doc_no||'-')+
-            '</span>'+
-          '</td>'+
-          '<td style="padding:9px 10px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+H.e(r.title||'-')+'</td>'+
-          '<td style="padding:9px 10px;text-align:center">'+
-            '<span style="'+stStyle+';font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">'+stLabel+'</span>'+
-          '</td>'+
-          '<td style="padding:9px 10px;text-align:center">'+
-            '<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+H.e(r.current_ver||'-')+'</span>'+
-          '</td>'+
-          '<td style="padding:9px 10px;text-align:center;font-size:12px;color:var(--muted)">'+H.e(r.dept||'-')+'</td>'+
-          '<td style="padding:9px 10px;text-align:center;font-size:12px;color:var(--muted)">'+H.e((r.created_at||'').slice(0,10)||'-')+'</td>'+
-          '<td style="padding:9px 10px;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+H.e(r.summary||r.change_summary||'-')+'</td>'+
-        '</tr>';
-      }).join('')+
+    (!rows.length?
+      '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">검색 결과가 없습니다.</td></tr>'
+    :rows.map(function(r,i){
+      var evenBg=(i%2===1)?'background:var(--bg2)':'';
+      return '<tr onclick="Pages.doc_history('+r.id+')"'+
+        ' style="border-bottom:1px solid var(--brd);cursor:pointer;'+evenBg+'"'+
+        ' onmouseover="this._bg=this.style.background;this.style.background=\'#eef2ff\'"'+
+        ' onmouseout="this.style.background=this._bg||\'\'">'+
+        '<td style="padding:8px 10px;text-align:center;white-space:nowrap">'+
+          '<span style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+
+            H.e(Pages._DT[r.doc_type]||r.doc_type||'-')+'</span></td>'+
+        '<td style="padding:8px 10px;white-space:nowrap">'+
+          '<span style="font-family:monospace;font-size:12px;font-weight:700;color:#1a5fa8"'+
+            ' onclick="event.stopPropagation();Pages.doc_history('+r.id+')"'+
+            ' title="클릭: 개정이력">'+H.e(r.doc_no||'-')+'</span></td>'+
+        '<td style="padding:8px 10px;font-weight:500;min-width:140px">'+H.e(r.title||'-')+'</td>'+
+        '<td style="padding:8px 10px;text-align:center;white-space:nowrap">'+stIcon(r.status)+'</td>'+
+        '<td style="padding:8px 10px;text-align:center;white-space:nowrap">'+
+          '<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px">'+
+            H.e(r.current_ver||'-')+'</span></td>'+
+        '<td style="padding:8px 10px;text-align:center;white-space:nowrap;font-size:12px;color:var(--muted)">'+H.e(r.dept||'-')+'</td>'+
+        '<td style="padding:8px 10px;text-align:center;white-space:nowrap;font-size:12px;color:var(--muted)">'+
+          H.e((r.created_at||'').slice(0,10)||'-')+'</td>'+
+        '<td style="padding:8px 10px;font-size:12px;color:var(--muted)">'+H.e(r.summary||r.change_summary||'-')+'</td>'+
+        '<td style="padding:8px 6px;text-align:center" onclick="event.stopPropagation()">'+FM.btn('doc-'+r.id)+'</td>'+
+      '</tr>';
+    }).join(''))+
     '</tbody></table></div>';
 },
 _docKwFilter:function(v){window._docKw=v; Pages._docRender();},
