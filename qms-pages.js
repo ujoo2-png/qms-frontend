@@ -8031,67 +8031,7 @@ tr.even td{background:#f5f8fd}
 
 /* [v2.247] 고객불만관리대장 Excel(.xlsx) 내보내기 — 3시트 구성
    시트1: 고객불만 목록 | 시트2: 고객사별 통계 | 시트3: 월별 추이 */
-_carComplaintExcel(){
-  if(typeof XLSX==='undefined'){Toast.show('Excel 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.','warn');return;}
-
-  /* 고객불만 데이터 필터 */
-  const allData=window._carStatusAllData||DB.cars||[];
-  const q=(document.getElementById('csSearch')?.value||'').toLowerCase();
-  const as=document.getElementById('csAssigneeF')?.value||'';
-  const yr=document.getElementById('csYearF')?.value||'';
-  const cu=(document.getElementById('csCustomerF')?.value||'').toLowerCase();
-  const rows=allData.filter(c=>{
-    if(!(c.type==='고객불만'||c.source==='고객불만'||c.type==='고객불만관리'))return false;
-    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.customer||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;
-    if(as&&c.assignee!==as)return false;
-    if(yr&&!(c.date||'').startsWith(yr))return false;
-    if(cu&&!(c.customer||'').toLowerCase().includes(cu))return false;
-    return true;
-  });
-  if(!rows.length){Toast.show('출력할 고객불만 데이터가 없습니다.','warn');return;}
-
-  const dday=v=>{if(!v)return'';const d=Math.ceil((new Date(v)-new Date())/86400000);return d<0?`D+${Math.abs(d)} 초과`:`D-${d}`;};
-
-  /* ── 시트1: 고객불만 목록 ── */
-  const h1=['No','CAR번호','상태','고객사','귀책처/공급사','품목코드','품목명','불량현상','담당자','개시일','완료기한','D-day','8D제출일','NC참조','비고'];
-  const list=[h1,...rows.map((c,i)=>[
-    i+1, c.no||'', c.status||'', c.customer||'', c.vendor_name||'',
-    c.item_code||'', c.item||'', c.title||c.defect_desc||'', c.assignee||'',
-    c.date||'', c.due_date||'', dday(c.due_date),
-    c.d8_date||'', c.nc_no||'', c.note||'',
-  ])];
-
-  /* ── 시트2: 고객사별 통계 ── */
-  const byCust={};
-  rows.forEach(c=>{const k=c.customer||'미입력';if(!byCust[k])byCust[k]={total:0,done:0,over:0};byCust[k].total++;if(['완료','종결'].includes(c.status))byCust[k].done++;if(c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status))byCust[k].over++;});
-  const h2=['고객사','총건수','완료','기한초과','완료율(%)'];
-  const custStat=[h2,...Object.entries(byCust).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>[k,v.total,v.done,v.over,v.total?Math.round(v.done/v.total*100):0])];
-
-  /* ── 시트3: 월별 추이 ── */
-  const byMonth={};
-  rows.forEach(c=>{const m=(c.date||'').slice(0,7);if(!m)return;if(!byMonth[m])byMonth[m]={total:0,done:0};byMonth[m].total++;if(['완료','종결'].includes(c.status))byMonth[m].done++;});
-  const h3=['년월','발생건수','완료건수','완료율(%)'];
-  const monthStat=[h3,...Object.keys(byMonth).sort().map(m=>[m,byMonth[m].total,byMonth[m].done,Math.round(byMonth[m].done/byMonth[m].total*100)])];
-
-  const wb=XLSX.utils.book_new();
-
-  const ws1=XLSX.utils.aoa_to_sheet(list);
-  ws1['!cols']=[{wch:5},{wch:22},{wch:8},{wch:12},{wch:12},{wch:10},{wch:14},{wch:30},{wch:8},{wch:10},{wch:10},{wch:10},{wch:10},{wch:18},{wch:16}];
-  XLSX.utils.book_append_sheet(wb, ws1, '고객불만목록');
-
-  const ws2=XLSX.utils.aoa_to_sheet(custStat);
-  ws2['!cols']=[{wch:16},{wch:8},{wch:8},{wch:8},{wch:10}];
-  XLSX.utils.book_append_sheet(wb, ws2, '고객사별통계');
-
-  const ws3=XLSX.utils.aoa_to_sheet(monthStat);
-  ws3['!cols']=[{wch:10},{wch:8},{wch:8},{wch:10}];
-  XLSX.utils.book_append_sheet(wb, ws3, '월별추이');
-
-  const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
-  XLSX.writeFile(wb, `고객불만관리대장_${today}.xlsx`);
-  Toast.show(`📥 고객불만관리대장 Excel 완료 — ${rows.length}건 (3시트)`,'ok');
-},
-
+_carComplaintExcel(){  if(typeof XLSX==='undefined'){Toast.show('Excel 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.','warn');return;}  /* [v2.249] 고객불만 필터 — car_input 폼 전체 43컬럼 동일 적용 */  const allData=window._carStatusAllData||DB.cars||[];  const q=(document.getElementById('csSearch')?.value||'').toLowerCase();  const as=document.getElementById('csAssigneeF')?.value||'';  const yr=document.getElementById('csYearF')?.value||'';  const cu=(document.getElementById('csCustomerF')?.value||'').toLowerCase();  const rows=allData.filter(c=>{    if(!(c.type==='고객불만'||c.source==='고객불만'||c.type==='고객불만관리'))return false;    if(q&&![(c.no||''),(c.title||''),(c.item||''),(c.customer||''),(c.assignee||'')].join(' ').toLowerCase().includes(q))return false;    if(as&&c.assignee!==as)return false;    if(yr&&!(c.date||'').startsWith(yr))return false;    if(cu&&!(c.customer||'').toLowerCase().includes(cu))return false;    return true;  });  if(!rows.length){Toast.show('출력할 고객불만 데이터가 없습니다.','warn');return;}  const v=c=>c===null||c===undefined?'':String(c);  const dday=d=>{if(!d)return'';const n=Math.ceil((new Date(d)-new Date())/86400000);return n<0?`D+${Math.abs(n)} 초과`:`D-${n}`;};  const cost=c=>c?Number(String(c).replace(/[^\d.-]/g,''))||'':'';  /* 시트1: car_input 폼 전체 43컬럼 — _carExcel과 동일 */  const headers=[    'No','CAR번호','상태','발생원(유형)','NC참조번호','제목',    '고객사','귀책처/공급사','작업지시번호','품목코드','품목명',    '개시일','완료기한','D-day','담당자','작성자',    '출하수량','검사수량','불량수량','불량률(%)','불량유형','불량현상','처리방법','비고(NC)',    '재료비손실','공정손실','기타손실','총손실비용',    'D1.팀구성','D2.문제기술','D3.긴급대책',    'D4.근본원인(WHY1)','D4.근본원인(WHY2)','D4.근본원인(WHY3)',    'D4.근본원인(WHY4)','D4.근본원인(WHY5)',    'D5.시정조치','D5.완료예정일',    'D6.유효성검증','D6.검증결과','D6.검증일',    'D7.재발방지','특이사항',  ];  const listData=[headers,...rows.map((c,i)=>[    i+1,           v(c.no),          v(c.status),    v(c.type||c.source),    v(c.nc_no),    v(c.title),       v(c.customer),  v(c.vendor_name),    v(c.work_order),v(c.item_code),  v(c.item),    v(c.date||c.open),v(c.due_date), dday(c.due_date),v(c.assignee),v(c.created_by),    cost(c.ship_qty),cost(c.insp_qty),cost(c.bad_qty),v(c.defect_rate),    v(c.defect_type),v(c.defect_desc),v(c.action_type),v(c.nc_note),    cost(c.cost_material),cost(c.cost_process),cost(c.cost_etc),cost(c.cost_total),    v(c.d1_team),  v(c.d2_desc),    v(c.d3_action),    v(c.d4_why1),  v(c.d4_why2),    v(c.d4_why3),   v(c.d4_why4),  v(c.d4_why5),    v(c.d5_action),v(c.d5_date),    v(c.d6_verify),v(c.d6_result),  v(c.d6_date),    v(c.d7_prevent),v(c.note),  ])];  /* 시트2: 고객사별 통계 */  const byCust={};  rows.forEach(c=>{const k=c.customer||'미입력';if(!byCust[k])byCust[k]={total:0,done:0,over:0};    byCust[k].total++;    if(['완료','종결'].includes(c.status))byCust[k].done++;    if(c.due_date&&Math.ceil((new Date(c.due_date)-new Date())/86400000)<0&&!['완료','종결'].includes(c.status))byCust[k].over++;  });  const custStat=[    ['고객사','총건수','완료','기한초과','완료율(%)'],    ...Object.entries(byCust).sort((a,b)=>b[1].total-a[1].total)      .map(([k,val])=>[k,val.total,val.done,val.over,val.total?Math.round(val.done/val.total*100):0]),    ['','','','',''],    ['합계',rows.length,'','',''],    ['출력일시',new Date().toLocaleString('ko-KR'),'','',''],  ];  /* 시트3: 월별 추이 */  const byMonth={};  rows.forEach(c=>{const m=(c.date||'').slice(0,7);if(!m)return;    if(!byMonth[m])byMonth[m]={total:0,done:0};    byMonth[m].total++;    if(['완료','종결'].includes(c.status))byMonth[m].done++;  });  const monthStat=[    ['년월','발생건수','완료건수','완료율(%)'],    ...Object.keys(byMonth).sort().map(m=>[m,byMonth[m].total,byMonth[m].done,Math.round(byMonth[m].done/byMonth[m].total*100)]),  ];  const wb=XLSX.utils.book_new();  const ws1=XLSX.utils.aoa_to_sheet(listData);  ws1['!cols']=[    {wch:5},{wch:22},{wch:8},{wch:8},{wch:18},{wch:28},    {wch:10},{wch:12},{wch:12},{wch:10},{wch:14},    {wch:10},{wch:10},{wch:10},{wch:8},{wch:8},    {wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:24},{wch:10},{wch:16},    {wch:10},{wch:10},{wch:10},{wch:12},    {wch:20},{wch:30},{wch:24},    {wch:20},{wch:20},{wch:20},{wch:20},{wch:20},    {wch:24},{wch:10},    {wch:20},{wch:16},{wch:10},    {wch:24},{wch:20},  ];  ws1['!freeze']={xSplit:0,ySplit:1};  XLSX.utils.book_append_sheet(wb,ws1,'고객불만목록');  const ws2=XLSX.utils.aoa_to_sheet(custStat);  ws2['!cols']=[{wch:16},{wch:8},{wch:8},{wch:8},{wch:10}];  XLSX.utils.book_append_sheet(wb,ws2,'고객사별통계');  const ws3=XLSX.utils.aoa_to_sheet(monthStat);  ws3['!cols']=[{wch:10},{wch:8},{wch:8},{wch:10}];  XLSX.utils.book_append_sheet(wb,ws3,'월별추이');  const today=new Date().toISOString().slice(0,10).replace(/-/g,'');  XLSX.writeFile(wb,`고객불만관리대장_${today}.xlsx`);  Toast.show(`📥 고객불만관리대장 Excel 완료 — ${rows.length}건 / ${headers.length}컬럼 (3시트)`,'ok');},
 /* [v2.217] 날짜 퀵버튼 */
 _carDateQuick(fromDays,toDays){
   const fmt=d=>{const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
